@@ -130,7 +130,9 @@ uv run mypy \
   src/extended_data/connectors/anthropic/__init__.py \
   src/extended_data/connectors/slack/__init__.py \
   src/extended_data/connectors/slack/tools.py \
-  src/extended_data/connectors/vault/__init__.py
+  src/extended_data/connectors/vault/__init__.py \
+  src/extended_data/connectors/github/__init__.py \
+  src/extended_data/connectors/github/tools.py
 uv build
 ```
 

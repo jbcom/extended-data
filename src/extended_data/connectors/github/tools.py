@@ -79,7 +79,7 @@ def list_repositories(
     type_filter: str = "all",
     include_branches: bool = False,
     github_token: str | None = None,
-    **kwargs,
+    **kwargs: Any,
 ) -> list[dict[str, Any]]:
     """List repositories in a GitHub organization.
 
@@ -109,7 +109,7 @@ def get_repository(
     github_owner: str,
     repo_name: str,
     github_token: str | None = None,
-    **kwargs,
+    **kwargs: Any,
 ) -> dict[str, Any]:
     """Get details of a specific GitHub repository.
 
@@ -137,7 +137,7 @@ def list_teams(
     include_members: bool = False,
     include_repos: bool = False,
     github_token: str | None = None,
-    **kwargs,
+    **kwargs: Any,
 ) -> list[dict[str, Any]]:
     """List teams in a GitHub organization.
 
@@ -161,7 +161,7 @@ def get_team(
     github_owner: str,
     team_slug: str,
     github_token: str | None = None,
-    **kwargs,
+    **kwargs: Any,
 ) -> dict[str, Any]:
     """Get details of a specific GitHub team.
 
@@ -189,7 +189,7 @@ def list_org_members(
     role: str = "member",
     include_pending: bool = False,
     github_token: str | None = None,
-    **kwargs,
+    **kwargs: Any,
 ) -> list[dict[str, Any]]:
     """List members of a GitHub organization.
 
@@ -215,7 +215,7 @@ def get_repository_file(
     file_path: str,
     github_branch: str | None = None,
     github_token: str | None = None,
-    **kwargs,
+    **kwargs: Any,
 ) -> dict[str, Any]:
     """Get a file from a GitHub repository.
 

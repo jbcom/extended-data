@@ -39,7 +39,7 @@ else:
     UnknownObjectException = GitHubFallbackError
 
 
-FilePath = str | bytes | os.PathLike[Any]
+FilePath = str | os.PathLike[str]
 
 
 def _load_github_sdk() -> None:
@@ -82,8 +82,8 @@ class GitHubConnector(VendorConnectorBase):
         github_token: str | None = None,
         per_page: int = DEFAULT_PER_PAGE,
         logger: Logging | None = None,
-        **kwargs,
-    ):
+        **kwargs: Any,
+    ) -> None:
         super().__init__(logger=logger, **kwargs)
         _load_github_sdk()
 
@@ -110,7 +110,7 @@ class GitHubConnector(VendorConnectorBase):
 
         self.graphql_client = GraphqlClient(endpoint="https://api.github.com/graphql")
 
-    def get_repository_branch(self, branch_name: str):
+    def get_repository_branch(self, branch_name: str) -> Any | None:
         """Get a repository branch by name."""
         if self.repo is None:
             self.logger.warning(f"Repository not set for {self.GITHUB_OWNER}, cannot get branch {branch_name}")
@@ -122,14 +122,14 @@ class GitHubConnector(VendorConnectorBase):
             self.logger.warning(f"{branch_name} does not yet exist")
             return None
 
-    def create_repository_branch(self, branch_name: str, parent_branch: str | None = None):
+    def create_repository_branch(self, branch_name: str, parent_branch: str | None = None) -> Any | None:
         """Create a new repository branch."""
         if self.repo is None:
             self.logger.warning(f"Repository not set for {self.GITHUB_OWNER}, cannot create branch {branch_name}")
             return None
 
         parent_branch_ref = self.get_repository_branch(parent_branch or self.repo.default_branch)
-        if is_nothing(parent_branch_ref):
+        if parent_branch_ref is None or is_nothing(parent_branch_ref):
             raise RuntimeError(
                 f"Cannot create Git branch {branch_name}, parent branch {parent_branch} does not yet exist"
             )
@@ -155,19 +155,20 @@ class GitHubConnector(VendorConnectorBase):
         charset: str | None = "utf-8",
         errors: str | None = "strict",
         raise_on_not_found: bool = False,
-    ):
+    ) -> Any:
         """Get a file from the repository."""
+        file_path_text = os.fspath(file_path)
         if self.repo is None:
-            self.logger.warning(f"Repository not set for {self.GITHUB_OWNER}, cannot get file {file_path}")
+            self.logger.warning(f"Repository not set for {self.GITHUB_OWNER}, cannot get file {file_path_text}")
             return None
 
-        def state_negative_result(result: str):
+        def state_negative_result(result: str) -> None:
             self.logger.warning(result)
             if raise_on_not_found:
                 raise FileNotFoundError(result)
 
-        def get_retval(d: str | None, s: str | None, p: FilePath):
-            retval = [d]
+        def get_retval(d: Any, s: str | None, p: str) -> Any:
+            retval: list[Any] = [d]
             if return_sha:
                 retval.append(s)
             if return_path:
@@ -176,29 +177,29 @@ class GitHubConnector(VendorConnectorBase):
                 return retval[0]
             return tuple(retval)
 
-        file_data = {} if decode else ""
+        file_data: Any = {} if decode else ""
         file_sha = None
 
-        self.logger.debug(f"Getting repository file: {file_path}")
+        self.logger.debug(f"Getting repository file: {file_path_text}")
 
         try:
-            raw_file_data = self.repo.get_contents(str(file_path), ref=self.GITHUB_BRANCH)
+            raw_file_data = self.repo.get_contents(file_path_text, ref=self.GITHUB_BRANCH)
             file_sha = raw_file_data.sha
             if is_nothing(raw_file_data.content):
-                self.logger.warning(f"{file_path} is empty of content: {self.GITHUB_BRANCH}")
+                self.logger.warning(f"{file_path_text} is empty of content: {self.GITHUB_BRANCH}")
             else:
                 file_data = raw_file_data.decoded_content.decode(charset, errors)
         except (UnknownObjectException, AttributeError):
-            state_negative_result(f"{file_path} does not exist")
+            state_negative_result(f"{file_path_text} does not exist")
         except ValueError as exc:
-            self.logger.warning(f"Reading {file_path} not supported: {exc}")
+            self.logger.warning(f"Reading {file_path_text} not supported: {exc}")
             decode = False
 
         if not decode or is_nothing(file_data):
-            return get_retval(file_data, file_sha, file_path)
+            return get_retval(file_data, file_sha, file_path_text)
 
         # Decode file content based on file type
-        encoding = get_encoding_for_file_path(file_path)
+        encoding = get_encoding_for_file_path(file_path_text)
         try:
             if encoding == "json":
                 decoded_data = decode_json(file_data)
@@ -208,10 +209,10 @@ class GitHubConnector(VendorConnectorBase):
                 # For raw or unknown types, return the string as-is
                 decoded_data = file_data
         except Exception as exc:
-            self.logger.warning(f"Failed to decode {file_path} as {encoding}: {exc}")
+            self.logger.warning(f"Failed to decode {file_path_text} as {encoding}: {exc}")
             decoded_data = file_data
 
-        return get_retval(decoded_data, file_sha, file_path)
+        return get_retval(decoded_data, file_sha, file_path_text)
 
     def update_repository_file(
         self,
@@ -222,63 +223,65 @@ class GitHubConnector(VendorConnectorBase):
         allow_encoding: bool | str | None = None,
         allow_empty: bool = False,
         **format_opts: Any,
-    ):
+    ) -> Any | None:
         """Update a file in the repository."""
+        file_path_text = os.fspath(file_path)
         if self.repo is None:
-            self.logger.warning(f"Repository not set for {self.GITHUB_OWNER}, cannot update file {file_path}")
+            self.logger.warning(f"Repository not set for {self.GITHUB_OWNER}, cannot update file {file_path_text}")
             return None
 
         if is_nothing(file_data) and not allow_empty:
-            self.logger.warning(f"Empty file data for {file_path} not allowed")
+            self.logger.warning(f"Empty file data for {file_path_text} not allowed")
             return None
 
         if msg:
             self.logger.info(msg)
 
         if allow_encoding is None:
-            allow_encoding = get_encoding_for_file_path(file_path)
+            allow_encoding = get_encoding_for_file_path(file_path_text)
 
         file_data = wrap_raw_data_for_export(file_data, allow_encoding=allow_encoding, **format_opts)
 
         if not isinstance(file_data, str):
             file_data = str(file_data)
 
-        self.logger.info(f"Updating repository file: {file_path}")
+        self.logger.info(f"Updating repository file: {file_path_text}")
 
         if file_sha is None:
-            result = self.get_repository_file(file_path, return_sha=True)
+            result = self.get_repository_file(file_path_text, return_sha=True)
             if isinstance(result, tuple):
                 _, file_sha = result
 
         if file_sha is None:
             if msg is None:
-                msg = f"Creating {file_path}"
+                msg = f"Creating {file_path_text}"
             return self.repo.create_file(
-                path=str(file_path),
+                path=file_path_text,
                 message=msg,
                 branch=self.GITHUB_BRANCH,
                 content=file_data,
             )
         else:
             if msg is None:
-                msg = f"Updating {file_path}"
+                msg = f"Updating {file_path_text}"
             return self.repo.update_file(
-                path=str(file_path),
+                path=file_path_text,
                 message=msg,
                 content=file_data,
                 sha=file_sha,
                 branch=self.GITHUB_BRANCH,
             )
 
-    def delete_repository_file(self, file_path: FilePath, msg: str | None = None):
+    def delete_repository_file(self, file_path: FilePath, msg: str | None = None) -> Any | None:
         """Delete a file from the repository."""
+        file_path_text = os.fspath(file_path)
         if self.repo is None:
-            self.logger.warning(f"Repository not set for {self.GITHUB_OWNER}, cannot delete file {file_path}")
+            self.logger.warning(f"Repository not set for {self.GITHUB_OWNER}, cannot delete file {file_path_text}")
             return None
 
-        self.logger.info(f"Deleting repository file: {file_path}")
+        self.logger.info(f"Deleting repository file: {file_path_text}")
 
-        result = self.get_repository_file(file_path=file_path, return_sha=True)
+        result = self.get_repository_file(file_path=file_path_text, return_sha=True)
         sha = None
         if isinstance(result, tuple):
             _, sha = result
@@ -287,10 +290,10 @@ class GitHubConnector(VendorConnectorBase):
             return None
 
         if msg is None:
-            msg = f"Deleting {file_path}"
+            msg = f"Deleting {file_path_text}"
 
         return self.repo.delete_file(
-            path=str(file_path),
+            path=file_path_text,
             message=msg,
             branch=self.GITHUB_BRANCH,
             sha=sha,
