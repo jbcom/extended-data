@@ -18,6 +18,12 @@ PUBLIC_TEXT_ROOTS = (
     REPO_ROOT / "README.md",
 )
 OLD_PROJECT_TERMS = ("terraform-modules", "TerraformDataSource")
+OLD_PACKAGE_NAMESPACES = (
+    "directed_inputs_class",
+    "extended_data_types",
+    "lifecyclelogging",
+    "vendor_connectors",
+)
 
 
 def test_workflow_actions_are_pinned_to_exact_shas() -> None:
@@ -60,5 +66,20 @@ def test_public_text_does_not_reference_old_project_origins() -> None:
         for term in OLD_PROJECT_TERMS:
             if term in text:
                 offenders.append(f"{path.relative_to(REPO_ROOT)}: {term}")
+
+    assert offenders == []
+
+
+def test_old_package_namespace_shims_do_not_exist() -> None:
+    """Clean major-version breaks should not grow old import namespace shims."""
+    offenders: list[str] = []
+
+    for namespace in OLD_PACKAGE_NAMESPACES:
+        package_path = REPO_ROOT / "src" / namespace
+        module_path = REPO_ROOT / "src" / f"{namespace}.py"
+        if package_path.exists():
+            offenders.append(str(package_path.relative_to(REPO_ROOT)))
+        if module_path.exists():
+            offenders.append(str(module_path.relative_to(REPO_ROOT)))
 
     assert offenders == []

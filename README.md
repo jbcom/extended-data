@@ -106,7 +106,8 @@ Tier 1 primitive names are explicit in this major version. Use
 `string_to_int()`, `string_to_float()`, `string_to_path()`,
 `string_to_date()`, `string_to_datetime()`, and `string_to_time()` for scalar
 string conversion. The old `bytestostr` and `strto*` helper names are not
-preserved.
+preserved. Old package import namespaces are not shimmed; missing imports are
+intentional so remaining migration work fails fast.
 
 Vendor connectors are first-class adapters in the data fabric. `ConnectorFabric`
 uses the registry to resolve connectors by name, injects shared input/logging
