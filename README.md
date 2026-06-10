@@ -212,7 +212,9 @@ methods. `snapshot_inputs()` returns detached active or frozen snapshots, and
 `replace_inputs()` installs a new active snapshot while clearing stale frozen
 state by default. `get_input()` remains the scalar coercion boundary for
 booleans, numbers, paths, datetimes, and credential strings; pass
-`as_extended=True` when an injected raw input value should stay in Tier 2 form.
+`as_extended=True` when an injected raw or fallback input value should stay in
+Tier 2 form and keep using container methods such as `reconstruct_special_types()`
+and `to_export_safe()`.
 `Logging` stores marked log message collections as `ExtendedDict` and
 `ExtendedSet` values while keeping Python logger and handler objects plain.
 

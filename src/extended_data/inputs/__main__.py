@@ -159,6 +159,10 @@ class InputProvider:
         keys = sorted(str(key) for key in inputs)
         return ", ".join(keys[:20]) + (f", ... ({len(keys)} total)" if len(keys) > 20 else "")
 
+    @staticmethod
+    def _return_value(value: Any, *, as_extended: bool) -> Any:
+        return extend_data(value) if as_extended else value
+
     def get_input(
         self,
         k: str,
@@ -274,20 +278,20 @@ class InputProvider:
         if not source_present:
             if required:
                 self.get_input(k, default=default, required=True)
-            return default
+            return self._return_value(default, as_extended=as_extended)
 
         conf = to_builtin(raw_input)
         if conf is None:
-            return default if not allow_none else None
+            return self._return_value(default, as_extended=as_extended) if not allow_none else None
         if is_nothing(conf):
             if required:
                 self.get_input(k, default=default, required=True)
-            return default
+            return self._return_value(default, as_extended=as_extended)
 
         conf = self._coerce_text(conf)
 
         if not isinstance(conf, str):
-            return extend_data(conf) if as_extended else conf
+            return self._return_value(conf, as_extended=as_extended)
 
         if decode_from_base64:
             try:
@@ -303,8 +307,8 @@ class InputProvider:
 
             if not isinstance(conf, str):
                 if conf is None and not allow_none:
-                    return default
-                return extend_data(conf) if as_extended else conf
+                    return self._return_value(default, as_extended=as_extended)
+                return self._return_value(conf, as_extended=as_extended)
 
         if decode_from_yaml:
             try:
@@ -320,12 +324,9 @@ class InputProvider:
                 raise RuntimeError(message) from exc
 
         if conf is None and not allow_none:
-            return default
+            return self._return_value(default, as_extended=as_extended)
 
-        if as_extended:
-            return extend_data(conf)
-
-        return conf
+        return self._return_value(conf, as_extended=as_extended)
 
     def freeze_inputs(self) -> ExtendedDict:
         """Freezes the current inputs, preventing further modifications until thawed.

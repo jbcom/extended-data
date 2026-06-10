@@ -48,4 +48,5 @@ Demonstrates input decoding capabilities:
 - YAML decoding
 - Base64 decoding
 - Combined Base64 + JSON/YAML decoding
-- Default values for missing inputs
+- Tier 2 reconstruction/export methods on decoded inputs
+- Promoted default values for missing inputs

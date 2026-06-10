@@ -258,6 +258,26 @@ def test_decode_input_json_can_return_extended_containers():
     assert decoded["name"].upper_first() == "Test"
 
 
+def test_decode_input_extended_containers_can_use_tier2_export_methods():
+    """Decoded input payloads can stay inside the integrated container surface."""
+    dic = InputProvider(inputs={"json_key": '{"enabled": "true", "retries": "5", "service": {"name": "api"}}'})
+
+    decoded = dic.decode_input("json_key", decode_from_json=True, as_extended=True)
+    reconstructed = decoded.reconstruct_special_types()
+
+    assert isinstance(decoded, ExtendedDict)
+    assert decoded.to_export_safe() == {"enabled": "true", "retries": "5", "service": {"name": "api"}}
+    assert json.loads(decoded.wrap_for_export(allow_encoding="json")) == {
+        "enabled": "true",
+        "retries": "5",
+        "service": {"name": "api"},
+    }
+    assert isinstance(reconstructed, ExtendedDict)
+    assert reconstructed["enabled"] is True
+    assert reconstructed["retries"] == 5
+    assert reconstructed["service"]["name"].upper_first() == "Api"
+
+
 def test_decode_input_decodes_present_value_that_equals_default():
     """Defaults should not mask present input values that happen to be equal."""
     raw_config = '{"name": "test"}'
@@ -272,6 +292,23 @@ def test_decode_input_decodes_present_value_that_equals_default():
     assert missing.decode_input("json_key", default=raw_config, decode_from_json=True) == raw_config
 
 
+def test_decode_input_missing_default_can_return_extended_containers():
+    """Missing decoded inputs promote fallback data when Tier 2 output is requested."""
+    dic = InputProvider(from_environment=False)
+
+    decoded = dic.decode_input(
+        "missing_key",
+        default={"enabled": "true", "service": {"name": "fallback"}},
+        decode_from_json=True,
+        as_extended=True,
+    )
+
+    assert isinstance(decoded, ExtendedDict)
+    assert isinstance(decoded["service"], ExtendedDict)
+    assert decoded["service"]["name"].upper_first() == "Fallback"
+    assert decoded.reconstruct_special_types()["enabled"] is True
+
+
 def test_decode_input_honors_explicit_none_values():
     """Present None inputs should obey allow_none instead of looking missing."""
     dic = InputProvider(inputs={"json_key": None}, from_environment=False)
@@ -280,6 +317,22 @@ def test_decode_input_honors_explicit_none_values():
     assert dic.decode_input("json_key", default="fallback", decode_from_json=True, allow_none=True) is None
     assert dic.decode_input("json_key", default="fallback", decode_from_json=True, allow_none=False) == "fallback"
     assert missing.decode_input("json_key", default="fallback", decode_from_json=True, allow_none=True) == "fallback"
+
+
+def test_decode_input_none_fallback_can_return_extended_containers():
+    """Explicit None fallbacks use the same promotion rule when None is disallowed."""
+    dic = InputProvider(inputs={"json_key": None}, from_environment=False)
+
+    decoded = dic.decode_input(
+        "json_key",
+        default={"enabled": "false"},
+        decode_from_json=True,
+        allow_none=False,
+        as_extended=True,
+    )
+
+    assert isinstance(decoded, ExtendedDict)
+    assert decoded.reconstruct_special_types()["enabled"] is False
 
 
 def test_decode_input_required_empty_value_raises():

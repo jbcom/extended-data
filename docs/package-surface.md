@@ -172,22 +172,26 @@ writes raise `ValueError` unless `allow_empty=True` is passed.
 `InputProvider` loads input data from explicit mappings, environment variables,
 and stdin, then decodes or coerces values through the primitive layer. Its
 `decode_input(..., as_extended=True)` path gives input-driven workflows the same
-container bridge as file and Base64 decoding. Requested input coercions are
-strict, and diagnostics identify the input key and failed operation without
-echoing raw values from environment variables, stdin, JSON, YAML, or Base64
-payloads. Active, frozen, shifted, and merged input snapshots are `ExtendedDict`
-values, and input decorator metadata/options are promoted the same way. The old
-case-insensitive input mapping is intentionally not preserved; exact keys keep
-configuration wiring explicit while still letting direct snapshots use Tier 2
-methods. Use `snapshot_inputs()` for a detached promoted copy of active or
-frozen state, and `replace_inputs()` when a workflow should install a new
-active snapshot instead of mutating `.inputs` directly.
+container bridge as file and Base64 decoding; fallback values use that same
+promotion rule, so defaults do not silently drop back to plain dictionaries.
+Requested input coercions are strict, and diagnostics identify the input key and
+failed operation without echoing raw values from environment variables, stdin,
+JSON, YAML, or Base64 payloads. Active, frozen, shifted, and merged input
+snapshots are `ExtendedDict` values, and input decorator metadata/options are
+promoted the same way. The old case-insensitive input mapping is intentionally
+not preserved; exact keys keep configuration wiring explicit while still
+letting direct snapshots use Tier 2 methods. Use `snapshot_inputs()` for a
+detached promoted copy of active or frozen state, and `replace_inputs()` when a
+workflow should install a new active snapshot instead of mutating `.inputs`
+directly.
 
 ```python
 inputs = InputProvider(inputs={"service": {"name": "api"}}, from_environment=False)
 assert inputs.inputs["service"]["name"].upper_first() == "Api"
 assert isinstance(inputs.merge_inputs({"service": {"region": "us-east-1"}}), ExtendedDict)
 assert inputs.snapshot_inputs()["service"]["region"].upper_first() == "Us-east-1"
+fallback = inputs.decode_input("missing", default={"enabled": "true"}, as_extended=True)
+assert fallback.reconstruct_special_types()["enabled"] is True
 ```
 
 `get_input()` is the scalar coercion boundary for booleans, numbers, paths,
