@@ -108,6 +108,8 @@ class GoogleServicesMixin:
 
         def get_cloud_resource_manager_service(self) -> Any: ...
 
+        def extend_result(self, value: Any) -> Any: ...
+
     # =========================================================================
     # Compute Engine
     # =========================================================================
@@ -168,7 +170,7 @@ class GoogleServicesMixin:
         if unhump_instances:
             instances = [unhump_map(i) for i in instances]
 
-        return instances
+        return self.extend_result(instances)
 
     # =========================================================================
     # Google Kubernetes Engine
@@ -202,7 +204,7 @@ class GoogleServicesMixin:
         if unhump_clusters:
             clusters = [unhump_map(c) for c in clusters]
 
-        return clusters
+        return self.extend_result(clusters)
 
     def get_gke_cluster(
         self,
@@ -226,7 +228,7 @@ class GoogleServicesMixin:
         name = f"projects/{project_id}/locations/{location}/clusters/{cluster_id}"
 
         try:
-            return service.projects().locations().clusters().get(name=name).execute()
+            return self.extend_result(service.projects().locations().clusters().get(name=name).execute())
         except HttpError as e:
             if e.resp.status == 404:
                 self.logger.warning(f"GKE cluster not found: {cluster_id}")
@@ -274,7 +276,7 @@ class GoogleServicesMixin:
         if unhump_buckets:
             buckets = [unhump_map(b) for b in buckets]
 
-        return buckets
+        return self.extend_result(buckets)
 
     # =========================================================================
     # Cloud SQL
@@ -317,7 +319,7 @@ class GoogleServicesMixin:
         if unhump_instances:
             instances = [unhump_map(i) for i in instances]
 
-        return instances
+        return self.extend_result(instances)
 
     # =========================================================================
     # Pub/Sub
@@ -360,7 +362,7 @@ class GoogleServicesMixin:
         if unhump_topics:
             topics = [unhump_map(t) for t in topics]
 
-        return topics
+        return self.extend_result(topics)
 
     def list_pubsub_subscriptions(
         self,
@@ -399,7 +401,7 @@ class GoogleServicesMixin:
         if unhump_subscriptions:
             subscriptions = [unhump_map(s) for s in subscriptions]
 
-        return subscriptions
+        return self.extend_result(subscriptions)
 
     # =========================================================================
     # Service Usage (Enabled APIs)
@@ -445,7 +447,7 @@ class GoogleServicesMixin:
         if unhump_services:
             services = [unhump_map(s) for s in services]
 
-        return services
+        return self.extend_result(services)
 
     def enable_service(
         self,
@@ -468,7 +470,7 @@ class GoogleServicesMixin:
         result = service.services().enable(name=name).execute()
 
         self.logger.info(f"Enabled service {service_name}")
-        return result
+        return self.extend_result(result)
 
     def disable_service(
         self,
@@ -497,7 +499,7 @@ class GoogleServicesMixin:
         result = service.services().disable(name=name, body=body).execute()
 
         self.logger.info(f"Disabled service {service_name}")
-        return result
+        return self.extend_result(result)
 
     def batch_enable_services(
         self,
@@ -527,7 +529,7 @@ class GoogleServicesMixin:
         )
 
         self.logger.info(f"Batch enabled {len(service_names)} services")
-        return result
+        return self.extend_result(result)
 
     # =========================================================================
     # Cloud KMS
@@ -573,7 +575,7 @@ class GoogleServicesMixin:
         if unhump_keyrings:
             keyrings = [unhump_map(k) for k in keyrings]
 
-        return keyrings
+        return self.extend_result(keyrings)
 
     def create_kms_keyring(
         self,
@@ -608,7 +610,7 @@ class GoogleServicesMixin:
         )
 
         self.logger.info(f"Created key ring {keyring_id}")
-        return result
+        return self.extend_result(result)
 
     def create_kms_key(
         self,
@@ -655,7 +657,7 @@ class GoogleServicesMixin:
         )
 
         self.logger.info(f"Created crypto key {key_id}")
-        return result
+        return self.extend_result(result)
 
     # =========================================================================
     # Project Resource Summary
@@ -752,7 +754,7 @@ class GoogleServicesMixin:
                 users[member]["roles"].append(role)
 
         self.logger.info(f"Found {len(users)} IAM members for project {project_id}")
-        return users
+        return self.extend_result(users)
 
     def get_pubsub_resources_for_project(
         self,
@@ -793,7 +795,7 @@ class GoogleServicesMixin:
             f"Found {result['topic_count']} topics"
             + (f", {result.get('subscription_count', 0)} subscriptions" if include_subscriptions else "")
         )
-        return result
+        return self.extend_result(result)
 
     def find_inactive_projects(
         self,
@@ -830,7 +832,7 @@ class GoogleServicesMixin:
                 projects = {p["projectId"]: p for p in self.list_projects()}
             else:
                 self.logger.warning("list_projects not available, cannot find inactive projects")
-                return []
+                return self.extend_result([])
 
         inactive: list[dict[str, Any]] = []
 
@@ -866,4 +868,4 @@ class GoogleServicesMixin:
                         raise
 
         self.logger.info(f"Found {len(inactive)} inactive projects out of {len(projects)}")
-        return inactive
+        return self.extend_result(inactive)

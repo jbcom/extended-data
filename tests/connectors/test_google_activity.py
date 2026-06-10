@@ -8,6 +8,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from extended_data.connectors.google.services import GoogleServicesMixin
+from extended_data.containers import ExtendedList, extend_data
 
 
 class DummyGoogleServices(GoogleServicesMixin):
@@ -19,6 +20,9 @@ class DummyGoogleServices(GoogleServicesMixin):
 
     def is_project_empty(self, project_id: str) -> bool:
         return project_id in self.empty_projects
+
+    def extend_result(self, value: Any) -> Any:
+        return extend_data(value)
 
 
 def test_find_inactive_projects_uses_activity_threshold_for_empty_projects() -> None:
@@ -43,6 +47,7 @@ def test_find_inactive_projects_uses_activity_threshold_for_empty_projects() -> 
 
     inactive = connector.find_inactive_projects(projects, days_since_activity=90)
 
+    assert isinstance(inactive, ExtendedList)
     assert {project["projectId"] for project in inactive} == {"old", "unknown"}
     assert projects["old"]["inactive_reason"] == "no_resources_since=2000-01-01"
     assert projects["unknown"]["inactive_reason"] == "no_resources"
