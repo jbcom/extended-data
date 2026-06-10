@@ -31,8 +31,11 @@ from __future__ import annotations
 
 import json
 
-from collections.abc import Callable
+from collections.abc import Callable, Iterable, Mapping
 from typing import Any, cast
+
+from extended_data.connectors.redaction import redact_sensitive_data, redact_sensitive_text
+from extended_data.containers import to_builtin
 
 
 MCP_INSTALL_MESSAGE = "MCP SDK not installed. Install with: pip install extended-data[meshy,mcp]"
@@ -254,6 +257,23 @@ def _create_mcp_tools() -> list[tuple[Any, Callable[..., Any]]]:
     return mcp_tools
 
 
+def _jsonable_tool_result(result: Any) -> Any:
+    """Lower Meshy tool results to JSON-compatible redacted data."""
+    if hasattr(result, "model_dump"):
+        result = result.model_dump()
+    elif isinstance(result, Iterable) and not isinstance(result, (str, bytes, bytearray, Mapping)):
+        result = [item.model_dump() if hasattr(item, "model_dump") else item for item in result]
+    result = to_builtin(result)
+    if isinstance(result, set | frozenset):
+        result = [to_builtin(item) for item in result]
+    return redact_sensitive_data(result)
+
+
+def _tool_error_payload(error: object) -> dict[str, str]:
+    """Return an MCP-safe error payload without raw secret values."""
+    return {"error": redact_sensitive_text(error)}
+
+
 def create_server() -> Any:
     """Create an MCP server with Meshy AI tools.
 
@@ -299,12 +319,12 @@ def create_server() -> Any:
 
         try:
             result = handler(**arguments)
-            return [TextContent(type="text", text=json.dumps(result, indent=2))]
+            return [TextContent(type="text", text=json.dumps(_jsonable_tool_result(result), indent=2))]
         except Exception as e:
             return [
                 TextContent(
                     type="text",
-                    text=json.dumps({"error": str(e)}, indent=2),
+                    text=json.dumps(_tool_error_payload(e), indent=2),
                 )
             ]
 

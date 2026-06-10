@@ -28,7 +28,7 @@ import sys
 from collections.abc import Callable, Iterable, Mapping
 from typing import Any, cast
 
-from extended_data.connectors.redaction import redact_sensitive_data
+from extended_data.connectors.redaction import redact_sensitive_data, redact_sensitive_text
 from extended_data.connectors.registry import _list_connector_classes, get_connector
 from extended_data.connectors.surface import connector_data_methods
 from extended_data.containers import to_builtin
@@ -108,6 +108,11 @@ def _jsonable_tool_result(result: Any) -> Any:
     if isinstance(result, set | frozenset):
         result = [to_builtin(item) for item in result]
     return redact_sensitive_data(result)
+
+
+def _tool_error_text(error: Exception) -> str:
+    """Return an MCP-safe error string without raw secret values."""
+    return f"Error: {type(error).__name__}: {redact_sensitive_text(error)}"
 
 
 def create_server() -> Any:
@@ -192,7 +197,7 @@ def create_server() -> Any:
             return [TextContent(type="text", text=json.dumps(_jsonable_tool_result(result), indent=2, default=str))]
 
         except Exception as e:
-            return [TextContent(type="text", text=f"Error: {type(e).__name__}: {e}")]
+            return [TextContent(type="text", text=_tool_error_text(e))]
 
     return server
 
