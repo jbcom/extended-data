@@ -7,8 +7,8 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 
-# Patch target for GithubConnector - patch at source since tools.py imports lazily inside functions
-GITHUB_CONNECTOR_PATCH = "extended_data.connectors.github.GithubConnector"
+# Patch target for GitHubConnector - patch at source since tools.py imports lazily inside functions
+GITHUB_CONNECTOR_PATCH = "extended_data.connectors.github.GitHubConnector"
 
 
 class TestGitHubToolDefinitions:

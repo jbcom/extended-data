@@ -1,4 +1,4 @@
-"""Tests for VendorConnectors main class."""
+"""Tests for ConnectorFabric main class."""
 
 from __future__ import annotations
 
@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from extended_data.connectors.connectors import VendorConnectors
+from extended_data.connectors.connectors import ConnectorFabric
 from extended_data.connectors.registry import _register_builtins
 
 
@@ -30,25 +30,25 @@ requires_slack = pytest.mark.skipif(not _has_module("slack_sdk"), reason="slack-
 requires_vault = pytest.mark.skipif(not _has_module("hvac"), reason="hvac not installed")
 
 
-class TestVendorConnectors:
-    """Tests for VendorConnectors class."""
+class TestConnectorFabric:
+    """Tests for ConnectorFabric class."""
 
     def test_init(self):
-        """Test VendorConnectors initialization."""
-        vc = VendorConnectors()
+        """Test ConnectorFabric initialization."""
+        vc = ConnectorFabric()
         assert vc.logger is not None
         assert vc._client_cache is not None
 
     def test_init_with_logger(self):
-        """Test VendorConnectors initialization with custom logger."""
+        """Test ConnectorFabric initialization with custom logger."""
         mock_logger = MagicMock()
-        vc = VendorConnectors(logger=mock_logger)
+        vc = ConnectorFabric(logger=mock_logger)
         assert vc.logging == mock_logger
         assert vc.logger is not None  # Logger is extracted from logging
 
     def test_get_cache_key(self):
         """Test cache key generation."""
-        vc = VendorConnectors()
+        vc = ConnectorFabric()
         key1 = vc._get_cache_key(param1="value1", param2="value2")
         key2 = vc._get_cache_key(param1="value1", param2="value2")
         key3 = vc._get_cache_key(param1="value1", param2="different")
@@ -58,7 +58,7 @@ class TestVendorConnectors:
 
     def test_cache_client(self):
         """Test caching and retrieving clients."""
-        vc = VendorConnectors()
+        vc = ConnectorFabric()
         mock_client = MagicMock()
 
         # Set cache
@@ -76,7 +76,7 @@ class TestVendorConnectors:
     @patch("extended_data.connectors.aws.AWSConnector")
     def test_get_aws_connector(self, mock_aws):
         """Test getting AWS connector."""
-        vc = VendorConnectors()
+        vc = ConnectorFabric()
         mock_connector = MagicMock()
         mock_aws.return_value = mock_connector
 
@@ -89,7 +89,7 @@ class TestVendorConnectors:
     @patch("extended_data.connectors.aws.AWSConnector")
     def test_get_aws_connector_caching(self, mock_aws):
         """Test AWS connector caching."""
-        vc = VendorConnectors()
+        vc = ConnectorFabric()
         mock_connector = MagicMock()
         mock_aws.return_value = mock_connector
 
@@ -106,7 +106,7 @@ class TestVendorConnectors:
     @patch("extended_data.connectors.aws.AWSConnector")
     def test_get_aws_client(self, mock_aws):
         """Test getting AWS client."""
-        vc = VendorConnectors()
+        vc = ConnectorFabric()
         mock_connector = MagicMock()
         mock_client = MagicMock()
         mock_connector.get_aws_client.return_value = mock_client
@@ -121,7 +121,7 @@ class TestVendorConnectors:
     @patch("extended_data.connectors.aws.AWSConnector")
     def test_get_aws_resource(self, mock_aws):
         """Test getting AWS resource."""
-        vc = VendorConnectors()
+        vc = ConnectorFabric()
         mock_connector = MagicMock()
         mock_resource = MagicMock()
         mock_connector.get_aws_resource.return_value = mock_resource
@@ -136,7 +136,7 @@ class TestVendorConnectors:
     @patch("extended_data.connectors.google.GoogleConnector")
     def test_get_google_client(self, mock_google):
         """Test getting Google client."""
-        vc = VendorConnectors(
+        vc = ConnectorFabric(
             inputs={"GOOGLE_SERVICE_ACCOUNT": '{"type": "service_account"}', "GOOGLE_PROJECT_ID": "test-project"}
         )
         mock_connector = MagicMock()
@@ -149,10 +149,10 @@ class TestVendorConnectors:
         assert result == mock_connector
 
     @requires_github
-    @patch("extended_data.connectors.github.GithubConnector")
+    @patch("extended_data.connectors.github.GitHubConnector")
     def test_get_github_client(self, mock_github):
         """Test getting GitHub client."""
-        vc = VendorConnectors(inputs={"GITHUB_OWNER": "test-org", "GITHUB_TOKEN": "ghp_test123"})
+        vc = ConnectorFabric(inputs={"GITHUB_OWNER": "test-org", "GITHUB_TOKEN": "ghp_test123"})
         mock_connector = MagicMock()
         mock_github.return_value = mock_connector
 
@@ -164,7 +164,7 @@ class TestVendorConnectors:
     @patch("extended_data.connectors.slack.SlackConnector")
     def test_get_slack_client(self, mock_slack):
         """Test getting Slack client."""
-        vc = VendorConnectors(inputs={"SLACK_TOKEN": "xoxp-test123", "SLACK_BOT_TOKEN": "xoxb-test123"})
+        vc = ConnectorFabric(inputs={"SLACK_TOKEN": "xoxp-test123", "SLACK_BOT_TOKEN": "xoxb-test123"})
         mock_connector = MagicMock()
         mock_slack.return_value = mock_connector
 
@@ -176,7 +176,7 @@ class TestVendorConnectors:
     @patch("extended_data.connectors.vault.VaultConnector")
     def test_get_vault_connector(self, mock_vault):
         """Test getting Vault connector."""
-        vc = VendorConnectors()
+        vc = ConnectorFabric()
         mock_connector = MagicMock()
         mock_vault.return_value = mock_connector
 
@@ -187,7 +187,7 @@ class TestVendorConnectors:
     @patch("extended_data.connectors.connectors.ZoomConnector")
     def test_get_zoom_client(self, mock_zoom):
         """Test getting Zoom client."""
-        vc = VendorConnectors(
+        vc = ConnectorFabric(
             inputs={
                 "ZOOM_CLIENT_ID": "test-client-id",
                 "ZOOM_CLIENT_SECRET": "test-secret",
@@ -205,7 +205,7 @@ class TestVendorConnectors:
     @patch("extended_data.connectors.vault.VaultConnector")
     def test_get_vault_client(self, mock_vault):
         """Test getting Vault client."""
-        vc = VendorConnectors()
+        vc = ConnectorFabric()
         mock_connector = MagicMock()
         mock_client = MagicMock()
         mock_connector.vault_client = mock_client
@@ -223,7 +223,7 @@ class TestVendorConnectors:
             patch("extended_data.connectors.aws.AWSConnector") as mock_aws,
             patch("extended_data.connectors.slack.SlackConnector") as mock_slack,
         ):
-            vc = VendorConnectors(inputs={"SLACK_TOKEN": "xoxp-test123", "SLACK_BOT_TOKEN": "xoxb-test123"})
+            vc = ConnectorFabric(inputs={"SLACK_TOKEN": "xoxp-test123", "SLACK_BOT_TOKEN": "xoxb-test123"})
             mock_aws_connector = MagicMock()
             mock_slack_connector = MagicMock()
             mock_aws.return_value = mock_aws_connector
@@ -244,14 +244,14 @@ class TestVendorConnectors:
     def test_get_aws_connector_without_boto3(self):
         """Test that get_aws_connector raises ImportError without boto3."""
         # This test runs even without boto3 to verify error handling
-        vc = VendorConnectors()
+        vc = ConnectorFabric()
         if not _has_module("boto3"):
             with pytest.raises(ImportError, match="boto3"):
                 vc.get_aws_connector()
 
     def test_get_github_client_without_pygithub(self):
         """Test that get_github_client raises ImportError without PyGithub."""
-        vc = VendorConnectors(inputs={"GITHUB_OWNER": "test-org", "GITHUB_TOKEN": "ghp_test123"})
+        vc = ConnectorFabric(inputs={"GITHUB_OWNER": "test-org", "GITHUB_TOKEN": "ghp_test123"})
         if not _has_module("github"):
             with pytest.raises(ImportError, match="PyGithub"):
                 vc.get_github_client()
@@ -275,4 +275,4 @@ class TestVendorConnectors:
 
         _register_builtins(connectors)
 
-        assert connectors["github"].__name__ == "GithubConnector"
+        assert connectors["github"].__name__ == "GitHubConnector"

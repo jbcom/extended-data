@@ -1,4 +1,4 @@
-"""Google Cloud and Workspace connector built on shared monorepo packages."""
+"""Google Cloud and Workspace connector built on extended-data primitives."""
 
 from __future__ import annotations
 

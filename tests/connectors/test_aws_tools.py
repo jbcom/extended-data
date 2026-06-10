@@ -236,7 +236,7 @@ class TestGetTools:
         assert len(tools) > 0
         assert all(callable(t) for t in tools)
 
-    @patch("extended_data.connectors._compat.is_available")
+    @patch("extended_data.connectors._optional.is_available")
     def test_get_tools_auto_fallback(self, mock_is_available):
         """Test auto-detection falls back to strands/functions."""
         from extended_data.connectors.aws.tools import get_tools

@@ -584,7 +584,7 @@ def get_tools(framework: str = "auto") -> list[Any]:
         tools = get_tools("langchain")
         tools = get_tools("crewai")
     """
-    from extended_data.connectors._compat import is_available
+    from extended_data.connectors._optional import is_available
 
     if framework == "auto":
         # Priority: CrewAI > LangChain > Strands/functions

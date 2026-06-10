@@ -210,7 +210,7 @@ class TestGetTools:
         with pytest.raises(ValueError, match="Unknown framework"):
             get_tools(framework="invalid")
 
-    @patch("extended_data.connectors._compat.is_available")
+    @patch("extended_data.connectors._optional.is_available")
     def test_get_tools_auto_no_frameworks(self, mock_is_available):
         """Test get_tools with auto detection when no frameworks installed."""
         from extended_data.connectors.vault.tools import get_tools

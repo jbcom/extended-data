@@ -124,11 +124,11 @@ def test_wrap_raw_data_for_export_tf_alias() -> None:
 def test_wrap_raw_data_for_export_toml() -> None:
     """Encode mappings as TOML when explicitly requested."""
     result = wrap_raw_data_for_export(
-        {"package": {"name": "extended-data-types"}},
+        {"package": {"name": "extended-data"}},
         allow_encoding="toml",
     )
     assert "[package]" in result
-    assert 'name = "extended-data-types"' in result
+    assert 'name = "extended-data"' in result
 
 
 def test_wrap_raw_data_for_export_json_preserves_composite_structure() -> None:

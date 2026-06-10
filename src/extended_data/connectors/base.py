@@ -1,14 +1,14 @@
 """Base class for all extended data connectors.
 
 This module provides VendorConnectorBase - the foundation for ALL connectors
-in this library. It extends DirectedInputsClass and provides:
+in this library. It extends InputProvider and provides:
 
 1. Credential loading from env vars, stdin, or direct inputs
 2. HTTP client with retries and rate limiting
 3. MCP server scaffolding
 4. LangChain tool registration helpers
 
-ALL connectors should extend this class instead of DirectedInputsClass directly.
+ALL connectors should extend this class instead of InputProvider directly.
 
 Usage:
     from extended_data.connectors.base import VendorConnectorBase
@@ -43,7 +43,7 @@ from tenacity import (
     wait_exponential,
 )
 
-from extended_data.inputs import DirectedInputsClass
+from extended_data.inputs import InputProvider
 from extended_data.logging import Logging
 
 
@@ -66,11 +66,11 @@ class ConnectorAPIError(Exception):
         self.status_code = status_code
 
 
-class VendorConnectorBase(DirectedInputsClass, ABC):
+class VendorConnectorBase(InputProvider, ABC):
     """Base class for all extended data connectors.
 
     Provides:
-    - DirectedInputsClass for credential loading (env, stdin, direct)
+    - InputProvider for credential loading (env, stdin, direct)
     - HTTP client with connection pooling
     - Automatic retries with exponential backoff
     - Rate limiting
@@ -119,7 +119,7 @@ class VendorConnectorBase(DirectedInputsClass, ABC):
             base_url: Base URL (overrides class default)
             timeout: HTTP timeout in seconds
             logger: Logger instance
-            **kwargs: Passed to DirectedInputsClass
+            **kwargs: Passed to InputProvider
         """
         super().__init__(**kwargs)
 

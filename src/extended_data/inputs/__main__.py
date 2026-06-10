@@ -1,4 +1,4 @@
-"""Module to handle directed inputs for the DirectedInputsClass library.
+"""Module to handle directed inputs for the InputProvider library.
 
 This module provides functionality for managing inputs from various sources
 (environment, stdin) and allows for dynamic merging, freezing, and thawing
@@ -37,7 +37,7 @@ if TYPE_CHECKING:
     from collections.abc import Mapping
 
 
-class DirectedInputsClass:
+class InputProvider:
     """A class to manage and process directed inputs from environment variables.
 
     stdin, or provided dictionaries.
@@ -57,7 +57,7 @@ class DirectedInputsClass:
         env_prefix: str | None = None,
         strip_env_prefix: bool = False,
     ):
-        """Initializes the DirectedInputsClass with the provided inputs.
+        """Initializes the InputProvider with the provided inputs.
 
         Optionally loading additional inputs from environment variables and stdin.
 

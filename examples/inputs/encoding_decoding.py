@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import base64
 
-from extended_data.inputs import DirectedInputsClass
+from extended_data.inputs import InputProvider
 
 
 def main() -> None:
@@ -26,7 +26,7 @@ def main() -> None:
     base64_json = base64.b64encode(json_data.encode()).decode()
     base64_yaml = base64.b64encode(yaml_data.encode()).decode()
 
-    inputs = DirectedInputsClass(
+    inputs = InputProvider(
         inputs={
             "json_config": json_data,
             "yaml_config": yaml_data,

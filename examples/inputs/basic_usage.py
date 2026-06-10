@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Basic usage example for DirectedInputsClass.
+"""Basic usage example for InputProvider.
 
-This example demonstrates the fundamental features of the legacy DirectedInputsClass API:
+This example demonstrates the fundamental features of the InputProvider API:
 - Loading inputs from environment variables
 - Providing default values
 - Type conversion (boolean, integer, float)
@@ -15,11 +15,11 @@ from __future__ import annotations
 
 import os
 
-from extended_data.inputs import DirectedInputsClass
+from extended_data.inputs import InputProvider
 
 
 def main() -> None:
-    """Demonstrate basic DirectedInputsClass usage."""
+    """Demonstrate basic InputProvider usage."""
     # Set up some environment variables for demonstration
     os.environ["APP_DEBUG"] = "true"
     os.environ["APP_PORT"] = "8080"
@@ -27,7 +27,7 @@ def main() -> None:
     os.environ["APP_NAME"] = "MyApplication"
 
     # Initialize with environment variables filtered by prefix
-    inputs = DirectedInputsClass(
+    inputs = InputProvider(
         from_environment=True,
         env_prefix="APP_",
         strip_env_prefix=True,

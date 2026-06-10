@@ -1,7 +1,7 @@
 """Meshy AI Connector - HTTP client for Meshy AI 3D generation API.
 
 This connector provides Python access to Meshy AI's 3D asset generation API,
-following the shared connector patterns used across this monorepo.
+following the shared connector patterns used across extended-data.
 """
 
 from __future__ import annotations

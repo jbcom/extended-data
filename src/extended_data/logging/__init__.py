@@ -6,10 +6,8 @@ configurable logging for console and file outputs, and clean exit functionality.
 
 from __future__ import annotations
 
-
-__version__ = "2.1.1"
-
+from extended_data._version import __version__
 from extended_data.logging.logging import ExitRunError, KeyTransform, Logging
 
 
-__all__ = ["ExitRunError", "KeyTransform", "Logging"]
+__all__ = ["ExitRunError", "KeyTransform", "Logging", "__version__"]

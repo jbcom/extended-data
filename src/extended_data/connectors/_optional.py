@@ -1,10 +1,10 @@
-"""Compatibility and graceful degradation utilities.
+"""Optional dependency utilities.
 
 This module provides utilities for checking optional dependencies and
 providing helpful error messages when they're missing.
 
 Usage:
-    from extended_data.connectors._compat import require_extra, is_available
+    from extended_data.connectors._optional import require_extra, is_available
 
     # Check if available (returns bool)
     if is_available("boto3"):

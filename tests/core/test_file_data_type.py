@@ -495,7 +495,7 @@ def test_decode_file_infer_hcl_suffix() -> None:
 
 
 def test_decode_file_infer_toml_alias_suffix() -> None:
-    """Infer TOML decoding from legacy .tml suffixes."""
+    """Infer TOML decoding from historical .tml suffixes."""
     result = decode_file('title = "Example"\n', file_path="/path/to/config.tml")
     assert result == {"title": "Example"}
 

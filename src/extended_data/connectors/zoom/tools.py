@@ -202,7 +202,7 @@ def get_strands_tools() -> list[Any]:
 
 def get_tools(framework: str = "auto") -> list[Any]:
     """Get Zoom tools for the specified or auto-detected framework."""
-    from extended_data.connectors._compat import is_available
+    from extended_data.connectors._optional import is_available
 
     if framework == "auto":
         if is_available("crewai"):

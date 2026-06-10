@@ -1,4 +1,4 @@
-"""AWS connector built on shared packages from this monorepo.
+"""AWS connector built on extended-data primitives.
 
 This package provides AWS operations organized into submodules:
 - organizations: AWS Organizations and Control Tower account management
@@ -109,7 +109,7 @@ class AWSConnector(VendorConnectorBase):
             self.aws_sessions[execution_role_arn] = {}
 
         if not role_session_name:
-            role_session_name = "VendorConnectors"
+            role_session_name = "ConnectorFabric"
 
         if role_session_name not in self.aws_sessions[execution_role_arn]:
             self.aws_sessions[execution_role_arn][role_session_name] = self.assume_role(
