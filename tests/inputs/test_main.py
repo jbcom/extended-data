@@ -272,6 +272,24 @@ def test_decode_input_decodes_present_value_that_equals_default():
     assert missing.decode_input("json_key", default=raw_config, decode_from_json=True) == raw_config
 
 
+def test_decode_input_honors_explicit_none_values():
+    """Present None inputs should obey allow_none instead of looking missing."""
+    dic = InputProvider(inputs={"json_key": None}, from_environment=False)
+    missing = InputProvider(from_environment=False)
+
+    assert dic.decode_input("json_key", default="fallback", decode_from_json=True, allow_none=True) is None
+    assert dic.decode_input("json_key", default="fallback", decode_from_json=True, allow_none=False) == "fallback"
+    assert missing.decode_input("json_key", default="fallback", decode_from_json=True, allow_none=True) == "fallback"
+
+
+def test_decode_input_required_empty_value_raises():
+    """Required decode inputs still reject empty provided values."""
+    dic = InputProvider(inputs={"json_key": ""}, from_environment=False)
+
+    with pytest.raises(RuntimeError, match="Required input json_key not passed"):
+        dic.decode_input("json_key", decode_from_json=True, required=True)
+
+
 def test_decode_input_errors_do_not_echo_values():
     """Decode diagnostics identify the input key without exposing raw values."""
     dic = InputProvider(

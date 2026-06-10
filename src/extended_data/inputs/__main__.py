@@ -32,6 +32,9 @@ if TYPE_CHECKING:
     from collections.abc import Mapping
 
 
+_MISSING = object()
+
+
 class InputProvider:
     """Manage directed inputs from environment variables, stdin, or mappings.
 
@@ -259,14 +262,21 @@ class InputProvider:
         Returns:
             Any: The decoded input, potentially converted or defaulted.
         """
-        source_present = k in self.inputs
-        conf = self.get_input(k, default=default, required=required)
+        raw_input = self.inputs.get(k, _MISSING)
+        source_present = raw_input is not _MISSING
 
-        if not source_present or (is_nothing(self.inputs.get(k)) and conf == default):
-            return conf
+        if not source_present:
+            if required:
+                self.get_input(k, default=default, required=True)
+            return default
 
+        conf = to_builtin(raw_input)
         if conf is None:
             return default if not allow_none else None
+        if is_nothing(conf):
+            if required:
+                self.get_input(k, default=default, required=True)
+            return default
 
         conf = self._coerce_text(conf)
 
