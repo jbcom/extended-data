@@ -27,9 +27,12 @@ Usage:
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from typing import Any
 
 from pydantic import BaseModel, Field
+
+from extended_data.containers import extend_data
 
 
 # =============================================================================
@@ -91,7 +94,7 @@ def get_caller_account_id() -> dict[str, str]:
 
     connector = AWSConnectorFull()
     account_id = connector.get_caller_account_id()
-    return {"account_id": account_id}
+    return extend_data({"account_id": account_id})
 
 
 def list_s3_buckets() -> list[dict[str, Any]]:
@@ -104,14 +107,16 @@ def list_s3_buckets() -> list[dict[str, Any]]:
 
     connector = AWSConnectorFull()
     buckets = connector.list_s3_buckets()
-    return [
-        {
-            "name": name,
-            "creation_date": str(data.get("CreationDate", "")),
-            "region": data.get("region", ""),
-        }
-        for name, data in buckets.items()
-    ]
+    return extend_data(
+        [
+            {
+                "name": name,
+                "creation_date": str(data.get("CreationDate", "")),
+                "region": data.get("region", ""),
+            }
+            for name, data in buckets.items()
+        ]
+    )
 
 
 def list_s3_objects(bucket: str) -> list[dict[str, Any]]:
@@ -127,14 +132,14 @@ def list_s3_objects(bucket: str) -> list[dict[str, Any]]:
 
     connector = AWSConnectorFull()
     objects_raw: Any = connector.list_objects(bucket)
-    if isinstance(objects_raw, dict):
+    if isinstance(objects_raw, Mapping):
         objects = [{"key": key, **data} for key, data in objects_raw.items()]
     else:
         objects = objects_raw
 
     result: list[dict[str, Any]] = []
     for data in objects:
-        if not isinstance(data, dict):
+        if not isinstance(data, Mapping):
             continue
         result.append(
             {
@@ -143,7 +148,7 @@ def list_s3_objects(bucket: str) -> list[dict[str, Any]]:
                 "last_modified": str(data.get("last_modified", data.get("LastModified", ""))),
             }
         )
-    return result
+    return extend_data(result)
 
 
 def list_accounts() -> list[dict[str, Any]]:
@@ -156,15 +161,17 @@ def list_accounts() -> list[dict[str, Any]]:
 
     connector = AWSConnectorFull()
     accounts = connector.get_accounts()
-    return [
-        {
-            "id": acc_id,
-            "name": data.get("Name", ""),
-            "email": data.get("Email", ""),
-            "status": data.get("Status", ""),
-        }
-        for acc_id, data in accounts.items()
-    ]
+    return extend_data(
+        [
+            {
+                "id": acc_id,
+                "name": data.get("Name", ""),
+                "email": data.get("Email", ""),
+                "status": data.get("Status", ""),
+            }
+            for acc_id, data in accounts.items()
+        ]
+    )
 
 
 def list_sso_users() -> list[dict[str, Any]]:
@@ -177,15 +184,17 @@ def list_sso_users() -> list[dict[str, Any]]:
 
     connector = AWSConnectorFull()
     users = connector.list_sso_users()
-    return [
-        {
-            "user_id": user_id,
-            "user_name": data.get("user_name", ""),
-            "display_name": data.get("display_name", ""),
-            "email": data.get("primary_email", {}).get("value", ""),
-        }
-        for user_id, data in users.items()
-    ]
+    return extend_data(
+        [
+            {
+                "user_id": user_id,
+                "user_name": data.get("user_name", ""),
+                "display_name": data.get("display_name", ""),
+                "email": data.get("primary_email", {}).get("value", ""),
+            }
+            for user_id, data in users.items()
+        ]
+    )
 
 
 def list_sso_groups() -> list[dict[str, Any]]:
@@ -198,14 +207,16 @@ def list_sso_groups() -> list[dict[str, Any]]:
 
     connector = AWSConnectorFull()
     groups = connector.list_sso_groups()
-    return [
-        {
-            "group_id": group_id,
-            "display_name": data.get("display_name", ""),
-            "member_count": len(data.get("members", [])),
-        }
-        for group_id, data in groups.items()
-    ]
+    return extend_data(
+        [
+            {
+                "group_id": group_id,
+                "display_name": data.get("display_name", ""),
+                "member_count": len(data.get("members", [])),
+            }
+            for group_id, data in groups.items()
+        ]
+    )
 
 
 def list_secrets(
@@ -241,7 +252,7 @@ def list_secrets(
             result.append({"name": name, "arn": None, "value": None})
         else:
             result.append({"name": name, "arn": data.get("ARN"), "value": data})
-    return result
+    return extend_data(result)
 
 
 def get_secret(secret_id: str) -> dict[str, Any]:
@@ -257,11 +268,13 @@ def get_secret(secret_id: str) -> dict[str, Any]:
 
     connector = AWSConnectorFull()
     value = connector.get_secret(secret_id)
-    return {
-        "secret_name": secret_id,
-        "secret_value": value,
-        "status": "retrieved" if value is not None else "not_found",
-    }
+    return extend_data(
+        {
+            "secret_name": secret_id,
+            "secret_value": value,
+            "status": "retrieved" if value is not None else "not_found",
+        }
+    )
 
 
 # =============================================================================

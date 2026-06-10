@@ -8,6 +8,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from extended_data.containers import ExtendedDict, ExtendedList, ExtendedString, extend_data
+
 
 # Patch target for AWSConnectorFull - must patch where it's imported
 AWS_CONNECTOR_PATCH = "extended_data.connectors.aws.AWSConnectorFull"
@@ -51,6 +53,25 @@ class TestAWSToolDefinitions:
             assert defn["name"].startswith("aws_"), f"Tool name not prefixed: {defn['name']}"
 
 
+class TestGetCallerAccountId:
+    """Tests for get_caller_account_id tool."""
+
+    @patch(AWS_CONNECTOR_PATCH)
+    def test_get_caller_account_id(self, mock_connector_class):
+        """Test account ID lookup."""
+        from extended_data.connectors.aws.tools import get_caller_account_id
+
+        mock_connector = MagicMock()
+        mock_connector.get_caller_account_id.return_value = "123456789012"
+        mock_connector_class.return_value = mock_connector
+
+        result = get_caller_account_id()
+
+        assert isinstance(result, ExtendedDict)
+        assert isinstance(result["account_id"], ExtendedString)
+        assert result["account_id"] == "123456789012"
+
+
 class TestListSecrets:
     """Tests for list_secrets tool."""
 
@@ -60,22 +81,28 @@ class TestListSecrets:
         from extended_data.connectors.aws.tools import list_secrets
 
         mock_connector = MagicMock()
-        mock_connector.list_secrets.return_value = {
-            "my-secret": {
-                "ARN": "arn:aws:secretsmanager:us-east-1:123456789012:secret:my-secret",
-                "Description": "Test secret",
-                "LastChangedDate": "2024-01-01T00:00:00Z",
-            },
-            "another-secret": {
-                "ARN": "arn:aws:secretsmanager:us-east-1:123456789012:secret:another-secret",
-                "Description": "Another test",
-                "LastChangedDate": "2024-01-02T00:00:00Z",
-            },
-        }
+        mock_connector.list_secrets.return_value = extend_data(
+            {
+                "my-secret": {
+                    "ARN": "arn:aws:secretsmanager:us-east-1:123456789012:secret:my-secret",
+                    "Description": "Test secret",
+                    "LastChangedDate": "2024-01-01T00:00:00Z",
+                },
+                "another-secret": {
+                    "ARN": "arn:aws:secretsmanager:us-east-1:123456789012:secret:another-secret",
+                    "Description": "Another test",
+                    "LastChangedDate": "2024-01-02T00:00:00Z",
+                },
+            }
+        )
         mock_connector_class.return_value = mock_connector
 
         result = list_secrets()
 
+        assert isinstance(result, ExtendedList)
+        assert isinstance(result[0], ExtendedDict)
+        assert isinstance(result[0]["name"], ExtendedString)
+        assert isinstance(result[0]["value"], ExtendedDict)
         assert len(result) == 2
         assert result[0]["name"] == "my-secret"
         assert "arn" in result[0]
@@ -108,6 +135,8 @@ class TestGetSecret:
 
         result = get_secret("my-secret")
 
+        assert isinstance(result, ExtendedDict)
+        assert isinstance(result["secret_name"], ExtendedString)
         assert result["secret_name"] == "my-secret"
         assert result["secret_value"] == "super-secret-value"
         assert result["status"] == "retrieved"
@@ -122,16 +151,21 @@ class TestListS3Buckets:
         from extended_data.connectors.aws.tools import list_s3_buckets
 
         mock_connector = MagicMock()
-        mock_connector.list_s3_buckets.return_value = {
-            "my-bucket": {
-                "CreationDate": "2024-01-01T00:00:00Z",
-                "region": "us-east-1",
-            },
-        }
+        mock_connector.list_s3_buckets.return_value = extend_data(
+            {
+                "my-bucket": {
+                    "CreationDate": "2024-01-01T00:00:00Z",
+                    "region": "us-east-1",
+                },
+            }
+        )
         mock_connector_class.return_value = mock_connector
 
         result = list_s3_buckets()
 
+        assert isinstance(result, ExtendedList)
+        assert isinstance(result[0], ExtendedDict)
+        assert isinstance(result[0]["name"], ExtendedString)
         assert len(result) == 1
         assert result[0]["name"] == "my-bucket"
         assert result[0]["region"] == "us-east-1"
@@ -146,17 +180,22 @@ class TestListS3Objects:
         from extended_data.connectors.aws.tools import list_s3_objects
 
         mock_connector = MagicMock()
-        mock_connector.list_objects.return_value = {
-            "file1.txt": {
-                "Size": 1024,
-                "LastModified": "2024-01-01T00:00:00Z",
-                "StorageClass": "STANDARD",
-            },
-        }
+        mock_connector.list_objects.return_value = extend_data(
+            {
+                "file1.txt": {
+                    "Size": 1024,
+                    "LastModified": "2024-01-01T00:00:00Z",
+                    "StorageClass": "STANDARD",
+                },
+            }
+        )
         mock_connector_class.return_value = mock_connector
 
         result = list_s3_objects("my-bucket")
 
+        assert isinstance(result, ExtendedList)
+        assert isinstance(result[0], ExtendedDict)
+        assert isinstance(result[0]["key"], ExtendedString)
         assert len(result) == 1
         assert result[0]["key"] == "file1.txt"
         assert result[0]["size"] == 1024
@@ -171,17 +210,22 @@ class TestListAccounts:
         from extended_data.connectors.aws.tools import list_accounts
 
         mock_connector = MagicMock()
-        mock_connector.get_accounts.return_value = {
-            "123456789012": {
-                "Name": "Production",
-                "Email": "prod@example.com",
-                "Status": "ACTIVE",
-            },
-        }
+        mock_connector.get_accounts.return_value = extend_data(
+            {
+                "123456789012": {
+                    "Name": "Production",
+                    "Email": "prod@example.com",
+                    "Status": "ACTIVE",
+                },
+            }
+        )
         mock_connector_class.return_value = mock_connector
 
         result = list_accounts()
 
+        assert isinstance(result, ExtendedList)
+        assert isinstance(result[0], ExtendedDict)
+        assert isinstance(result[0]["name"], ExtendedString)
         assert len(result) == 1
         assert result[0]["id"] == "123456789012"
         assert result[0]["name"] == "Production"
@@ -196,17 +240,22 @@ class TestListSSOUsers:
         from extended_data.connectors.aws.tools import list_sso_users
 
         mock_connector = MagicMock()
-        mock_connector.list_sso_users.return_value = {
-            "user-123": {
-                "user_name": "john.doe",
-                "display_name": "John Doe",
-                "primary_email": {"value": "john@example.com"},
-            },
-        }
+        mock_connector.list_sso_users.return_value = extend_data(
+            {
+                "user-123": {
+                    "user_name": "john.doe",
+                    "display_name": "John Doe",
+                    "primary_email": {"value": "john@example.com"},
+                },
+            }
+        )
         mock_connector_class.return_value = mock_connector
 
         result = list_sso_users()
 
+        assert isinstance(result, ExtendedList)
+        assert isinstance(result[0], ExtendedDict)
+        assert isinstance(result[0]["user_name"], ExtendedString)
         assert len(result) == 1
         assert result[0]["user_id"] == "user-123"
         assert result[0]["user_name"] == "john.doe"
@@ -221,17 +270,22 @@ class TestListSSOGroups:
         from extended_data.connectors.aws.tools import list_sso_groups
 
         mock_connector = MagicMock()
-        mock_connector.list_sso_groups.return_value = {
-            "group-123": {
-                "display_name": "Admins",
-                "description": "Admin group",
-                "members": ["user-1", "user-2"],
-            },
-        }
+        mock_connector.list_sso_groups.return_value = extend_data(
+            {
+                "group-123": {
+                    "display_name": "Admins",
+                    "description": "Admin group",
+                    "members": ["user-1", "user-2"],
+                },
+            }
+        )
         mock_connector_class.return_value = mock_connector
 
         result = list_sso_groups()
 
+        assert isinstance(result, ExtendedList)
+        assert isinstance(result[0], ExtendedDict)
+        assert isinstance(result[0]["display_name"], ExtendedString)
         assert len(result) == 1
         assert result[0]["group_id"] == "group-123"
         assert result[0]["display_name"] == "Admins"
