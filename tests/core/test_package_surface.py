@@ -157,12 +157,14 @@ def test_root_exports_first_class_integrated_primitives() -> None:
 def test_tier2_container_methods_expose_integrated_primitives() -> None:
     """Tier 2 containers should expose common primitive operations directly."""
     matched = ExtendedString("api-gateway").is_partial_match("gateway")
+    parsed_int = ExtendedString("42").to_int()
     typed = ExtendedList(["api", 2]).split_by_type(primitive_only=True)
     mapped = ExtendedTuple(("service", "region")).zipmap(("api", "us-east-1"))
     first_entry = ExtendedDict({"empty": "", "service": "api"}).first_non_empty_entry("empty", "service")
     selected = ExtendedList([None, "", {"service": "api"}]).first_non_empty()
 
     assert matched is True
+    assert parsed_int == 42
     assert isinstance(typed, ExtendedDict)
     assert typed["str"] == ["api"]
     assert isinstance(mapped, ExtendedDict)

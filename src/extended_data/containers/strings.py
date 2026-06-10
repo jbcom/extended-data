@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import datetime
+
 from collections import UserString
 from collections.abc import Iterable, Mapping
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 import extended_data.primitives.matching as primitive_matching
@@ -27,7 +30,15 @@ from extended_data.primitives.strings import (
     truncate,
     upper_first_char,
 )
-from extended_data.primitives.types import string_to_bool
+from extended_data.primitives.types import (
+    string_to_bool,
+    string_to_date,
+    string_to_datetime,
+    string_to_float,
+    string_to_int,
+    string_to_path,
+    string_to_time,
+)
 
 
 if TYPE_CHECKING:
@@ -165,3 +176,27 @@ class ExtendedString(UserString):
     def to_bool(self, *, raise_on_error: bool = False) -> bool | None:
         """Return a boolean parsed from the string."""
         return string_to_bool(self.data, raise_on_error=raise_on_error)
+
+    def to_float(self, *, raise_on_error: bool = False) -> float | None:
+        """Return a float parsed from the string."""
+        return string_to_float(self.data, raise_on_error=raise_on_error)
+
+    def to_int(self, *, raise_on_error: bool = False) -> int | None:
+        """Return an integer parsed from the string."""
+        return string_to_int(self.data, raise_on_error=raise_on_error)
+
+    def to_path(self, *, raise_on_error: bool = False) -> Path | None:
+        """Return a path parsed from the string."""
+        return string_to_path(self.data, raise_on_error=raise_on_error)
+
+    def to_date(self, *, raise_on_error: bool = False) -> datetime.date | None:
+        """Return a date parsed from the string."""
+        return string_to_date(self.data, raise_on_error=raise_on_error)
+
+    def to_datetime(self, *, raise_on_error: bool = False) -> datetime.datetime | None:
+        """Return a datetime parsed from the string."""
+        return string_to_datetime(self.data, raise_on_error=raise_on_error)
+
+    def to_time(self, *, raise_on_error: bool = False) -> datetime.time | None:
+        """Return a time parsed from the string."""
+        return string_to_time(self.data, raise_on_error=raise_on_error)

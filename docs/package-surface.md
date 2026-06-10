@@ -96,7 +96,10 @@ values containing `ExtendedString` parts, while `partition()` and
 `rpartition()` return `ExtendedTuple` values. String formatting paths
 `format()` and `format_map()` return `ExtendedString`. String matching paths
 `is_partial_match()` and `is_non_empty_match()` expose the Tier 1 matching
-helpers through `ExtendedString`.
+helpers through `ExtendedString`. Scalar conversion paths `to_bool()`,
+`to_int()`, `to_float()`, `to_path()`, `to_date()`, `to_datetime()`, and
+`to_time()` expose the Tier 1 `string_to_*()` family directly on
+`ExtendedString`.
 
 Container methods that return derived collections stay in Tier 2 as well:
 `ExtendedDict.filter()` returns an `ExtendedTuple` of accepted and rejected

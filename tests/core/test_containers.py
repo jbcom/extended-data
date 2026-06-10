@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import datetime
+
+from pathlib import Path
 from typing import Any
 
 import extended_data
@@ -38,6 +41,20 @@ def test_extended_string_chains_primitive_transforms() -> None:
     assert value.to_kebab_case() == "api-response-value"
     assert ExtendedString("1").ordinalize() == "1st"
     assert ExtendedString("yes").to_bool() is True
+    assert ExtendedString("42").to_int() == 42
+    assert ExtendedString("3.14").to_float() == 3.14
+    assert ExtendedString("/tmp/service.yaml").to_path() == Path("/tmp/service.yaml")
+    assert ExtendedString("2026-06-10").to_date() == datetime.date(2026, 6, 10)
+    assert ExtendedString("2026-06-10T12:30:00").to_datetime() == datetime.datetime(
+        2026,
+        6,
+        10,
+        12,
+        30,
+        0,
+        tzinfo=datetime.timezone.utc,
+    )
+    assert ExtendedString("12:30").to_time() == datetime.time(12, 30)
     assert ExtendedString("api-gateway").is_partial_match("gateway") is True
     assert ExtendedString("api").is_partial_match("gateway", check_prefix_only=True) is False
     assert ExtendedString("API").is_non_empty_match("api") is True

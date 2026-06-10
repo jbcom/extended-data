@@ -189,6 +189,9 @@ returns an `ExtendedList` of `ExtendedString` values, and partition operations
 return `ExtendedTuple` values. `ExtendedString.is_partial_match()` and
 `ExtendedString.is_non_empty_match()` expose the Tier 1 matching primitives
 without requiring callers to drop back to function-only utility code.
+`ExtendedString.to_bool()`, `to_int()`, `to_float()`, `to_path()`,
+`to_date()`, `to_datetime()`, and `to_time()` expose the Tier 1 scalar
+conversion family as direct string-container methods.
 Format encoders lower extended containers, including extended mapping keys, at
 the serialization boundary.
 `read_data_file()` is the direct file boundary for one-step read plus decode
