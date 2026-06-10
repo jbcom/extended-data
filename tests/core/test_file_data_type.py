@@ -17,6 +17,7 @@ and mock objects to simulate Git operations without requiring actual repositorie
 
 from __future__ import annotations
 
+from base64 import b64encode
 from pathlib import Path
 from typing import Any
 
@@ -126,6 +127,7 @@ def test_clone_repository_to_temp(mocker, valid_repo_data: dict) -> None:
     """
     # Mock the Repo.clone_from method to return a mock Repo instance
     mock_clone_from = mocker.patch("extended_data.io.files.Repo.clone_from")
+    mocker.patch.dict("extended_data.io.files.os.environ", {}, clear=True)
     mock_repo_instance = mocker.Mock(spec=Repo)
     mock_clone_from.return_value = mock_repo_instance
 
@@ -135,6 +137,15 @@ def test_clone_repository_to_temp(mocker, valid_repo_data: dict) -> None:
     # Assert that temp_dir is a Path instance and repo is the mocked Repo instance
     assert isinstance(temp_dir, Path)
     assert repo is mock_repo_instance
+    clone_url = mock_clone_from.call_args.args[0]
+    clone_env = mock_clone_from.call_args.kwargs["env"]
+    expected_header = b64encode(b"x-access-token:token123").decode("ascii")
+
+    assert clone_url == "https://github.com/owner/repo.git"
+    assert "token123" not in clone_url
+    assert clone_env["GIT_CONFIG_KEY_0"] == "http.https://github.com/.extraheader"
+    assert clone_env["GIT_CONFIG_VALUE_0"] == f"Authorization: Basic {expected_header}"
+    assert clone_env["GIT_CONFIG_COUNT"] == "1"
 
     # Test cloning with errors
     mock_clone_from.side_effect = GitCommandError("Error", "git")

@@ -6,6 +6,7 @@ import os
 import tempfile
 import urllib.request
 
+from base64 import b64encode
 from collections.abc import Mapping
 from pathlib import Path
 from typing import Any, TypeAlias
@@ -19,6 +20,21 @@ from extended_data.primitives.serialization import normalize_data_encoding
 
 FilePath: TypeAlias = str | os.PathLike[str]
 """Type alias for file paths that can be represented as strings or os.PathLike objects."""
+
+
+def _github_auth_header_env(github_token: str) -> dict[str, str]:
+    """Return Git environment config for GitHub token auth without URL credentials."""
+    env = os.environ.copy()
+    try:
+        config_count = int(env.get("GIT_CONFIG_COUNT", "0"))
+    except ValueError:
+        config_count = 0
+
+    encoded = b64encode(f"x-access-token:{github_token}".encode()).decode("ascii")
+    env[f"GIT_CONFIG_KEY_{config_count}"] = "http.https://github.com/.extraheader"
+    env[f"GIT_CONFIG_VALUE_{config_count}"] = f"Authorization: Basic {encoded}"
+    env["GIT_CONFIG_COUNT"] = str(config_count + 1)
+    return env
 
 
 def get_parent_repository(file_path: FilePath | None = None, search_parent_directories: bool = True) -> Repo | None:
@@ -74,11 +90,11 @@ def clone_repository_to_temp(
     Raises:
         EnvironmentError: If errors occur while trying to clone a Git repository.
     """
-    repo_url = f"https://{github_token}:x-oauth-basic@github.com/{repo_owner}/{repo_name}.git"
+    repo_url = f"https://github.com/{repo_owner}/{repo_name}.git"
 
     try:
         temp_dir = Path(tempfile.mkdtemp())
-        repo = Repo.clone_from(repo_url, str(temp_dir), branch=branch or None)
+        repo = Repo.clone_from(repo_url, str(temp_dir), branch=branch or None, env=_github_auth_header_env(github_token))
         return temp_dir, repo
     except GitCommandError as e:
         error_message = "Git command error occurred"
