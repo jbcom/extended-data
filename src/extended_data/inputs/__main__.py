@@ -16,10 +16,10 @@ import sys
 from copy import deepcopy
 from typing import TYPE_CHECKING, Any
 
-from case_insensitive_dict import CaseInsensitiveDict
 from deepmerge import Merger  # type: ignore[attr-defined]
 
-from extended_data.containers.factory import extend_data
+from extended_data.containers.factory import extend_data, to_builtin
+from extended_data.containers.mappings import ExtendedDict
 from extended_data.io.base64 import base64_decode
 from extended_data.primitives.formats.errors import DataDecodeError
 from extended_data.primitives.formats.json import decode_json
@@ -38,8 +38,8 @@ class InputProvider:
     stdin, or provided dictionaries.
 
     Attributes:
-        inputs (CaseInsensitiveDict): Dictionary to store inputs.
-        frozen_inputs (CaseInsensitiveDict): Dictionary to store frozen inputs.
+        inputs (ExtendedDict): Dictionary to store inputs.
+        frozen_inputs (ExtendedDict): Dictionary to store frozen inputs.
         from_stdin (bool): Flag indicating if inputs were read from stdin.
         merger (Merger): Object to manage deep merging of dictionaries.
     """
@@ -80,15 +80,15 @@ class InputProvider:
             current_inputs = self._merge_inputs(stdin_inputs, current_inputs)
 
         self.from_stdin = from_stdin
-        self.inputs: CaseInsensitiveDict[str, Any] = CaseInsensitiveDict(current_inputs)
-        self.frozen_inputs: CaseInsensitiveDict[str, Any] = CaseInsensitiveDict()
+        self.inputs: ExtendedDict = ExtendedDict(current_inputs)
+        self.frozen_inputs: ExtendedDict = ExtendedDict()
 
     @staticmethod
     def _normalize_inputs(inputs: Mapping[str, Any] | None) -> dict[str, Any]:
         if inputs is None or is_nothing(inputs):
             return {}
 
-        return dict(inputs)
+        return to_builtin(dict(inputs))
 
     @staticmethod
     def _filtered_environment(
@@ -108,10 +108,10 @@ class InputProvider:
 
     def _merge_inputs(self, base: Mapping[str, Any], incoming: Mapping[str, Any]) -> dict[str, Any]:
         if is_nothing(incoming):
-            return deepcopy(dict(base))
+            return deepcopy(to_builtin(base))
 
-        clean_base = deepcopy(dict(base))
-        clean_incoming = deepcopy(dict(incoming))
+        clean_base = deepcopy(to_builtin(base))
+        clean_incoming = deepcopy(to_builtin(incoming))
 
         return self.merger.merge(clean_base, clean_incoming)
 
@@ -162,6 +162,7 @@ class InputProvider:
         is_float: bool = False,
         is_path: bool = False,
         is_datetime: bool = False,
+        as_extended: bool = False,
     ) -> Any:
         """Retrieves an input by key, with options for type conversion and default values.
 
@@ -178,25 +179,26 @@ class InputProvider:
             is_float (bool): Whether to convert the input to a float.
             is_path (bool): Whether to convert the input to a Path object.
             is_datetime (bool): Whether to convert the input to a datetime object.
+            as_extended (bool): Whether to wrap the returned value in Tier 2 containers.
 
         Returns:
             Any: The retrieved input, potentially converted or defaulted.
         """
-        inp = self.inputs.get(k, default)
+        inp = to_builtin(self.inputs.get(k, default))
 
         if is_nothing(inp):
             inp = default
 
         if is_bool and not isinstance(inp, bool):
             try:
-                inp = strtobool(inp, raise_on_error=True)
+                inp = strtobool(str(inp), raise_on_error=True)
             except (TypeError, ValueError) as exc:
                 message = f"Input {k} cannot be converted to boolean."
                 raise RuntimeError(message) from exc
 
         if is_integer and inp is not None and not isinstance(inp, int):
             try:
-                inp = strtoint(inp, raise_on_error=True)
+                inp = strtoint(str(inp), raise_on_error=True)
             except (TypeError, ValueError) as exc:
                 message = f"Input {k} cannot be converted to integer."
                 raise RuntimeError(message) from exc
@@ -226,6 +228,9 @@ class InputProvider:
             available = self._format_available_keys(self.inputs)
             message = f"Required input {k} not passed. Available input keys: {available}."
             raise RuntimeError(message)
+
+        if as_extended:
+            return extend_data(inp)
 
         return inp
 
@@ -303,51 +308,52 @@ class InputProvider:
 
         return conf
 
-    def freeze_inputs(self) -> CaseInsensitiveDict[str, Any]:
+    def freeze_inputs(self) -> ExtendedDict:
         """Freezes the current inputs, preventing further modifications until thawed.
 
         Returns:
-            CaseInsensitiveDict: The frozen inputs.
+            ExtendedDict: The frozen inputs.
         """
         if is_nothing(self.frozen_inputs):
-            self.frozen_inputs = deepcopy(self.inputs)
-            self.inputs = CaseInsensitiveDict()
+            self.frozen_inputs = ExtendedDict(deepcopy(to_builtin(self.inputs)))
+            self.inputs = ExtendedDict()
 
         return self.frozen_inputs
 
-    def thaw_inputs(self) -> CaseInsensitiveDict[str, Any]:
+    def thaw_inputs(self) -> ExtendedDict:
         """Thaws the inputs, merging the frozen inputs back into the current inputs.
 
         Returns:
-            CaseInsensitiveDict: The thawed inputs.
+            ExtendedDict: The thawed inputs.
         """
         if is_nothing(self.inputs):
-            self.inputs = deepcopy(self.frozen_inputs)
-            self.frozen_inputs = CaseInsensitiveDict()
+            self.inputs = ExtendedDict(deepcopy(to_builtin(self.frozen_inputs)))
+            self.frozen_inputs = ExtendedDict()
             return self.inputs
 
-        self.inputs = self.merger.merge(deepcopy(self.inputs), deepcopy(self.frozen_inputs))
-        self.frozen_inputs = CaseInsensitiveDict()
+        merged = self._merge_inputs(self.inputs, self.frozen_inputs)
+        self.inputs = ExtendedDict(merged)
+        self.frozen_inputs = ExtendedDict()
         return self.inputs
 
-    def merge_inputs(self, new_inputs: Mapping[str, Any] | None) -> CaseInsensitiveDict[str, Any]:
+    def merge_inputs(self, new_inputs: Mapping[str, Any] | None) -> ExtendedDict:
         """Merge new inputs into the current inputs using deep merge semantics.
 
         Args:
             new_inputs (Mapping[str, Any] | None): Incoming values to merge.
 
         Returns:
-            CaseInsensitiveDict[str, Any]: The updated input mapping.
+            ExtendedDict: The updated input mapping.
         """
         merged = self._merge_inputs(self.inputs, self._normalize_inputs(new_inputs))
-        self.inputs = CaseInsensitiveDict(merged)
+        self.inputs = ExtendedDict(merged)
         return self.inputs
 
-    def shift_inputs(self) -> CaseInsensitiveDict[str, Any]:
+    def shift_inputs(self) -> ExtendedDict:
         """Shifts between frozen and thawed inputs.
 
         Returns:
-            CaseInsensitiveDict: The resulting inputs after the shift.
+            ExtendedDict: The resulting inputs after the shift.
         """
         if is_nothing(self.frozen_inputs):
             return self.freeze_inputs()

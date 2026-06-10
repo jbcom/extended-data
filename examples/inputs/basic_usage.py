@@ -38,6 +38,7 @@ def main() -> None:
     inputs.get_input("PORT", is_integer=True)
     inputs.get_input("TIMEOUT", is_float=True)
     inputs.get_input("NAME")
+    inputs.inputs["NAME"].to_snake_case()
 
     # Demonstrate default values
     inputs.get_input("LOG_LEVEL", default="INFO")

@@ -103,8 +103,32 @@ def test_get_input_with_default():
     returning a default value if the key is not found.
     """
     dic = InputProvider(inputs={"key1": "value1"})
+    assert isinstance(dic.inputs, ExtendedDict)
+    assert isinstance(dic.inputs["key1"], ExtendedString)
     assert dic.get_input("key1", default="default_value") == "value1"
+    assert isinstance(dic.get_input("key1"), str)
     assert dic.get_input("key2", default="default_value") == "default_value"
+
+
+def test_get_input_uses_exact_keys():
+    """InputProvider now uses the package's exact-key ExtendedDict surface."""
+    dic = InputProvider(inputs={"API_KEY": "secret"}, from_environment=False)
+
+    assert dic.get_input("api_key", default="fallback") == "fallback"
+    assert dic.get_input("API_KEY") == "secret"
+
+
+def test_get_input_can_return_extended_containers():
+    """Plain input retrieval can opt into the Tier 2 container layer."""
+    dic = InputProvider(inputs={"config": {"service": "api"}, "name": "gateway"}, from_environment=False)
+
+    config = dic.get_input("config", as_extended=True)
+    name = dic.get_input("name", as_extended=True)
+
+    assert isinstance(config, ExtendedDict)
+    assert isinstance(config["service"], ExtendedString)
+    assert isinstance(name, ExtendedString)
+    assert name.upper_first() == "Gateway"
 
 
 def test_get_input_required():
@@ -276,7 +300,10 @@ def test_freeze_inputs():
     """
     dic = InputProvider(inputs={"key1": "value1"})
     frozen_inputs = dic.freeze_inputs()
+    assert isinstance(frozen_inputs, ExtendedDict)
     assert frozen_inputs["key1"] == "value1"
+    assert isinstance(frozen_inputs["key1"], ExtendedString)
+    assert isinstance(dic.inputs, ExtendedDict)
     assert dic.inputs == {}
 
 
@@ -289,7 +316,10 @@ def test_thaw_inputs():
     dic = InputProvider(inputs={"key1": "value1"})
     dic.freeze_inputs()
     dic.thaw_inputs()
+    assert isinstance(dic.inputs, ExtendedDict)
     assert dic.inputs["key1"] == "value1"
+    assert isinstance(dic.inputs["key1"], ExtendedString)
+    assert isinstance(dic.frozen_inputs, ExtendedDict)
     assert dic.frozen_inputs == {}
 
 
@@ -301,6 +331,8 @@ def test_shift_inputs():
     """
     dic = InputProvider(inputs={"key1": "value1"})
     dic.shift_inputs()
+    assert isinstance(dic.inputs, ExtendedDict)
+    assert isinstance(dic.frozen_inputs, ExtendedDict)
     assert dic.inputs == {}
     assert dic.frozen_inputs["key1"] == "value1"
 
@@ -314,6 +346,8 @@ def test_merge_inputs_deep_merge():
     dic = InputProvider(inputs={"nested": {"left": 1}})
     merged = dic.merge_inputs({"nested": {"right": 2}})
 
+    assert isinstance(merged, ExtendedDict)
+    assert isinstance(merged["nested"], ExtendedDict)
     assert merged["nested"] == {"left": 1, "right": 2}
 
 
@@ -326,5 +360,6 @@ def test_environment_prefix_filter(monkeypatch):
     dic = InputProvider(from_environment=True, env_prefix="APP_", strip_env_prefix=True)
 
     assert dic.inputs["ALPHA"] == "alpha"
+    assert dic.inputs["ALPHA"].upper_first() == "Alpha"
     assert dic.inputs["BETA"] == "beta"
     assert "UNSCOPED" not in dic.inputs

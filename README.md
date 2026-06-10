@@ -126,6 +126,11 @@ decoded files, Base64 payloads, and directed inputs can immediately use
 `DataWorkflow` makes those compositions first-class: read or decode data,
 apply named transformations, write an output artifact, and keep the step trail
 in a `WorkflowResult`. Missing workflow inputs and empty writes fail loudly.
+`InputProvider` stores its active, frozen, and merged input snapshots as
+`ExtendedDict` values, so direct input-data access can use Tier 2 container
+methods. `get_input()` remains the scalar coercion boundary for booleans,
+numbers, paths, datetimes, and credential strings; pass `as_extended=True` when
+an injected raw input value should stay in Tier 2 form.
 
 More detail lives in [`docs/package-surface.md`](docs/package-surface.md).
 

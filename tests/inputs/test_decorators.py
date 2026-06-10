@@ -27,6 +27,10 @@ class ExampleService:
     def parse_extended_config(self, extended_config: ExtendedDict) -> ExtendedDict:
         return extended_config
 
+    @input_config("raw_config", as_extended=True)
+    def parse_raw_extended_config(self, raw_config: ExtendedDict) -> ExtendedDict:
+        return raw_config
+
     def greet(self, prefix: str = "hello") -> str:
         return prefix
 
@@ -65,6 +69,14 @@ def test_decode_from_json_input_config_can_return_extended_containers() -> None:
     assert isinstance(parsed["name"], ExtendedString)
 
 
+def test_plain_input_config_can_return_extended_containers() -> None:
+    service = ExampleService(_input_provider_config={"inputs": {"raw_config": {"name": "api"}}})
+    parsed = service.parse_raw_extended_config()
+
+    assert isinstance(parsed, ExtendedDict)
+    assert isinstance(parsed["name"], ExtendedString)
+
+
 def test_method_default_used_when_input_missing() -> None:
     service = ExampleService(_input_provider_config={"inputs": {"domain": "acme.io"}})
     assert service.greet() == "hello"
@@ -82,3 +94,11 @@ def test_decorator_exposes_input_provider_property() -> None:
 
     assert service.input_provider.get_input("domain") == "override.io"
     assert not hasattr(service, "directed_inputs")
+
+
+def test_decorator_metadata_uses_extended_options() -> None:
+    metadata = ExampleService.__input_provider_metadata__
+
+    assert isinstance(metadata.options, ExtendedDict)
+    assert isinstance(metadata.options["inputs"], ExtendedDict)
+    assert isinstance(metadata.options["inputs"]["domain"], ExtendedString)

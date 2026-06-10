@@ -107,11 +107,26 @@ and stdin, then decodes or coerces values through the primitive layer. Its
 container bridge as file and Base64 decoding. Requested input coercions are
 strict, and diagnostics identify the input key and failed operation without
 echoing raw values from environment variables, stdin, JSON, YAML, or Base64
-payloads. `Logging` provides structured lifecycle logging for applications and
-connector workflows without creating log files unless file output is explicitly
-enabled. `ConnectorFabric` caches and coordinates vendor connectors while
-sharing input loading, logging, data normalization, retry behavior, and
-serialization.
+payloads. Active, frozen, shifted, and merged input snapshots are `ExtendedDict`
+values, and input decorator metadata/options are promoted the same way. The old
+case-insensitive input mapping is intentionally not preserved; exact keys keep
+configuration wiring explicit while still letting direct snapshots use Tier 2
+methods.
+
+```python
+inputs = InputProvider(inputs={"service": {"name": "api"}}, from_environment=False)
+assert inputs.inputs["service"]["name"].upper_first() == "Api"
+assert isinstance(inputs.merge_inputs({"service": {"region": "us-east-1"}}), ExtendedDict)
+```
+
+`get_input()` is the scalar coercion boundary for booleans, numbers, paths,
+datetimes, and credential strings. Pass `as_extended=True` when a raw injected
+input value should remain in Tier 2 form.
+
+`Logging` provides structured lifecycle logging for applications and connector
+workflows without creating log files unless file output is explicitly enabled.
+`ConnectorFabric` caches and coordinates vendor connectors while sharing input
+loading, logging, data normalization, retry behavior, and serialization.
 
 ## Connector Fabric
 
