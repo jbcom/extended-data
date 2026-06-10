@@ -64,8 +64,8 @@ class TestZoomConnector:
 
     @patch("extended_data.connectors.zoom.requests.get")
     @patch("extended_data.connectors.zoom.requests.post")
-    def test_get_zoom_users(self, mock_post, mock_get, base_connector_kwargs):
-        """Test getting Zoom users."""
+    def test_list_users(self, mock_post, mock_get, base_connector_kwargs):
+        """Test listing Zoom users."""
         mock_token_response = MagicMock()
         mock_token_response.json.return_value = {"access_token": "test-token"}
         mock_token_response.raise_for_status = MagicMock()
@@ -89,13 +89,24 @@ class TestZoomConnector:
             **base_connector_kwargs,
         )
 
-        users = connector.get_zoom_users()
+        users = connector.list_users()
         assert isinstance(users, ExtendedDict)
         assert isinstance(users["user1@example.com"], ExtendedDict)
         assert isinstance(users["user1@example.com"]["first_name"], ExtendedString)
         assert "user1@example.com" in users
         assert "user2@example.com" in users
         assert len(users) == 2
+
+    def test_get_zoom_users_alias_is_not_preserved(self, base_connector_kwargs):
+        """The clean major version should expose only the canonical list_users method."""
+        connector = ZoomConnector(
+            client_id="test-client-id",
+            client_secret="test-client-secret",
+            account_id="test-account-id",
+            **base_connector_kwargs,
+        )
+
+        assert not hasattr(connector, "get_zoom_users")
 
     @patch("extended_data.connectors.zoom.requests.post")
     def test_create_zoom_user(self, mock_post, base_connector_kwargs):
@@ -119,37 +130,6 @@ class TestZoomConnector:
         result = connector.create_zoom_user("newuser@example.com", "New", "User")
         assert result is True
         assert mock_post.call_count == 2
-
-    @patch("extended_data.connectors.zoom.requests.get")
-    @patch("extended_data.connectors.zoom.requests.post")
-    def test_list_users(self, mock_post, mock_get, base_connector_kwargs):
-        """Test list_users method (alias for get_zoom_users)."""
-        mock_token_response = MagicMock()
-        mock_token_response.json.return_value = {"access_token": "test-token"}
-        mock_token_response.raise_for_status = MagicMock()
-        mock_post.return_value = mock_token_response
-
-        mock_users_response = MagicMock()
-        mock_users_response.json.return_value = {
-            "users": [
-                {"email": "user1@example.com", "id": "123"},
-            ],
-            "next_page_token": None,
-        }
-        mock_users_response.raise_for_status = MagicMock()
-        mock_get.return_value = mock_users_response
-
-        connector = ZoomConnector(
-            client_id="test-client-id",
-            client_secret="test-client-secret",
-            account_id="test-account-id",
-            **base_connector_kwargs,
-        )
-
-        users = connector.list_users()
-        assert isinstance(users, ExtendedDict)
-        assert isinstance(users["user1@example.com"], ExtendedDict)
-        assert "user1@example.com" in users
 
     @patch("extended_data.connectors.zoom.requests.get")
     @patch("extended_data.connectors.zoom.requests.post")

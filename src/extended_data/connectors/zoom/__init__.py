@@ -61,8 +61,12 @@ class ZoomConnector(VendorConnectorBase):
             raise RuntimeError(msg)
         return {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
 
-    def get_zoom_users(self) -> ExtendedDict:
-        """Get all Zoom users."""
+    def list_users(self) -> ExtendedDict:
+        """List all Zoom users.
+
+        Returns:
+            Dictionary mapping user emails to user data.
+        """
         url = "https://api.zoom.us/v2/users"
         headers = self.get_headers()
         users: dict[str, dict[str, Any]] = {}
@@ -120,16 +124,6 @@ class ZoomConnector(VendorConnectorBase):
             self.errors.append(error_msg)
             self.logger.exception(error_msg)
             return False
-
-    def list_users(self) -> ExtendedDict:
-        """List all Zoom users.
-
-        This is an alias for get_zoom_users() for consistency with AI tools naming.
-
-        Returns:
-            Dictionary mapping user emails to user data
-        """
-        return self.get_zoom_users()
 
     def get_user(self, user_id: str) -> ExtendedDict:
         """Get a specific Zoom user by ID or email.

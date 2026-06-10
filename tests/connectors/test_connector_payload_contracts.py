@@ -189,7 +189,6 @@ PAYLOAD_METHODS = (
     (VaultConnector.list_aws_iam_roles, ExtendedList[ExtendedString]),
     (VaultConnector.get_aws_iam_role, ExtendedDict | None),
     (VaultConnector.generate_aws_credentials, ExtendedDict),
-    (ZoomConnector.get_zoom_users, ExtendedDict),
     (ZoomConnector.list_users, ExtendedDict),
     (ZoomConnector.get_user, ExtendedDict),
     (ZoomConnector.list_meetings, ExtendedList[ExtendedDict]),
