@@ -140,6 +140,6 @@ class ExtendedDict(UserDict[str, Any]):
 
     def first_non_empty_value(self, *keys: str) -> Any:
         """Return the first non-empty value for the provided keys."""
-        from extended_data.containers.factory import to_builtin
+        from extended_data.containers.factory import extend_data, to_builtin
 
-        return first_non_empty_value_from_map(to_builtin(self.data), *keys)
+        return extend_data(first_non_empty_value_from_map(to_builtin(self.data), *keys))

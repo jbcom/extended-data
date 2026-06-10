@@ -104,7 +104,9 @@ Container methods that return derived collections stay in Tier 2 as well:
 `ExtendedList`. `ExtendedList.split_by_type()`,
 `ExtendedTuple.split_by_type()`, and `ExtendedDict.split_by_type()` expose the
 Tier 1 split helpers as type-name keyed `ExtendedDict` results; tuple inputs
-keep tuple-shaped grouped values.
+keep tuple-shaped grouped values. `ExtendedDict.first_non_empty_value()`
+returns promoted Tier 2 values when it selects nested maps, lists, tuples, sets,
+or strings.
 Generic type routing can still ask for plain data roles:
 `typeof(value, primitive_only=True)` reports Extended strings, lists, tuples,
 mappings, and sets as `str`, `list`, `list`, `dict`, and `set`.
