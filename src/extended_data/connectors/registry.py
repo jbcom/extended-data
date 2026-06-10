@@ -32,14 +32,50 @@ from __future__ import annotations
 
 import builtins
 
-from typing import TYPE_CHECKING, Any
+from dataclasses import dataclass
+from typing import TYPE_CHECKING, Any, NoReturn
 
 
 if TYPE_CHECKING:
     from extended_data.connectors.base import VendorConnectorBase
 
+
+@dataclass(frozen=True)
+class BuiltinConnectorSpec:
+    """Import metadata for a built-in connector."""
+
+    module_path: str
+    class_name: str
+    extra: str
+
+
+BUILTIN_CONNECTORS: dict[str, BuiltinConnectorSpec] = {
+    # Google connectors
+    "jules": BuiltinConnectorSpec("extended_data.connectors.google.jules", "JulesConnector", "google"),
+    "google": BuiltinConnectorSpec("extended_data.connectors.google", "GoogleConnector", "google"),
+    "google_cloud": BuiltinConnectorSpec("extended_data.connectors.google", "GoogleCloudConnector", "google"),
+    "google_workspace": BuiltinConnectorSpec("extended_data.connectors.google", "GoogleWorkspaceConnector", "google"),
+    "google_billing": BuiltinConnectorSpec("extended_data.connectors.google", "GoogleBillingConnector", "google"),
+    # Other connectors
+    "cursor": BuiltinConnectorSpec("extended_data.connectors.cursor", "CursorConnector", "cursor"),
+    "github": BuiltinConnectorSpec("extended_data.connectors.github", "GitHubConnector", "github"),
+    "meshy": BuiltinConnectorSpec("extended_data.connectors.meshy", "MeshyConnector", "meshy"),
+    "anthropic": BuiltinConnectorSpec("extended_data.connectors.anthropic", "AnthropicConnector", "anthropic"),
+    "aws": BuiltinConnectorSpec("extended_data.connectors.aws", "AWSConnector", "aws"),
+    "slack": BuiltinConnectorSpec("extended_data.connectors.slack", "SlackConnector", "slack"),
+    "zoom": BuiltinConnectorSpec("extended_data.connectors.zoom", "ZoomConnector", "zoom"),
+    "vault": BuiltinConnectorSpec("extended_data.connectors.vault", "VaultConnector", "vault"),
+}
+
+
 # Cache for discovered connectors
 _connector_cache: dict[str, builtins.type[VendorConnectorBase]] | None = None
+_missing_builtin_connectors: dict[str, ImportError] = {}
+
+
+def _normalize_connector_name(name: str) -> str:
+    """Normalize connector registry names."""
+    return name.strip().lower()
 
 
 def _discover_connectors() -> dict[str, builtins.type[VendorConnectorBase]]:
@@ -75,36 +111,32 @@ def _discover_connectors() -> dict[str, builtins.type[VendorConnectorBase]]:
 
 def _register_builtins(connectors: dict[str, builtins.type[VendorConnectorBase]]) -> None:
     """Register built-in connectors that may not be in entry points yet."""
-    builtin_connectors = {
-        # Google connectors
-        "jules": ("extended_data.connectors.google.jules", "JulesConnector"),
-        "google": ("extended_data.connectors.google", "GoogleConnector"),
-        "google_cloud": ("extended_data.connectors.google", "GoogleCloudConnector"),
-        "google_workspace": ("extended_data.connectors.google", "GoogleWorkspaceConnector"),
-        "google_billing": ("extended_data.connectors.google", "GoogleBillingConnector"),
-        # Other connectors
-        "cursor": ("extended_data.connectors.cursor", "CursorConnector"),
-        "github": ("extended_data.connectors.github", "GitHubConnector"),
-        "meshy": ("extended_data.connectors.meshy", "MeshyConnector"),
-        "anthropic": ("extended_data.connectors.anthropic", "AnthropicConnector"),
-        "aws": ("extended_data.connectors.aws", "AWSConnector"),
-        "slack": ("extended_data.connectors.slack", "SlackConnector"),
-        "zoom": ("extended_data.connectors.zoom", "ZoomConnector"),
-        "vault": ("extended_data.connectors.vault", "VaultConnector"),
-    }
-
-    for name, (module_path, class_name) in builtin_connectors.items():
+    for name, spec in BUILTIN_CONNECTORS.items():
         if name in connectors:
+            _missing_builtin_connectors.pop(name, None)
             continue  # Entry point takes precedence
         try:
             import importlib
 
-            module = importlib.import_module(module_path)
-            cls = getattr(module, class_name, None)
+            module = importlib.import_module(spec.module_path)
+            cls = getattr(module, spec.class_name, None)
             if cls is not None:
                 connectors[name] = cls
-        except (ImportError, AttributeError):
-            pass  # Optional dependency not installed
+                _missing_builtin_connectors.pop(name, None)
+        except ImportError as e:
+            _missing_builtin_connectors[name] = e  # Optional dependency not installed
+
+
+def _raise_missing_builtin_connector(name: str, error: ImportError) -> NoReturn:
+    """Raise a clear install hint for a known built-in connector."""
+    spec = BUILTIN_CONNECTORS[name]
+    msg = (
+        f"The '{name}' connector is built in but its optional dependencies are not installed.\n"
+        f"Install with: pip install extended-data[{spec.extra}]"
+    )
+    if str(error):
+        msg = f"{msg}\nOriginal import error: {error}"
+    raise ImportError(msg) from error
 
 
 def list_connectors() -> dict[str, builtins.type[VendorConnectorBase]]:
@@ -129,9 +161,11 @@ def get_connector_class(name: str) -> builtins.type[VendorConnectorBase]:
         ValueError: If connector not found.
     """
     connectors = _discover_connectors()
-    name_lower = name.lower()
+    name_lower = _normalize_connector_name(name)
 
     if name_lower not in connectors:
+        if name_lower in _missing_builtin_connectors:
+            _raise_missing_builtin_connector(name_lower, _missing_builtin_connectors[name_lower])
         available = ", ".join(sorted(connectors.keys()))
         raise ValueError(f"Unknown connector: {name}. Available: {available}")
 
@@ -163,6 +197,7 @@ def clear_cache() -> None:
     """Clear the connector cache (useful for testing)."""
     global _connector_cache
     _connector_cache = None
+    _missing_builtin_connectors.clear()
 
 
 # =============================================================================

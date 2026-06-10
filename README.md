@@ -46,6 +46,10 @@ github = connectors.get_connector(
 )
 ```
 
+Connector names are normalized before lookup. If a known built-in connector is
+requested without its optional extra installed, the registry raises an
+`ImportError` with the matching `extended-data[...]` install target.
+
 ## Package Shape
 
 ```text

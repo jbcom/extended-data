@@ -86,7 +86,7 @@ class ConnectorFabric(InputProvider):
         explicit values are passed in ``kwargs``. This is the generic path for
         vendor adapters that are registered through entry points or built-ins.
         """
-        connector_name = name.lower()
+        connector_name = name.strip().lower()
         cache_kwargs = {"name": connector_name, **kwargs}
 
         cached = self._get_cached_client("connector", **cache_kwargs)

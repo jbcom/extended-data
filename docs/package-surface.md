@@ -48,7 +48,8 @@ github = fabric.get_connector(
 ```
 
 Both paths share the same input provider and lifecycle logger, and both cache
-instances by connector type and constructor inputs.
+instances by connector type and constructor inputs. Generic connector names are
+stripped and lowercased before lookup.
 
 ## Optional Integrations
 
@@ -62,4 +63,7 @@ pip install "extended-data[meshy,mcp]"
 ```
 
 Optional dependency checks live in `extended_data.connectors._optional`; there
-are no old package compatibility shims in the public API.
+are no old package compatibility shims in the public API. When a known built-in
+connector is requested without its optional extra installed, the registry raises
+an `ImportError` with the exact `extended-data[...]` install target instead of
+reporting the connector as unknown.

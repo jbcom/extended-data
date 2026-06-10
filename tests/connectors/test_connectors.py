@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 import pytest
 
+from extended_data.connectors import registry
 from extended_data.connectors.connectors import ConnectorFabric
 from extended_data.connectors.registry import _register_builtins
 
@@ -85,7 +87,7 @@ class TestConnectorFabric:
         vc = ConnectorFabric(inputs={"TOKEN": "from-inputs"}, from_environment=False)
         mock_get_connector_class.return_value = DummyConnector
 
-        connector = vc.get_connector("dummy", token="direct-token")
+        connector = vc.get_connector(" dummy ", token="direct-token")
 
         assert isinstance(connector, DummyConnector)
         assert connector.logger is vc.logging
@@ -124,7 +126,7 @@ class TestConnectorFabric:
         mock_get_connector_class.return_value = DummyConnector
 
         first = vc.get_connector("dummy", token="one")
-        second = vc.get_connector("DUMMY", token="one")
+        second = vc.get_connector(" DUMMY ", token="one")
         third = vc.get_connector("dummy", token="two")
 
         assert first is second
@@ -314,6 +316,33 @@ class TestConnectorFabric:
         if not _has_module("github"):
             with pytest.raises(ImportError, match="PyGithub"):
                 vc.get_github_client()
+
+    def test_get_connector_class_known_missing_builtin_has_install_hint(self, monkeypatch):
+        """Registry raises install guidance when a known built-in extra is missing."""
+        monkeypatch.setattr(registry, "_connector_cache", {})
+        monkeypatch.setitem(
+            registry._missing_builtin_connectors,
+            "github",
+            ImportError("No module named 'github'"),
+        )
+
+        with pytest.raises(ImportError, match=r"extended-data\[github\]"):
+            registry.get_connector_class(" github ")
+
+    def test_register_builtins_tracks_missing_optional_dependency(self, monkeypatch):
+        """Built-in discovery remembers optional dependency import failures."""
+        monkeypatch.setattr(registry, "_missing_builtin_connectors", {})
+
+        def fake_import_module(module_path):
+            if module_path == "extended_data.connectors.github":
+                raise ImportError("No module named 'github'")
+            return SimpleNamespace()
+
+        monkeypatch.setattr("importlib.import_module", fake_import_module)
+
+        _register_builtins({})
+
+        assert "github" in registry._missing_builtin_connectors
 
     def test_register_builtins_includes_specialized_google_connectors(self):
         """Registry builtins expose the advertised specialized Google connectors."""
