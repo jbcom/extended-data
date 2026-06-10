@@ -12,6 +12,7 @@ pytest.importorskip("botocore")
 
 from botocore.exceptions import ClientError
 
+from extended_data.containers import ExtendedDict, ExtendedList, ExtendedString
 from extended_data.connectors.aws import AWSConnectorFull
 
 
@@ -42,6 +43,7 @@ class TestSSOIdentityStore:
 
         result = aws_connector.get_identity_store_id()
 
+        assert isinstance(result, ExtendedString)
         assert result == "d-1234567890"
         aws_connector.get_aws_client.assert_called_once_with(client_name="sso-admin", execution_role_arn=None)
 
@@ -69,6 +71,7 @@ class TestSSOIdentityStore:
 
         result = aws_connector.get_sso_instance_arn()
 
+        assert isinstance(result, ExtendedString)
         assert result == "arn:aws:sso:::instance/ssoins-1234567890"
 
     def test_get_sso_instance_arn_no_instance(self, aws_connector):
@@ -113,6 +116,9 @@ class TestSSOUsers:
 
         result = aws_connector.list_sso_users(unhump_users=False, flatten_name=False)
 
+        assert isinstance(result, ExtendedDict)
+        assert isinstance(result["user-1"], ExtendedDict)
+        assert isinstance(result["user-1"]["UserName"], ExtendedString)
         assert len(result) == 2
         assert "user-1" in result
         assert "user-2" in result
@@ -142,6 +148,8 @@ class TestSSOUsers:
 
         result = aws_connector.list_sso_users(unhump_users=False, flatten_name=True, identity_store_id="d-1234567890")
 
+        assert isinstance(result, ExtendedDict)
+        assert isinstance(result["user-1"], ExtendedDict)
         assert len(result) == 1
         assert result["user-1"]["GivenName"] == "John"
         assert result["user-1"]["FamilyName"] == "Doe"
@@ -200,6 +208,8 @@ class TestSSOUsers:
 
         result = aws_connector.get_sso_user("user-1", identity_store_id="d-1234567890")
 
+        assert isinstance(result, ExtendedDict)
+        assert isinstance(result["UserName"], ExtendedString)
         assert result["UserId"] == "user-1"
         assert result["UserName"] == "john.doe"
 
@@ -259,6 +269,9 @@ class TestSSOGroups:
 
         result = aws_connector.list_sso_groups(unhump_groups=False)
 
+        assert isinstance(result, ExtendedDict)
+        assert isinstance(result["group-1"], ExtendedDict)
+        assert isinstance(result["group-1"]["DisplayName"], ExtendedString)
         assert len(result) == 2
         assert "group-1" in result
         assert result["group-1"]["DisplayName"] == "Admins"
@@ -282,6 +295,8 @@ class TestSSOGroups:
 
         result = aws_connector.create_sso_group("Admins", description="Admin group")
 
+        assert isinstance(result, ExtendedDict)
+        assert isinstance(result["GroupId"], ExtendedString)
         assert result["GroupId"] == "group-1"
         mock_identitystore.create_group.assert_called_once()
 
@@ -340,8 +355,11 @@ class TestSSOPermissionSets:
 
         result = aws_connector.list_permission_sets(unhump_sets=False)
 
+        assert isinstance(result, ExtendedDict)
         assert len(result) == 2
         ps1_arn = "arn:aws:sso:::permissionSet/ssoins-1234567890/ps-1"
+        assert isinstance(result[ps1_arn], ExtendedDict)
+        assert isinstance(result[ps1_arn]["Name"], ExtendedString)
         assert ps1_arn in result
         assert result[ps1_arn]["Name"] == "AdminAccess"
 
@@ -372,6 +390,9 @@ class TestSSOAccountAssignments:
             unhump_assignments=False,
         )
 
+        assert isinstance(result, ExtendedList)
+        assert isinstance(result[0], ExtendedDict)
+        assert isinstance(result[0]["AccountId"], ExtendedString)
         assert len(result) == 1
         assert result[0]["AccountId"] == "123456789012"
         assert result[0]["PrincipalType"] == "USER"
@@ -398,5 +419,7 @@ class TestSSOAccountAssignments:
             principal_type="USER",
         )
 
+        assert isinstance(result, ExtendedDict)
+        assert isinstance(result["AccountAssignmentCreationStatus"], ExtendedDict)
         assert "AccountAssignmentCreationStatus" in result
         mock_sso_admin.create_account_assignment.assert_called_once()

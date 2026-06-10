@@ -40,6 +40,8 @@ class AWSSSOmixin:
             **client_args: Any,
         ) -> Any: ...
 
+        def extend_result(self, value: Any) -> Any: ...
+
     def get_identity_store_id(
         self,
         execution_role_arn: str | None = None,
@@ -72,7 +74,7 @@ class AWSSSOmixin:
 
         identity_store_id = instance_list[0]["IdentityStoreId"]
         self.logger.info(f"Identity store ID: {identity_store_id}")
-        return identity_store_id
+        return self.extend_result(identity_store_id)
 
     def get_sso_instance_arn(
         self,
@@ -106,7 +108,7 @@ class AWSSSOmixin:
 
         instance_arn = instance_list[0]["InstanceArn"]
         self.logger.info(f"SSO instance ARN: {instance_arn}")
-        return instance_arn
+        return self.extend_result(instance_arn)
 
     # =========================================================================
     # Users
@@ -177,7 +179,7 @@ class AWSSSOmixin:
             users = {k: unhump_map(v) for k, v in users.items()}
 
         self.logger.info(f"Retrieved {len(users)} SSO users")
-        return users
+        return self.extend_result(users)
 
     def get_sso_user(
         self,
@@ -208,9 +210,11 @@ class AWSSSOmixin:
         )
 
         try:
-            return identitystore.describe_user(
-                IdentityStoreId=identity_store_id,
-                UserId=user_id,
+            return self.extend_result(
+                identitystore.describe_user(
+                    IdentityStoreId=identity_store_id,
+                    UserId=user_id,
+                )
             )
         except ClientError as e:
             if e.response.get("Error", {}).get("Code") == "ResourceNotFoundException":
@@ -270,7 +274,7 @@ class AWSSSOmixin:
 
         result = identitystore.create_user(**user_body)
         self.logger.info(f"Created SSO user: {user_name} ({result.get('UserId')})")
-        return result
+        return self.extend_result(result)
 
     def delete_sso_user(
         self,
@@ -385,7 +389,7 @@ class AWSSSOmixin:
             groups = {k: unhump_map(v) for k, v in groups.items()}
 
         self.logger.info(f"Retrieved {len(groups)} SSO groups")
-        return groups
+        return self.extend_result(groups)
 
     def _get_group_members(
         self,
@@ -472,7 +476,7 @@ class AWSSSOmixin:
             Description=description,
         )
         self.logger.info(f"Created SSO group: {display_name} ({result.get('GroupId')})")
-        return result
+        return self.extend_result(result)
 
     def delete_sso_group(
         self,
@@ -539,7 +543,7 @@ class AWSSSOmixin:
             MemberId={"UserId": user_id},
         )
         self.logger.info(f"Added user {user_id} to group {group_id}")
-        return result
+        return self.extend_result(result)
 
     def remove_user_from_group(
         self,
@@ -660,7 +664,7 @@ class AWSSSOmixin:
             permission_sets = {k: unhump_map(v) for k, v in permission_sets.items()}
 
         self.logger.info(f"Retrieved {len(permission_sets)} permission sets")
-        return permission_sets
+        return self.extend_result(permission_sets)
 
     def _get_managed_policies_for_permission_set(
         self,
@@ -747,7 +751,7 @@ class AWSSSOmixin:
             assignments = [unhump_map(a) for a in assignments]
 
         self.logger.info(f"Retrieved {len(assignments)} assignments for {account_id}")
-        return assignments
+        return self.extend_result(assignments)
 
     def create_account_assignment(
         self,
@@ -791,7 +795,7 @@ class AWSSSOmixin:
             PrincipalId=principal_id,
         )
         self.logger.info(f"Created account assignment for {principal_id}")
-        return result
+        return self.extend_result(result)
 
     def delete_account_assignment(
         self,
@@ -835,4 +839,4 @@ class AWSSSOmixin:
             PrincipalId=principal_id,
         )
         self.logger.info(f"Deleted account assignment for {principal_id}")
-        return result
+        return self.extend_result(result)
