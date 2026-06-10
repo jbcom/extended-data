@@ -35,6 +35,7 @@ from extended_data.io.files import (
     write_file,
 )
 from extended_data.io.importers import unwrap_raw_data_from_import
+from extended_data.primitives.formats.errors import DataDecodeError
 from extended_data.primitives.formats.hcl import decode_hcl2, encode_hcl2
 from extended_data.primitives.formats.json import decode_json, encode_json
 from extended_data.primitives.formats.toml import decode_toml, encode_toml
@@ -160,6 +161,7 @@ def __getattr__(name: str) -> Any:
 __all__ = [
     "ConnectorFabric",
     "ConnectorInfo",
+    "DataDecodeError",
     "ExitRunError",
     "ExtendedDict",
     "ExtendedList",

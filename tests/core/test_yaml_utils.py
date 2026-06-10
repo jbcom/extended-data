@@ -19,10 +19,10 @@ from __future__ import annotations
 from types import SimpleNamespace
 
 import pytest
-import yaml
 
 from yaml import MappingNode, ScalarNode, SequenceNode
 
+from extended_data.primitives.formats.errors import DataDecodeError
 from extended_data.primitives.formats.yaml import (
     LiteralScalarString,
     YamlPairs,
@@ -155,9 +155,20 @@ def test_decode_yaml_bytes_success(simple_yaml_fixture: str) -> None:
 
 
 def test_decode_yaml_invalid_bytes() -> None:
-    """Raise a YAMLError when bytes cannot be decoded."""
-    with pytest.raises(yaml.YAMLError, match="Failed to decode bytes to string"):
+    """Raise a sanitized decode error when bytes cannot be decoded."""
+    with pytest.raises(DataDecodeError, match="input bytes are not valid UTF-8"):
         decode_yaml(b"\x80")
+
+
+def test_decode_yaml_invalid_input_does_not_echo_payload() -> None:
+    """Invalid YAML messages do not include source snippets."""
+    with pytest.raises(DataDecodeError) as exc_info:
+        decode_yaml("token: [super-secret")
+
+    message = str(exc_info.value)
+    assert "Failed to decode YAML data" in message
+    assert "line 1" in message
+    assert "super-secret" not in message
 
 
 @pytest.mark.parametrize(

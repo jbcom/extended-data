@@ -33,6 +33,7 @@ def test_clean_major_version_public_names() -> None:
 
 def test_root_exports_first_class_integrated_primitives() -> None:
     """Inputs, logging, and connector fabric are available from the root package."""
+    assert extended_data.DataDecodeError.__name__ == "DataDecodeError"
     assert extended_data.InputProvider is InputProvider
     assert extended_data.Logging is Logging
     assert extended_data.ConnectorFabric is ConnectorFabric

@@ -10,6 +10,7 @@ from typing import Any
 
 import yaml
 
+from extended_data.primitives.formats.errors import DataDecodeError, invalid_utf8_error
 from extended_data.primitives.formats.yaml.dumpers import PureDumper
 from extended_data.primitives.formats.yaml.loaders import PureLoader
 from extended_data.primitives.formats.yaml.tag_classes import YamlPairs, YamlTagged
@@ -28,8 +29,11 @@ def decode_yaml(yaml_data: str | memoryview | bytes | bytearray) -> Any:
     try:
         yaml_data = bytestostr(yaml_data)
     except UnicodeDecodeError as exc:
-        raise yaml.YAMLError(f"Failed to decode bytes to string: {yaml_data!r}") from exc
-    return yaml.load(yaml_data, Loader=PureLoader)  # noqa: S506
+        raise invalid_utf8_error("YAML") from exc
+    try:
+        return yaml.load(yaml_data, Loader=PureLoader)  # noqa: S506
+    except yaml.YAMLError as exc:
+        raise DataDecodeError.from_exception("YAML", exc) from exc
 
 
 def encode_yaml(raw_data: Any) -> str:

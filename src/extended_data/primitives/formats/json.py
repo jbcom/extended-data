@@ -10,6 +10,8 @@ from typing import Any
 
 import orjson
 
+from extended_data.primitives.formats.errors import DataDecodeError
+
 
 def decode_json(json_data: str | memoryview | bytes | bytearray) -> Any:
     """Decodes a JSON string or bytes into a Python object using orjson.
@@ -20,7 +22,10 @@ def decode_json(json_data: str | memoryview | bytes | bytearray) -> Any:
     Returns:
         Any: The decoded Python object.
     """
-    return orjson.loads(json_data)
+    try:
+        return orjson.loads(json_data)
+    except orjson.JSONDecodeError as exc:
+        raise DataDecodeError.from_exception("JSON", exc) from exc
 
 
 def encode_json(

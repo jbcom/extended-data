@@ -4,9 +4,8 @@ from __future__ import annotations
 
 import pytest
 
-from lark.exceptions import ParseError, UnexpectedToken
-
 from extended_data.primitives.formats import hcl as hcl2_utils
+from extended_data.primitives.formats.errors import DataDecodeError
 from extended_data.primitives.formats.hcl import decode_hcl2, encode_hcl2
 
 
@@ -56,13 +55,18 @@ def test_decode_hcl2_empty() -> None:
 
 def test_decode_hcl2_invalid() -> None:
     """Reject invalid HCL input."""
-    with pytest.raises(UnexpectedToken):
-        decode_hcl2("invalid hcl2 data")
+    with pytest.raises(DataDecodeError) as exc_info:
+        decode_hcl2('locals { token = "super-secret" ')
+
+    message = str(exc_info.value)
+    assert "Failed to decode HCL2 data" in message
+    assert "line 1" in message
+    assert "super-secret" not in message
 
 
 def test_decode_hcl2_invalid_bytes() -> None:
     """Reject byte input that cannot be decoded as UTF-8."""
-    with pytest.raises(ParseError, match="Failed to decode bytes to string"):
+    with pytest.raises(DataDecodeError, match="input bytes are not valid UTF-8"):
         decode_hcl2(b"\x80")
 
 

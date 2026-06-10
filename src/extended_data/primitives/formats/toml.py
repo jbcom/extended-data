@@ -9,8 +9,7 @@ from typing import Any
 
 import tomlkit
 
-from tomlkit.exceptions import TOMLKitError
-
+from extended_data.primitives.formats.errors import DataDecodeError, invalid_utf8_error
 from extended_data.primitives.strings import bytestostr
 from extended_data.primitives.types import convert_special_types
 
@@ -27,8 +26,11 @@ def decode_toml(toml_data: str | memoryview | bytes | bytearray) -> Any:
     try:
         toml_data = bytestostr(toml_data)
     except UnicodeDecodeError as exc:
-        raise TOMLKitError(f"Failed to decode bytes to string: {toml_data!r}") from exc
-    return tomlkit.parse(toml_data)
+        raise invalid_utf8_error("TOML") from exc
+    try:
+        return tomlkit.parse(toml_data)
+    except tomlkit.exceptions.TOMLKitError as exc:
+        raise DataDecodeError.from_exception("TOML", exc) from exc
 
 
 def encode_toml(raw_data: Any) -> str:

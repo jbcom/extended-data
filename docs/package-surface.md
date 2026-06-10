@@ -6,6 +6,7 @@ namespace. The root package exposes the primitives users need most often:
 ```python
 from extended_data import (
     ConnectorFabric,
+    DataDecodeError,
     ExtendedDict,
     ExtendedList,
     ExtendedSet,
@@ -30,6 +31,10 @@ from extended_data import (
   ergonomic methods over Tier 1 primitives.
 - Tier 3 processors use the first two tiers to handle files, imports, exports,
   inputs, API data, vendor integrations, and workflows.
+
+Direct JSON, YAML, TOML, and HCL decode failures raise `DataDecodeError` with
+format and position context while preserving the parser exception as the cause;
+the public error message does not echo the raw payload.
 
 ```python
 name = ExtendedString("API Response Value").to_snake_case()

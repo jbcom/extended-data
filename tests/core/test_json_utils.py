@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import pytest
 
+from extended_data.primitives.formats.errors import DataDecodeError
 from extended_data.primitives.formats.json import decode_json, encode_json
 
 
@@ -65,6 +66,17 @@ def test_decode_json(simple_json: str, simple_dict: dict) -> None:
     """
     result = decode_json(simple_json)
     assert result == simple_dict
+
+
+def test_decode_json_invalid_input_raises_sanitized_decode_error() -> None:
+    """Invalid JSON raises a package-owned decode error without echoing values."""
+    with pytest.raises(DataDecodeError) as exc_info:
+        decode_json('{"token": "super-secret"')
+
+    message = str(exc_info.value)
+    assert "Failed to decode JSON data" in message
+    assert "line 1" in message
+    assert "super-secret" not in message
 
 
 def test_encode_json(simple_dict: dict, simple_json: str) -> None:

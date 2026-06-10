@@ -18,10 +18,10 @@ from typing import TYPE_CHECKING, Any
 
 from case_insensitive_dict import CaseInsensitiveDict
 from deepmerge import Merger  # type: ignore[attr-defined]
-from yaml import YAMLError
 
 from extended_data.containers.factory import extend_data
 from extended_data.io.base64 import base64_decode
+from extended_data.primitives.formats.errors import DataDecodeError
 from extended_data.primitives.formats.json import decode_json
 from extended_data.primitives.formats.yaml import decode_yaml
 from extended_data.primitives.state import is_nothing
@@ -273,7 +273,7 @@ class InputProvider:
                     unwrap_raw_data=decode_from_json or decode_from_yaml,
                     encoding="json" if decode_from_json else "yaml",
                 )
-            except binascii.Error as exc:
+            except (binascii.Error, DataDecodeError) as exc:
                 message = f"Failed to decode input {k} from Base64."
                 raise RuntimeError(message) from exc
 
@@ -285,13 +285,13 @@ class InputProvider:
         if decode_from_yaml:
             try:
                 conf = decode_yaml(conf)
-            except YAMLError as exc:
+            except DataDecodeError as exc:
                 message = f"Failed to decode input {k} from YAML."
                 raise RuntimeError(message) from exc
         elif decode_from_json:
             try:
                 conf = decode_json(conf)
-            except json.JSONDecodeError as exc:
+            except DataDecodeError as exc:
                 message = f"Failed to decode input {k} from JSON."
                 raise RuntimeError(message) from exc
 

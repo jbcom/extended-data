@@ -11,8 +11,9 @@ from typing import Any
 
 import hcl2
 
-from lark.exceptions import ParseError
+from lark.exceptions import LarkError
 
+from extended_data.primitives.formats.errors import DataDecodeError, invalid_utf8_error
 from extended_data.primitives.strings import bytestostr
 from extended_data.primitives.types import convert_special_types
 
@@ -235,10 +236,13 @@ def decode_hcl2(hcl2_data: str | memoryview | bytes | bytearray) -> Any:
     try:
         hcl2_data = bytestostr(hcl2_data)
     except UnicodeDecodeError as exc:
-        raise ParseError(f"Failed to decode bytes to string: {hcl2_data!r}") from exc
+        raise invalid_utf8_error("HCL2") from exc
 
     hcl2_data_stream = StringIO(hcl2_data)
-    return _normalize_hcl_value(hcl2.load(hcl2_data_stream))
+    try:
+        return _normalize_hcl_value(hcl2.load(hcl2_data_stream))
+    except LarkError as exc:
+        raise DataDecodeError.from_exception("HCL2", exc) from exc
 
 
 def encode_hcl2(data: Any) -> str:

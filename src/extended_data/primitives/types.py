@@ -41,9 +41,7 @@ from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
-from orjson import JSONDecodeError
-from yaml.error import YAMLError
-
+from extended_data.primitives.formats.errors import DataDecodeError
 from extended_data.primitives.formats.json import decode_json
 from extended_data.primitives.formats.yaml import YamlPairs, YamlTagged, decode_yaml
 from extended_data.primitives.strings import removesuffix
@@ -438,7 +436,7 @@ def reconstruct_special_type(converted_obj: str, fail_silently: bool = False) ->
 
         if is_potential_json(converted_obj):
             return decode_json(converted_obj)
-    except (ValueError, TypeError, YAMLError, JSONDecodeError) as exc:
+    except (ValueError, TypeError, DataDecodeError) as exc:
         if not fail_silently:
             raise ConversionError(type(converted_obj), converted_obj) from exc
     return converted_obj
