@@ -19,6 +19,14 @@ def _response(payload: dict, status_code: int = 200) -> httpx.Response:
     )
 
 
+def _text_response(text: str, status_code: int = 500, url: str = "https://jules.googleapis.com/v1alpha/test") -> httpx.Response:
+    return httpx.Response(
+        status_code,
+        text=text,
+        request=httpx.Request("GET", url),
+    )
+
+
 def test_session_pull_request_model_property() -> None:
     """The standalone Session model still exposes typed convenience properties."""
     session = Session(
@@ -181,3 +189,49 @@ def test_handle_response_redacts_sensitive_jules_error_details() -> None:
     assert "hunter2" not in message
     assert "raw_token" not in message
     assert exc_info.value.details == [{"api_key": "[REDACTED]"}]
+
+
+def test_handle_response_redacts_request_url_in_jules_error() -> None:
+    """Jules API errors should redact caller-controlled request URLs."""
+    connector = JulesConnector(api_key="test-key")
+    request_url = "https://jules.googleapis.com/v1alpha/sessions/private-session?api_key=raw_key"
+    response = httpx.Response(
+        403,
+        json={
+            "error": {
+                "message": f"denied while calling {request_url}",
+                "code": 403,
+                "details": [{"debug": request_url}],
+            }
+        },
+        request=httpx.Request("GET", request_url),
+    )
+
+    with pytest.raises(JulesError) as exc_info:
+        connector._handle_response(response)
+
+    error = exc_info.value
+    assert request_url not in str(error)
+    assert request_url not in repr(error.details)
+    assert error.__cause__ is None
+
+
+def test_handle_response_malformed_error_has_sanitized_message_without_cause() -> None:
+    """Malformed Jules errors should not chain parser internals or expose request URLs."""
+    connector = JulesConnector(api_key="test-key")
+    request_url = "https://jules.googleapis.com/v1alpha/sessions/private-session?api_key=raw_key"
+    response = _text_response(
+        f"upstream failed while calling {request_url} with password=hunter2",
+        status_code=502,
+        url=request_url,
+    )
+
+    with pytest.raises(JulesError) as exc_info:
+        connector._handle_response(response)
+
+    error = exc_info.value
+    message = str(error)
+    assert error.code == 502
+    assert error.__cause__ is None
+    assert request_url not in message
+    assert "hunter2" not in message

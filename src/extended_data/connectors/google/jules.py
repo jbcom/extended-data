@@ -26,6 +26,7 @@ Reference: https://developers.google.com/jules/api
 
 from __future__ import annotations
 
+from contextlib import suppress
 from enum import Enum
 from typing import Any
 
@@ -34,8 +35,9 @@ import httpx
 from pydantic import BaseModel, Field
 
 from extended_data.connectors.base import VendorConnectorBase
+from extended_data.connectors.google._diagnostics import safe_google_text
 from extended_data.containers import ExtendedDict, ExtendedList
-from extended_data.primitives.redaction import redact_sensitive_data, redact_sensitive_text
+from extended_data.primitives.redaction import redact_sensitive_data
 
 
 __all__ = [
@@ -163,16 +165,24 @@ class JulesConnector(VendorConnectorBase):
     def _handle_response(self, response: httpx.Response) -> dict[str, Any]:
         """Handle API response, raising on errors."""
         if not response.is_success:
+            diagnostic_values = self._response_diagnostic_values(response)
             try:
                 error = response.json().get("error", {})
                 raise JulesError(
-                    redact_sensitive_text(error.get("message", response.text)),
+                    safe_google_text(error.get("message", response.text), diagnostic_values),
                     error.get("code", response.status_code),
-                    redact_sensitive_data(error.get("details")),
+                    redact_sensitive_data(error.get("details"), values=diagnostic_values),
                 )
-            except (ValueError, KeyError) as exc:
-                raise JulesError(redact_sensitive_text(response.text), response.status_code) from exc
+            except (ValueError, KeyError):
+                raise JulesError(safe_google_text(response.text, diagnostic_values), response.status_code) from None
         return response.json()
+
+    def _response_diagnostic_values(self, response: httpx.Response) -> list[str]:
+        """Collect caller-controlled response identifiers for diagnostics redaction."""
+        values = [self._base_url]
+        with suppress(RuntimeError):
+            values.append(str(response.request.url))
+        return values
 
     # =========================================================================
     # Sources
