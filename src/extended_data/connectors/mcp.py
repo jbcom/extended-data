@@ -28,7 +28,7 @@ import sys
 from collections.abc import Callable, Iterable, Mapping
 from typing import Any, cast
 
-from extended_data.connectors.registry import get_connector, list_connectors
+from extended_data.connectors.registry import _list_connector_classes, get_connector
 from extended_data.connectors.surface import connector_data_methods
 from extended_data.containers import to_builtin
 
@@ -124,7 +124,7 @@ def create_server() -> Any:
     tools: dict[str, dict[str, Any]] = {}
 
     # Discover all connectors
-    connectors = list_connectors()
+    connectors = _list_connector_classes()
 
     for connector_name, connector_class in connectors.items():
         # Get public methods

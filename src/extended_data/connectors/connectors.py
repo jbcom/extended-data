@@ -91,8 +91,8 @@ class ConnectorFabric(InputProvider):
         cache_key = self._get_cache_key(**kwargs)
         self._client_cache[client_type][cache_key] = client
 
-    def list_connectors(self) -> dict[str, Any]:
-        """List connector classes available in the current environment."""
+    def list_connectors(self) -> ExtendedList[Any]:
+        """List connector names available in the current environment."""
         return list_registered_connectors()
 
     def list_connector_info(self, *, include_unavailable: bool = True) -> ExtendedList[ExtendedDict]:

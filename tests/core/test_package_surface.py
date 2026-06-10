@@ -12,6 +12,7 @@ import extended_data.logging as lifecycle_logging
 from extended_data import connectors, containers, inputs, io, primitives, secrets, workflows
 from extended_data.connectors.connectors import ConnectorFabric
 from extended_data.connectors.registry import BUILTIN_CONNECTORS
+from extended_data.containers import ExtendedList, ExtendedString
 from extended_data.inputs import InputProvider
 from extended_data.logging import Logging
 
@@ -136,6 +137,10 @@ def test_root_exports_first_class_integrated_primitives() -> None:
     assert callable(extended_data.read_data_file)
     assert callable(extended_data.get_connector)
     assert callable(extended_data.list_connector_info)
+    connector_names = extended_data.list_connectors()
+    assert isinstance(connector_names, ExtendedList)
+    assert isinstance(connector_names[0], ExtendedString)
+    assert "github" in connector_names
 
 
 def test_connectors_root_exports_builtin_connector_classes() -> None:

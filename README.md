@@ -70,9 +70,14 @@ requested without its optional extra installed, the registry raises an
 Inspect connector availability before wiring vendor workflows:
 
 ```python
+names = connectors.list_connectors()
 catalog = connectors.list_connector_info()
 github_info = connectors.get_connector_info("github")
 ```
+
+`list_connectors()` returns an `ExtendedList` of available connector names.
+Use `list_connector_info()` when a workflow needs availability, extra, install,
+class, module, and description metadata.
 
 The same catalog is available from the CLI:
 

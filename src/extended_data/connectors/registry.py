@@ -13,7 +13,7 @@ Usage:
 
     # List available connectors
     available = list_connectors()
-    # {'jules': <class JulesConnector>, 'cursor': <class CursorConnector>, ...}
+    # ExtendedList(["anthropic", "aws", "cursor", ...])
 
     # Get a specific connector instance
     connector = get_connector('jules', api_key='...')
@@ -183,13 +183,18 @@ def _raise_unregistered_builtin_connector(name: str) -> NoReturn:
     )
 
 
-def list_connectors() -> dict[str, builtins.type[VendorConnectorBase]]:
-    """List all available connectors.
+def _list_connector_classes() -> dict[str, builtins.type[VendorConnectorBase]]:
+    """List available connector classes for internal tool registration."""
+    return _discover_connectors().copy()
+
+
+def list_connectors() -> ExtendedList[Any]:
+    """List available connector names.
 
     Returns:
-        Dict mapping connector name to connector class.
+        ExtendedList of connector registry names.
     """
-    return _discover_connectors().copy()
+    return extend_data(sorted(_discover_connectors()))
 
 
 def get_connector_class(name: str) -> builtins.type[VendorConnectorBase]:

@@ -145,9 +145,13 @@ class TestConnectorFabric:
         assert "cursor" in names
         assert "github" in names
         github_info = vc.get_connector_info(" github ")
+        connector_names = vc.list_connectors()
         assert isinstance(github_info, ExtendedDict)
         assert github_info["name"] == "github"
-        assert isinstance(vc.list_connectors(), dict)
+        assert isinstance(connector_names, ExtendedList)
+        assert isinstance(connector_names[0], ExtendedString)
+        assert "github" in connector_names
+        assert "cursor" in connector_names
 
     @requires_boto3
     @patch("extended_data.connectors.aws.AWSConnector")

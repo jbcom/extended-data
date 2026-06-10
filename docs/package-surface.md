@@ -255,10 +255,12 @@ Use the catalog helpers when a workflow needs to inspect which integrations can
 run in the current environment:
 
 ```python
+names = fabric.list_connectors()
 catalog = fabric.list_connector_info()
 github_info = fabric.get_connector_info("github")
 ```
 
+`list_connectors()` returns an `ExtendedList` of available connector names.
 Each catalog entry includes availability, source, extra name, install command,
 required packages, missing packages, module, class, and description fields.
 The installed CLI exposes the same discovery layer for shell automation:
