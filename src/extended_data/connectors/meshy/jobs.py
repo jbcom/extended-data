@@ -81,7 +81,7 @@ class AssetGenerator:
             intent=spec.intent.value,
             description=spec.description,
             art_style=spec.art_style.value,
-            task_id=task_id,
+            task_id=str(task_id),
             polycount_target=spec.target_polycount,
             metadata=spec.metadata.copy() if spec.metadata else {},
         )
@@ -90,32 +90,36 @@ class AssetGenerator:
             return manifest.to_dict()
 
         # Poll until complete
-        result = text3d.poll(task_id, interval=poll_interval)
+        result = text3d.poll(str(task_id), interval=poll_interval)
 
         # Download assets
         output_dir = self.output_root / spec.output_path
         output_dir.mkdir(parents=True, exist_ok=True)
 
-        if result.model_urls and result.model_urls.glb:
+        model_urls = result.get("model_urls") or {}
+        glb_url = model_urls.get("glb")
+        if glb_url:
             glb_path = output_dir / f"{asset_id}.glb"
-            base.download(result.model_urls.glb, str(glb_path))
+            base.download(str(glb_url), str(glb_path))
             manifest.model_path = str(glb_path.relative_to(self.output_root))
 
-        if result.texture_urls and len(result.texture_urls) > 0:
-            textures = result.texture_urls[0]
+        texture_urls = result.get("texture_urls") or []
+        if texture_urls and len(texture_urls) > 0:
+            textures = texture_urls[0]
             texture_paths = {}
 
-            for map_type, url in textures.model_dump(exclude_none=True).items():
+            for map_type, url in textures.items():
                 if url:
                     tex_path = output_dir / f"{asset_id}_{map_type}.png"
-                    base.download(url, str(tex_path))
+                    base.download(str(url), str(tex_path))
                     texture_paths[map_type] = str(tex_path.relative_to(self.output_root))
 
             manifest.texture_paths = texture_paths
 
-        if result.thumbnail_url:
+        thumbnail_url = result.get("thumbnail_url")
+        if thumbnail_url:
             thumb_path = output_dir / f"{asset_id}_thumb.png"
-            base.download(result.thumbnail_url, str(thumb_path))
+            base.download(str(thumbnail_url), str(thumb_path))
             manifest.thumbnail_path = str(thumb_path.relative_to(self.output_root))
 
         # Save manifest

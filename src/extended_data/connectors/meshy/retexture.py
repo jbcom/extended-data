@@ -12,10 +12,10 @@ import time
 
 from extended_data.connectors.meshy import base
 from extended_data.connectors.meshy.models import RetextureRequest, RetextureResult, TaskStatus
-from extended_data.containers import extend_data
+from extended_data.containers import ExtendedDict, ExtendedString, extend_data
 
 
-def create(request: RetextureRequest) -> str:
+def create(request: RetextureRequest) -> ExtendedString:
     """Create retexture task. Returns task_id."""
     response = base.request(
         "POST",
@@ -26,25 +26,27 @@ def create(request: RetextureRequest) -> str:
     return extend_data(response.json().get("result"))
 
 
-def get(task_id: str) -> RetextureResult:
+def get(task_id: str) -> ExtendedDict:
     """Get task status."""
     response = base.request("GET", f"retexture/{task_id}", version="v1")
-    return RetextureResult(**response.json())
+    result = RetextureResult(**response.json())
+    return extend_data(result.model_dump(mode="json"))
 
 
-def poll(task_id: str, interval: float = 5.0, timeout: float = 600.0) -> RetextureResult:
+def poll(task_id: str, interval: float = 5.0, timeout: float = 600.0) -> ExtendedDict:
     """Poll until complete or failed."""
     start = time.time()
     while True:
         result = get(task_id)
-        if result.status == TaskStatus.SUCCEEDED:
+        status = result.get("status")
+        if status == TaskStatus.SUCCEEDED:
             return result
-        if result.status == TaskStatus.FAILED:
-            error = getattr(result, "task_error", {})
+        if status == TaskStatus.FAILED:
+            error = result.get("task_error", {})
             msg = error.get("message", "Unknown error") if isinstance(error, dict) else str(error)
             msg = f"Task failed: {msg}"
             raise RuntimeError(msg)
-        if result.status == TaskStatus.EXPIRED:
+        if status == TaskStatus.EXPIRED:
             msg = "Task expired"
             raise RuntimeError(msg)
         if time.time() - start > timeout:
@@ -60,7 +62,7 @@ def apply(
     enable_original_uv: bool = True,
     enable_pbr: bool = True,
     wait: bool = True,
-) -> RetextureResult | str:
+) -> ExtendedDict | ExtendedString:
     """Apply new textures to a model.
 
     Args:
@@ -71,7 +73,7 @@ def apply(
         wait: Wait for completion (default True)
 
     Returns:
-        RetextureResult if wait=True, task_id if wait=False
+        Extended result payload if wait=True, extended task_id if wait=False.
     """
     request = RetextureRequest(
         input_task_id=model_task_id,
@@ -85,7 +87,7 @@ def apply(
     if not wait:
         return task_id
 
-    return poll(task_id)
+    return poll(str(task_id))
 
 
 def apply_from_image(
@@ -95,7 +97,7 @@ def apply_from_image(
     enable_original_uv: bool = True,
     enable_pbr: bool = True,
     wait: bool = True,
-) -> RetextureResult | str:
+) -> ExtendedDict | ExtendedString:
     """Apply textures based on reference image.
 
     Args:
@@ -106,7 +108,7 @@ def apply_from_image(
         wait: Wait for completion (default True)
 
     Returns:
-        RetextureResult if wait=True, task_id if wait=False
+        Extended result payload if wait=True, extended task_id if wait=False.
     """
     request = RetextureRequest(
         input_task_id=model_task_id,
@@ -120,4 +122,4 @@ def apply_from_image(
     if not wait:
         return task_id
 
-    return poll(task_id)
+    return poll(str(task_id))

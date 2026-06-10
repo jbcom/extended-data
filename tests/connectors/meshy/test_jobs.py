@@ -22,7 +22,11 @@ from extended_data.connectors.meshy.models import (
     Text3DResult,
     TextureUrls,
 )
-from extended_data.containers import ExtendedDict, ExtendedList, ExtendedString
+from extended_data.containers import ExtendedDict, ExtendedList, ExtendedString, extend_data
+
+
+def _extended_result(result: Text3DResult) -> ExtendedDict:
+    return extend_data(result.model_dump(mode="json"))
 
 
 class TestAssetManifest:
@@ -142,7 +146,7 @@ class TestAssetGenerator:
             patch("extended_data.connectors.meshy.jobs.base") as mock_base,
         ):
             mock_text3d.create.return_value = "task-12345"
-            mock_text3d.poll.return_value = Text3DResult(
+            mock_text3d.poll.return_value = _extended_result(Text3DResult(
                 id="task-12345",
                 status=TaskStatus.SUCCEEDED,
                 progress=100,
@@ -150,7 +154,7 @@ class TestAssetGenerator:
                 model_urls=ModelUrls(glb="https://example.com/model.glb"),
                 texture_urls=[TextureUrls(base_color="https://example.com/base.png")],
                 thumbnail_url="https://example.com/thumb.png",
-            )
+            ))
             mock_base.download.return_value = 1000
 
             generator = AssetGenerator(output_root=str(temp_dir))
@@ -177,13 +181,13 @@ class TestAssetGenerator:
             patch("extended_data.connectors.meshy.jobs.base") as mock_base,
         ):
             mock_text3d.create.return_value = "task-12345"
-            mock_text3d.poll.return_value = Text3DResult(
+            mock_text3d.poll.return_value = _extended_result(Text3DResult(
                 id="task-12345",
                 status=TaskStatus.SUCCEEDED,
                 progress=100,
                 created_at=1700000000,
                 model_urls=ModelUrls(glb="https://example.com/model.glb"),
-            )
+            ))
             mock_base.download.return_value = 1000
 
             generator = AssetGenerator(output_root=str(temp_dir))
@@ -211,13 +215,13 @@ class TestAssetGenerator:
             patch("extended_data.connectors.meshy.jobs.base") as mock_base,
         ):
             mock_text3d.create.return_value = "task-12345"
-            mock_text3d.poll.return_value = Text3DResult(
+            mock_text3d.poll.return_value = _extended_result(Text3DResult(
                 id="task-12345",
                 status=TaskStatus.SUCCEEDED,
                 progress=100,
                 created_at=1700000000,
                 model_urls=ModelUrls(glb="https://example.com/model.glb"),
-            )
+            ))
             mock_base.download.return_value = 1000
 
             generator = AssetGenerator(output_root=str(temp_dir))
@@ -261,13 +265,13 @@ class TestAssetGenerator:
                 return "task-success"
 
             mock_text3d.create.side_effect = create_side_effect
-            mock_text3d.poll.return_value = Text3DResult(
+            mock_text3d.poll.return_value = _extended_result(Text3DResult(
                 id="task-success",
                 status=TaskStatus.SUCCEEDED,
                 progress=100,
                 created_at=1700000000,
                 model_urls=ModelUrls(glb="https://example.com/model.glb"),
-            )
+            ))
             mock_base.download.return_value = 1000
 
             generator = AssetGenerator(output_root=str(temp_dir))

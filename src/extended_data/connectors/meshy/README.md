@@ -35,7 +35,7 @@ task_id = text3d.create(
 )
 
 result = text3d.poll(task_id)
-print(result.status)
+print(result["status"])
 ```
 
 The package also exposes `image3d`, `rigging`, `animate`, and `retexture`

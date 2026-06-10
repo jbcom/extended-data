@@ -4,7 +4,7 @@ Usage:
     from extended_data.connectors.meshy import text3d
 
     result = text3d.generate("a medieval sword")
-    print(result.model_urls.glb)
+    print(result["model_urls"]["glb"])
 """
 
 from __future__ import annotations
@@ -13,10 +13,10 @@ import time
 
 from extended_data.connectors.meshy import base
 from extended_data.connectors.meshy.models import ArtStyle, TaskStatus, Text3DRequest, Text3DResult
-from extended_data.containers import extend_data
+from extended_data.containers import ExtendedDict, ExtendedString, extend_data
 
 
-def create(request: Text3DRequest) -> str:
+def create(request: Text3DRequest) -> ExtendedString:
     """Create text-to-3d task. Returns task_id."""
     response = base.request(
         "POST",
@@ -27,13 +27,14 @@ def create(request: Text3DRequest) -> str:
     return extend_data(response.json().get("result"))
 
 
-def get(task_id: str) -> Text3DResult:
+def get(task_id: str) -> ExtendedDict:
     """Get task status."""
     response = base.request("GET", f"text-to-3d/{task_id}", version="v2")
-    return Text3DResult(**response.json())
+    result = Text3DResult(**response.json())
+    return extend_data(result.model_dump(mode="json"))
 
 
-def refine(task_id: str) -> str:
+def refine(task_id: str) -> ExtendedString:
     """Refine preview to full quality. Returns new task_id."""
     response = base.request(
         "POST",
@@ -44,19 +45,20 @@ def refine(task_id: str) -> str:
     return extend_data(response.json().get("result"))
 
 
-def poll(task_id: str, interval: float = 5.0, timeout: float = 600.0) -> Text3DResult:
+def poll(task_id: str, interval: float = 5.0, timeout: float = 600.0) -> ExtendedDict:
     """Poll until complete or failed."""
     start = time.time()
     while True:
         result = get(task_id)
-        if result.status == TaskStatus.SUCCEEDED:
+        status = result.get("status")
+        if status == TaskStatus.SUCCEEDED:
             return result
-        if result.status == TaskStatus.FAILED:
-            error = getattr(result, "task_error", {})
+        if status == TaskStatus.FAILED:
+            error = result.get("task_error", {})
             msg = error.get("message", "Unknown error") if isinstance(error, dict) else str(error)
             msg = f"Task failed: {msg}"
             raise RuntimeError(msg)
-        if result.status == TaskStatus.EXPIRED:
+        if status == TaskStatus.EXPIRED:
             msg = "Task expired"
             raise RuntimeError(msg)
         if time.time() - start > timeout:
@@ -73,7 +75,7 @@ def generate(
     target_polycount: int = 15000,
     enable_pbr: bool = True,
     wait: bool = True,
-) -> Text3DResult | str:
+) -> ExtendedDict | ExtendedString:
     """Generate a 3D model from text.
 
     Args:
@@ -85,7 +87,7 @@ def generate(
         wait: Wait for completion (default True)
 
     Returns:
-        Text3DResult if wait=True, task_id if wait=False
+        Extended result payload if wait=True, extended task_id if wait=False.
     """
     if isinstance(art_style, str):
         art_style = ArtStyle(art_style)
@@ -104,4 +106,4 @@ def generate(
     if not wait:
         return task_id
 
-    return poll(task_id)
+    return poll(str(task_id))

@@ -12,12 +12,18 @@ from extended_data.connectors.meshy.models import (
     RiggingRequest,
     Text3DRequest,
 )
-from extended_data.containers import ExtendedString
+from extended_data.containers import ExtendedDict, ExtendedString
 
 
 def _task_response(task_id: str) -> MagicMock:
     response = MagicMock()
     response.json.return_value = {"result": task_id}
+    return response
+
+
+def _json_response(payload: dict[str, object]) -> MagicMock:
+    response = MagicMock()
+    response.json.return_value = payload
     return response
 
 
@@ -71,3 +77,84 @@ def test_retexture_task_id_is_extended_string() -> None:
 
     assert isinstance(created, ExtendedString)
     assert created == "retexture-task"
+
+
+def test_text3d_get_returns_extended_payload() -> None:
+    payload = {
+        "id": "text-task",
+        "status": "SUCCEEDED",
+        "progress": 100,
+        "created_at": 1700000000,
+        "model_urls": {"glb": "https://example.com/model.glb"},
+    }
+    with patch("extended_data.connectors.meshy.text3d.base.request", return_value=_json_response(payload)):
+        result = text3d.get("text-task")
+
+    assert isinstance(result, ExtendedDict)
+    assert isinstance(result["id"], ExtendedString)
+    assert isinstance(result["model_urls"], ExtendedDict)
+    assert result["model_urls"]["glb"] == "https://example.com/model.glb"
+
+
+def test_image3d_get_returns_extended_payload() -> None:
+    payload = {
+        "id": "image-task",
+        "status": "SUCCEEDED",
+        "progress": 100,
+        "created_at": 1700000000,
+        "model_urls": {"glb": "https://example.com/image.glb"},
+    }
+    with patch("extended_data.connectors.meshy.image3d.base.request", return_value=_json_response(payload)):
+        result = image3d.get("image-task")
+
+    assert isinstance(result, ExtendedDict)
+    assert isinstance(result["model_urls"], ExtendedDict)
+    assert result["model_urls"]["glb"] == "https://example.com/image.glb"
+
+
+def test_animation_get_returns_extended_payload() -> None:
+    payload = {
+        "id": "animation-task",
+        "status": "SUCCEEDED",
+        "progress": 100,
+        "created_at": 1700000000,
+        "animation_glb_url": "https://example.com/animation.glb",
+    }
+    with patch("extended_data.connectors.meshy.animate.base.request", return_value=_json_response(payload)):
+        result = animate.get("animation-task")
+
+    assert isinstance(result, ExtendedDict)
+    assert isinstance(result["animation_glb_url"], ExtendedString)
+    assert result["animation_glb_url"] == "https://example.com/animation.glb"
+
+
+def test_rigging_get_returns_extended_payload() -> None:
+    payload = {
+        "id": "rig-task",
+        "status": "SUCCEEDED",
+        "progress": 100,
+        "created_at": 1700000000,
+        "result": {"rigged_character_glb_url": "https://example.com/rig.glb"},
+    }
+    with patch("extended_data.connectors.meshy.rigging.base.request", return_value=_json_response(payload)):
+        result = rigging.get("rig-task")
+
+    assert isinstance(result, ExtendedDict)
+    assert isinstance(result["result"], ExtendedDict)
+    assert result["result"]["rigged_character_glb_url"] == "https://example.com/rig.glb"
+
+
+def test_retexture_get_returns_extended_payload() -> None:
+    payload = {
+        "id": "retexture-task",
+        "status": "SUCCEEDED",
+        "progress": 100,
+        "created_at": 1700000000,
+        "model_urls": {"glb": "https://example.com/retexture.glb"},
+    }
+    with patch("extended_data.connectors.meshy.retexture.base.request", return_value=_json_response(payload)):
+        result = retexture.get("retexture-task")
+
+    assert isinstance(result, ExtendedDict)
+    assert isinstance(result["model_urls"], ExtendedDict)
+    assert result["model_urls"]["glb"] == "https://example.com/retexture.glb"

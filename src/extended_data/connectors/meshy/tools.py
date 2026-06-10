@@ -7,7 +7,7 @@ with native wrappers for each supported framework.
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from typing import Any
 
 from pydantic import BaseModel, Field
@@ -97,6 +97,19 @@ class GetAnimationSchema(BaseModel):
 # =============================================================================
 
 
+def _result_get(result: object, field: str, default: object = None) -> object:
+    """Read a field from an extended payload or a model-like test double."""
+    if isinstance(result, Mapping):
+        return result.get(field, default)
+    return getattr(result, field, default)
+
+
+def _result_status(result: object) -> str:
+    """Read a task status from an extended payload or model-like object."""
+    status = _result_get(result, "status", "unknown")
+    return str(status.value) if hasattr(status, "value") else str(status)
+
+
 def _extract_result_fields(result: object) -> dict[str, object]:
     """Extract common fields from Meshy API result objects.
 
@@ -110,15 +123,18 @@ def _extract_result_fields(result: object) -> dict[str, object]:
         Dict with status, model_url, and thumbnail_url fields
     """
     # Extract status - prefer .value if it's an enum, otherwise str()
-    status = getattr(result.status, "value", str(result.status)) if hasattr(result, "status") else "unknown"
+    status = _result_status(result)
 
     # Extract model_url from model_urls.glb if available
     model_url = None
-    if hasattr(result, "model_urls") and result.model_urls:
-        model_url = result.model_urls.glb
+    model_urls = _result_get(result, "model_urls")
+    if isinstance(model_urls, Mapping):
+        model_url = model_urls.get("glb")
+    elif model_urls:
+        model_url = getattr(model_urls, "glb", None)
 
     # Extract thumbnail_url
-    thumbnail_url = getattr(result, "thumbnail_url", None)
+    thumbnail_url = _result_get(result, "thumbnail_url")
 
     return extend_data({
         "status": status,
@@ -168,7 +184,7 @@ def text3d_generate(
 
     fields = _extract_result_fields(result)
     return extend_data({
-        "task_id": result.id,
+        "task_id": _result_get(result, "id"),
         **fields,
     })
 
@@ -209,7 +225,7 @@ def image3d_generate(
 
     fields = _extract_result_fields(result)
     return extend_data({
-        "task_id": result.id,
+        "task_id": _result_get(result, "id"),
         **fields,
     })
 
@@ -237,8 +253,8 @@ def rig_model(model_id: str, wait: bool = True) -> dict[str, Any]:
 
     if wait:
         return extend_data({
-            "task_id": result.id,
-            "status": result.status.value if hasattr(result.status, "value") else str(result.status),
+            "task_id": _result_get(result, "id"),
+            "status": _result_status(result),
             "message": "Rigging completed",
         })
 
@@ -270,10 +286,10 @@ def apply_animation(model_id: str, animation_id: int, wait: bool = True) -> dict
 
     if wait:
         return extend_data({
-            "task_id": result.id,
-            "status": result.status.value if hasattr(result.status, "value") else str(result.status),
+            "task_id": _result_get(result, "id"),
+            "status": _result_status(result),
             "message": "Animation completed",
-            "glb_url": result.animation_glb_url,
+            "glb_url": _result_get(result, "animation_glb_url"),
         })
 
     msg = "Expected animation task id when wait=False"
@@ -315,10 +331,10 @@ def retexture_model(
 
     if wait:
         return extend_data({
-            "task_id": result.id,
-            "status": result.status.value if hasattr(result.status, "value") else str(result.status),
+            "task_id": _result_get(result, "id"),
+            "status": _result_status(result),
             "message": "Retexture completed",
-            "model_url": getattr(result, "model_url", None),
+            "model_url": _result_get(result, "model_url"),
         })
 
     msg = "Expected retexture task id when wait=False"
@@ -386,19 +402,22 @@ def check_task_status(task_id: str, task_type: str = "text-to-3d") -> dict[str, 
         raise ValueError(f"Unknown task type: {task_type}")
 
     result = get_func(task_id)
-    status = result.status.value if hasattr(result.status, "value") else str(result.status)
+    status = _result_status(result)
 
     # Get model URL if available
     model_url = None
-    if hasattr(result, "model_urls") and result.model_urls:
-        model_url = result.model_urls.glb
-    elif hasattr(result, "glb_url"):
-        model_url = result.glb_url
+    model_urls = _result_get(result, "model_urls")
+    if isinstance(model_urls, Mapping):
+        model_url = model_urls.get("glb")
+    elif model_urls:
+        model_url = getattr(model_urls, "glb", None)
+    if model_url is None:
+        model_url = _result_get(result, "glb_url")
 
     return extend_data({
         "task_id": task_id,
         "status": status,
-        "progress": getattr(result, "progress", None),
+        "progress": _result_get(result, "progress"),
         "model_url": model_url,
     })
 

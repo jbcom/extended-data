@@ -13,13 +13,13 @@ Usage:
     model = image3d.generate("https://example.com/image.png")
 
     # Rig for animation
-    rigged = rigging.rig(model.id)
+    rigged = rigging.rig(model["id"])
 
     # Apply animation
-    animated = animate.apply(rigged.id, animation_id=0)
+    animated = animate.apply(rigged["id"], animation_id=0)
 
     # Retexture
-    retextured = retexture.apply(model.id, "golden with gems")
+    retextured = retexture.apply(model["id"], "golden with gems")
 
     # LangChain tools
     from extended_data.connectors.meshy.tools import get_tools

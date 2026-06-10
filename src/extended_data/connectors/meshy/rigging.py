@@ -12,10 +12,10 @@ import time
 
 from extended_data.connectors.meshy import base
 from extended_data.connectors.meshy.models import RiggingRequest, RiggingResult, TaskStatus
-from extended_data.containers import extend_data
+from extended_data.containers import ExtendedDict, ExtendedString, extend_data
 
 
-def create(request: RiggingRequest) -> str:
+def create(request: RiggingRequest) -> ExtendedString:
     """Create rigging task. Returns task_id."""
     response = base.request(
         "POST",
@@ -26,25 +26,27 @@ def create(request: RiggingRequest) -> str:
     return extend_data(response.json().get("result"))
 
 
-def get(task_id: str) -> RiggingResult:
+def get(task_id: str) -> ExtendedDict:
     """Get task status."""
     response = base.request("GET", f"rigging/{task_id}", version="v1")
-    return RiggingResult(**response.json())
+    result = RiggingResult(**response.json())
+    return extend_data(result.model_dump(mode="json"))
 
 
-def poll(task_id: str, interval: float = 5.0, timeout: float = 600.0) -> RiggingResult:
+def poll(task_id: str, interval: float = 5.0, timeout: float = 600.0) -> ExtendedDict:
     """Poll until complete or failed."""
     start = time.time()
     while True:
         result = get(task_id)
-        if result.status == TaskStatus.SUCCEEDED:
+        status = result.get("status")
+        if status == TaskStatus.SUCCEEDED:
             return result
-        if result.status == TaskStatus.FAILED:
-            error = getattr(result, "task_error", {})
+        if status == TaskStatus.FAILED:
+            error = result.get("task_error", {})
             msg = error.get("message", "Unknown error") if isinstance(error, dict) else str(error)
             msg = f"Task failed: {msg}"
             raise RuntimeError(msg)
-        if result.status == TaskStatus.EXPIRED:
+        if status == TaskStatus.EXPIRED:
             msg = "Task expired"
             raise RuntimeError(msg)
         if time.time() - start > timeout:
@@ -58,7 +60,7 @@ def rig(
     *,
     height_meters: float = 1.7,
     wait: bool = True,
-) -> RiggingResult | str:
+) -> ExtendedDict | ExtendedString:
     """Rig a model for animation.
 
     Args:
@@ -67,7 +69,7 @@ def rig(
         wait: Wait for completion (default True)
 
     Returns:
-        RiggingResult if wait=True, task_id if wait=False
+        Extended result payload if wait=True, extended task_id if wait=False.
     """
     request = RiggingRequest(
         input_task_id=model_task_id,
@@ -79,7 +81,7 @@ def rig(
     if not wait:
         return task_id
 
-    return poll(task_id)
+    return poll(str(task_id))
 
 
 def rig_from_url(
@@ -88,7 +90,7 @@ def rig_from_url(
     height_meters: float = 1.7,
     texture_url: str | None = None,
     wait: bool = True,
-) -> RiggingResult | str:
+) -> ExtendedDict | ExtendedString:
     """Rig a model from URL.
 
     Args:
@@ -98,7 +100,7 @@ def rig_from_url(
         wait: Wait for completion (default True)
 
     Returns:
-        RiggingResult if wait=True, task_id if wait=False
+        Extended result payload if wait=True, extended task_id if wait=False.
     """
     request = RiggingRequest(
         model_url=model_url,
@@ -111,4 +113,4 @@ def rig_from_url(
     if not wait:
         return task_id
 
-    return poll(task_id)
+    return poll(str(task_id))

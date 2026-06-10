@@ -17,10 +17,10 @@ import time
 
 from extended_data.connectors.meshy import base
 from extended_data.connectors.meshy.models import AnimationRequest, AnimationResult, TaskStatus
-from extended_data.containers import extend_data
+from extended_data.containers import ExtendedDict, ExtendedString, extend_data
 
 
-def create(request: AnimationRequest) -> str:
+def create(request: AnimationRequest) -> ExtendedString:
     """Create animation task. Returns task_id."""
     response = base.request(
         "POST",
@@ -31,25 +31,27 @@ def create(request: AnimationRequest) -> str:
     return extend_data(response.json().get("result"))
 
 
-def get(task_id: str) -> AnimationResult:
+def get(task_id: str) -> ExtendedDict:
     """Get task status."""
     response = base.request("GET", f"animations/{task_id}", version="v1")
-    return AnimationResult(**response.json())
+    result = AnimationResult(**response.json())
+    return extend_data(result.model_dump(mode="json"))
 
 
-def poll(task_id: str, interval: float = 5.0, timeout: float = 600.0) -> AnimationResult:
+def poll(task_id: str, interval: float = 5.0, timeout: float = 600.0) -> ExtendedDict:
     """Poll until complete or failed."""
     start = time.time()
     while True:
         result = get(task_id)
-        if result.status == TaskStatus.SUCCEEDED:
+        status = result.get("status")
+        if status == TaskStatus.SUCCEEDED:
             return result
-        if result.status == TaskStatus.FAILED:
-            error = getattr(result, "task_error", {})
+        if status == TaskStatus.FAILED:
+            error = result.get("task_error", {})
             msg = error.get("message", "Unknown error") if isinstance(error, dict) else str(error)
             msg = f"Task failed: {msg}"
             raise RuntimeError(msg)
-        if result.status == TaskStatus.EXPIRED:
+        if status == TaskStatus.EXPIRED:
             msg = "Task expired"
             raise RuntimeError(msg)
         if time.time() - start > timeout:
@@ -65,7 +67,7 @@ def apply(
     loop: bool = True,
     frame_rate: int = 30,
     wait: bool = True,
-) -> AnimationResult | str:
+) -> ExtendedDict | ExtendedString:
     """Apply animation to a rigged model.
 
     Args:
@@ -76,7 +78,7 @@ def apply(
         wait: Wait for completion (default True)
 
     Returns:
-        AnimationResult if wait=True, task_id if wait=False
+        Extended result payload if wait=True, extended task_id if wait=False.
     """
     request = AnimationRequest(
         rig_task_id=rigged_task_id,
@@ -90,4 +92,4 @@ def apply(
     if not wait:
         return task_id
 
-    return poll(task_id)
+    return poll(str(task_id))

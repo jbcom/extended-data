@@ -13,7 +13,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from extended_data.containers import ExtendedDict, ExtendedList, ExtendedString
+from extended_data.containers import ExtendedDict, ExtendedList, ExtendedString, extend_data
 
 
 # Expected tools list - canonical reference for all Meshy tools
@@ -90,6 +90,25 @@ class TestText3DGenerate:
         assert result["status"] == "SUCCEEDED"
         assert result["model_url"] == "https://example.com/model.glb"
         assert result["thumbnail_url"] == "https://example.com/thumb.png"
+
+    def test_successful_generation_accepts_extended_payload(self):
+        """Tool wrapper should consume the real extended result payload shape."""
+        from extended_data.connectors.meshy.tools import text3d_generate
+
+        mock_result = extend_data({
+            "id": "task_123",
+            "status": "SUCCEEDED",
+            "model_urls": {"glb": "https://example.com/model.glb"},
+            "thumbnail_url": "https://example.com/thumb.png",
+        })
+
+        with patch("extended_data.connectors.meshy.text3d.generate", return_value=mock_result):
+            result = text3d_generate(prompt="a medieval sword")
+
+        assert isinstance(result, ExtendedDict)
+        assert result["task_id"] == "task_123"
+        assert result["status"] == "SUCCEEDED"
+        assert result["model_url"] == "https://example.com/model.glb"
 
     def test_generation_with_defaults(self):
         """Test generation with default parameters.
@@ -348,6 +367,24 @@ class TestCheckTaskStatus:
         assert isinstance(result, ExtendedDict)
         assert isinstance(result["task_id"], ExtendedString)
         assert result["task_id"] == "task_123"
+        assert result["status"] == "SUCCEEDED"
+        assert result["progress"] == 100
+        assert result["model_url"] == "https://example.com/model.glb"
+
+    def test_check_text3d_status_accepts_extended_payload(self):
+        """Task status wrapper should consume the real extended get() payload."""
+        from extended_data.connectors.meshy.tools import check_task_status
+
+        mock_result = extend_data({
+            "status": "SUCCEEDED",
+            "progress": 100,
+            "model_urls": {"glb": "https://example.com/model.glb"},
+        })
+
+        with patch("extended_data.connectors.meshy.text3d.get", return_value=mock_result):
+            result = check_task_status(task_id="task_123", task_type="text-to-3d")
+
+        assert isinstance(result, ExtendedDict)
         assert result["status"] == "SUCCEEDED"
         assert result["progress"] == 100
         assert result["model_url"] == "https://example.com/model.glb"

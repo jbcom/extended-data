@@ -4,7 +4,7 @@ Usage:
     from extended_data.connectors.meshy import image3d
 
     result = image3d.generate("https://example.com/image.png")
-    print(result.model_urls.glb)
+    print(result["model_urls"]["glb"])
 """
 
 from __future__ import annotations
@@ -13,10 +13,10 @@ import time
 
 from extended_data.connectors.meshy import base
 from extended_data.connectors.meshy.models import Image3DRequest, Image3DResult, TaskStatus
-from extended_data.containers import extend_data
+from extended_data.containers import ExtendedDict, ExtendedString, extend_data
 
 
-def create(request: Image3DRequest) -> str:
+def create(request: Image3DRequest) -> ExtendedString:
     """Create image-to-3d task. Returns task_id."""
     response = base.request(
         "POST",
@@ -30,13 +30,14 @@ def create(request: Image3DRequest) -> str:
     return extend_data(data["result"])
 
 
-def get(task_id: str) -> Image3DResult:
+def get(task_id: str) -> ExtendedDict:
     """Get task status."""
     response = base.request("GET", f"image-to-3d/{task_id}", version="v2")
-    return Image3DResult(**response.json())
+    result = Image3DResult(**response.json())
+    return extend_data(result.model_dump(mode="json"))
 
 
-def refine(task_id: str) -> str:
+def refine(task_id: str) -> ExtendedString:
     """Refine preview to full quality. Returns new task_id."""
     response = base.request(
         "POST",
@@ -50,7 +51,7 @@ def refine(task_id: str) -> str:
     return extend_data(data["result"])
 
 
-def poll(task_id: str, interval: float = 5.0, timeout: float = 600.0) -> Image3DResult:
+def poll(task_id: str, interval: float = 5.0, timeout: float = 600.0) -> ExtendedDict:
     """Polls the status of an image-to-3D task until it completes, fails, expires, or times out.
 
     Args:
@@ -59,7 +60,7 @@ def poll(task_id: str, interval: float = 5.0, timeout: float = 600.0) -> Image3D
         timeout: Maximum time in seconds to wait for task completion (default: 600.0).
 
     Returns:
-        Image3DResult: The result of the completed task.
+        Extended payload for the completed task.
 
     Raises:
         RuntimeError: If the task fails or expires.
@@ -68,12 +69,13 @@ def poll(task_id: str, interval: float = 5.0, timeout: float = 600.0) -> Image3D
     start = time.time()
     while True:
         result = get(task_id)
-        if result.status == TaskStatus.SUCCEEDED:
+        status = result.get("status")
+        if status == TaskStatus.SUCCEEDED:
             return result
-        if result.status == TaskStatus.FAILED:
-            msg = f"Task failed: {result.error or 'Unknown error'}"
+        if status == TaskStatus.FAILED:
+            msg = f"Task failed: {result.get('error') or 'Unknown error'}"
             raise RuntimeError(msg)
-        if result.status == TaskStatus.EXPIRED:
+        if status == TaskStatus.EXPIRED:
             msg = "Task expired"
             raise RuntimeError(msg)
         if time.time() - start > timeout:
@@ -89,7 +91,7 @@ def generate(
     target_polycount: int | None = None,
     enable_pbr: bool = True,
     wait: bool = True,
-) -> Image3DResult | str:
+) -> ExtendedDict | ExtendedString:
     """Generate a 3D model from an image.
 
     Args:
@@ -100,7 +102,7 @@ def generate(
         wait: Wait for completion (default True)
 
     Returns:
-        Image3DResult if wait=True, task_id if wait=False
+        Extended result payload if wait=True, extended task_id if wait=False.
     """
     request = Image3DRequest(
         mode="preview",
@@ -115,4 +117,4 @@ def generate(
     if not wait:
         return task_id
 
-    return poll(task_id)
+    return poll(str(task_id))
