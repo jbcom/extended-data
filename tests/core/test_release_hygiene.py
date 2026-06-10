@@ -32,6 +32,7 @@ SECRETSSYNC_PROJECT_PATTERNS = (
     re.compile(r"\bsecretssync\s+(?:Go\s+)?(?:project|library|repo|repository|CLI|connector|bindings?)\b", re.IGNORECASE),
     re.compile(r"\b(?:project|library|repo|repository|CLI|connector|bindings?)\s+secretssync\b", re.IGNORECASE),
 )
+EXTRA_REFERENCE_RE = re.compile(r"extended-data\[([^\]\n]+)\]")
 NON_RUNTIME_EXTRAS = {"all", "dev", "tests", "typing"}
 
 
@@ -123,6 +124,31 @@ def test_all_extra_contains_every_runtime_extra_dependency() -> None:
                 missing.append(f"{extra_name}: {dependency_text}")
 
     assert missing == []
+
+
+def test_public_install_guidance_names_known_extras() -> None:
+    """Static install examples should not teach extras that pyproject does not publish."""
+    known_extras = set(_pyproject()["project"]["optional-dependencies"])
+    offenders: list[str] = []
+    paths = [REPO_ROOT / "README.md"]
+    paths.extend(path for root in (REPO_ROOT / "docs", REPO_ROOT / "examples", REPO_ROOT / "src") for path in root.rglob("*"))
+
+    for path in sorted(path for path in paths if path.is_file()):
+        if path.suffix in {".pyc", ".png"}:
+            continue
+
+        relative_path = path.relative_to(REPO_ROOT)
+        for line_number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
+            for match in EXTRA_REFERENCE_RE.finditer(line):
+                extra_group = match.group(1)
+                if "..." in extra_group or "{" in extra_group or "}" in extra_group:
+                    continue
+
+                for extra in (part.strip() for part in extra_group.split(",")):
+                    if extra and extra not in known_extras:
+                        offenders.append(f"{relative_path}:{line_number}: {extra} in extended-data[{extra_group}]")
+
+    assert offenders == []
 
 
 def test_public_guidance_does_not_use_removed_runtime_keywords() -> None:
