@@ -106,6 +106,8 @@ class TestMeshyWebhookPayload:
             thumbnail_url="https://example.com/thumb.png",
         )
         urls = payload.get_all_urls()
+        assert isinstance(urls, ExtendedDict)
+        assert isinstance(urls["glb"], ExtendedString)
         assert urls["glb"] == "https://example.com/model.glb"
         assert urls["fbx"] == "https://example.com/model.fbx"
         assert urls["thumbnail"] == "https://example.com/thumb.png"

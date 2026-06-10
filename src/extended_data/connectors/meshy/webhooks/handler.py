@@ -10,7 +10,7 @@ from datetime import datetime, timezone
 
 from extended_data.connectors.meshy import base
 from extended_data.connectors.meshy.webhooks.schemas import MeshyWebhookPayload
-from extended_data.containers import ExtendedDict, extend_data
+from extended_data.containers import ExtendedDict, extend_data, to_builtin
 
 from ..persistence.repository import TaskRepository
 from ..persistence.schemas import ArtifactRecord
@@ -113,7 +113,7 @@ class WebhookHandler:
         if payload.status == "FAILED":
             error_message = payload.get_error_message()
 
-        result_paths = payload.get_all_urls()
+        result_paths = to_builtin(payload.get_all_urls())
 
         artifacts = []
         if payload.status == "SUCCEEDED" and self.download_artifacts:

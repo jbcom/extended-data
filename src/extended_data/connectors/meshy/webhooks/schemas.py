@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from pydantic import BaseModel, Field
 
+from extended_data.containers import ExtendedDict, extend_data
+
 
 class WebhookModelUrls(BaseModel):
     """Model URLs in webhook payload."""
@@ -107,8 +109,8 @@ class MeshyWebhookPayload(BaseModel):
 
         return None
 
-    def get_all_urls(self) -> dict[str, str]:
-        """Get all available URLs as a flat dict."""
+    def get_all_urls(self) -> ExtendedDict:
+        """Get all available URLs as an extended flat dict."""
         urls = {}
 
         # Model URLs
@@ -143,4 +145,4 @@ class MeshyWebhookPayload(BaseModel):
         if self.thumbnail_url:
             urls["thumbnail"] = self.thumbnail_url
 
-        return urls
+        return extend_data(urls)
