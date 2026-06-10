@@ -376,8 +376,8 @@ class TestConnectorFabric:
         assert info["extra"] == "github"
         assert "not registered" in info["error"]
 
-    def test_lazy_builtin_with_missing_requirements_is_unavailable(self):
-        """Lazy-loadable built-ins still report unavailable when extras are missing."""
+    def test_builtin_with_missing_requirements_is_unavailable(self):
+        """Entry-point registered built-ins report unavailable when extras are missing."""
         registry.clear_cache()
 
         if not _has_module("boto3"):
@@ -389,8 +389,8 @@ class TestConnectorFabric:
             with pytest.raises(ImportError, match=r"extended-data\[aws\]"):
                 registry.get_connector_class("aws")
 
-    def test_available_only_catalog_filters_missing_lazy_builtins(self):
-        """Available-only metadata excludes lazy built-ins with missing extras."""
+    def test_available_only_catalog_filters_missing_builtins(self):
+        """Available-only metadata excludes built-ins with missing extras."""
         registry.clear_cache()
 
         info = registry.list_connector_info(include_unavailable=False)

@@ -177,4 +177,7 @@ Optional dependency checks live in `extended_data.connectors._optional`; there
 are no old package compatibility shims in the public API. When a known built-in
 connector is requested without its optional extra installed, the registry raises
 an `ImportError` with the exact `extended-data[...]` install target instead of
-reporting the connector as unknown.
+reporting the connector as unknown. Built-in connectors must also be registered
+through the `extended_data.connectors` entry point group; missing entry-point
+registration is treated as a package configuration error instead of being
+patched over by direct source imports.
