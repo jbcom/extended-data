@@ -9,6 +9,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 from extended_data import unhump_map
+from extended_data.containers import to_builtin
 
 
 class GoogleWorkspaceMixin:
@@ -25,6 +26,8 @@ class GoogleWorkspaceMixin:
         service_account_info: dict[str, Any]
 
         def get_admin_directory_service(self, subject: str | None = None) -> Any: ...
+
+        def extend_result(self, value: Any) -> Any: ...
 
     def list_workspace_users(
         self,
@@ -67,7 +70,7 @@ class GoogleWorkspaceMixin:
         if unhump_users:
             users = [unhump_map(u) for u in users]
 
-        return users
+        return self.extend_result(users)
 
     def get_user(
         self,
@@ -88,7 +91,7 @@ class GoogleWorkspaceMixin:
         service = self.get_admin_directory_service(subject=subject)
 
         try:
-            return service.users().get(userKey=user_key).execute()
+            return self.extend_result(service.users().get(userKey=user_key).execute())
         except HttpError as e:
             if e.resp.status == 404:
                 self.logger.warning(f"User not found: {user_key}")
@@ -140,9 +143,9 @@ class GoogleWorkspaceMixin:
             **additional_fields,
         }
 
-        result = service.users().insert(body=user_body).execute()
+        result = service.users().insert(body=to_builtin(user_body)).execute()
         self.logger.info(f"Created user: {primary_email}")
-        return result
+        return self.extend_result(result)
 
     def update_user(
         self,
@@ -161,9 +164,9 @@ class GoogleWorkspaceMixin:
             Updated user dictionary.
         """
         service = self.get_admin_directory_service(subject=subject)
-        result = service.users().update(userKey=user_key, body=fields).execute()
+        result = service.users().update(userKey=user_key, body=to_builtin(fields)).execute()
         self.logger.info(f"Updated user: {user_key}")
-        return result
+        return self.extend_result(result)
 
     def delete_user(
         self,
@@ -221,7 +224,7 @@ class GoogleWorkspaceMixin:
         if unhump_groups:
             groups = [unhump_map(g) for g in groups]
 
-        return groups
+        return self.extend_result(groups)
 
     def get_group(
         self,
@@ -242,7 +245,7 @@ class GoogleWorkspaceMixin:
         service = self.get_admin_directory_service(subject=subject)
 
         try:
-            return service.groups().get(groupKey=group_key).execute()
+            return self.extend_result(service.groups().get(groupKey=group_key).execute())
         except HttpError as e:
             if e.resp.status == 404:
                 self.logger.warning(f"Group not found: {group_key}")
@@ -275,9 +278,9 @@ class GoogleWorkspaceMixin:
             "description": description,
         }
 
-        result = service.groups().insert(body=group_body).execute()
+        result = service.groups().insert(body=to_builtin(group_body)).execute()
         self.logger.info(f"Created group: {email}")
-        return result
+        return self.extend_result(result)
 
     def delete_group(
         self,
@@ -335,7 +338,7 @@ class GoogleWorkspaceMixin:
         if unhump_members:
             members = [unhump_map(m) for m in members]
 
-        return members
+        return self.extend_result(members)
 
     def add_group_member(
         self,
@@ -362,9 +365,9 @@ class GoogleWorkspaceMixin:
             "role": role,
         }
 
-        result = service.members().insert(groupKey=group_key, body=member_body).execute()
+        result = service.members().insert(groupKey=group_key, body=to_builtin(member_body)).execute()
         self.logger.info(f"Added {email} to group {group_key} with role {role}")
-        return result
+        return self.extend_result(result)
 
     def remove_group_member(
         self,
@@ -413,7 +416,7 @@ class GoogleWorkspaceMixin:
 
         org_units = response.get("organizationUnits", [])
         self.logger.info(f"Retrieved {len(org_units)} org units")
-        return org_units
+        return self.extend_result(org_units)
 
     def create_or_update_user(
         self,
@@ -472,19 +475,19 @@ class GoogleWorkspaceMixin:
             existing = service.users().get(userKey=primary_email).execute()
             if update_if_exists:
                 # Update existing user
-                result = service.users().update(userKey=primary_email, body=user_body).execute()
+                result = service.users().update(userKey=primary_email, body=to_builtin(user_body)).execute()
                 self.logger.info(f"Updated existing user: {primary_email}")
-                return result
+                return self.extend_result(result)
             self.logger.info(f"User already exists: {primary_email}")
-            return existing
+            return self.extend_result(existing)
         except HttpError as e:
             if e.resp.status != 404:
                 raise
             # User doesn't exist, create new
 
-        result = service.users().insert(body=user_body).execute()
+        result = service.users().insert(body=to_builtin(user_body)).execute()
         self.logger.info(f"Created user: {primary_email}")
-        return result
+        return self.extend_result(result)
 
     def create_or_update_group(
         self,
@@ -527,19 +530,19 @@ class GoogleWorkspaceMixin:
             existing = service.groups().get(groupKey=email).execute()
             if update_if_exists:
                 # Update existing group
-                result = service.groups().update(groupKey=email, body=group_body).execute()
+                result = service.groups().update(groupKey=email, body=to_builtin(group_body)).execute()
                 self.logger.info(f"Updated existing group: {email}")
-                return result
+                return self.extend_result(result)
             self.logger.info(f"Group already exists: {email}")
-            return existing
+            return self.extend_result(existing)
         except HttpError as e:
             if e.resp.status != 404:
                 raise
             # Group doesn't exist, create new
 
-        result = service.groups().insert(body=group_body).execute()
+        result = service.groups().insert(body=to_builtin(group_body)).execute()
         self.logger.info(f"Created group: {email}")
-        return result
+        return self.extend_result(result)
 
     def list_available_licenses(
         self,
@@ -622,7 +625,7 @@ class GoogleWorkspaceMixin:
                     self.logger.warning(f"Error listing licenses for {prod_id}: {e}")
 
         self.logger.info(f"Retrieved {len(licenses)} license assignments")
-        return licenses
+        return self.extend_result(licenses)
 
     def get_license_summary(
         self,
@@ -653,4 +656,4 @@ class GoogleWorkspaceMixin:
                 summary[key] = {"assigned": 0}
             summary[key]["assigned"] += 1
 
-        return summary
+        return self.extend_result(summary)

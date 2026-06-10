@@ -470,9 +470,11 @@ class GoogleConnector(VendorConnectorBase):
         )
 
         if return_keyed:
-            return self._key_results_by_email(filtered_users, primary_field="primaryEmail", fallback_field="email")
+            return self.extend_result(
+                self._key_results_by_email(filtered_users, primary_field="primaryEmail", fallback_field="email")
+            )
 
-        return filtered_users
+        return self.extend_result(filtered_users)
 
     def list_groups(
         self,
@@ -541,9 +543,11 @@ class GoogleConnector(VendorConnectorBase):
         )
 
         if return_keyed:
-            return self._key_results_by_email(filtered_groups, primary_field="email", fallback_field="primaryEmail")
+            return self.extend_result(
+                self._key_results_by_email(filtered_groups, primary_field="email", fallback_field="primaryEmail")
+            )
 
-        return filtered_groups
+        return self.extend_result(filtered_groups)
 
 
 # Import submodule operations

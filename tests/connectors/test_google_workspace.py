@@ -10,6 +10,7 @@ import pytest
 pytest.importorskip("google.oauth2.service_account")
 pytest.importorskip("googleapiclient")
 
+from extended_data.containers import ExtendedDict, ExtendedList, ExtendedString, extend_data
 from extended_data.connectors.google import GoogleConnectorFull
 
 
@@ -46,6 +47,9 @@ class TestWorkspaceUsers:
 
         result = google_connector.list_users()
 
+        assert isinstance(result, ExtendedList)
+        assert isinstance(result[0], ExtendedDict)
+        assert isinstance(result[0]["primaryEmail"], ExtendedString)
         assert len(result) == 2
         assert result[0]["primaryEmail"] == "user1@example.com"
 
@@ -58,6 +62,8 @@ class TestWorkspaceUsers:
 
         result = google_connector.list_users(domain="example.com")
 
+        assert isinstance(result, ExtendedList)
+        assert isinstance(result[0], ExtendedDict)
         assert len(result) == 1
         call_args = mock_users.list.call_args[1]
         assert call_args["domain"] == "example.com"
@@ -79,6 +85,8 @@ class TestWorkspaceUsers:
 
         result = google_connector.list_users()
 
+        assert isinstance(result, ExtendedList)
+        assert isinstance(result[0], ExtendedDict)
         assert len(result) == 2
         assert mock_users.list.return_value.execute.call_count == 2
 
@@ -95,6 +103,8 @@ class TestWorkspaceUsers:
 
         result = google_connector.get_user("user1@example.com")
 
+        assert isinstance(result, ExtendedDict)
+        assert isinstance(result["primaryEmail"], ExtendedString)
         assert result["primaryEmail"] == "user1@example.com"
         assert result["suspended"] is False
 
@@ -129,10 +139,16 @@ class TestWorkspaceUsers:
             given_name="New",
             family_name="User",
             password="SecurePass123!",
+            customSchemas=extend_data({"HR": {"level": "5"}}),
         )
 
+        assert isinstance(result, ExtendedDict)
+        assert isinstance(result["primaryEmail"], ExtendedString)
         assert result["primaryEmail"] == "newuser@example.com"
         mock_users.insert.assert_called_once()
+        body = mock_users.insert.call_args.kwargs["body"]
+        assert isinstance(body, dict)
+        assert isinstance(body["customSchemas"], dict)
 
     def test_update_user(self, google_connector):
         """Test updating a user."""
@@ -144,9 +160,17 @@ class TestWorkspaceUsers:
         }
         google_connector.get_admin_directory_service = MagicMock(return_value=mock_service)
 
-        result = google_connector.update_user("user1@example.com", suspended=True)
+        result = google_connector.update_user(
+            "user1@example.com",
+            suspended=True,
+            customSchemas=extend_data({"HR": {"level": "7"}}),
+        )
 
+        assert isinstance(result, ExtendedDict)
         assert result["suspended"] is True
+        body = mock_users.update.call_args.kwargs["body"]
+        assert isinstance(body, dict)
+        assert isinstance(body["customSchemas"], dict)
 
     def test_delete_user(self, google_connector):
         """Test deleting a user."""
@@ -177,6 +201,9 @@ class TestWorkspaceGroups:
 
         result = google_connector.list_groups()
 
+        assert isinstance(result, ExtendedList)
+        assert isinstance(result[0], ExtendedDict)
+        assert isinstance(result[0]["email"], ExtendedString)
         assert len(result) == 2
         assert result[0]["email"] == "group1@example.com"
 
@@ -189,6 +216,8 @@ class TestWorkspaceGroups:
 
         result = google_connector.list_groups(domain="example.com")
 
+        assert isinstance(result, ExtendedList)
+        assert isinstance(result[0], ExtendedDict)
         assert len(result) == 1
         call_args = mock_groups.list.call_args[1]
         assert call_args["domain"] == "example.com"
@@ -206,6 +235,8 @@ class TestWorkspaceGroups:
 
         result = google_connector.get_group("group1@example.com")
 
+        assert isinstance(result, ExtendedDict)
+        assert isinstance(result["email"], ExtendedString)
         assert result["email"] == "group1@example.com"
         assert result["directMembersCount"] == "5"
 
@@ -240,6 +271,8 @@ class TestWorkspaceGroups:
             name="New Group",
         )
 
+        assert isinstance(result, ExtendedDict)
+        assert isinstance(result["email"], ExtendedString)
         assert result["email"] == "newgroup@example.com"
 
     def test_list_group_members(self, google_connector):
@@ -256,6 +289,9 @@ class TestWorkspaceGroups:
 
         result = google_connector.list_group_members("group1@example.com")
 
+        assert isinstance(result, ExtendedList)
+        assert isinstance(result[0], ExtendedDict)
+        assert isinstance(result[1]["role"], ExtendedString)
         assert len(result) == 2
         assert result[1]["role"] == "OWNER"
 
@@ -271,6 +307,8 @@ class TestWorkspaceGroups:
 
         result = google_connector.add_group_member("group1@example.com", "user1@example.com")
 
+        assert isinstance(result, ExtendedDict)
+        assert isinstance(result["email"], ExtendedString)
         assert result["email"] == "user1@example.com"
 
     def test_remove_group_member(self, google_connector):
@@ -302,5 +340,8 @@ class TestWorkspaceOrgUnits:
 
         result = google_connector.list_org_units()
 
+        assert isinstance(result, ExtendedList)
+        assert isinstance(result[0], ExtendedDict)
+        assert isinstance(result[0]["name"], ExtendedString)
         assert len(result) == 2
         assert result[0]["name"] == "Engineering"

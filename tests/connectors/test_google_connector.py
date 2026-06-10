@@ -10,6 +10,7 @@ import pytest
 pytest.importorskip("google.oauth2.service_account")
 pytest.importorskip("googleapiclient")
 
+from extended_data.containers import ExtendedDict, ExtendedString
 from extended_data.connectors.google import (
     GoogleBillingConnector,
     GoogleCloudConnector,
@@ -197,6 +198,9 @@ class TestGoogleConnector:
             key_by_email=True,
         )
 
+        assert isinstance(result, ExtendedDict)
+        assert isinstance(result["engineer@example.com"], ExtendedDict)
+        assert isinstance(result["engineer@example.com"]["full_name"], ExtendedString)
         assert "bot@example.com" not in result
         assert "suspended@example.com" not in result
         assert "sales@example.com" not in result
@@ -229,6 +233,8 @@ class TestGoogleConnector:
             key_by_email=True,
         )
 
+        assert isinstance(result, ExtendedDict)
+        assert isinstance(result["keepers@example.com"], ExtendedDict)
         assert "bots@example.com" not in result
         assert "keepers@example.com" in result
         assert result["keepers@example.com"]["suspended"] is True
