@@ -25,12 +25,10 @@ from extended_data import (
     SecretsConnector,
     SlackConnector,
     SyncOptions,
-    decode_json,
     extend_data,
-    encode_yaml,
     to_builtin,
 )
-from extended_data.primitives import normalize_data_encoding, number_to_words
+from extended_data.primitives import decode_json, encode_yaml, normalize_data_encoding, number_to_words
 ```
 
 ## Tiers
@@ -46,10 +44,10 @@ from extended_data.primitives import normalize_data_encoding, number_to_words
 - Tier 3 processors use the first two tiers to handle files, imports, exports,
   inputs, API data, vendor integrations, and workflows.
 
-Clean major-version primitive names live under `extended_data.primitives` and
-prefer explicit Python words over inherited helper spellings: use
-`bytes_to_string()` and the `string_to_*()` conversion family
-(`string_to_bool()`, `string_to_int()`, `string_to_float()`,
+Clean major-version primitive names, including JSON/YAML/TOML/HCL codecs, live
+under `extended_data.primitives` and prefer explicit Python words over
+inherited helper spellings: use `bytes_to_string()` and the `string_to_*()`
+conversion family (`string_to_bool()`, `string_to_int()`, `string_to_float()`,
 `string_to_path()`, `string_to_date()`, `string_to_datetime()`, and
 `string_to_time()`). The old `bytestostr` and `strto*` helper names are
 intentionally not preserved, and pure utility functions are not re-exported
@@ -58,9 +56,9 @@ Tier 1 public exports stay function-oriented; use `get_default_dict()` when a
 workflow needs nested or sorted default mappings rather than importing the
 internal sorted-default mapping helper class.
 
-Direct JSON, YAML, TOML, and HCL decode failures raise `DataDecodeError` with
-format and position context while preserving the parser exception as the cause;
-the public error message does not echo the raw payload.
+Direct JSON, YAML, TOML, and HCL primitive decode failures raise
+`DataDecodeError` with format and position context while preserving the parser
+exception as the cause; the public error message does not echo the raw payload.
 
 ```python
 name = ExtendedString("API Response Value").to_snake_case()

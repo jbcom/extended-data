@@ -18,11 +18,10 @@ from extended_data import (
     WorkflowStep,
     base64_decode,
     base64_encode,
-    decode_hcl2,
-    encode_hcl2,
     read_data_file,
     write_file,
 )
+from extended_data.primitives import decode_hcl2, encode_hcl2
 from extended_data.primitives.formats.yaml import YamlTagged
 
 

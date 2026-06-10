@@ -54,18 +54,7 @@ FUNCTION_FIRST_BASIC_USAGE_HELPERS = (
     "sanitize_key",
     "truncate",
 )
-ROOT_ALLOWED_PRIMITIVE_IMPORTS = (
-    "decode_hcl2",
-    "decode_json",
-    "decode_toml",
-    "decode_yaml",
-    "encode_hcl2",
-    "encode_json",
-    "encode_toml",
-    "encode_yaml",
-    "is_yaml_data",
-)
-ROOT_DISALLOWED_TIER1_IMPORTS = tuple(sorted(set(primitives.__all__) - set(ROOT_ALLOWED_PRIMITIVE_IMPORTS)))
+ROOT_DISALLOWED_TIER1_IMPORTS = tuple(sorted(primitives.__all__))
 
 
 def _readme_usage_snippet() -> str:

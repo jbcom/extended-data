@@ -10,6 +10,8 @@ from __future__ import annotations
 from extended_data import (
     base64_decode,
     base64_encode,
+)
+from extended_data.primitives import (
     decode_hcl2,
     decode_json,
     decode_toml,

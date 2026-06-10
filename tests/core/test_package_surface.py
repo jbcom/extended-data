@@ -75,27 +75,9 @@ def test_root_exports_tiered_data_surfaces() -> None:
         assert set(module.__all__) <= set(extended_data.__all__), module.__name__
 
 
-def test_tier1_utility_functions_are_not_root_exports() -> None:
-    """Pure utility functions should be imported from extended_data.primitives."""
-    tier1_utility_names = (
-        "all_non_empty",
-        "any_non_empty",
-        "deep_merge",
-        "filter_list",
-        "filter_map",
-        "flatten_list",
-        "flatten_map",
-        "is_nothing",
-        "normalize_data_encoding",
-        "number_to_words",
-        "sanitize_key",
-        "string_to_bool",
-        "to_roman",
-        "truncate",
-        "unhump_map",
-    )
-
-    for name in tier1_utility_names:
+def test_tier1_primitives_are_not_root_exports() -> None:
+    """Tier 1 functions and codecs should be imported from extended_data.primitives."""
+    for name in primitives.__all__:
         assert hasattr(primitives, name), name
         assert not hasattr(extended_data, name), name
         assert name not in extended_data.__all__

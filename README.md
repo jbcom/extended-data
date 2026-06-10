@@ -30,8 +30,8 @@ CrewAI releases pull vulnerable `chromadb` versions transitively.
 ## Usage
 
 ```python
-from extended_data import ConnectorFabric, DataWorkflow, ExtendedDict, InputProvider, Logging, decode_file, decode_json, encode_yaml
-from extended_data.primitives import number_to_words
+from extended_data import ConnectorFabric, DataWorkflow, ExtendedDict, InputProvider, Logging, decode_file
+from extended_data.primitives import decode_json, encode_yaml, number_to_words
 
 logger = Logging(logger_name="example")
 inputs = InputProvider(inputs={"GITHUB_OWNER": "jbcom"}, from_environment=False)
