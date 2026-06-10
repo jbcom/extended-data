@@ -154,7 +154,10 @@ plain strings before JSON handoff.
 processing. It reads or decodes structured data through the file and format
 processors, promotes values into Tier 2 containers by default, applies named
 transformation steps, writes output artifacts, and returns a `WorkflowResult`
-with the completed value, output path, and step trail.
+with the completed value, output path, and step trail. `WorkflowResult.as_extended()`
+returns a detached promoted view of the completed value, and result-level
+`to_export_safe()` / `wrap_for_export()` expose the same export boundary used by
+Tier 2 containers.
 
 ```python
 from extended_data import DataWorkflow
@@ -167,6 +170,8 @@ result = (
 )
 
 assert result.steps == ("read:config/base.yaml", "merge-env", "write:build/config.yaml")
+assert result.as_extended()["service"]["name"].upper_first() == "Api"
+assert result.to_export_safe()["service"]["name"] == "api"
 ```
 
 Missing workflow input files raise `FileNotFoundError`, and empty workflow

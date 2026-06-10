@@ -51,6 +51,7 @@ def demonstrate_layered_config_workflow() -> None:
             .then(("merge-env", lambda data: data.deep_merge(env_data)))
             .write("build/config.yaml", tld=tld)
         )
+        result.to_export_safe()
         merged_text = read_file("build/config.yaml", tld=tld)
 
     print(merged_text)

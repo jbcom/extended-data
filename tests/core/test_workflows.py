@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import datetime
+import json
+
 from pathlib import Path
 
 import pytest
@@ -120,6 +123,32 @@ def test_data_workflow_can_lower_and_promote_values() -> None:
     assert not isinstance(builtin.value, ExtendedDict)
     assert isinstance(extended.value, ExtendedDict)
     assert extended.value["service"]["name"].upper_first() == "Api"
+
+
+def test_workflow_result_extended_view_is_detached() -> None:
+    """WorkflowResult accessors expose promoted data without sharing mutable state."""
+    result = DataWorkflow.from_value({"service": {"name": "api"}}).result()
+
+    promoted = result.as_extended()
+    promoted["service"]["name"] = "worker"
+
+    assert isinstance(promoted, ExtendedDict)
+    assert isinstance(result.value, ExtendedDict)
+    assert result.value["service"]["name"] == "api"
+    assert result.as_extended()["service"]["name"].upper_first() == "Api"
+
+
+def test_workflow_result_exports_from_completed_value() -> None:
+    """Completed workflow results can be exported without leaving the result boundary."""
+    result = DataWorkflow.from_value(
+        {"launched": datetime.date(2026, 6, 10), "service": {"name": "api"}},
+    ).result()
+
+    export_safe = result.to_export_safe()
+    wrapped = result.wrap_for_export(allow_encoding="json")
+
+    assert export_safe == {"launched": "2026-06-10", "service": {"name": "api"}}
+    assert json.loads(wrapped) == {"launched": "2026-06-10", "service": {"name": "api"}}
 
 
 def test_data_workflow_preserves_tuples_until_serialization(tmp_path: Path) -> None:

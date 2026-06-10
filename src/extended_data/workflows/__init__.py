@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Iterable
+from copy import deepcopy
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, TypeAlias
 
 from extended_data.containers import extend_data, to_builtin
+from extended_data.io.exporters import make_raw_data_export_safe, wrap_raw_data_for_export
 from extended_data.io.files import FilePath, decode_file, read_data_file, write_file
 
 
@@ -40,8 +42,16 @@ class WorkflowResult:
         return to_builtin(self.value)
 
     def as_extended(self) -> Any:
-        """Return the workflow value promoted to Extended Data containers."""
-        return extend_data(self.value)
+        """Return a detached workflow value promoted to Extended Data containers."""
+        return extend_data(deepcopy(to_builtin(self.value)))
+
+    def to_export_safe(self, *, export_to_yaml: bool = False) -> Any:
+        """Return the workflow value converted to export-safe primitive data."""
+        return make_raw_data_export_safe(self.value, export_to_yaml=export_to_yaml)
+
+    def wrap_for_export(self, allow_encoding: bool | str = True, **format_opts: Any) -> str:
+        """Return the workflow value wrapped as an encoded export string."""
+        return wrap_raw_data_for_export(self.value, allow_encoding=allow_encoding, **format_opts)
 
 
 class DataWorkflow:

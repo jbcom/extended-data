@@ -171,6 +171,20 @@ def test_logging_exposes_stored_messages_as_detached_tier2_data() -> None:
     assert sorted(snapshot.to_export_safe()["events"]) == ["Stored message"]
 
 
+def test_workflow_result_exposes_detached_export_boundaries() -> None:
+    """Workflow results should expose promoted and export-safe value boundaries."""
+    result = extended_data.DataWorkflow.from_value({"service": {"name": "api"}}).result()
+
+    promoted = result.as_extended()
+    promoted["service"]["name"] = "worker"
+
+    assert isinstance(promoted, ExtendedDict)
+    assert result.value["service"]["name"] == "api"
+    assert result.as_extended()["service"]["name"].upper_first() == "Api"
+    assert result.to_export_safe() == {"service": {"name": "api"}}
+    assert '"service"' in result.wrap_for_export(allow_encoding="json")
+
+
 def test_tier2_container_methods_expose_integrated_primitives() -> None:
     """Tier 2 containers should expose common primitive operations directly."""
     matched = ExtendedString("api-gateway").is_partial_match("gateway")
