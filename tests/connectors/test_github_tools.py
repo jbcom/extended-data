@@ -1,17 +1,27 @@
-# ruff: noqa: I001
 """Tests for GitHub AI tools."""
 
 from __future__ import annotations
+
+import importlib.util
 
 from unittest.mock import MagicMock, patch
 
 import pytest
 
-pytest.importorskip("github")
-
 
 # Patch target for GitHubConnector - patch at source since tools.py imports lazily inside functions
 GITHUB_CONNECTOR_PATCH = "extended_data.connectors.github.GitHubConnector"
+
+
+def test_github_connector_requires_pygithub_when_constructed_without_extra() -> None:
+    """GitHub tool metadata imports without PyGithub, but the connector still requires the extra."""
+    if importlib.util.find_spec("github") is not None:
+        pytest.skip("PyGithub is installed")
+
+    from extended_data.connectors.github import GitHubConnector
+
+    with pytest.raises(ImportError, match=r"extended-data\[github\]"):
+        GitHubConnector(github_owner="jbcom", github_token="token", from_environment=False)
 
 
 class TestGitHubToolDefinitions:

@@ -230,6 +230,12 @@ def get_connector_class(name: str) -> builtins.type[VendorConnectorBase]:
         available = ", ".join(sorted(connectors.keys()))
         raise ValueError(f"Unknown connector: {name}. Available: {available}")
 
+    if name_lower in BUILTIN_CONNECTORS:
+        missing = get_missing_connector_requirements(name_lower)
+        if missing:
+            error = ImportError(f"Missing packages: {', '.join(missing)}")
+            _raise_missing_builtin_connector(name_lower, error)
+
     return connectors[name_lower]
 
 
@@ -282,7 +288,7 @@ def _available_connector_info(name: str, cls: builtins.type[VendorConnectorBase]
 
     return ConnectorInfo(
         name=name,
-        available=True,
+        available=not missing,
         source=source,
         extra=extra,
         install=get_connector_install_command(name),
@@ -350,4 +356,7 @@ def list_connector_info(*, include_unavailable: bool = True) -> list[dict[str, A
     if include_unavailable:
         names.update(BUILTIN_CONNECTORS)
         names.update(_missing_builtin_connectors)
-    return [get_connector_info(name, include_unavailable=include_unavailable) for name in sorted(names)]
+    info = [get_connector_info(name, include_unavailable=include_unavailable) for name in sorted(names)]
+    if not include_unavailable:
+        return [connector for connector in info if connector["available"]]
+    return info

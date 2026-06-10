@@ -1,13 +1,8 @@
-# ruff: noqa: I001
 """Tests for GitHub workflow builder utility."""
 
 from __future__ import annotations
 
-import pytest
-
 from ruamel.yaml import YAML
-
-pytest.importorskip("github")
 
 from extended_data.connectors.github import build_github_actions_workflow
 

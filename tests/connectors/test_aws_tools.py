@@ -1,18 +1,27 @@
-# ruff: noqa: I001
 """Tests for AWS AI tools."""
 
 from __future__ import annotations
+
+import importlib.util
 
 from unittest.mock import MagicMock, patch
 
 import pytest
 
-pytest.importorskip("boto3")
-pytest.importorskip("botocore")
-
 
 # Patch target for AWSConnectorFull - must patch where it's imported
 AWS_CONNECTOR_PATCH = "extended_data.connectors.aws.AWSConnectorFull"
+
+
+def test_aws_connector_requires_boto3_when_constructed_without_extra() -> None:
+    """AWS tool metadata imports without boto3, but the connector still requires the extra."""
+    if importlib.util.find_spec("boto3") is not None:
+        pytest.skip("boto3 is installed")
+
+    from extended_data.connectors.aws import AWSConnector
+
+    with pytest.raises(ImportError, match=r"extended-data\[aws\]"):
+        AWSConnector(from_environment=False)
 
 
 class TestAWSToolDefinitions:

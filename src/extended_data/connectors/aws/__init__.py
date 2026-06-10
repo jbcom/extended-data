@@ -18,19 +18,37 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-import boto3
-
-from boto3.resources.base import ServiceResource
-from botocore.config import Config
-from botocore.exceptions import ClientError
-
 from extended_data import is_nothing
+from extended_data.connectors._optional import is_connector_available, require_extra
 from extended_data.connectors.base import VendorConnectorBase
 from extended_data.logging import Logging
 
 
 if TYPE_CHECKING:
-    pass
+    import boto3
+
+    from boto3.resources.base import ServiceResource
+    from botocore.config import Config
+    from botocore.exceptions import ClientError
+else:
+    boto3 = None
+    Config = None
+    ServiceResource = Any
+
+    class ClientError(Exception):
+        """Fallback exception used until botocore is imported."""
+
+
+def _load_aws_sdk() -> Any:
+    """Load boto3/botocore lazily so tool metadata can import without the aws extra."""
+    global ClientError, Config, ServiceResource, boto3
+
+    if boto3 is None:
+        boto3 = require_extra("boto3", "aws")
+        Config = require_extra("botocore.config", "aws").Config
+        ClientError = require_extra("botocore.exceptions", "aws").ClientError
+        ServiceResource = require_extra("boto3.resources.base", "aws").ServiceResource
+    return boto3
 
 
 class AWSConnector(VendorConnectorBase):
@@ -51,9 +69,10 @@ class AWSConnector(VendorConnectorBase):
         **kwargs,
     ):
         super().__init__(logger=logger, **kwargs)
+        self._boto3 = _load_aws_sdk()
         self.execution_role_arn = execution_role_arn
         self.aws_sessions: dict[str, dict[str, boto3.Session]] = {}
-        self.default_aws_session = boto3.Session()
+        self.default_aws_session = self._boto3.Session()
 
     # =========================================================================
     # Session Management
@@ -79,7 +98,7 @@ class AWSConnector(VendorConnectorBase):
             response = sts_client.assume_role(RoleArn=execution_role_arn, RoleSessionName=role_session_name)
             credentials = response["Credentials"]
             self.logger.info(f"Successfully assumed role: {execution_role_arn}")
-            return boto3.Session(
+            return self._boto3.Session(
                 aws_access_key_id=credentials["AccessKeyId"],
                 aws_secret_access_key=credentials["SecretAccessKey"],
                 aws_session_token=credentials["SessionToken"],
@@ -132,6 +151,7 @@ class AWSConnector(VendorConnectorBase):
         Returns:
             A botocore Config with retry settings.
         """
+        _load_aws_sdk()
         return Config(retries={"max_attempts": max_attempts, "mode": "standard"})
 
     def get_aws_client(
@@ -553,7 +573,8 @@ class AWSConnector(VendorConnectorBase):
         prefix = os.getenv("TM_VENDORS_PREFIX", prefix)
 
         try:
-            session = boto3.Session()
+            aws_sdk = _load_aws_sdk()
+            session = aws_sdk.Session()
             secretsmanager = session.client("secretsmanager")
 
             # List secrets with the prefix
@@ -578,11 +599,34 @@ class AWSConnector(VendorConnectorBase):
         return vendors
 
 
-# Import submodule operations to make them available
-from extended_data.connectors.aws.codedeploy import create_codedeploy_deployment, get_aws_codedeploy_deployments
-from extended_data.connectors.aws.organizations import AWSOrganizationsMixin
-from extended_data.connectors.aws.s3 import AWSS3Mixin
-from extended_data.connectors.aws.sso import AWSSSOmixin
+if is_connector_available("aws"):
+    # Import submodule operations to make them available when the AWS SDK is present.
+    from extended_data.connectors.aws.codedeploy import create_codedeploy_deployment, get_aws_codedeploy_deployments
+    from extended_data.connectors.aws.organizations import AWSOrganizationsMixin
+    from extended_data.connectors.aws.s3 import AWSS3Mixin
+    from extended_data.connectors.aws.sso import AWSSSOmixin
+else:
+
+    class AWSOrganizationsMixin:
+        """Placeholder mixin used when the aws extra is not installed."""
+
+
+    class AWSS3Mixin:
+        """Placeholder mixin used when the aws extra is not installed."""
+
+
+    class AWSSSOmixin:
+        """Placeholder mixin used when the aws extra is not installed."""
+
+
+    def create_codedeploy_deployment(*args: Any, **kwargs: Any) -> Any:
+        """Require the aws extra before creating CodeDeploy deployments."""
+        _load_aws_sdk()
+
+
+    def get_aws_codedeploy_deployments(*args: Any, **kwargs: Any) -> Any:
+        """Require the aws extra before listing CodeDeploy deployments."""
+        _load_aws_sdk()
 
 
 class AWSConnectorFull(AWSConnector, AWSOrganizationsMixin, AWSSSOmixin, AWSS3Mixin):

@@ -1,17 +1,27 @@
-# ruff: noqa: I001
 """Tests for Vault AI tools."""
 
 from __future__ import annotations
+
+import importlib.util
 
 from unittest.mock import MagicMock, patch
 
 import pytest
 
-pytest.importorskip("hvac")
-
 
 # Patch target for VaultConnector - must patch where it's used (in tools.py), not where it's defined
 VAULT_CONNECTOR_PATCH = "extended_data.connectors.vault.VaultConnector"
+
+
+def test_vault_connector_requires_hvac_when_constructed_without_extra() -> None:
+    """Vault tool metadata imports without hvac, but the connector still requires the extra."""
+    if importlib.util.find_spec("hvac") is not None:
+        pytest.skip("hvac is installed")
+
+    from extended_data.connectors.vault import VaultConnector
+
+    with pytest.raises(ImportError, match=r"extended-data\[vault\]"):
+        VaultConnector(from_environment=False)
 
 
 class TestVaultToolDefinitions:

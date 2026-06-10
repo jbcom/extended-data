@@ -4,15 +4,33 @@ from __future__ import annotations
 
 from collections import deque
 from datetime import datetime, timezone
-from typing import Any
-
-import hvac
-
-from hvac.exceptions import VaultError
+from typing import TYPE_CHECKING, Any
 
 from extended_data import is_nothing
+from extended_data.connectors._optional import require_extra
 from extended_data.connectors.base import VendorConnectorBase
 from extended_data.logging import Logging
+
+
+if TYPE_CHECKING:
+    import hvac
+
+    from hvac.exceptions import VaultError
+else:
+    hvac = None
+
+    class VaultError(Exception):
+        """Fallback exception used until hvac is imported."""
+
+
+def _load_hvac() -> Any:
+    """Load hvac lazily so tool metadata can import without the vault extra."""
+    global VaultError, hvac
+
+    if hvac is None:
+        hvac = require_extra("hvac", "vault")
+        VaultError = require_extra("hvac.exceptions", "vault").VaultError
+    return hvac
 
 
 # Default Vault settings
@@ -36,6 +54,7 @@ class VaultConnector(VendorConnectorBase):
     ):
         super().__init__(logger=logger, **kwargs)
 
+        self._hvac = _load_hvac()
         self.vault_url = vault_url
         self.vault_namespace = vault_namespace
         self.vault_token = vault_token
@@ -63,7 +82,7 @@ class VaultConnector(VendorConnectorBase):
             vault_opts["token"] = vault_token
 
         try:
-            self._vault_client = hvac.Client(**vault_opts)
+            self._vault_client = self._hvac.Client(**vault_opts)
 
             if vault_token and self._vault_client.is_authenticated():
                 self._set_token_expiration()
@@ -86,7 +105,7 @@ class VaultConnector(VendorConnectorBase):
                 if vault_namespace:
                     vault_opts["namespace"] = vault_namespace
 
-                self._vault_client = hvac.Client(**vault_opts)
+                self._vault_client = self._hvac.Client(**vault_opts)
                 self._vault_client.auth.approle.login(
                     role_id=role_id,
                     secret_id=secret_id,

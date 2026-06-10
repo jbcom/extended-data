@@ -1,18 +1,27 @@
-# ruff: noqa: I001
 """Tests for Google AI tools."""
 
 from __future__ import annotations
+
+import importlib.util
 
 from unittest.mock import MagicMock, patch
 
 import pytest
 
-pytest.importorskip("google.oauth2.service_account")
-pytest.importorskip("googleapiclient")
-
 
 # Patch target for GoogleConnectorFull - must patch where it's imported
 GOOGLE_CONNECTOR_PATCH = "extended_data.connectors.google.GoogleConnectorFull"
+
+
+def test_google_connector_requires_google_sdk_when_constructed_without_extra() -> None:
+    """Google tool metadata imports without Google SDKs, but the connector still requires the extra."""
+    if importlib.util.find_spec("googleapiclient") is not None:
+        pytest.skip("google-api-python-client is installed")
+
+    from extended_data.connectors.google import GoogleConnector
+
+    with pytest.raises(ImportError, match=r"extended-data\[google\]"):
+        GoogleConnector(service_account_info={"type": "service_account"}, from_environment=False)
 
 
 class TestGoogleToolDefinitions:

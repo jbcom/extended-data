@@ -6,11 +6,8 @@ import io
 import os
 
 from copy import deepcopy
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from github import Auth, Github
-from github.GithubException import GithubException, UnknownObjectException
-from python_graphql_client import GraphqlClient
 from ruamel.yaml import YAML
 
 from extended_data import (
@@ -20,11 +17,49 @@ from extended_data import (
     is_nothing,
     wrap_raw_data_for_export,
 )
+from extended_data.connectors._optional import require_extra
 from extended_data.connectors.base import VendorConnectorBase
 from extended_data.logging import Logging
 
 
+if TYPE_CHECKING:
+    from github import Auth, Github
+    from github.GithubException import GithubException, UnknownObjectException
+    from python_graphql_client import GraphqlClient
+else:
+    Auth = None
+    Github = None
+    GraphqlClient = None
+
+    class GitHubFallbackError(Exception):
+        """Fallback exception used until PyGithub is imported."""
+
+
+    GithubException = GitHubFallbackError
+    UnknownObjectException = GitHubFallbackError
+
+
 FilePath = str | bytes | os.PathLike[Any]
+
+
+def _load_github_sdk() -> None:
+    """Load GitHub SDK dependencies lazily so tool metadata remains importable."""
+    global Auth, Github, GithubException, GraphqlClient, UnknownObjectException
+
+    if Github is None:
+        try:
+            github_module = require_extra("github", "github")
+            github_exceptions = require_extra("github.GithubException", "github")
+            graphql_module = require_extra("python_graphql_client", "github")
+        except ImportError as exc:
+            msg = "PyGithub is required for GitHubConnector. Install with: pip install extended-data[github]"
+            raise ImportError(msg) from exc
+
+        Auth = github_module.Auth
+        Github = github_module.Github
+        GithubException = github_exceptions.GithubException
+        UnknownObjectException = github_exceptions.UnknownObjectException
+        GraphqlClient = graphql_module.GraphqlClient
 
 
 def get_github_api_error(exc: GithubException) -> str | None:
@@ -50,6 +85,7 @@ class GitHubConnector(VendorConnectorBase):
         **kwargs,
     ):
         super().__init__(logger=logger, **kwargs)
+        _load_github_sdk()
 
         self.GITHUB_OWNER = github_owner
         self.GITHUB_REPO = github_repo

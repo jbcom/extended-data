@@ -5,13 +5,33 @@ from __future__ import annotations
 import json
 
 from collections.abc import Sequence
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from google.oauth2 import service_account
-from googleapiclient.discovery import build
-
+from extended_data.connectors._optional import require_extra
 from extended_data.connectors.base import VendorConnectorBase
 from extended_data.logging import Logging
+
+
+if TYPE_CHECKING:
+    from google.oauth2 import service_account
+    from googleapiclient.discovery import build
+else:
+    service_account = None
+    build = None
+
+
+def _load_google_sdk() -> None:
+    """Load Google SDK dependencies lazily so tool metadata remains importable."""
+    global build, service_account
+
+    if service_account is None or build is None:
+        try:
+            service_account = require_extra("google.oauth2.service_account", "google")
+            discovery = require_extra("googleapiclient.discovery", "google")
+        except ImportError as exc:
+            msg = "google-api-python-client is required for GoogleConnector. Install with: pip install extended-data[google]"
+            raise ImportError(msg) from exc
+        build = discovery.build
 
 
 # Default Google scopes
@@ -56,6 +76,7 @@ class GoogleConnector(VendorConnectorBase):
             **kwargs: Additional arguments passed to VendorConnectorBase.
         """
         super().__init__(logger=logger, **kwargs)
+        _load_google_sdk()
 
         self.scopes = scopes or DEFAULT_SCOPES
         self.subject = subject

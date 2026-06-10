@@ -358,6 +358,27 @@ class TestConnectorFabric:
         assert info["install"] == "pip install extended-data[github]"
         assert info["class"] == "GitHubConnector"
 
+    def test_lazy_builtin_with_missing_requirements_is_unavailable(self):
+        """Lazy-loadable built-ins still report unavailable when extras are missing."""
+        registry.clear_cache()
+
+        if not _has_module("boto3"):
+            info = registry.get_connector_info("aws")
+
+            assert info["available"] is False
+            assert info["missing"] == ["boto3"]
+
+            with pytest.raises(ImportError, match=r"extended-data\[aws\]"):
+                registry.get_connector_class("aws")
+
+    def test_available_only_catalog_filters_missing_lazy_builtins(self):
+        """Available-only metadata excludes lazy built-ins with missing extras."""
+        registry.clear_cache()
+
+        info = registry.list_connector_info(include_unavailable=False)
+
+        assert all(connector["available"] for connector in info)
+
     def test_register_builtins_tracks_missing_optional_dependency(self, monkeypatch):
         """Built-in discovery remembers optional dependency import failures."""
         monkeypatch.setattr(registry, "_missing_builtin_connectors", {})
