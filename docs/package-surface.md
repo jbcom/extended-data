@@ -65,6 +65,10 @@ payload = ExtendedDict({"service": {"name": "api"}})
 payload["service"]["name"].upper_first()
 ```
 
+Mutation and common operator paths are part of that contract: `setdefault()`,
+in-place dict merge, tuple slicing, tuple concatenation, and tuple repetition
+preserve Tier 2 containers instead of leaking plain nested values.
+
 Container methods that return derived collections stay in Tier 2 as well:
 `ExtendedDict.filter()` returns an `ExtendedTuple` of accepted and rejected
 `ExtendedDict` values, and `ExtendedDict.all_values()` returns an

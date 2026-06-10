@@ -6,6 +6,8 @@ from collections import UserDict
 from collections.abc import Iterable, Mapping
 from typing import TYPE_CHECKING, Any, overload
 
+from typing_extensions import Self
+
 
 if TYPE_CHECKING:
     from _typeshed import SupportsKeysAndGetItem
@@ -67,6 +69,17 @@ class ExtendedDict(UserDict[str, Any]):
 
         for key, value in kwargs.items():
             self[key] = value
+
+    def setdefault(self, key: str, default: Any = None) -> Any:
+        """Insert a default while returning the promoted stored value."""
+        if key not in self.data:
+            self[key] = default
+        return self.data[key]
+
+    def __ior__(self, other: Any) -> Self:  # type: ignore[override,misc]
+        """Update from a mapping or item iterable while preserving extended containers."""
+        self.update(other)
+        return self
 
     def deep_merge(self, *mappings: Mapping[str, Any]) -> ExtendedDict:
         """Return a deeply merged copy."""

@@ -59,6 +59,11 @@ def test_extended_dict_promotes_nested_values_on_mutation() -> None:
     value.update({"ports": [8080, "9090"]})
     value.update([("metadata", {"tier": "prod"})], runtime={"python": "3.13"})
     value.update(other={"literal": "key"})
+    defaulted = value.setdefault("labels", {"team": "data"})
+    existing = value.setdefault("labels", {"team": "ignored"})
+    merged = value | {"deployment": {"region": "us-east-1"}}
+    right_merged = {"cluster": {"name": "primary"}} | value
+    value |= {"settings": {"debug": "false"}}
 
     assert isinstance(value["service"], ExtendedDict)
     assert isinstance(value["service"]["name"], ExtendedString)
@@ -71,6 +76,18 @@ def test_extended_dict_promotes_nested_values_on_mutation() -> None:
     assert isinstance(value["runtime"]["python"], ExtendedString)
     assert isinstance(value["other"], ExtendedDict)
     assert isinstance(value["other"]["literal"], ExtendedString)
+    assert isinstance(defaulted, ExtendedDict)
+    assert isinstance(defaulted["team"], ExtendedString)
+    assert existing is defaulted
+    assert value["labels"]["team"] == "data"
+    assert isinstance(value["settings"], ExtendedDict)
+    assert isinstance(value["settings"]["debug"], ExtendedString)
+    assert isinstance(merged, ExtendedDict)
+    assert isinstance(merged["deployment"], ExtendedDict)
+    assert isinstance(merged["deployment"]["region"], ExtendedString)
+    assert isinstance(right_merged, ExtendedDict)
+    assert isinstance(right_merged["cluster"], ExtendedDict)
+    assert isinstance(right_merged["cluster"]["name"], ExtendedString)
     assert value["service"]["name"].upper_first() == "Api"
 
 
@@ -146,6 +163,32 @@ def test_extended_tuple_promotes_nested_values() -> None:
     assert isinstance(value[1][0], ExtendedString)
     assert value.to_tuple() == ({"name": "api"}, ["jobs"])
     assert to_builtin(value) == ({"name": "api"}, ["jobs"])
+
+
+def test_extended_tuple_preserves_surface_for_builtin_tuple_operations() -> None:
+    """Inherited tuple operations should not leak plain tuple results."""
+    value = ExtendedTuple(({"name": "api"}, ["jobs"]))
+    prefix = ({"name": "gateway"},)
+    suffix = ({"name": "worker"},)
+
+    sliced = value[:1]
+    added = value + suffix
+    right_added = prefix + value
+    repeated = value * 2
+    right_repeated = 2 * value
+
+    assert isinstance(sliced, ExtendedTuple)
+    assert isinstance(added, ExtendedTuple)
+    assert isinstance(right_added, ExtendedTuple)
+    assert isinstance(repeated, ExtendedTuple)
+    assert isinstance(right_repeated, ExtendedTuple)
+    assert isinstance(sliced[0], ExtendedDict)
+    assert isinstance(added[2], ExtendedDict)
+    assert isinstance(added[2]["name"], ExtendedString)
+    assert isinstance(right_added[0], ExtendedDict)
+    assert isinstance(right_added[0]["name"], ExtendedString)
+    assert isinstance(repeated[2], ExtendedDict)
+    assert isinstance(right_repeated[2], ExtendedDict)
 
 
 def test_extend_data_recursively_wraps_builtin_containers() -> None:

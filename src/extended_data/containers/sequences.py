@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections import UserList
 from collections.abc import Callable, Iterable, Iterator, MutableSet
+from operator import index as operator_index
 from typing import Any, SupportsIndex, TypeVar, cast, overload
 
 from extended_data.primitives.sequences import flatten_list
@@ -102,6 +103,41 @@ class ExtendedTuple(tuple[T, ...]):
         from extended_data.containers.factory import extend_data
 
         return cast(T, extend_data(item))
+
+    @overload
+    def __getitem__(self, index: SupportsIndex) -> T: ...
+
+    @overload
+    def __getitem__(self, index: slice) -> ExtendedTuple[T]: ...
+
+    def __getitem__(self, index: SupportsIndex | slice) -> T | ExtendedTuple[T]:
+        """Return sliced values as ExtendedTuple instances."""
+        value = super().__getitem__(index)
+        if isinstance(index, slice):
+            return ExtendedTuple(cast(tuple[T, ...], value))
+        return cast(T, value)
+
+    @overload
+    def __add__(self, other: tuple[T, ...]) -> ExtendedTuple[T]: ...
+
+    @overload
+    def __add__(self, other: tuple[U, ...]) -> ExtendedTuple[T | U]: ...
+
+    def __add__(self, other: tuple[Any, ...]) -> ExtendedTuple[Any]:
+        """Concatenate tuples while preserving the ExtendedTuple surface."""
+        return ExtendedTuple((*tuple(self), *other))
+
+    def __radd__(self, other: tuple[Any, ...]) -> ExtendedTuple[Any]:
+        """Concatenate tuples while preserving the ExtendedTuple surface."""
+        return ExtendedTuple((*other, *tuple(self)))
+
+    def __mul__(self, count: SupportsIndex) -> ExtendedTuple[T]:
+        """Repeat tuple values while preserving the ExtendedTuple surface."""
+        return ExtendedTuple(tuple(self) * operator_index(count))
+
+    def __rmul__(self, count: SupportsIndex) -> ExtendedTuple[T]:
+        """Repeat tuple values while preserving the ExtendedTuple surface."""
+        return self * count
 
     def flatten(self) -> ExtendedTuple[Any]:
         """Return a recursively flattened tuple copy."""
