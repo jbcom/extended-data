@@ -138,7 +138,7 @@ class TestAWSConnector:
         connector.get_aws_client = MagicMock(return_value=mock_secretsmanager)
 
         filters = [{"Key": "description", "Values": ["prod"]}]
-        secrets = connector.list_secrets(filters=filters, name_prefix="/vendors/")
+        secrets = connector.list_secrets(filters=filters, prefix="/vendors/")
 
         assert isinstance(secrets, ExtendedDict)
         assert isinstance(secrets["/vendors/foo"], ExtendedString)
@@ -218,21 +218,28 @@ class TestAWSConnector:
         )
 
     def test_list_secrets_rejects_path_traversal(self, base_connector_kwargs):
-        """Ensure list_secrets rejects path traversal in name_prefix."""
+        """Ensure list_secrets rejects path traversal in prefix."""
         import pytest
 
         connector = AWSConnector(**base_connector_kwargs)
 
         # Should reject path traversal attempts
         with pytest.raises(ValueError, match="invalid characters"):
-            connector.list_secrets(name_prefix="../../../etc/passwd")
+            connector.list_secrets(prefix="../../../etc/passwd")
 
         with pytest.raises(ValueError, match="invalid characters"):
-            connector.list_secrets(name_prefix="secrets/../admin")
+            connector.list_secrets(prefix="secrets/../admin")
 
         # Should reject null bytes
         with pytest.raises(ValueError, match="invalid characters"):
-            connector.list_secrets(name_prefix="secrets\x00admin")
+            connector.list_secrets(prefix="secrets\x00admin")
+
+    def test_list_secrets_does_not_preserve_name_prefix_alias(self, base_connector_kwargs):
+        """Clean major-version surface should keep prefix as the only prefix keyword."""
+        connector = AWSConnector(**base_connector_kwargs)
+
+        with pytest.raises(TypeError, match="name_prefix"):
+            connector.list_secrets(name_prefix="/vendors/")  # type: ignore[call-arg]
 
     def test_get_secret_returns_extended_string(self, base_connector_kwargs):
         """Ensure get_secret promotes returned secret strings."""
@@ -352,7 +359,7 @@ class TestAWSConnector:
         connector.delete_secret = MagicMock()
 
         to_delete = connector.delete_secrets_matching(
-            name_prefix="/vendors/",
+            prefix="/vendors/",
             dry_run=True,
             force_delete=False,
             execution_role_arn="arn:role:override",
@@ -363,7 +370,7 @@ class TestAWSConnector:
         assert to_delete == ["arn:a", "arn:b"]
         connector.delete_secret.assert_not_called()
         connector.list_secrets.assert_called_once_with(
-            name_prefix="/vendors/",
+            prefix="/vendors/",
             execution_role_arn="arn:role:override",
         )
 
@@ -376,7 +383,7 @@ class TestAWSConnector:
         )
 
         deleted = connector.delete_secrets_matching(
-            name_prefix="/vendors/",
+            prefix="/vendors/",
             dry_run=False,
             force_delete=True,
             execution_role_arn="arn:role:override",
@@ -401,6 +408,13 @@ class TestAWSConnector:
                 ),
             ]
         )
+
+    def test_delete_secrets_matching_does_not_preserve_name_prefix_alias(self, base_connector_kwargs):
+        """Clean major-version surface should keep prefix as the only deletion keyword."""
+        connector = AWSConnector(**base_connector_kwargs)
+
+        with pytest.raises(TypeError, match="name_prefix"):
+            connector.delete_secrets_matching(name_prefix="/vendors/")  # type: ignore[call-arg]
 
     def test_copy_secrets_to_s3_unwraps_extended_data(self, base_connector_kwargs):
         """Ensure copy_secrets_to_s3 uploads JSON built from plain containers."""

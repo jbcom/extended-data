@@ -187,6 +187,8 @@ AWS Secrets Manager prefix loading is generic too: use
 `AWSConnector.load_secrets_by_prefix()` when a workflow needs a promoted mapping
 of secret names to values. The old vendor-specific ASM loader name is
 intentionally not preserved.
+AWS secret listing and deletion methods use the canonical `prefix` keyword. The
+old `name_prefix` convenience keyword is intentionally not preserved.
 
 ## Connector Fabric
 

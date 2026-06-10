@@ -287,7 +287,6 @@ class AWSConnector(AWSOrganizationsMixin, AWSSSOmixin, AWSS3Mixin, VendorConnect
         skip_empty_secrets: bool = False,
         execution_role_arn: str | None = None,
         role_session_name: str | None = None,
-        **kwargs: Any,
     ) -> ExtendedDict:
         """List secrets from AWS Secrets Manager.
 
@@ -298,7 +297,6 @@ class AWSConnector(AWSOrganizationsMixin, AWSSSOmixin, AWSS3Mixin, VendorConnect
             skip_empty_secrets: If True, skip secrets with empty values.
             execution_role_arn: ARN of role to assume for cross-account access.
             role_session_name: Session name for assumed role.
-            **kwargs: Support for 'name_prefix' alias.
 
         Returns:
             Dict mapping secret names to ARNs or values.
@@ -307,8 +305,6 @@ class AWSConnector(AWSOrganizationsMixin, AWSSSOmixin, AWSS3Mixin, VendorConnect
             ValueError: If prefix contains invalid characters.
         """
         self.logger.info("Listing AWS Secrets Manager secrets")
-
-        prefix = prefix or kwargs.get("name_prefix")
 
         if prefix and (".." in prefix or "\x00" in prefix):
             msg = "prefix contains invalid characters"
@@ -471,10 +467,8 @@ class AWSConnector(AWSOrganizationsMixin, AWSSSOmixin, AWSS3Mixin, VendorConnect
         force_delete: bool = False,
         dry_run: bool = True,
         execution_role_arn: str | None = None,
-        **kwargs: Any,
     ) -> ExtendedList[ExtendedString]:
         """Delete all secrets that match the provided name prefix."""
-        prefix = prefix or kwargs.get("name_prefix")
         if not prefix:
             msg = "prefix is required to delete matching secrets"
             raise ValueError(msg)
@@ -482,9 +476,8 @@ class AWSConnector(AWSOrganizationsMixin, AWSSSOmixin, AWSS3Mixin, VendorConnect
         self.logger.info(f"Deleting secrets matching prefix: {prefix} (dry_run={dry_run})")
 
         role_arn = execution_role_arn or self.execution_role_arn
-        # Pass name_prefix to satisfy existing tests that mock this call
         secrets = self.list_secrets(
-            name_prefix=prefix,
+            prefix=prefix,
             execution_role_arn=role_arn,
         )
 
