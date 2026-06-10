@@ -37,7 +37,7 @@ def to_builtin(value: Any) -> Any:
     if isinstance(value, ExtendedString):
         return str(value)
     if isinstance(value, ExtendedDict):
-        return {key: to_builtin(item) for key, item in value.items()}
+        return {to_builtin(key): to_builtin(item) for key, item in value.items()}
     if isinstance(value, ExtendedList):
         return [to_builtin(item) for item in value]
     if isinstance(value, ExtendedTuple):
@@ -45,7 +45,7 @@ def to_builtin(value: Any) -> Any:
     if isinstance(value, ExtendedSet):
         return {to_builtin(item) for item in value}
     if isinstance(value, Mapping):
-        return {key: to_builtin(item) for key, item in value.items()}
+        return {to_builtin(key): to_builtin(item) for key, item in value.items()}
     if isinstance(value, list):
         return [to_builtin(item) for item in value]
     if isinstance(value, tuple):

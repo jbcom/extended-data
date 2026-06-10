@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import pytest
 
-from extended_data.containers import ExtendedDict
+from extended_data.containers import ExtendedDict, ExtendedString
 from extended_data.primitives.formats.errors import DataDecodeError
 from extended_data.primitives.formats.json import decode_json, encode_json
 
@@ -123,3 +123,12 @@ def test_encode_json_lowers_extended_containers(use_data_attribute: bool) -> Non
     result = encode_json(raw_data, sort_keys=True)
 
     assert decode_json(result) == {"items": ["one"], "status": "ok"}
+
+
+def test_encode_json_lowers_extended_mapping_keys() -> None:
+    """Extended mapping keys are lowered before JSON handoff."""
+    payload = ExtendedDict({ExtendedString("service"): {"name": "api"}})
+
+    result = encode_json(payload, sort_keys=True)
+
+    assert decode_json(result) == {"service": {"name": "api"}}

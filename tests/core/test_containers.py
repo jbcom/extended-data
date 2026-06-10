@@ -246,6 +246,7 @@ def test_to_builtin_recursively_unwraps_extended_containers() -> None:
     wrapped = ExtendedDict(
         {
             "service": ExtendedDict({"name": ExtendedString("api")}),
+            ExtendedString("metadata"): ExtendedDict({"owner": ExtendedString("platform")}),
             "ports": ExtendedList([8080, 8081]),
             "tags": ExtendedSet({"prod", "api"}),
             "aliases": ExtendedTuple(("api", "gateway")),
@@ -256,6 +257,9 @@ def test_to_builtin_recursively_unwraps_extended_containers() -> None:
 
     assert isinstance(plain, dict)
     assert plain["service"] == {"name": "api"}
+    metadata_key = next(key for key in plain if key == "metadata")
+    assert type(metadata_key) is str
+    assert plain["metadata"] == {"owner": "platform"}
     assert plain["ports"] == [8080, 8081]
     assert plain["tags"] == {"prod", "api"}
     assert plain["aliases"] == ("api", "gateway")
