@@ -12,6 +12,7 @@ from extended_data import (
     ExtendedList,
     ExtendedSet,
     ExtendedString,
+    ExtendedTuple,
     InputProvider,
     Logging,
     SecretsConnector,
@@ -31,8 +32,9 @@ from extended_data import (
 - Tier 1 `extended_data.primitives` modules are pure functions and codecs for
   strings, numbers, maps, lists, matching, state, type coercion, and structured
   formats.
-- Tier 2 `extended_data.containers` classes wrap Python user containers as
-  `ExtendedString`, `ExtendedDict`, `ExtendedList`, and `ExtendedSet` with
+- Tier 2 `extended_data.containers` classes wrap Python container primitives as
+  `ExtendedString`, `ExtendedDict`, `ExtendedList`, `ExtendedTuple`, and
+  `ExtendedSet` with
   ergonomic methods over Tier 1 primitives.
 - Tier 3 processors use the first two tiers to handle files, imports, exports,
   inputs, API data, vendor integrations, and workflows.
@@ -45,14 +47,15 @@ the public error message does not echo the raw payload.
 name = ExtendedString("API Response Value").to_snake_case()
 payload = ExtendedDict({"outer": {"inner": 1}}).flatten()
 items = ExtendedList([1, [2, [3]]]).flatten()
+aliases = ExtendedTuple(("api", ("gateway",))).flatten()
 tags = ExtendedSet({"prod", "prod", ""}).compact()
 words = number_to_words(42)
 encoding = normalize_data_encoding("YML")
 ```
 
-`ExtendedDict`, `ExtendedList`, and `ExtendedSet` recursively promote nested
-plain values on construction and mutation, so method chains can continue through
-data loaded from normal Python literals:
+`ExtendedDict`, `ExtendedList`, `ExtendedTuple`, and `ExtendedSet` recursively
+promote nested plain values on construction and mutation, so method chains can
+continue through data loaded from normal Python literals:
 
 ```python
 payload = ExtendedDict({"service": {"name": "api"}})
@@ -70,6 +73,9 @@ assert payload["service"]["name"].upper_first() == "Api"
 
 Use `extend_data(value)` to promote existing plain data and `to_builtin(value)`
 to lower extended containers back to standard Python data.
+Tuple values are promoted to `ExtendedTuple` and lowered back to Python tuples,
+so the Tier 2 surface does not silently turn immutable input data into mutable
+lists.
 Format encoders lower Tier 2 containers the same way before serializing JSON,
 YAML, TOML, and HCL output.
 

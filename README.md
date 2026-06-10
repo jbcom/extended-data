@@ -116,7 +116,8 @@ The package is intentionally tiered:
 
 Tier 3 decoders can opt into Tier 2 containers with `as_extended=True`, so
 decoded files, Base64 payloads, and directed inputs can immediately use
-`ExtendedDict`, `ExtendedList`, `ExtendedSet`, and `ExtendedString` methods.
+`ExtendedDict`, `ExtendedList`, `ExtendedTuple`, `ExtendedSet`, and
+`ExtendedString` methods.
 `DataWorkflow` makes those compositions first-class: read or decode data,
 apply named transformations, write an output artifact, and keep the step trail
 in a `WorkflowResult`. Missing workflow inputs and empty writes fail loudly.

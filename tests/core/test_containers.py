@@ -6,7 +6,15 @@ from typing import Any
 
 import extended_data
 
-from extended_data.containers import ExtendedDict, ExtendedList, ExtendedSet, ExtendedString, extend_data, to_builtin
+from extended_data.containers import (
+    ExtendedDict,
+    ExtendedList,
+    ExtendedSet,
+    ExtendedString,
+    ExtendedTuple,
+    extend_data,
+    to_builtin,
+)
 
 
 def test_extended_string_chains_primitive_transforms() -> None:
@@ -109,6 +117,29 @@ def test_extended_set_promotes_string_values() -> None:
     assert to_builtin(value) == {"api", "worker"}
 
 
+def test_extended_tuple_preserves_immutable_sequence_shape() -> None:
+    """ExtendedTuple composes sequence primitives without becoming an ExtendedList."""
+    value = ExtendedTuple((1, (2, [3]), "", 2))
+
+    assert value.flatten() == (1, 2, 3, "", 2)
+    assert value.compact() == (1, (2, [3]), 2)
+    assert value.unique() == (1, (2, [3]), "", 2)
+    assert value.filter(lambda item: isinstance(item, int)) == (1, 2)
+    assert value.map(lambda item: item * 2 if isinstance(item, int) else item) == (2, (2, [3]), "", 4)
+
+
+def test_extended_tuple_promotes_nested_values() -> None:
+    """ExtendedTuple keeps tuple-shaped values in the Tier 2 surface."""
+    value = ExtendedTuple(({"name": "api"}, ["jobs"]))
+
+    assert isinstance(value[0], ExtendedDict)
+    assert isinstance(value[0]["name"], ExtendedString)
+    assert isinstance(value[1], ExtendedList)
+    assert isinstance(value[1][0], ExtendedString)
+    assert value.to_tuple() == ({"name": "api"}, ["jobs"])
+    assert to_builtin(value) == ({"name": "api"}, ["jobs"])
+
+
 def test_extend_data_recursively_wraps_builtin_containers() -> None:
     """The container factory promotes plain values into the Tier 2 surface."""
     wrapped = extend_data(
@@ -116,6 +147,7 @@ def test_extend_data_recursively_wraps_builtin_containers() -> None:
             "service": {"name": "api"},
             "ports": [8080, 8081],
             "tags": {"prod", "api"},
+            "aliases": ("api", "gateway"),
         }
     )
 
@@ -124,6 +156,7 @@ def test_extend_data_recursively_wraps_builtin_containers() -> None:
     assert isinstance(wrapped["service"]["name"], ExtendedString)
     assert isinstance(wrapped["ports"], ExtendedList)
     assert isinstance(wrapped["tags"], ExtendedSet)
+    assert isinstance(wrapped["aliases"], ExtendedTuple)
     assert wrapped["service"]["name"].upper_first() == "Api"
 
 
@@ -134,6 +167,7 @@ def test_to_builtin_recursively_unwraps_extended_containers() -> None:
             "service": ExtendedDict({"name": ExtendedString("api")}),
             "ports": ExtendedList([8080, 8081]),
             "tags": ExtendedSet({"prod", "api"}),
+            "aliases": ExtendedTuple(("api", "gateway")),
         }
     )
 
@@ -143,6 +177,7 @@ def test_to_builtin_recursively_unwraps_extended_containers() -> None:
     assert plain["service"] == {"name": "api"}
     assert plain["ports"] == [8080, 8081]
     assert plain["tags"] == {"prod", "api"}
+    assert plain["aliases"] == ("api", "gateway")
 
 
 def test_container_classes_are_root_exports() -> None:
@@ -151,5 +186,6 @@ def test_container_classes_are_root_exports() -> None:
     assert extended_data.ExtendedDict is ExtendedDict
     assert extended_data.ExtendedList is ExtendedList
     assert extended_data.ExtendedSet is ExtendedSet
+    assert extended_data.ExtendedTuple is ExtendedTuple
     assert extended_data.extend_data is extend_data
     assert extended_data.to_builtin is to_builtin

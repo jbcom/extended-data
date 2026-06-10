@@ -11,7 +11,15 @@ import importlib
 from typing import TYPE_CHECKING, Any
 
 from extended_data._version import __version__
-from extended_data.containers import ExtendedDict, ExtendedList, ExtendedSet, ExtendedString, extend_data, to_builtin
+from extended_data.containers import (
+    ExtendedDict,
+    ExtendedList,
+    ExtendedSet,
+    ExtendedString,
+    ExtendedTuple,
+    extend_data,
+    to_builtin,
+)
 from extended_data.io.base64 import base64_decode, base64_encode
 from extended_data.io.exporters import (
     make_raw_data_export_safe,
@@ -183,6 +191,7 @@ __all__ = [
     "ExtendedList",
     "ExtendedSet",
     "ExtendedString",
+    "ExtendedTuple",
     "FilePath",
     "InputProvider",
     "KeyTransform",

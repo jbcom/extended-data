@@ -86,6 +86,68 @@ class ExtendedList(UserList[T]):
         return ExtendedList(values)
 
 
+class ExtendedTuple(tuple[T, ...]):
+    """Tuple wrapper with immutable chainable sequence operations."""
+
+    __slots__ = ()
+
+    def __new__(cls, values: Iterable[T] | None = None) -> ExtendedTuple[T]:
+        """Initialize the extended tuple."""
+        items = () if values is None else values
+        return super().__new__(cls, (cls._wrap_item(item) for item in items))
+
+    @staticmethod
+    def _wrap_item(item: T) -> T:
+        """Promote nested built-in containers to extended containers."""
+        from extended_data.containers.factory import extend_data
+
+        return cast(T, extend_data(item))
+
+    def flatten(self) -> ExtendedTuple[Any]:
+        """Return a recursively flattened tuple copy."""
+        from extended_data.containers.factory import to_builtin
+
+        def _flatten(items: Iterable[Any]) -> list[Any]:
+            flattened: list[Any] = []
+            for item in items:
+                plain_item = to_builtin(item)
+                if isinstance(plain_item, list | tuple):
+                    flattened.extend(_flatten(plain_item))
+                else:
+                    flattened.append(plain_item)
+            return flattened
+
+        return ExtendedTuple(_flatten(self))
+
+    def compact(self) -> ExtendedTuple[T]:
+        """Return a copy without values considered empty."""
+        return ExtendedTuple(item for item in self if not is_nothing(item))
+
+    def map(self, func: Callable[[T], U]) -> ExtendedTuple[U]:
+        """Return a copy with a callable applied to each item."""
+        return ExtendedTuple(func(item) for item in self)
+
+    def filter(self, predicate: Callable[[T], bool]) -> ExtendedTuple[T]:
+        """Return a copy containing items accepted by a predicate."""
+        return ExtendedTuple(item for item in self if predicate(item))
+
+    def unique(self) -> ExtendedTuple[T]:
+        """Return a copy with duplicate values removed while preserving order."""
+        seen: set[Any] = set()
+        values: list[T] = []
+        for item in self:
+            marker = make_hashable(item)
+            if marker in seen:
+                continue
+            seen.add(marker)
+            values.append(item)
+        return ExtendedTuple(values)
+
+    def to_tuple(self) -> tuple[T, ...]:
+        """Return a plain tuple copy."""
+        return tuple(self)
+
+
 class ExtendedSet(MutableSet[T]):
     """Set wrapper with explicit chainable operations."""
 
