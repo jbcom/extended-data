@@ -131,7 +131,7 @@ The package is intentionally tiered:
   vendor integrations, and workflows.
 
 Tier 3 decoders return Tier 2 containers by default, so
-decoded files, Base64 payloads, and directed inputs can immediately use
+data files, Base64 payloads, and directed inputs can immediately use
 `ExtendedDict`, `ExtendedList`, `ExtendedTuple`, `ExtendedSet`, and
 `ExtendedString` methods.
 String tokenization stays inside the same surface: `ExtendedString.split()`
@@ -139,9 +139,12 @@ returns an `ExtendedList` of `ExtendedString` values, and partition operations
 return `ExtendedTuple` values.
 Format encoders lower extended containers, including extended mapping keys, at
 the serialization boundary.
-`DataWorkflow` makes those compositions first-class: read or decode data,
-apply named transformations, write an output artifact, and keep the step trail
-in a `WorkflowResult`. Missing workflow inputs and empty writes fail loudly.
+`read_data_file()` is the direct file boundary for one-step read plus decode
+workflows; it raises for missing files and promotes structured data into Tier 2
+containers by default. `DataWorkflow` makes those compositions first-class:
+read or decode data, apply named transformations, write an output artifact, and
+keep the step trail in a `WorkflowResult`. Missing workflow inputs and empty
+writes fail loudly.
 `InputProvider` stores its active, frozen, and merged input snapshots as
 `ExtendedDict` values, so direct input-data access can use Tier 2 container
 methods. `snapshot_inputs()` returns detached active or frozen snapshots, and

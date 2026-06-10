@@ -13,9 +13,9 @@ from pathlib import Path
 
 from extended_data import (
     FilePath,
-    decode_file,
     file_path_depth,
     is_url,
+    read_data_file,
     read_file,
     resolve_local_path,
     write_file,
@@ -89,8 +89,7 @@ settings:
 """
         write_file(yaml_file, yaml_content)
 
-        yaml_text = read_file(yaml_file)
-        data = decode_file(yaml_text, file_path=yaml_file)
+        data = read_data_file(yaml_file)
         print(f"\nDecoded YAML file: {data}")
         print(f"YAML service keys: {data.flatten().keys()}")
 
@@ -99,8 +98,7 @@ settings:
         json_content = '{"users": [{"id": 1, "name": "Alice"}]}'
         write_file(json_file, json_content)
 
-        json_text = read_file(json_file)
-        data = decode_file(json_text, file_path=json_file)
+        data = read_data_file(json_file)
         print(f"Decoded JSON file: {data}")
 
 

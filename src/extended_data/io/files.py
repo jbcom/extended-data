@@ -9,7 +9,7 @@ import urllib.request
 from base64 import b64encode
 from collections.abc import Mapping
 from pathlib import Path
-from typing import Any, TypeAlias
+from typing import Any, TypeAlias, cast
 
 import validators
 
@@ -344,6 +344,40 @@ def decode_file(
     if suffix is not None and suffix in {"yaml", "json", "toml", "hcl", "raw"}:
         return unwrap_raw_data_from_import(file_data, encoding=suffix, as_extended=as_extended)
     return file_data
+
+
+def read_data_file(
+    file_path: FilePath,
+    *,
+    suffix: str | None = None,
+    as_extended: bool = True,
+    charset: str = "utf-8",
+    errors: str = "strict",
+    headers: Mapping[str, str] | None = None,
+    tld: Path | None = None,
+) -> Any:
+    """Read and decode a local file or URL through the Tier 3 data boundary.
+
+    This composes ``read_file`` and ``decode_file`` for the common data-file
+    workflow. Structured files are decoded from their suffix and promoted to
+    Tier 2 containers by default. Missing local files fail loudly.
+    """
+    file_data = read_file(
+        file_path,
+        charset=charset,
+        errors=errors,
+        headers=headers,
+        tld=tld,
+    )
+    if file_data is None:
+        raise FileNotFoundError(str(file_path))
+
+    return decode_file(
+        cast(str | memoryview | bytes | bytearray, file_data),
+        file_path=file_path,
+        suffix=suffix,
+        as_extended=as_extended,
+    )
 
 
 def write_file(

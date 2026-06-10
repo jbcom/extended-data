@@ -86,14 +86,16 @@ Container methods that return derived collections stay in Tier 2 as well:
 `ExtendedDict` values, and `ExtendedDict.all_values()` returns an
 `ExtendedList`.
 
-Tier 3 decode surfaces promote decoded values into Tier 2 containers by
-default:
+Tier 3 file and decode surfaces promote decoded values into Tier 2 containers
+by default:
 
 ```python
-from extended_data import decode_file
+from extended_data import decode_file, read_data_file
 
 payload = decode_file('{"service": {"name": "api"}}', suffix="json")
+file_payload = read_data_file("config/service.json")
 assert payload["service"]["name"].upper_first() == "Api"
+assert file_payload["service"]["name"].upper_first() == "Api"
 ```
 
 Pass `as_extended=False` when a decode boundary should return standard Python

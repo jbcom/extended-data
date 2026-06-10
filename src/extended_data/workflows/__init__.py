@@ -5,10 +5,10 @@ from __future__ import annotations
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, TypeAlias, cast
+from typing import Any, TypeAlias
 
 from extended_data.containers import extend_data, to_builtin
-from extended_data.io.files import FilePath, decode_file, read_file, write_file
+from extended_data.io.files import FilePath, decode_file, read_data_file, write_file
 
 
 WorkflowAction: TypeAlias = Callable[[Any], Any]
@@ -99,15 +99,13 @@ class DataWorkflow:
         tld: Path | None = None,
     ) -> DataWorkflow:
         """Read and decode a local file or URL into a workflow."""
-        file_data = read_file(file_path, charset=charset, errors=errors, tld=tld)
-        if file_data is None:
-            raise FileNotFoundError(str(file_path))
-
-        decoded = decode_file(
-            cast(str | memoryview | bytes | bytearray, file_data),
-            file_path=file_path,
+        decoded = read_data_file(
+            file_path,
             suffix=suffix,
             as_extended=as_extended,
+            charset=charset,
+            errors=errors,
+            tld=tld,
         )
         return cls(decoded, steps=(f"read:{file_path}",), as_extended=as_extended)
 

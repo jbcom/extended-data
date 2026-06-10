@@ -113,6 +113,7 @@ def test_root_exports_first_class_integrated_primitives() -> None:
     assert extended_data.number_to_words(42) == "forty-two"
     assert extended_data.to_roman(42) == "XLII"
     assert extended_data.normalize_data_encoding("YML") == "yaml"
+    assert callable(extended_data.read_data_file)
     assert callable(extended_data.get_connector)
     assert callable(extended_data.list_connector_info)
 

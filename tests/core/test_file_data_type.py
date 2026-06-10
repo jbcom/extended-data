@@ -39,6 +39,7 @@ from extended_data.io.files import (
     get_tld,
     is_url,
     match_file_extensions,
+    read_data_file,
     read_file,
     resolve_local_path,
     write_file,
@@ -540,6 +541,38 @@ def test_decode_file_returns_extended_containers_by_default() -> None:
     assert isinstance(result["service"], ExtendedDict)
     assert isinstance(result["service"]["name"], ExtendedString)
     assert isinstance(result["ports"], ExtendedList)
+
+
+def test_read_data_file_reads_and_decodes_extended_data(tmp_path: Path) -> None:
+    """Data-file reads enter the Tier 2 container layer in one operation."""
+    test_file = tmp_path / "service.json"
+    test_file.write_text('{"service": {"name": "api"}, "ports": [8080]}')
+
+    result = read_data_file(test_file, tld=tmp_path)
+
+    assert isinstance(result, ExtendedDict)
+    assert isinstance(result["service"], ExtendedDict)
+    assert isinstance(result["service"]["name"], ExtendedString)
+    assert isinstance(result["ports"], ExtendedList)
+    assert result["service"]["name"].upper_first() == "Api"
+
+
+def test_read_data_file_can_return_builtin_data(tmp_path: Path) -> None:
+    """The composed file-data boundary can explicitly return plain Python values."""
+    test_file = tmp_path / "service.json"
+    test_file.write_text('{"service": {"name": "api"}}')
+
+    result = read_data_file(test_file, as_extended=False, tld=tmp_path)
+
+    assert isinstance(result, dict)
+    assert not isinstance(result, ExtendedDict)
+    assert isinstance(result["service"], dict)
+
+
+def test_read_data_file_raises_for_missing_file(tmp_path: Path) -> None:
+    """Missing data-file reads fail loudly."""
+    with pytest.raises(FileNotFoundError, match=r"missing\.json"):
+        read_data_file("missing.json", tld=tmp_path)
 
 
 def test_write_file_json(tmp_path: Path) -> None:
