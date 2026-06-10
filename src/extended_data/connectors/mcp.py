@@ -25,10 +25,11 @@ import inspect
 import json
 import sys
 
-from collections.abc import Callable
+from collections.abc import Callable, Iterable, Mapping
 from typing import Any, cast
 
 from extended_data.connectors.registry import get_connector, list_connectors
+from extended_data.containers import to_builtin
 
 
 def _check_mcp_installed() -> bool:
@@ -100,6 +101,18 @@ def _get_public_methods(connector_class: builtins.type[Any]) -> list[tuple[str, 
         if callable(attr) and not isinstance(attr, builtins.type):
             methods.append((name, attr))
     return methods
+
+
+def _jsonable_tool_result(result: Any) -> Any:
+    """Lower connector tool results to JSON-compatible Python data."""
+    if hasattr(result, "model_dump"):
+        result = result.model_dump()
+    elif isinstance(result, Iterable) and not isinstance(result, (str, bytes, bytearray, Mapping)):
+        result = [item.model_dump() if hasattr(item, "model_dump") else item for item in result]
+    result = to_builtin(result)
+    if isinstance(result, set | frozenset):
+        return [to_builtin(item) for item in result]
+    return result
 
 
 def create_server() -> Any:
@@ -181,13 +194,7 @@ def create_server() -> Any:
             if inspect.iscoroutine(result):
                 result = await result
 
-            # Convert Pydantic models to dict
-            if hasattr(result, "model_dump"):
-                result = result.model_dump()
-            elif hasattr(result, "__iter__") and not isinstance(result, (str, dict)):
-                result = [r.model_dump() if hasattr(r, "model_dump") else r for r in result]
-
-            return [TextContent(type="text", text=json.dumps(result, indent=2, default=str))]
+            return [TextContent(type="text", text=json.dumps(_jsonable_tool_result(result), indent=2, default=str))]
 
         except Exception as e:
             return [TextContent(type="text", text=f"Error: {type(e).__name__}: {e}")]
