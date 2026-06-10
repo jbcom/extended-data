@@ -65,9 +65,11 @@ class TestAWSConnector:
     @patch("extended_data.connectors.aws.boto3.Session")
     def test_assume_role_failure(self, mock_session_class, base_connector_kwargs):
         """Test failed role assumption."""
+        role_arn = "arn:aws:iam::123456789012:role/TestRole"
         mock_sts_client = MagicMock()
         mock_sts_client.assume_role.side_effect = ClientError(
-            {"Error": {"Code": "AccessDenied", "Message": "Not authorized"}}, "AssumeRole"
+            {"Error": {"Code": "AccessDenied", "Message": f"Not authorized for {role_arn} token=raw-token"}},
+            "AssumeRole",
         )
 
         mock_default_session = MagicMock()
@@ -77,10 +79,15 @@ class TestAWSConnector:
         connector = AWSConnector(**base_connector_kwargs)
         connector.default_aws_session = mock_default_session
 
-        role_arn = "arn:aws:iam::123456789012:role/TestRole"
-
-        with pytest.raises(RuntimeError, match="Failed to assume role"):
+        with pytest.raises(RuntimeError, match="Failed to assume role") as exc_info:
             connector.assume_role(role_arn, "test-session")
+
+        diagnostics = _logged_text(connector.logger) + str(exc_info.value)
+        assert role_arn not in diagnostics
+        assert "raw-token" not in diagnostics
+        assert "[REDACTED]" in diagnostics
+        assert exc_info.value.__cause__ is None
+        assert all("exc_info" not in logged_call.kwargs for logged_call in connector.logger.method_calls)
 
     def test_get_aws_session_default(self, base_connector_kwargs):
         """Test getting default AWS session."""
@@ -125,6 +132,30 @@ class TestAWSConnector:
 
         assert resource == mock_resource
         mock_session.resource.assert_called_once()
+
+    @patch("extended_data.connectors.aws.boto3.Session")
+    def test_get_aws_resource_failure_redacts_exception_context(self, mock_session_class, base_connector_kwargs):
+        """Resource creation failures should not chain raw provider exceptions into diagnostics."""
+        mock_session = MagicMock()
+        mock_session.resource.side_effect = ClientError(
+            {"Error": {"Code": "AccessDenied", "Message": "denied for arn:role/private token=raw-token"}},
+            "CreateResource",
+        )
+        mock_session_class.return_value = mock_session
+
+        connector = AWSConnector(**base_connector_kwargs)
+        connector.default_aws_session = mock_session
+        connector.get_aws_session = MagicMock(return_value=mock_session)
+
+        with pytest.raises(RuntimeError) as exc_info:
+            connector.get_aws_resource("s3", execution_role_arn="arn:role/private")
+
+        diagnostics = _logged_text(connector.logger) + str(exc_info.value)
+        assert "arn:role/private" not in diagnostics
+        assert "raw-token" not in diagnostics
+        assert "[REDACTED]" in diagnostics
+        assert exc_info.value.__cause__ is None
+        assert all("exc_info" not in logged_call.kwargs for logged_call in connector.logger.method_calls)
 
     def test_list_secrets_returns_arns_with_filters(self, base_connector_kwargs):
         """Ensure listing secrets returns ARNs when not fetching values."""
@@ -276,6 +307,8 @@ class TestAWSConnector:
         assert "raw_token" not in diagnostics
         assert "hunter2" not in diagnostics
         assert "[REDACTED]" in diagnostics
+        assert exc_info.value.__cause__ is None
+        assert all("exc_info" not in logged_call.kwargs for logged_call in connector.logger.method_calls)
 
     def test_get_secret_redacts_missing_secret_log(self, base_connector_kwargs):
         """AWS missing-secret logs should not expose raw requested IDs."""
@@ -350,6 +383,8 @@ class TestAWSConnector:
         assert "raw-secret" not in diagnostics
         assert "key_123" not in diagnostics
         assert "[REDACTED]" in diagnostics
+        assert exc_info.value.__cause__ is None
+        assert all("exc_info" not in logged_call.kwargs for logged_call in connector.logger.method_calls)
 
     def test_update_secret_calls_aws(self, base_connector_kwargs):
         """Ensure update_secret forwards call to boto3 client."""

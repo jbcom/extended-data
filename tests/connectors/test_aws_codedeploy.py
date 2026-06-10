@@ -18,11 +18,22 @@ from extended_data.connectors.aws.codedeploy import (
 )
 
 
-def _client_error(operation: str) -> ClientError:
+def _client_error(operation: str, message: str = "denied") -> ClientError:
     return ClientError(
-        error_response={"Error": {"Code": "AccessDenied", "Message": "denied"}},
+        error_response={"Error": {"Code": "AccessDenied", "Message": message}},
         operation_name=operation,
     )
+
+
+def _logged_text(logger: MagicMock) -> str:
+    """Return concatenated mock logger messages."""
+    return "\n".join(str(arg) for call in logger.method_calls for arg in call.args)
+
+
+def _logging_adapter() -> MagicMock:
+    adapter = MagicMock()
+    adapter.logger = MagicMock()
+    return adapter
 
 
 class TestGetAwsCodeDeployDeployments:
@@ -59,10 +70,31 @@ class TestGetAwsCodeDeployDeployments:
 
     def test_raises_runtime_error_on_client_failure(self):
         codedeploy_client = MagicMock()
-        codedeploy_client.list_deployments.side_effect = _client_error("ListDeployments")
+        codedeploy_client.list_deployments.side_effect = _client_error(
+            "ListDeployments",
+            "denied private-app prod-group token-private tag-private token=raw-token",
+        )
+        logging_adapter = _logging_adapter()
 
-        with pytest.raises(RuntimeError):
-            get_aws_codedeploy_deployments(codedeploy_client=codedeploy_client)
+        with pytest.raises(RuntimeError) as exc_info:
+            get_aws_codedeploy_deployments(
+                application_name="private-app",
+                deployment_group_name="prod-group",
+                next_token="token-private",
+                tag_filters=[{"Value": "tag-private"}],
+                codedeploy_client=codedeploy_client,
+                logging_adapter=logging_adapter,
+            )
+
+        diagnostics = _logged_text(logging_adapter.logger) + str(exc_info.value)
+        assert "private-app" not in diagnostics
+        assert "prod-group" not in diagnostics
+        assert "token-private" not in diagnostics
+        assert "tag-private" not in diagnostics
+        assert "raw-token" not in diagnostics
+        assert "[REDACTED]" in diagnostics
+        assert exc_info.value.__cause__ is None
+        assert all("exc_info" not in logged_call.kwargs for logged_call in logging_adapter.logger.method_calls)
 
 
 class TestCreateCodeDeployDeployment:
@@ -99,10 +131,11 @@ class TestCreateCodeDeployDeployment:
 
     def test_waiter_failure_raises_runtime_error(self):
         codedeploy_client = MagicMock()
-        codedeploy_client.create_deployment.return_value = {"deploymentId": "dep-456"}
+        codedeploy_client.create_deployment.return_value = {"deploymentId": "dep-sensitive"}
         codedeploy_client.get_deployment.return_value = {
-            "deploymentInfo": {"deploymentId": "dep-456", "status": "Failed"}
+            "deploymentInfo": {"deploymentId": "dep-sensitive", "status": "Failed"}
         }
+        logging_adapter = _logging_adapter()
 
         waiter = MagicMock()
         waiter.wait.side_effect = WaiterError(
@@ -112,7 +145,7 @@ class TestCreateCodeDeployDeployment:
         )
         codedeploy_client.get_waiter.return_value = waiter
 
-        with pytest.raises(RuntimeError):
+        with pytest.raises(RuntimeError) as exc_info:
             create_codedeploy_deployment(
                 application_name="app",
                 deployment_group_name="group",
@@ -122,7 +155,74 @@ class TestCreateCodeDeployDeployment:
                 },
                 wait=True,
                 codedeploy_client=codedeploy_client,
+                logging_adapter=logging_adapter,
             )
+
+        diagnostics = _logged_text(logging_adapter.logger) + str(exc_info.value)
+        assert "dep-sensitive" not in diagnostics
+        assert "[REDACTED]" in diagnostics
+        assert exc_info.value.__cause__ is None
+
+    def test_detail_fetch_failure_logs_redact_deployment_id(self):
+        """Detail hydration failures should not log deployment identifiers or raw provider messages."""
+        codedeploy_client = MagicMock()
+        codedeploy_client.create_deployment.return_value = {"deploymentId": "dep-sensitive"}
+        codedeploy_client.get_deployment.side_effect = _client_error(
+            "GetDeployment",
+            "denied for dep-sensitive token=raw-token",
+        )
+        logging_adapter = _logging_adapter()
+
+        result = create_codedeploy_deployment(
+            application_name="app",
+            deployment_group_name="group",
+            revision={
+                "revisionType": "S3",
+                "s3Location": {"bucket": "bucket", "key": "bundle.zip", "bundleType": "zip"},
+            },
+            wait=False,
+            include_details=True,
+            codedeploy_client=codedeploy_client,
+            logging_adapter=logging_adapter,
+        )
+
+        assert result["deployment_id"] == "dep-sensitive"
+        logs = _logged_text(logging_adapter.logger)
+        assert "[REDACTED]" in logs
+        assert "dep-sensitive" not in logs
+        assert "raw-token" not in logs
+        assert all("exc_info" not in logged_call.kwargs for logged_call in logging_adapter.logger.method_calls)
+
+    def test_create_failure_redacts_request_context(self):
+        """Create failures should redact app/group/revision identifiers from diagnostics."""
+        codedeploy_client = MagicMock()
+        codedeploy_client.create_deployment.side_effect = _client_error(
+            "CreateDeployment",
+            "denied private-app prod-group prod-bucket bundle.zip secret=raw-secret",
+        )
+        logging_adapter = _logging_adapter()
+
+        with pytest.raises(RuntimeError) as exc_info:
+            create_codedeploy_deployment(
+                application_name="private-app",
+                deployment_group_name="prod-group",
+                revision={
+                    "revisionType": "S3",
+                    "s3Location": {"bucket": "prod-bucket", "key": "bundle.zip", "bundleType": "zip"},
+                },
+                codedeploy_client=codedeploy_client,
+                logging_adapter=logging_adapter,
+            )
+
+        diagnostics = _logged_text(logging_adapter.logger) + str(exc_info.value)
+        assert "private-app" not in diagnostics
+        assert "prod-group" not in diagnostics
+        assert "prod-bucket" not in diagnostics
+        assert "bundle.zip" not in diagnostics
+        assert "raw-secret" not in diagnostics
+        assert "[REDACTED]" in diagnostics
+        assert exc_info.value.__cause__ is None
+        assert all("exc_info" not in logged_call.kwargs for logged_call in logging_adapter.logger.method_calls)
 
     def test_validates_file_exists_behavior(self):
         codedeploy_client = MagicMock()

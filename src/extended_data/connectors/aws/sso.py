@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING, Any
 
 from deepmerge import always_merger
 
+from extended_data.connectors.aws._diagnostics import safe_aws_ref
 from extended_data.containers import ExtendedDict, ExtendedList, ExtendedString, to_builtin
 from extended_data.primitives import is_nothing, unhump_map
 
@@ -75,7 +76,7 @@ class AWSSSOmixin:
             raise RuntimeError(msg)
 
         identity_store_id = instance_list[0]["IdentityStoreId"]
-        self.logger.info(f"Identity store ID: {identity_store_id}")
+        self.logger.info(f"Identity store ID: {safe_aws_ref(identity_store_id)}")
         return self.extend_result(identity_store_id)
 
     def get_sso_instance_arn(
@@ -109,7 +110,7 @@ class AWSSSOmixin:
             raise RuntimeError(msg)
 
         instance_arn = instance_list[0]["InstanceArn"]
-        self.logger.info(f"SSO instance ARN: {instance_arn}")
+        self.logger.info(f"SSO instance ARN: {safe_aws_ref(instance_arn)}")
         return self.extend_result(instance_arn)
 
     # =========================================================================
@@ -247,7 +248,8 @@ class AWSSSOmixin:
         Returns:
             Created user response.
         """
-        self.logger.info(f"Creating SSO user: {user_name}")
+        safe_user_name = safe_aws_ref(user_name)
+        self.logger.info(f"Creating SSO user: {safe_user_name}")
         role_arn = execution_role_arn or getattr(self, "execution_role_arn", None)
 
         if not identity_store_id:
@@ -275,7 +277,7 @@ class AWSSSOmixin:
             user_body["Emails"] = to_builtin(list(emails))
 
         result = identitystore.create_user(**user_body)
-        self.logger.info(f"Created SSO user: {user_name} ({result.get('UserId')})")
+        self.logger.info(f"Created SSO user: {safe_user_name} ({safe_aws_ref(result.get('UserId'))})")
         return self.extend_result(result)
 
     def delete_sso_user(
@@ -291,7 +293,8 @@ class AWSSSOmixin:
             identity_store_id: Identity store ID. Auto-detected if not provided.
             execution_role_arn: ARN of role to assume for cross-account access.
         """
-        self.logger.info(f"Deleting SSO user: {user_id}")
+        safe_user_id = safe_aws_ref(user_id)
+        self.logger.info(f"Deleting SSO user: {safe_user_id}")
         role_arn = execution_role_arn or getattr(self, "execution_role_arn", None)
 
         if not identity_store_id:
@@ -306,7 +309,7 @@ class AWSSSOmixin:
             IdentityStoreId=identity_store_id,
             UserId=user_id,
         )
-        self.logger.info(f"Deleted SSO user: {user_id}")
+        self.logger.info(f"Deleted SSO user: {safe_user_id}")
 
     # =========================================================================
     # Groups
@@ -461,7 +464,8 @@ class AWSSSOmixin:
         Returns:
             Created group response.
         """
-        self.logger.info(f"Creating SSO group: {display_name}")
+        safe_display_name = safe_aws_ref(display_name)
+        self.logger.info(f"Creating SSO group: {safe_display_name}")
         role_arn = execution_role_arn or getattr(self, "execution_role_arn", None)
 
         if not identity_store_id:
@@ -477,7 +481,7 @@ class AWSSSOmixin:
             DisplayName=display_name,
             Description=description,
         )
-        self.logger.info(f"Created SSO group: {display_name} ({result.get('GroupId')})")
+        self.logger.info(f"Created SSO group: {safe_display_name} ({safe_aws_ref(result.get('GroupId'))})")
         return self.extend_result(result)
 
     def delete_sso_group(
@@ -493,7 +497,8 @@ class AWSSSOmixin:
             identity_store_id: Identity store ID. Auto-detected if not provided.
             execution_role_arn: ARN of role to assume for cross-account access.
         """
-        self.logger.info(f"Deleting SSO group: {group_id}")
+        safe_group_id = safe_aws_ref(group_id)
+        self.logger.info(f"Deleting SSO group: {safe_group_id}")
         role_arn = execution_role_arn or getattr(self, "execution_role_arn", None)
 
         if not identity_store_id:
@@ -508,7 +513,7 @@ class AWSSSOmixin:
             IdentityStoreId=identity_store_id,
             GroupId=group_id,
         )
-        self.logger.info(f"Deleted SSO group: {group_id}")
+        self.logger.info(f"Deleted SSO group: {safe_group_id}")
 
     def add_user_to_group(
         self,
@@ -528,7 +533,9 @@ class AWSSSOmixin:
         Returns:
             Membership response.
         """
-        self.logger.info(f"Adding user {user_id} to group {group_id}")
+        safe_user_id = safe_aws_ref(user_id)
+        safe_group_id = safe_aws_ref(group_id)
+        self.logger.info(f"Adding user {safe_user_id} to group {safe_group_id}")
         role_arn = execution_role_arn or getattr(self, "execution_role_arn", None)
 
         if not identity_store_id:
@@ -544,7 +551,7 @@ class AWSSSOmixin:
             GroupId=group_id,
             MemberId={"UserId": user_id},
         )
-        self.logger.info(f"Added user {user_id} to group {group_id}")
+        self.logger.info(f"Added user {safe_user_id} to group {safe_group_id}")
         return self.extend_result(result)
 
     def remove_user_from_group(
@@ -560,7 +567,8 @@ class AWSSSOmixin:
             identity_store_id: Identity store ID. Auto-detected if not provided.
             execution_role_arn: ARN of role to assume for cross-account access.
         """
-        self.logger.info(f"Removing membership: {membership_id}")
+        safe_membership_id = safe_aws_ref(membership_id)
+        self.logger.info(f"Removing membership: {safe_membership_id}")
         role_arn = execution_role_arn or getattr(self, "execution_role_arn", None)
 
         if not identity_store_id:
@@ -575,7 +583,7 @@ class AWSSSOmixin:
             IdentityStoreId=identity_store_id,
             MembershipId=membership_id,
         )
-        self.logger.info(f"Removed membership: {membership_id}")
+        self.logger.info(f"Removed membership: {safe_membership_id}")
 
     # =========================================================================
     # Permission Sets
@@ -719,7 +727,8 @@ class AWSSSOmixin:
         Returns:
             List of account assignment dictionaries.
         """
-        self.logger.info(f"Listing account assignments for {account_id}")
+        safe_account_id = safe_aws_ref(account_id)
+        self.logger.info(f"Listing account assignments for {safe_account_id}")
         role_arn = execution_role_arn or getattr(self, "execution_role_arn", None)
 
         if not instance_arn:
@@ -752,7 +761,7 @@ class AWSSSOmixin:
         if unhump_assignments:
             assignments = [unhump_map(a) for a in assignments]
 
-        self.logger.info(f"Retrieved {len(assignments)} assignments for {account_id}")
+        self.logger.info(f"Retrieved {len(assignments)} assignments for {safe_account_id}")
         return self.extend_result(assignments)
 
     def create_account_assignment(
@@ -777,7 +786,9 @@ class AWSSSOmixin:
         Returns:
             Account assignment creation status.
         """
-        self.logger.info(f"Creating account assignment: {principal_type} {principal_id} -> {account_id}")
+        safe_principal_id = safe_aws_ref(principal_id)
+        safe_account_id = safe_aws_ref(account_id)
+        self.logger.info(f"Creating account assignment: {principal_type} {safe_principal_id} -> {safe_account_id}")
         role_arn = execution_role_arn or getattr(self, "execution_role_arn", None)
 
         if not instance_arn:
@@ -796,7 +807,7 @@ class AWSSSOmixin:
             PrincipalType=principal_type,
             PrincipalId=principal_id,
         )
-        self.logger.info(f"Created account assignment for {principal_id}")
+        self.logger.info(f"Created account assignment for {safe_principal_id}")
         return self.extend_result(result)
 
     def delete_account_assignment(
@@ -821,7 +832,9 @@ class AWSSSOmixin:
         Returns:
             Account assignment deletion status.
         """
-        self.logger.info(f"Deleting account assignment: {principal_type} {principal_id} -> {account_id}")
+        safe_principal_id = safe_aws_ref(principal_id)
+        safe_account_id = safe_aws_ref(account_id)
+        self.logger.info(f"Deleting account assignment: {principal_type} {safe_principal_id} -> {safe_account_id}")
         role_arn = execution_role_arn or getattr(self, "execution_role_arn", None)
 
         if not instance_arn:
@@ -840,5 +853,5 @@ class AWSSSOmixin:
             PrincipalType=principal_type,
             PrincipalId=principal_id,
         )
-        self.logger.info(f"Deleted account assignment for {principal_id}")
+        self.logger.info(f"Deleted account assignment for {safe_principal_id}")
         return self.extend_result(result)

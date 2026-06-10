@@ -20,6 +20,7 @@ from collections.abc import Mapping, Sequence
 from typing import TYPE_CHECKING, Any
 
 from extended_data.connectors._optional import require_extra
+from extended_data.connectors.aws._diagnostics import aws_operation_error, safe_aws_ref, safe_aws_text
 from extended_data.connectors.aws.organizations import AWSOrganizationsMixin
 from extended_data.connectors.aws.s3 import AWSS3Mixin
 from extended_data.connectors.aws.sso import AWSSSOmixin
@@ -27,20 +28,9 @@ from extended_data.connectors.base import VendorConnectorBase
 from extended_data.containers import ExtendedDict, ExtendedList, ExtendedString, to_builtin
 from extended_data.logging import Logging
 from extended_data.primitives import is_nothing
-from extended_data.primitives.redaction import redact_sensitive_text
 
 
 AWSSecretValue = str | ExtendedString | Mapping[str, Any] | None
-
-
-def _safe_aws_text(value: Any, *sensitive_values: Any) -> str:
-    """Redact secrets and resource identifiers from AWS diagnostics."""
-    return redact_sensitive_text(value, values=sensitive_values)
-
-
-def _aws_secret_error(action: str, exc: BaseException, *sensitive_values: Any) -> str:
-    """Build a redacted AWS Secrets Manager operation error message."""
-    return f"{action}: {_safe_aws_text(exc, *sensitive_values)}"
 
 
 if TYPE_CHECKING:
@@ -109,21 +99,23 @@ class AWSConnector(AWSOrganizationsMixin, AWSSSOmixin, AWSS3Mixin, VendorConnect
         Raises:
             RuntimeError: If role assumption fails.
         """
-        self.logger.info(f"Attempting to assume role: {execution_role_arn}")
+        safe_role_arn = safe_aws_ref(execution_role_arn)
+        self.logger.info(f"Attempting to assume role: {safe_role_arn}")
         sts_client = self.default_aws_session.client("sts")
 
         try:
             response = sts_client.assume_role(RoleArn=execution_role_arn, RoleSessionName=role_session_name)
             credentials = response["Credentials"]
-            self.logger.info(f"Successfully assumed role: {execution_role_arn}")
+            self.logger.info(f"Successfully assumed role: {safe_role_arn}")
             return self._boto3.Session(
                 aws_access_key_id=credentials["AccessKeyId"],
                 aws_secret_access_key=credentials["SecretAccessKey"],
                 aws_session_token=credentials["SessionToken"],
             )
         except ClientError as e:
-            self.logger.error(f"Failed to assume role: {execution_role_arn}", exc_info=True)
-            raise RuntimeError(f"Failed to assume role {execution_role_arn}") from e
+            error_message = aws_operation_error("Failed to assume role", e, execution_role_arn)
+            self.logger.error(error_message)  # noqa: TRY400 - traceback can expose raw provider diagnostics.
+            raise RuntimeError(error_message) from None
 
     def get_aws_session(
         self,
@@ -227,8 +219,14 @@ class AWSConnector(AWSOrganizationsMixin, AWSSSOmixin, AWSS3Mixin, VendorConnect
         try:
             return session.resource(service_name, config=config, **resource_args)
         except ClientError as e:
-            self.logger.error(f"Failed to create resource for service: {service_name}", exc_info=True)
-            raise RuntimeError(f"Failed to create resource for service {service_name}") from e
+            error_message = aws_operation_error(
+                f"Failed to create resource for service {service_name}",
+                e,
+                execution_role_arn,
+                role_session_name,
+            )
+            self.logger.error(error_message)  # noqa: TRY400 - traceback can expose raw provider diagnostics.
+            raise RuntimeError(error_message) from None
 
     # =========================================================================
     # Identity Operations
@@ -266,7 +264,7 @@ class AWSConnector(AWSOrganizationsMixin, AWSSSOmixin, AWSS3Mixin, VendorConnect
         Returns:
             The secret value as a string, or None if not found.
         """
-        safe_secret_id = _safe_aws_text(secret_id, secret_id)
+        safe_secret_id = safe_aws_text(secret_id, secret_id)
         self.logger.debug(f"Getting AWS secret: {safe_secret_id}")
 
         if secretsmanager is None:
@@ -284,9 +282,9 @@ class AWSConnector(AWSOrganizationsMixin, AWSSSOmixin, AWSS3Mixin, VendorConnect
             if error_code == "ResourceNotFoundException":
                 self.logger.warning(f"Secret not found: {safe_secret_id}")
                 return None
-            error_message = _aws_secret_error("Failed to get secret", e, secret_id)
-            self.logger.exception(error_message)
-            raise ValueError(error_message) from e
+            error_message = aws_operation_error("Failed to get secret", e, secret_id)
+            self.logger.error(error_message)  # noqa: TRY400 - traceback can expose raw provider diagnostics.
+            raise ValueError(error_message) from None
 
         if "SecretString" in response:
             return self.extend_result(response["SecretString"])
@@ -385,7 +383,7 @@ class AWSConnector(AWSOrganizationsMixin, AWSSSOmixin, AWSS3Mixin, VendorConnect
             msg = "secret_value is required to create a secret"
             raise ValueError(msg)
 
-        safe_name = _safe_aws_text(name, name)
+        safe_name = safe_aws_text(name, name)
         self.logger.info(f"Creating AWS secret: {safe_name}")
         role_arn = execution_role_arn or self.execution_role_arn
         secretsmanager = self.get_aws_client(
@@ -401,12 +399,12 @@ class AWSConnector(AWSOrganizationsMixin, AWSSSOmixin, AWSS3Mixin, VendorConnect
 
         try:
             response = secretsmanager.create_secret(**create_kwargs)
-            self.logger.info(f"Created AWS secret ARN: {_safe_aws_text(response.get('ARN'), response.get('ARN'))}")
+            self.logger.info(f"Created AWS secret ARN: {safe_aws_text(response.get('ARN'), response.get('ARN'))}")
             return self.extend_result(response)
         except ClientError as exc:
-            error_message = _aws_secret_error("Failed to create secret", exc, name, secret_value)
-            self.logger.error(error_message, exc_info=True)
-            raise RuntimeError(error_message) from exc
+            error_message = aws_operation_error("Failed to create secret", exc, name, secret_value)
+            self.logger.error(error_message)  # noqa: TRY400 - traceback can expose raw provider diagnostics.
+            raise RuntimeError(error_message) from None
 
     def update_secret(
         self,
@@ -422,7 +420,7 @@ class AWSConnector(AWSOrganizationsMixin, AWSSSOmixin, AWSS3Mixin, VendorConnect
             msg = "secret_value is required to update a secret"
             raise ValueError(msg)
 
-        safe_secret_id = _safe_aws_text(secret_id, secret_id)
+        safe_secret_id = safe_aws_text(secret_id, secret_id)
         self.logger.info(f"Updating AWS secret: {safe_secret_id}")
 
         role_arn = execution_role_arn or self.execution_role_arn
@@ -434,12 +432,12 @@ class AWSConnector(AWSOrganizationsMixin, AWSSSOmixin, AWSS3Mixin, VendorConnect
         try:
             response = secretsmanager.update_secret(SecretId=secret_id, SecretString=secret_value)
             response_arn = response.get("ARN", secret_id)
-            self.logger.info(f"Updated AWS secret ARN: {_safe_aws_text(response_arn, response_arn)}")
+            self.logger.info(f"Updated AWS secret ARN: {safe_aws_text(response_arn, response_arn)}")
             return self.extend_result(response)
         except ClientError as exc:
-            error_message = _aws_secret_error("Failed to update secret", exc, secret_id, secret_value)
-            self.logger.error(error_message, exc_info=True)
-            raise RuntimeError(error_message) from exc
+            error_message = aws_operation_error("Failed to update secret", exc, secret_id, secret_value)
+            self.logger.error(error_message)  # noqa: TRY400 - traceback can expose raw provider diagnostics.
+            raise RuntimeError(error_message) from None
 
     def delete_secret(
         self,
@@ -457,7 +455,7 @@ class AWSConnector(AWSOrganizationsMixin, AWSSSOmixin, AWSS3Mixin, VendorConnect
             msg = "recovery_window_days must be between 7 and 30 when not forcing deletion"
             raise ValueError(msg)
 
-        safe_secret_id = _safe_aws_text(secret_id, secret_id)
+        safe_secret_id = safe_aws_text(secret_id, secret_id)
         self.logger.info(f"Deleting AWS secret: {safe_secret_id}")
 
         role_arn = execution_role_arn or self.execution_role_arn
@@ -475,12 +473,12 @@ class AWSConnector(AWSOrganizationsMixin, AWSSSOmixin, AWSS3Mixin, VendorConnect
         try:
             response = secretsmanager.delete_secret(**delete_kwargs)
             response_arn = response.get("ARN", secret_id)
-            self.logger.info(f"Delete secret request submitted for: {_safe_aws_text(response_arn, response_arn)}")
+            self.logger.info(f"Delete secret request submitted for: {safe_aws_text(response_arn, response_arn)}")
             return self.extend_result(response)
         except ClientError as exc:
-            error_message = _aws_secret_error("Failed to delete secret", exc, secret_id)
-            self.logger.error(error_message, exc_info=True)
-            raise RuntimeError(error_message) from exc
+            error_message = aws_operation_error("Failed to delete secret", exc, secret_id)
+            self.logger.error(error_message)  # noqa: TRY400 - traceback can expose raw provider diagnostics.
+            raise RuntimeError(error_message) from None
 
     def delete_secrets_matching(
         self,
@@ -494,7 +492,7 @@ class AWSConnector(AWSOrganizationsMixin, AWSSSOmixin, AWSS3Mixin, VendorConnect
             msg = "prefix is required to delete matching secrets"
             raise ValueError(msg)
 
-        safe_prefix = _safe_aws_text(prefix, prefix)
+        safe_prefix = safe_aws_text(prefix, prefix)
         self.logger.info(f"Deleting secrets matching prefix: {safe_prefix} (dry_run={dry_run})")
 
         role_arn = execution_role_arn or self.execution_role_arn
@@ -510,7 +508,7 @@ class AWSConnector(AWSOrganizationsMixin, AWSSSOmixin, AWSS3Mixin, VendorConnect
             elif isinstance(value, Mapping) and "ARN" in value:
                 secret_arns.append(value["ARN"])
             else:
-                self.logger.debug(f"Skipping secret {_safe_aws_text(secret_name, secret_name)} due to missing ARN data")
+                self.logger.debug(f"Skipping secret {safe_aws_text(secret_name, secret_name)} due to missing ARN data")
 
         if not secret_arns:
             self.logger.info(f"No secrets found for prefix: {safe_prefix}")

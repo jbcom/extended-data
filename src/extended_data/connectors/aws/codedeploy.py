@@ -11,6 +11,7 @@ from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any
 
 from extended_data.connectors.aws import AWSConnector
+from extended_data.connectors.aws._diagnostics import aws_operation_error, safe_aws_ref, safe_aws_text
 from extended_data.containers import ExtendedDict, extend_data, to_builtin
 from extended_data.logging import Logging
 
@@ -138,8 +139,12 @@ def _safe_get_deployment(
 ) -> dict[str, Any] | None:
     try:
         response = codedeploy_client.get_deployment(deploymentId=deployment_id)
-    except ClientError:
-        logger.warning("Unable to fetch CodeDeploy deployment details for %s", deployment_id, exc_info=True)
+    except ClientError as exc:
+        logger.warning(
+            "Unable to fetch CodeDeploy deployment details for %s: %s",
+            safe_aws_ref(deployment_id),
+            safe_aws_text(exc, deployment_id),
+        )
         return None
     return response.get("deploymentInfo")
 
@@ -234,9 +239,17 @@ def get_aws_codedeploy_deployments(
                 final_token = token
                 break
     except ClientError as exc:
-        logger.error("Failed to list CodeDeploy deployments", exc_info=True)
-        msg = "Failed to list AWS CodeDeploy deployments"
-        raise RuntimeError(msg) from exc
+        msg = aws_operation_error(
+            "Failed to list AWS CodeDeploy deployments",
+            exc,
+            application_name,
+            deployment_group_name,
+            deployment_config_name,
+            next_token,
+            tag_filters,
+        )
+        logger.error(msg)  # noqa: TRY400 - traceback can expose raw provider diagnostics.
+        raise RuntimeError(msg) from None
 
     deployment_infos: list[dict[str, Any]] | None = None
     if include_details and deployment_ids:
@@ -248,11 +261,8 @@ def get_aws_codedeploy_deployments(
                 if deployment_id in items:
                     deployment_infos.append(items[deployment_id])
 
-    logger.info(
-        "Fetched %s CodeDeploy deployments%s",
-        len(deployment_ids),
-        f" (next token: {final_token})" if final_token else "",
-    )
+    safe_token_detail = f" (next token: {safe_aws_ref(final_token)})" if final_token else ""
+    logger.info("Fetched %s CodeDeploy deployments%s", len(deployment_ids), safe_token_detail)
 
     _ = connector  # appease linters when we instantiate a connector internally
     return extend_data(
@@ -332,16 +342,28 @@ def create_codedeploy_deployment(
     try:
         response = client.create_deployment(**request)
     except ClientError as exc:
-        logger.error("Failed to create CodeDeploy deployment", exc_info=True)
-        msg = "Failed to create AWS CodeDeploy deployment"
-        raise RuntimeError(msg) from exc
+        msg = aws_operation_error(
+            "Failed to create AWS CodeDeploy deployment",
+            exc,
+            application_name,
+            deployment_group_name,
+            revision,
+            description,
+        )
+        logger.error(msg)  # noqa: TRY400 - traceback can expose raw provider diagnostics.
+        raise RuntimeError(msg) from None
 
     deployment_id = response.get("deploymentId")
     if not deployment_id:
         msg = "CodeDeploy did not return a deploymentId."
         raise RuntimeError(msg)
 
-    logger.info("Created CodeDeploy deployment %s for %s/%s", deployment_id, application_name, deployment_group_name)
+    logger.info(
+        "Created CodeDeploy deployment %s for %s/%s",
+        safe_aws_ref(deployment_id),
+        safe_aws_ref(application_name),
+        safe_aws_ref(deployment_group_name),
+    )
 
     deployment_info: dict[str, Any] | None = None
     if wait:
@@ -351,11 +373,13 @@ def create_codedeploy_deployment(
                 deploymentId=deployment_id,
                 WaiterConfig={"Delay": waiter_delay, "MaxAttempts": waiter_max_attempts},
             )
-        except WaiterError as exc:
+        except WaiterError:
             deployment_info = _safe_get_deployment(client, deployment_id, logger)
             status = deployment_info.get("status") if deployment_info else "unknown"
-            msg = f"Deployment {deployment_id} did not reach a successful state (status={status})."
-            raise RuntimeError(msg) from exc
+            safe_deployment_id = safe_aws_ref(deployment_id)
+            safe_status = safe_aws_text(status)
+            msg = f"Deployment {safe_deployment_id} did not reach a successful state (status={safe_status})."
+            raise RuntimeError(msg) from None
         deployment_info = _safe_get_deployment(client, deployment_id, logger)
     elif include_details:
         deployment_info = _safe_get_deployment(client, deployment_id, logger)

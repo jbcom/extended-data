@@ -19,6 +19,11 @@ from extended_data.containers import ExtendedDict, ExtendedList, ExtendedString,
 from extended_data.connectors.aws import AWSConnector
 
 
+def _logged_text(logger: MagicMock) -> str:
+    """Return concatenated mock logger messages."""
+    return "\n".join(str(arg) for call in logger.method_calls for arg in call.args)
+
+
 @pytest.fixture
 def aws_connector():
     """Create AWS connector with mocked clients."""
@@ -182,6 +187,22 @@ class TestS3ObjectOperations:
         result = aws_connector.get_object("bucket", "missing.txt")
 
         assert result is None
+
+    def test_get_object_not_found_logs_redact_bucket_and_key(self, aws_connector):
+        """Missing object diagnostics should not expose S3 resource identifiers."""
+        mock_s3 = MagicMock()
+        error = ClientError({"Error": {"Code": "NoSuchKey"}}, "GetObject")
+        mock_s3.get_object.side_effect = error
+        aws_connector.get_aws_client = MagicMock(return_value=mock_s3)
+
+        result = aws_connector.get_object("prod-secrets-bucket", "customers/acme/private.json")
+
+        assert result is None
+        mock_s3.get_object.assert_called_once_with(Bucket="prod-secrets-bucket", Key="customers/acme/private.json")
+        logs = _logged_text(aws_connector.logger)
+        assert "[REDACTED]" in logs
+        assert "prod-secrets-bucket" not in logs
+        assert "customers/acme/private.json" not in logs
 
     def test_get_object_other_error(self, aws_connector):
         """Test getting an object with other error."""
@@ -506,6 +527,19 @@ class TestS3BucketFeatures:
         assert call_args["Bucket"] == "my-bucket"
         assert call_args["ACL"] == "private"
 
+    def test_create_bucket_logs_redact_bucket_name_but_preserve_call_args(self, aws_connector):
+        """Bucket creation logs should redact resource names without changing API args."""
+        mock_s3 = MagicMock()
+        mock_s3.create_bucket.return_value = {"Location": "/prod-secrets-bucket"}
+        aws_connector.get_aws_client = MagicMock(return_value=mock_s3)
+
+        aws_connector.create_bucket("prod-secrets-bucket")
+
+        assert mock_s3.create_bucket.call_args.kwargs["Bucket"] == "prod-secrets-bucket"
+        logs = _logged_text(aws_connector.logger)
+        assert "[REDACTED]" in logs
+        assert "prod-secrets-bucket" not in logs
+
     def test_create_bucket_with_region(self, aws_connector):
         """Test creating bucket in specific region."""
         mock_s3 = MagicMock()
@@ -613,3 +647,17 @@ class TestS3BucketFeatures:
         assert result["test-bucket"]["size_bytes"] == 1073741824
         assert result["test-bucket"]["size_gb"] == 1.0
         assert result["test-bucket"]["object_count"] == 100
+
+    def test_get_bucket_sizes_error_logs_redact_bucket_name(self, aws_connector):
+        """CloudWatch metric diagnostics should not leak bucket names."""
+        mock_cloudwatch = MagicMock()
+        mock_cloudwatch.get_metric_statistics.side_effect = RuntimeError("denied for prod-secrets-bucket")
+        aws_connector.get_aws_client = MagicMock(return_value=mock_cloudwatch)
+
+        result = aws_connector.get_bucket_sizes(bucket_names=["prod-secrets-bucket"])
+
+        assert result["prod-secrets-bucket"]["size_bytes"] == 0
+        assert result["prod-secrets-bucket"]["object_count"] == 0
+        logs = _logged_text(aws_connector.logger)
+        assert "[REDACTED]" in logs
+        assert "prod-secrets-bucket" not in logs

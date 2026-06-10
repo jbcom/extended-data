@@ -10,6 +10,7 @@ import json
 from collections.abc import Mapping, Sequence
 from typing import TYPE_CHECKING, Any
 
+from extended_data.connectors.aws._diagnostics import safe_aws_ref, safe_aws_text
 from extended_data.containers import ExtendedDict, ExtendedList, ExtendedString, to_builtin
 from extended_data.primitives import unhump_map
 
@@ -24,6 +25,12 @@ else:
 
         class ClientError(Exception):
             """Fallback exception used until botocore is imported."""
+
+
+def _safe_s3_uri(bucket: str, key: str | None = None) -> str:
+    """Return a diagnostic-safe S3 URI."""
+    uri = f"s3://{bucket}" if key is None else f"s3://{bucket}/{key}"
+    return safe_aws_text(uri, bucket, key)
 
 
 class AWSS3Mixin:
@@ -109,7 +116,8 @@ class AWSS3Mixin:
         Returns:
             The AWS region where the bucket is located.
         """
-        self.logger.debug(f"Getting location for bucket: {bucket_name}")
+        safe_bucket = safe_aws_ref(bucket_name)
+        self.logger.debug(f"Getting location for bucket: {safe_bucket}")
         role_arn = execution_role_arn or getattr(self, "execution_role_arn", None)
 
         s3 = self.get_aws_client(
@@ -138,7 +146,8 @@ class AWSS3Mixin:
         Returns:
             The object contents, or None if not found.
         """
-        self.logger.debug(f"Getting S3 object: s3://{bucket}/{key}")
+        safe_uri = _safe_s3_uri(bucket, key)
+        self.logger.debug(f"Getting S3 object: {safe_uri}")
         role_arn = execution_role_arn or getattr(self, "execution_role_arn", None)
 
         s3 = self.get_aws_client(
@@ -155,7 +164,7 @@ class AWSS3Mixin:
             return body
         except ClientError as e:
             if e.response.get("Error", {}).get("Code") == "NoSuchKey":
-                self.logger.warning(f"S3 object not found: s3://{bucket}/{key}")
+                self.logger.warning(f"S3 object not found: {safe_uri}")
                 return None
             raise
 
@@ -209,7 +218,8 @@ class AWSS3Mixin:
         Returns:
             The S3 put_object response.
         """
-        self.logger.debug(f"Putting S3 object: s3://{bucket}/{key}")
+        safe_uri = _safe_s3_uri(bucket, key)
+        self.logger.debug(f"Putting S3 object: {safe_uri}")
         role_arn = execution_role_arn or getattr(self, "execution_role_arn", None)
 
         s3 = self.get_aws_client(
@@ -237,7 +247,7 @@ class AWSS3Mixin:
             put_args["Metadata"] = {str(key): str(value) for key, value in metadata.items()}
 
         response = s3.put_object(**put_args)
-        self.logger.debug(f"Put object to s3://{bucket}/{key}")
+        self.logger.debug(f"Put object to {safe_uri}")
         return self.extend_result(response)
 
     def put_json_object(
@@ -288,7 +298,8 @@ class AWSS3Mixin:
         Returns:
             The S3 delete_object response.
         """
-        self.logger.debug(f"Deleting S3 object: s3://{bucket}/{key}")
+        safe_uri = _safe_s3_uri(bucket, key)
+        self.logger.debug(f"Deleting S3 object: {safe_uri}")
         role_arn = execution_role_arn or getattr(self, "execution_role_arn", None)
 
         s3 = self.get_aws_client(
@@ -297,7 +308,7 @@ class AWSS3Mixin:
         )
 
         response = s3.delete_object(Bucket=bucket, Key=key)
-        self.logger.debug(f"Deleted object s3://{bucket}/{key}")
+        self.logger.debug(f"Deleted object {safe_uri}")
         return self.extend_result(response)
 
     def list_objects(
@@ -322,7 +333,8 @@ class AWSS3Mixin:
         Returns:
             List of object metadata dictionaries.
         """
-        self.logger.debug(f"Listing objects in s3://{bucket}/{prefix or ''}")
+        safe_uri = _safe_s3_uri(bucket, prefix or None)
+        self.logger.debug(f"Listing objects in {safe_uri}")
         role_arn = execution_role_arn or getattr(self, "execution_role_arn", None)
 
         s3 = self.get_aws_client(
@@ -375,7 +387,9 @@ class AWSS3Mixin:
         Returns:
             The S3 copy_object response.
         """
-        self.logger.debug(f"Copying s3://{source_bucket}/{source_key} to s3://{dest_bucket}/{dest_key}")
+        safe_source_uri = _safe_s3_uri(source_bucket, source_key)
+        safe_dest_uri = _safe_s3_uri(dest_bucket, dest_key)
+        self.logger.debug(f"Copying {safe_source_uri} to {safe_dest_uri}")
         role_arn = execution_role_arn or getattr(self, "execution_role_arn", None)
 
         s3 = self.get_aws_client(
@@ -388,7 +402,7 @@ class AWSS3Mixin:
             Key=dest_key,
             CopySource={"Bucket": source_bucket, "Key": source_key},
         )
-        self.logger.debug(f"Copied object to s3://{dest_bucket}/{dest_key}")
+        self.logger.debug(f"Copied object to {safe_dest_uri}")
         return self.extend_result(response)
 
     # =========================================================================
@@ -409,7 +423,8 @@ class AWSS3Mixin:
         Returns:
             Dictionary with logging, versioning, lifecycle_rules, and policy.
         """
-        self.logger.debug(f"Getting features for bucket: {bucket_name}")
+        safe_bucket = safe_aws_ref(bucket_name)
+        self.logger.debug(f"Getting features for bucket: {safe_bucket}")
         role_arn = execution_role_arn or getattr(self, "execution_role_arn", None)
 
         s3_resource: ServiceResource = self.get_aws_resource(
@@ -421,7 +436,7 @@ class AWSS3Mixin:
 
         # Check if bucket exists
         if not bucket.creation_date:
-            self.logger.warning(f"Bucket does not exist: {bucket_name}")
+            self.logger.warning(f"Bucket does not exist: {safe_bucket}")
             return self.extend_result({})
 
         features: dict[str, Any] = {}
@@ -476,7 +491,8 @@ class AWSS3Mixin:
         Returns:
             Dictionary mapping bucket names to bucket data/features.
         """
-        self.logger.info(f"Finding S3 buckets containing: {name_contains}")
+        safe_search = safe_aws_ref(name_contains)
+        self.logger.info(f"Finding S3 buckets containing: {safe_search}")
         role_arn = execution_role_arn or getattr(self, "execution_role_arn", None)
 
         s3_resource: ServiceResource = self.get_aws_resource(
@@ -488,7 +504,7 @@ class AWSS3Mixin:
 
         for bucket in s3_resource.buckets.all():
             if name_contains in bucket.name:
-                self.logger.debug(f"Found matching bucket: {bucket.name}")
+                self.logger.debug(f"Found matching bucket: {safe_aws_ref(bucket.name)}")
 
                 if include_features:
                     buckets[bucket.name] = to_builtin(
@@ -528,7 +544,8 @@ class AWSS3Mixin:
         Returns:
             Create bucket response.
         """
-        self.logger.info(f"Creating S3 bucket: {bucket_name}")
+        safe_bucket = safe_aws_ref(bucket_name)
+        self.logger.info(f"Creating S3 bucket: {safe_bucket}")
         role_arn = execution_role_arn or getattr(self, "execution_role_arn", None)
 
         s3 = self.get_aws_client(
@@ -548,7 +565,7 @@ class AWSS3Mixin:
             }
 
         result = s3.create_bucket(**create_args)
-        self.logger.info(f"Created bucket: {bucket_name}")
+        self.logger.info(f"Created bucket: {safe_bucket}")
 
         # Enable versioning if requested
         if enable_versioning:
@@ -556,7 +573,7 @@ class AWSS3Mixin:
                 Bucket=bucket_name,
                 VersioningConfiguration={"Status": "Enabled"},
             )
-            self.logger.info(f"Enabled versioning for bucket: {bucket_name}")
+            self.logger.info(f"Enabled versioning for bucket: {safe_bucket}")
 
         # Apply tags if provided
         if tags:
@@ -565,7 +582,7 @@ class AWSS3Mixin:
                 Bucket=bucket_name,
                 Tagging={"TagSet": tag_set},
             )
-            self.logger.info(f"Applied {len(tags)} tags to bucket: {bucket_name}")
+            self.logger.info(f"Applied {len(tags)} tags to bucket: {safe_bucket}")
 
         return self.extend_result(result)
 
@@ -585,7 +602,8 @@ class AWSS3Mixin:
         Raises:
             ClientError: If bucket not empty and force=False.
         """
-        self.logger.info(f"Deleting S3 bucket: {bucket_name}")
+        safe_bucket = safe_aws_ref(bucket_name)
+        self.logger.info(f"Deleting S3 bucket: {safe_bucket}")
         role_arn = execution_role_arn or getattr(self, "execution_role_arn", None)
 
         if force:
@@ -596,11 +614,11 @@ class AWSS3Mixin:
             bucket = s3_resource.Bucket(bucket_name)
 
             # Delete all objects
-            self.logger.info(f"Deleting all objects in bucket: {bucket_name}")
+            self.logger.info(f"Deleting all objects in bucket: {safe_bucket}")
             bucket.objects.all().delete()
 
             # Delete all versions
-            self.logger.info(f"Deleting all versions in bucket: {bucket_name}")
+            self.logger.info(f"Deleting all versions in bucket: {safe_bucket}")
             bucket.object_versions.all().delete()
 
         s3 = self.get_aws_client(
@@ -609,7 +627,7 @@ class AWSS3Mixin:
         )
 
         s3.delete_bucket(Bucket=bucket_name)
-        self.logger.info(f"Deleted bucket: {bucket_name}")
+        self.logger.info(f"Deleted bucket: {safe_bucket}")
 
     def get_bucket_tags(
         self,
@@ -653,7 +671,8 @@ class AWSS3Mixin:
             tags: Dictionary of tag key-value pairs.
             execution_role_arn: ARN of role to assume for cross-account access.
         """
-        self.logger.info(f"Setting {len(tags)} tags on bucket: {bucket_name}")
+        safe_bucket = safe_aws_ref(bucket_name)
+        self.logger.info(f"Setting {len(tags)} tags on bucket: {safe_bucket}")
         role_arn = execution_role_arn or getattr(self, "execution_role_arn", None)
 
         s3 = self.get_aws_client(
@@ -666,7 +685,7 @@ class AWSS3Mixin:
             Bucket=bucket_name,
             Tagging={"TagSet": tag_set},
         )
-        self.logger.info(f"Set tags on bucket: {bucket_name}")
+        self.logger.info(f"Set tags on bucket: {safe_bucket}")
 
     def get_bucket_sizes(
         self,
@@ -705,6 +724,7 @@ class AWSS3Mixin:
         bucket_sizes: dict[str, dict[str, Any]] = {}
 
         for bucket_name in bucket_names:
+            safe_bucket = safe_aws_ref(bucket_name)
             size_bytes = 0
             object_count = 0
 
@@ -725,7 +745,7 @@ class AWSS3Mixin:
                 if size_response.get("Datapoints"):
                     size_bytes = int(max(size_response["Datapoints"], key=lambda x: x["Timestamp"])["Average"])
             except Exception as e:
-                self.logger.debug(f"Could not get size for {bucket_name}: {e}")
+                self.logger.debug(f"Could not get size for {safe_bucket}: {safe_aws_text(e, bucket_name)}")
 
             # Get object count
             try:
@@ -744,7 +764,7 @@ class AWSS3Mixin:
                 if count_response.get("Datapoints"):
                     object_count = int(max(count_response["Datapoints"], key=lambda x: x["Timestamp"])["Average"])
             except Exception as e:
-                self.logger.debug(f"Could not get count for {bucket_name}: {e}")
+                self.logger.debug(f"Could not get count for {safe_bucket}: {safe_aws_text(e, bucket_name)}")
 
             bucket_sizes[bucket_name] = {
                 "size_bytes": size_bytes,

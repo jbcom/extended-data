@@ -16,6 +16,11 @@ from extended_data.containers import ExtendedDict, ExtendedList, ExtendedString
 from extended_data.connectors.aws import AWSConnector
 
 
+def _logged_text(logger: MagicMock) -> str:
+    """Return concatenated mock logger messages."""
+    return "\n".join(str(arg) for call in logger.method_calls for arg in call.args)
+
+
 @pytest.fixture
 def aws_connector():
     """Create AWS connector with mocked clients."""
@@ -46,6 +51,9 @@ class TestSSOIdentityStore:
         assert isinstance(result, ExtendedString)
         assert result == "d-1234567890"
         aws_connector.get_aws_client.assert_called_once_with(client_name="sso-admin", execution_role_arn=None)
+        logs = _logged_text(aws_connector.logger)
+        assert "[REDACTED]" in logs
+        assert "d-1234567890" not in logs
 
     def test_get_identity_store_id_no_instance(self, aws_connector):
         """Test getting identity store ID with no instances."""
@@ -73,6 +81,9 @@ class TestSSOIdentityStore:
 
         assert isinstance(result, ExtendedString)
         assert result == "arn:aws:sso:::instance/ssoins-1234567890"
+        logs = _logged_text(aws_connector.logger)
+        assert "[REDACTED]" in logs
+        assert "arn:aws:sso:::instance/ssoins-1234567890" not in logs
 
     def test_get_sso_instance_arn_no_instance(self, aws_connector):
         """Test getting SSO instance ARN with no instances."""
@@ -300,6 +311,34 @@ class TestSSOGroups:
         assert result["GroupId"] == "group-1"
         mock_identitystore.create_group.assert_called_once()
 
+    def test_create_sso_group_logs_redact_identifiers_but_preserve_call_args(self, aws_connector):
+        """Group mutation diagnostics should redact names and IDs."""
+        mock_identitystore = MagicMock()
+        mock_identitystore.create_group.return_value = {
+            "GroupId": "group-sensitive-1",
+            "IdentityStoreId": "d-sensitive",
+        }
+
+        def get_client(client_name, **kwargs):
+            if client_name == "identitystore":
+                return mock_identitystore
+            mock_sso_admin = MagicMock()
+            mock_sso_admin.list_instances.return_value = {"Instances": [{"IdentityStoreId": "d-sensitive"}]}
+            return mock_sso_admin
+
+        aws_connector.get_aws_client = MagicMock(side_effect=get_client)
+
+        aws_connector.create_sso_group("Executive Audit", description="Admin group")
+
+        call_args = mock_identitystore.create_group.call_args.kwargs
+        assert call_args["DisplayName"] == "Executive Audit"
+        assert call_args["IdentityStoreId"] == "d-sensitive"
+        logs = _logged_text(aws_connector.logger)
+        assert "[REDACTED]" in logs
+        assert "Executive Audit" not in logs
+        assert "group-sensitive-1" not in logs
+        assert "d-sensitive" not in logs
+
     def test_delete_sso_group(self, aws_connector):
         """Test deleting an SSO group."""
         mock_identitystore = MagicMock()
@@ -423,3 +462,35 @@ class TestSSOAccountAssignments:
         assert isinstance(result["AccountAssignmentCreationStatus"], ExtendedDict)
         assert "AccountAssignmentCreationStatus" in result
         mock_sso_admin.create_account_assignment.assert_called_once()
+
+    def test_create_account_assignment_logs_redact_identifiers_but_preserve_call_args(self, aws_connector):
+        """Account assignment diagnostics should redact resource identifiers."""
+        mock_sso_admin = MagicMock()
+        mock_sso_admin.list_instances.return_value = {
+            "Instances": [{"InstanceArn": "arn:aws:sso:::instance/ssoins-sensitive"}]
+        }
+        mock_sso_admin.create_account_assignment.return_value = {
+            "AccountAssignmentCreationStatus": {
+                "Status": "SUCCEEDED",
+                "RequestId": "req-123",
+            }
+        }
+
+        aws_connector.get_aws_client = MagicMock(return_value=mock_sso_admin)
+
+        aws_connector.create_account_assignment(
+            account_id="123456789012",
+            permission_set_arn="arn:aws:sso:::permissionSet/ssoins-sensitive/ps-sensitive",
+            principal_id="user-sensitive-1",
+            principal_type="USER",
+        )
+
+        call_args = mock_sso_admin.create_account_assignment.call_args.kwargs
+        assert call_args["TargetId"] == "123456789012"
+        assert call_args["PermissionSetArn"] == "arn:aws:sso:::permissionSet/ssoins-sensitive/ps-sensitive"
+        assert call_args["PrincipalId"] == "user-sensitive-1"
+        logs = _logged_text(aws_connector.logger)
+        assert "[REDACTED]" in logs
+        assert "123456789012" not in logs
+        assert "user-sensitive-1" not in logs
+        assert "ssoins-sensitive" not in logs
