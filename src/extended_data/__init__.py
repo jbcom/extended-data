@@ -6,6 +6,10 @@ logging, vendor data connectors, and workflow-oriented integrations.
 
 from __future__ import annotations
 
+import importlib
+
+from typing import TYPE_CHECKING
+
 from extended_data._version import __version__
 from extended_data.base64_utils import base64_decode, base64_encode
 from extended_data.export_utils import (
@@ -108,9 +112,57 @@ from extended_data.type_utils import (
 from extended_data.yaml_utils import decode_yaml, encode_yaml, is_yaml_data
 
 
+if TYPE_CHECKING:
+    from extended_data.connectors import (
+        ConnectorFabric,
+        VendorConnectorBase,
+        get_connector,
+        get_connector_class,
+        get_connector_info,
+        list_connector_info,
+        list_connectors,
+    )
+    from extended_data.inputs import InputProvider, directed_inputs, input_config
+    from extended_data.logging import ExitRunError, KeyTransform, Logging
+
+
+_LAZY_EXPORTS = {
+    "ConnectorFabric": ("extended_data.connectors", "ConnectorFabric"),
+    "ExitRunError": ("extended_data.logging", "ExitRunError"),
+    "InputProvider": ("extended_data.inputs", "InputProvider"),
+    "KeyTransform": ("extended_data.logging", "KeyTransform"),
+    "Logging": ("extended_data.logging", "Logging"),
+    "VendorConnectorBase": ("extended_data.connectors", "VendorConnectorBase"),
+    "directed_inputs": ("extended_data.inputs", "directed_inputs"),
+    "get_connector": ("extended_data.connectors", "get_connector"),
+    "get_connector_class": ("extended_data.connectors", "get_connector_class"),
+    "get_connector_info": ("extended_data.connectors", "get_connector_info"),
+    "input_config": ("extended_data.inputs", "input_config"),
+    "list_connector_info": ("extended_data.connectors", "list_connector_info"),
+    "list_connectors": ("extended_data.connectors", "list_connectors"),
+}
+
+
+def __getattr__(name: str):
+    """Lazily expose integrated subpackage primitives at the package root."""
+    if name not in _LAZY_EXPORTS:
+        raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
+    module_name, attr_name = _LAZY_EXPORTS[name]
+    value = getattr(importlib.import_module(module_name), attr_name)
+    globals()[name] = value
+    return value
+
+
 __all__ = [
+    "ConnectorFabric",
+    "ExitRunError",
     "FilePath",
+    "InputProvider",
+    "KeyTransform",
+    "Logging",
     "SortedDefaultDict",
+    "VendorConnectorBase",
     "__version__",
     "all_non_empty",
     "all_non_empty_in_dict",
@@ -133,6 +185,7 @@ __all__ = [
     "deduplicate_map",
     "deep_merge",
     "delete_file",
+    "directed_inputs",
     "encode_hcl2",
     "encode_json",
     "encode_toml",
@@ -148,6 +201,9 @@ __all__ = [
     "flatten_map",
     "get_available_methods",
     "get_caller",
+    "get_connector",
+    "get_connector_class",
+    "get_connector_info",
     "get_default_dict",
     "get_default_value_for_type",
     "get_encoding_for_file_path",
@@ -158,11 +214,14 @@ __all__ = [
     "get_tld",
     "get_unique_signature",
     "humanize",
+    "input_config",
     "is_non_empty_match",
     "is_nothing",
     "is_partial_match",
     "is_url",
     "is_yaml_data",
+    "list_connector_info",
+    "list_connectors",
     "lower_first_char",
     "make_hashable",
     "make_raw_data_export_safe",
