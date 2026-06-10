@@ -26,10 +26,10 @@ def test_integration_workflow_serialization_transformation_export():
         }
         edt.write_file(tmp_path, raw_data)
 
-        # 2. Read and Decode
-        content = edt.read_file(tmp_path)
-        loaded_data = edt.decode_file(content, file_path=tmp_path)
+        # 2. Read and decode through the Tier 3 file boundary
+        loaded_data = edt.read_data_file(tmp_path)
         assert loaded_data == raw_data
+        assert isinstance(loaded_data, edt.ExtendedDict)
 
         # 3. Transform: Convert types and transform strings
         transformed = {

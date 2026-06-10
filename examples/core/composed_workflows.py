@@ -15,10 +15,10 @@ from extended_data import (
     ExtendedDict,
     base64_decode,
     base64_encode,
-    decode_file,
     decode_hcl2,
     encode_hcl2,
     filter_list,
+    read_data_file,
     read_file,
     write_file,
 )
@@ -120,7 +120,7 @@ def demonstrate_yaml_native_workflow() -> None:
         tld = Path(tmpdir)
         write_file("template.yaml", template, tld=tld)
         rendered = read_file("template.yaml", tld=tld)
-        decoded = decode_file(rendered, file_path="template.yaml")
+        decoded = read_data_file("template.yaml", tld=tld)
 
     print(rendered)
     print(f"\nDecoded tag: {decoded['bucket_name'].tag}")
