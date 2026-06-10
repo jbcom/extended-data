@@ -11,6 +11,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 
 from extended_data import (
+    DataWorkflow,
     ExtendedDict,
     base64_decode,
     base64_encode,
@@ -44,17 +45,16 @@ def demonstrate_layered_config_workflow() -> None:
         write_file("config/base.yaml", base_config, tld=tld)
         write_file("config/dev.yaml", env_config, tld=tld)
 
-        base_text = read_file("config/base.yaml", tld=tld)
-        env_text = read_file("config/dev.yaml", tld=tld)
-
-        base_data = decode_file(base_text, file_path="config/base.yaml", as_extended=True)
-        env_data = decode_file(env_text, file_path="config/dev.yaml", as_extended=True)
-        merged = base_data.deep_merge(env_data)
-
-        write_file("build/config.yaml", merged, tld=tld)
+        env_data = DataWorkflow.from_file("config/dev.yaml", tld=tld).value
+        result = (
+            DataWorkflow.from_file("config/base.yaml", tld=tld)
+            .then(("merge-env", lambda data: data.deep_merge(env_data)))
+            .write("build/config.yaml", tld=tld)
+        )
         merged_text = read_file("build/config.yaml", tld=tld)
 
     print(merged_text)
+    print(f"Steps: {', '.join(result.steps)}")
 
 
 def demonstrate_terraform_handoff_workflow() -> None:

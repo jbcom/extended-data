@@ -7,6 +7,7 @@ namespace. The root package exposes the primitives users need most often:
 from extended_data import (
     ConnectorFabric,
     DataDecodeError,
+    DataWorkflow,
     ExtendedDict,
     ExtendedList,
     ExtendedSet,
@@ -63,6 +64,28 @@ assert payload["service"]["name"].upper_first() == "Api"
 
 Use `extend_data(value)` to promote existing plain data and `to_builtin(value)`
 to lower extended containers back to standard Python data.
+
+`DataWorkflow` is the Tier 3 composition surface for higher-order data
+processing. It reads or decodes structured data through the file and format
+processors, promotes values into Tier 2 containers by default, applies named
+transformation steps, writes output artifacts, and returns a `WorkflowResult`
+with the completed value, output path, and step trail.
+
+```python
+from extended_data import DataWorkflow
+
+env_data = DataWorkflow.from_file("config/dev.yaml").value
+result = (
+    DataWorkflow.from_file("config/base.yaml")
+    .then(("merge-env", lambda data: data.deep_merge(env_data)))
+    .write("build/config.yaml")
+)
+
+assert result.steps == ("read:config/base.yaml", "merge-env", "write:build/config.yaml")
+```
+
+Missing workflow input files raise `FileNotFoundError`, and empty workflow
+writes raise `ValueError` unless `allow_empty=True` is passed.
 
 `InputProvider` loads input data from explicit mappings, environment variables,
 and stdin, then decodes or coerces values through the primitive layer. Its

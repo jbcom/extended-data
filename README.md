@@ -30,7 +30,7 @@ CrewAI releases pull vulnerable `chromadb` versions transitively.
 ## Usage
 
 ```python
-from extended_data import ConnectorFabric, ExtendedDict, InputProvider, Logging, decode_file, decode_json, encode_yaml
+from extended_data import ConnectorFabric, DataWorkflow, ExtendedDict, InputProvider, Logging, decode_file, decode_json, encode_yaml
 
 logger = Logging(logger_name="example")
 inputs = InputProvider(inputs={"GITHUB_OWNER": "jbcom"}, from_environment=False)
@@ -38,9 +38,11 @@ connectors = ConnectorFabric(inputs=inputs.inputs, logger=logger)
 data = decode_json('{"status": "ok"}')
 payload = ExtendedDict(data).deep_merge({"source": "example"})
 decoded_file = decode_file('{"service": {"name": "api"}}', suffix="json", as_extended=True)
+workflow = DataWorkflow.from_value(payload).then(("normalize", lambda data: data.unhump())).result()
 
 print(encode_yaml(payload.data))
 print(decoded_file["service"]["name"].upper_first())
+print(workflow.as_builtin())
 ```
 
 The fabric can also instantiate any registered connector by name:
@@ -101,6 +103,9 @@ The package is intentionally tiered:
 Tier 3 decoders can opt into Tier 2 containers with `as_extended=True`, so
 decoded files, Base64 payloads, and directed inputs can immediately use
 `ExtendedDict`, `ExtendedList`, `ExtendedSet`, and `ExtendedString` methods.
+`DataWorkflow` makes those compositions first-class: read or decode data,
+apply named transformations, write an output artifact, and keep the step trail
+in a `WorkflowResult`. Missing workflow inputs and empty writes fail loudly.
 
 More detail lives in [`docs/package-surface.md`](docs/package-surface.md).
 

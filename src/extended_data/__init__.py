@@ -112,6 +112,7 @@ from extended_data.primitives.types import (
     strtotime,
     typeof,
 )
+from extended_data.workflows import DataWorkflow, WorkflowResult, WorkflowStep
 
 
 if TYPE_CHECKING:
@@ -162,6 +163,7 @@ __all__ = [
     "ConnectorFabric",
     "ConnectorInfo",
     "DataDecodeError",
+    "DataWorkflow",
     "ExitRunError",
     "ExtendedDict",
     "ExtendedList",
@@ -173,6 +175,8 @@ __all__ = [
     "Logging",
     "SortedDefaultDict",
     "VendorConnectorBase",
+    "WorkflowResult",
+    "WorkflowStep",
     "__version__",
     "all_non_empty",
     "all_non_empty_in_dict",
