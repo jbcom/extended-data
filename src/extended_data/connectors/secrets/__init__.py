@@ -81,7 +81,7 @@ class SyncOptions:
     continue_on_error: bool = False
     parallelism: int = 4
     compute_diff: bool = False
-    output_format: OutputFormat = OutputFormat.HUMAN
+    output_format: OutputFormat = OutputFormat.JSON
 
 
 @dataclass
@@ -364,6 +364,9 @@ class SecretsConnector(VendorConnectorBase):
                 error_message="CLI not available and native bindings not installed",
             )
 
+        # CLI mode always requests JSON so this Python surface can reliably
+        # return a structured SyncResult. Native mode can pass through other
+        # output formats because it returns a typed result directly.
         cmd = [
             self._cli_path,
             "pipeline",
@@ -382,8 +385,6 @@ class SecretsConnector(VendorConnectorBase):
             cmd.append("--dry-run")
         if options.compute_diff:
             cmd.append("--diff")
-        if options.output_format:
-            cmd.extend(["--output", options.output_format.value])
         if options.targets:
             cmd.extend(["--targets", ",".join(options.targets)])
         if options.continue_on_error:

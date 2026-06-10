@@ -1,5 +1,6 @@
 import json
 
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -14,17 +15,17 @@ from extended_data.connectors.secrets import (
 
 
 @pytest.fixture
-def mock_logger():
+def mock_logger() -> MagicMock:
     return MagicMock()
 
 
 @pytest.fixture
-def connector(mock_logger):
+def connector(mock_logger: MagicMock) -> SecretsConnector:
     # Force CLI mode by setting prefer_native=False
     return SecretsConnector(cli_path="/usr/bin/secretsync", prefer_native=False, logger=mock_logger)
 
 
-def test_cli_get_config_info_valid(connector, tmp_path):
+def test_cli_get_config_info_valid(connector: SecretsConnector, tmp_path: Path) -> None:
     config_file = tmp_path / "config.yaml"
     config_data = {
         "sources": {"src1": {}, "src2": {}},
@@ -48,13 +49,13 @@ def test_cli_get_config_info_valid(connector, tmp_path):
     assert info.aws_region == "us-east-1"
 
 
-def test_cli_get_config_info_not_found(connector):
+def test_cli_get_config_info_not_found(connector: SecretsConnector) -> None:
     info = connector.get_config_info("/non/existent/path.yaml")
     assert info.valid is False
     assert "Configuration file not found" in info.error_message
 
 
-def test_cli_get_config_info_invalid_yaml(connector, tmp_path):
+def test_cli_get_config_info_invalid_yaml(connector: SecretsConnector, tmp_path: Path) -> None:
     config_file = tmp_path / "config.yaml"
     config_file.write_text("invalid: yaml: :")
 
@@ -63,7 +64,7 @@ def test_cli_get_config_info_invalid_yaml(connector, tmp_path):
     assert "Error parsing YAML file" in info.error_message
 
 
-def test_cli_get_config_info_empty_file(connector, tmp_path):
+def test_cli_get_config_info_empty_file(connector: SecretsConnector, tmp_path: Path) -> None:
     config_file = tmp_path / "config.yaml"
     config_file.write_text("")
 
@@ -73,7 +74,7 @@ def test_cli_get_config_info_empty_file(connector, tmp_path):
 
 
 @patch("subprocess.run")
-def test_cli_run_pipeline_operation(mock_run, connector):
+def test_cli_run_pipeline_operation(mock_run: MagicMock, connector: SecretsConnector) -> None:
     mock_run.return_value = MagicMock(
         returncode=0,
         stdout=json.dumps({"success": True, "secrets_processed": 5}),
@@ -90,10 +91,12 @@ def test_cli_run_pipeline_operation(mock_run, connector):
     args = mock_run.call_args[0][0]
     assert args[1] == "pipeline"
     assert "--merge-only" in args
+    assert args.count("--output") == 1
+    assert args[args.index("--output") + 1] == "json"
 
 
 @patch("subprocess.run")
-def test_cli_run_pipeline_diff_and_format(mock_run, connector):
+def test_cli_run_pipeline_diff_and_format(mock_run: MagicMock, connector: SecretsConnector) -> None:
     mock_run.return_value = MagicMock(
         returncode=0,
         stdout=json.dumps({"success": True, "diff_output": "some diff"}),
@@ -110,12 +113,28 @@ def test_cli_run_pipeline_diff_and_format(mock_run, connector):
 
     args = mock_run.call_args[0][0]
     assert "--diff" in args
-    assert "--output" in args
-    assert "json" in args
+    assert args.count("--output") == 1
+    assert args[args.index("--output") + 1] == "json"
 
 
 @patch("subprocess.run")
-def test_cli_validate_config(mock_run, connector):
+def test_cli_run_pipeline_default_output_is_json(mock_run: MagicMock, connector: SecretsConnector) -> None:
+    mock_run.return_value = MagicMock(
+        returncode=0,
+        stdout=json.dumps({"success": True}),
+        stderr="",
+    )
+
+    result = connector.run_pipeline("config.yaml")
+
+    assert result.success is True
+    args = mock_run.call_args[0][0]
+    assert args.count("--output") == 1
+    assert args[args.index("--output") + 1] == "json"
+
+
+@patch("subprocess.run")
+def test_cli_validate_config(mock_run: MagicMock, connector: SecretsConnector) -> None:
     mock_run.return_value = MagicMock(
         returncode=0,
         stdout="Valid",
