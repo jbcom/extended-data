@@ -137,6 +137,8 @@ decoded files, Base64 payloads, and directed inputs can immediately use
 String tokenization stays inside the same surface: `ExtendedString.split()`
 returns an `ExtendedList` of `ExtendedString` values, and partition operations
 return `ExtendedTuple` values.
+Format encoders lower extended containers, including extended mapping keys, at
+the serialization boundary.
 `DataWorkflow` makes those compositions first-class: read or decode data,
 apply named transformations, write an output artifact, and keep the step trail
 in a `WorkflowResult`. Missing workflow inputs and empty writes fail loudly.

@@ -100,7 +100,8 @@ Tuple values are promoted to `ExtendedTuple` and lowered back to Python tuples,
 so the Tier 2 surface does not silently turn immutable input data into mutable
 lists.
 Format encoders lower Tier 2 containers the same way before serializing JSON,
-YAML, TOML, and HCL output.
+YAML, TOML, and HCL output, including extended mapping keys that must become
+plain strings before JSON handoff.
 
 `DataWorkflow` is the Tier 3 composition surface for higher-order data
 processing. It reads or decodes structured data through the file and format
