@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock, patch
 
-from extended_data.containers import ExtendedDict, ExtendedList, ExtendedString
+from extended_data.containers import ExtendedDict, ExtendedList, ExtendedString, extend_data
 
 
 def test_anthropic_list_models():
@@ -13,10 +13,9 @@ def test_anthropic_list_models():
 
     with patch("extended_data.connectors.anthropic.AnthropicConnector") as mock_connector_class:
         mock_connector = MagicMock()
-        mock_model = MagicMock()
-        mock_model.id = "claude-3-opus"
-        mock_model.display_name = "Claude 3 Opus"
-        mock_connector.list_models.return_value = [mock_model]
+        mock_connector.list_models.return_value = extend_data(
+            [{"id": "claude-3-opus", "display_name": "Claude 3 Opus"}]
+        )
         mock_connector_class.return_value = mock_connector
 
         result = anthropic_list_models()
@@ -33,13 +32,14 @@ def test_anthropic_create_message():
 
     with patch("extended_data.connectors.anthropic.AnthropicConnector") as mock_connector_class:
         mock_connector = MagicMock()
-        mock_response = MagicMock()
-        mock_response.id = "msg_123"
-        mock_response.text = "Hello!"
-        mock_response.model = "claude-3-opus"
-        mock_response.usage.input_tokens = 10
-        mock_response.usage.output_tokens = 5
-        mock_connector.create_message.return_value = mock_response
+        mock_connector.create_message.return_value = extend_data(
+            {
+                "id": "msg_123",
+                "content": [{"type": "text", "text": "Hello!"}],
+                "model": "claude-3-opus",
+                "usage": {"input_tokens": 10, "output_tokens": 5},
+            }
+        )
         mock_connector_class.return_value = mock_connector
 
         result = anthropic_create_message(model="claude-3-opus", prompt="Hi")

@@ -13,6 +13,15 @@ from pydantic import BaseModel, Field
 from extended_data.containers import extend_data
 
 
+def _message_text(message: dict[str, Any]) -> str:
+    """Extract concatenated text blocks from a message payload."""
+    return "".join(
+        str(block.get("text", ""))
+        for block in message.get("content", [])
+        if block.get("type") == "text" and block.get("text")
+    )
+
+
 class CreateMessageSchema(BaseModel):
     """Pydantic schema for the anthropic_create_message tool."""
 
@@ -55,12 +64,12 @@ def anthropic_create_message(
 
     return extend_data(
         {
-            "id": response.id,
-            "text": response.text,
-            "model": response.model,
+            "id": response.get("id", ""),
+            "text": _message_text(response),
+            "model": response.get("model", ""),
             "usage": {
-                "input_tokens": response.usage.input_tokens,
-                "output_tokens": response.usage.output_tokens,
+                "input_tokens": response.get("usage", {}).get("input_tokens", 0),
+                "output_tokens": response.get("usage", {}).get("output_tokens", 0),
             },
         }
     )
@@ -77,7 +86,7 @@ def anthropic_list_models() -> list[dict[str, Any]]:
     connector = AnthropicConnector()
     models = connector.list_models()
 
-    return extend_data([{"id": m.id, "display_name": m.display_name} for m in models])
+    return extend_data([{"id": m.get("id", ""), "display_name": m.get("display_name", "")} for m in models])
 
 
 TOOL_DEFINITIONS = [

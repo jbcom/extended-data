@@ -37,6 +37,7 @@ import httpx
 from pydantic import BaseModel, ConfigDict, Field
 
 from extended_data.connectors.base import VendorConnectorBase
+from extended_data.containers import to_builtin
 from extended_data.logging import Logging
 
 
@@ -215,7 +216,7 @@ class AnthropicConnector(VendorConnectorBase):
         ...     max_tokens=1024,
         ...     messages=[{"role": "user", "content": "Hello"}]
         ... )
-        >>> print(response.text)
+        >>> print(response["content"][0]["text"])
     """
 
     API_KEY_ENV = "ANTHROPIC_API_KEY"
@@ -292,6 +293,20 @@ class AnthropicConnector(VendorConnectorBase):
             raise AnthropicRateLimitError(message, status_code=status_code, error_type=error_type)
         raise AnthropicAPIError(message, status_code=status_code, error_type=error_type)
 
+    @staticmethod
+    def _model_payload(model: BaseModel) -> dict[str, Any]:
+        """Serialize an Anthropic model into JSON-compatible API field names."""
+        return model.model_dump(mode="json")
+
+    @staticmethod
+    def _message_text(message: dict[str, Any]) -> str:
+        """Extract concatenated text blocks from an extended message payload."""
+        return "".join(
+            str(block.get("text", ""))
+            for block in message.get("content", [])
+            if block.get("type") == "text" and block.get("text")
+        )
+
     # =========================================================================
     # Message Operations
     # =========================================================================
@@ -309,7 +324,7 @@ class AnthropicConnector(VendorConnectorBase):
         tools: list[dict[str, Any]] | None = None,
         tool_choice: dict[str, Any] | None = None,
         metadata: dict[str, Any] | None = None,
-    ) -> Message:
+    ) -> dict[str, Any]:
         """Create a message using Claude.
 
         Args:
@@ -326,7 +341,7 @@ class AnthropicConnector(VendorConnectorBase):
             metadata: Optional metadata for the request.
 
         Returns:
-            Message object with response.
+            Message response payload.
 
         Raises:
             AnthropicError: If the API request fails.
@@ -356,12 +371,12 @@ class AnthropicConnector(VendorConnectorBase):
         if metadata:
             body["metadata"] = metadata
 
-        response = self.post("/v1/messages", json=body)
+        response = self.post("/v1/messages", json=to_builtin(body))
 
         if not response.is_success:
             self._handle_error(response)
 
-        return Message.model_validate(response.json())
+        return self.extend_result(self._model_payload(Message.model_validate(response.json())))
 
     def count_tokens(
         self,
@@ -396,7 +411,7 @@ class AnthropicConnector(VendorConnectorBase):
         if tools:
             body["tools"] = tools
 
-        response = self.post("/v1/messages/count_tokens", json=body)
+        response = self.post("/v1/messages/count_tokens", json=to_builtin(body))
 
         if not response.is_success:
             self._handle_error(response)
@@ -408,11 +423,11 @@ class AnthropicConnector(VendorConnectorBase):
     # Model Operations
     # =========================================================================
 
-    def list_models(self) -> list[Model]:
+    def list_models(self) -> list[dict[str, Any]]:
         """List available models from the API.
 
         Returns:
-            List of Model objects.
+            List of model payload dictionaries.
 
         Raises:
             AnthropicError: If the API request fails.
@@ -426,16 +441,16 @@ class AnthropicConnector(VendorConnectorBase):
 
         data = response.json()
         models_data = data.get("data", [])
-        return [Model.model_validate(m) for m in models_data]
+        return self.extend_result([self._model_payload(Model.model_validate(m)) for m in models_data])
 
-    def get_model(self, model_id: str) -> Model:
+    def get_model(self, model_id: str) -> dict[str, Any]:
         """Get information about a specific model.
 
         Args:
             model_id: Model identifier.
 
         Returns:
-            Model object with details.
+            Model payload dictionary with details.
 
         Raises:
             AnthropicError: If the API request fails.
@@ -447,7 +462,7 @@ class AnthropicConnector(VendorConnectorBase):
         if not response.is_success:
             self._handle_error(response)
 
-        return Model.model_validate(response.json())
+        return self.extend_result(self._model_payload(Model.model_validate(response.json())))
 
     # =========================================================================
     # Agent Execution (Sandbox Mode)
@@ -504,11 +519,12 @@ If the task requires code changes, describe exactly what changes should be made.
             )
 
             duration = time.time() - start_time
-            total_tokens = response.usage.input_tokens + response.usage.output_tokens
+            usage = response.get("usage", {})
+            total_tokens = int(usage.get("input_tokens", 0)) + int(usage.get("output_tokens", 0))
 
             return AgentExecutionResult(
                 success=True,
-                output=response.text,
+                output=self._message_text(response),
                 duration_seconds=duration,
                 tokens_used=total_tokens,
             )
@@ -553,4 +569,4 @@ If the task requires code changes, describe exactly what changes should be made.
             "fast": "claude-haiku-4-5-20251001",  # Claude Haiku 4.5 - fastest
             "powerful": "claude-opus-4-5-20251101",  # Claude Opus 4.5 - most capable
         }
-        return recommendations.get(use_case, recommendations["general"])
+        return self.extend_result(recommendations.get(use_case, recommendations["general"]))

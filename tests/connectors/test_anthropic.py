@@ -18,6 +18,7 @@ from extended_data.connectors.anthropic import (
     Model,
     Usage,
 )
+from extended_data.containers import ExtendedDict, ExtendedList, ExtendedString, extend_data
 
 
 class TestModels:
@@ -123,6 +124,7 @@ class TestAnthropicConnector:
         with patch.object(httpx, "Client"):
             connector = AnthropicConnector(api_key="test-key")
             # Using verified model IDs from https://docs.anthropic.com/en/docs/about-claude/models
+            assert isinstance(connector.get_recommended_model("general"), ExtendedString)
             assert connector.get_recommended_model("general") == "claude-sonnet-4-5-20250929"
             assert connector.get_recommended_model("fast") == "claude-haiku-4-5-20251001"
             assert connector.get_recommended_model("powerful") == "claude-opus-4-5-20251101"
@@ -152,14 +154,18 @@ class TestAnthropicConnector:
             message = connector.create_message(
                 model="claude-sonnet-4-20250514",
                 max_tokens=1024,
-                messages=[{"role": "user", "content": "Hi"}],
+                messages=extend_data([{"role": "user", "content": "Hi"}]),
             )
 
-            assert message.id == "msg_123"
-            assert message.role == MessageRole.ASSISTANT
-            assert message.text == "Hello!"
-            assert message.usage.input_tokens == 10
-            assert message.usage.output_tokens == 5
+            assert isinstance(message, ExtendedDict)
+            assert isinstance(message["content"], ExtendedList)
+            assert isinstance(message["content"][0], ExtendedDict)
+            assert isinstance(message["id"], ExtendedString)
+            assert message["id"] == "msg_123"
+            assert message["role"] == "assistant"
+            assert message["content"][0]["text"] == "Hello!"
+            assert message["usage"]["input_tokens"] == 10
+            assert message["usage"]["output_tokens"] == 5
 
             # Verify request
             call_args = mock_client.request.call_args
@@ -167,6 +173,8 @@ class TestAnthropicConnector:
             assert "/v1/messages" in call_args.args[1]
             assert call_args.kwargs["json"]["model"] == "claude-sonnet-4-20250514"
             assert call_args.kwargs["json"]["max_tokens"] == 1024
+            assert isinstance(call_args.kwargs["json"]["messages"], list)
+            assert isinstance(call_args.kwargs["json"]["messages"][0], dict)
 
     def test_create_message_with_system(self):
         """create_message should include system prompt."""
@@ -220,8 +228,31 @@ class TestAnthropicConnector:
             connector = AnthropicConnector(api_key="test-key")
             models = connector.list_models()
 
+            assert isinstance(models, ExtendedList)
+            assert isinstance(models[0], ExtendedDict)
+            assert isinstance(models[0]["id"], ExtendedString)
             assert len(models) == 2
-            assert models[0].id == "claude-sonnet-4-20250514"
+            assert models[0]["id"] == "claude-sonnet-4-20250514"
+
+    def test_get_model(self):
+        """get_model should return an extended model payload."""
+        import httpx
+
+        mock_client = MagicMock()
+
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.is_success = True
+        mock_response.json.return_value = {"id": "claude-sonnet-4-20250514", "display_name": "Claude Sonnet 4"}
+        mock_client.request.return_value = mock_response
+
+        with patch.object(httpx, "Client", return_value=mock_client):
+            connector = AnthropicConnector(api_key="test-key")
+            model = connector.get_model("claude-sonnet-4-20250514")
+
+            assert isinstance(model, ExtendedDict)
+            assert isinstance(model["display_name"], ExtendedString)
+            assert model["display_name"] == "Claude Sonnet 4"
 
 
 class TestClaudeModels:
