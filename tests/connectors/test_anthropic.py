@@ -22,6 +22,11 @@ from extended_data.connectors.anthropic import (
 from extended_data.containers import ExtendedDict, ExtendedList, ExtendedString, extend_data
 
 
+def _logged_text(logger: MagicMock) -> str:
+    """Return concatenated mock logger messages."""
+    return "\n".join(str(arg) for call in logger.method_calls for arg in call.args)
+
+
 class TestModels:
     """Tests for Pydantic models."""
 
@@ -295,6 +300,31 @@ class TestAnthropicConnector:
         assert "hunter2" not in result.error
         assert "raw_token" not in result.error
         assert "[REDACTED]" in result.error
+
+    def test_execute_agent_task_does_not_log_task_prompt(self, base_connector_kwargs):
+        """Agent task diagnostics should not expose raw prompt text."""
+        import httpx
+
+        with patch.object(httpx, "Client"):
+            connector = AnthropicConnector(api_key="test-key", **base_connector_kwargs)
+
+        with patch.object(
+            connector,
+            "create_message",
+            return_value=extend_data(
+                {
+                    "content": [{"type": "text", "text": "done"}],
+                    "usage": {"input_tokens": 2, "output_tokens": 1},
+                }
+            ),
+        ):
+            result = connector.execute_agent_task("rotate password=hunter2 for customer-prod")
+
+        logs = _logged_text(connector.logger)
+        assert result.success is True
+        assert "hunter2" not in logs
+        assert "customer-prod" not in logs
+        assert "Executing agent task with" in logs
 
 
 class TestClaudeModels:

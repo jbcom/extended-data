@@ -503,7 +503,7 @@ class AnthropicConnector(VendorConnectorBase):
         """
         import time
 
-        self.logger.info(f"Executing agent task: {task[:100]}...")
+        self.logger.info(f"Executing agent task with {len(task)} characters")
         start_time = time.time()
 
         default_system = """You are a helpful AI assistant that executes coding tasks.
