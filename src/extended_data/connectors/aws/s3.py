@@ -28,6 +28,28 @@ class AWSS3Mixin:
     - execution_role_arn
     """
 
+    if TYPE_CHECKING:
+        logger: Any
+        execution_role_arn: str | None
+
+        def get_aws_client(
+            self,
+            client_name: str,
+            execution_role_arn: str | None = None,
+            role_session_name: str | None = None,
+            config: Any | None = None,
+            **client_args: Any,
+        ) -> Any: ...
+
+        def get_aws_resource(
+            self,
+            service_name: str,
+            execution_role_arn: str | None = None,
+            role_session_name: str | None = None,
+            config: Any | None = None,
+            **resource_args: Any,
+        ) -> ServiceResource: ...
+
     def list_s3_buckets(
         self,
         unhump_buckets: bool = True,
@@ -132,7 +154,7 @@ class AWSS3Mixin:
         bucket: str,
         key: str,
         execution_role_arn: str | None = None,
-    ) -> dict[str, Any] | list | None:
+    ) -> dict[str, Any] | list[Any] | None:
         """Get a JSON object from S3.
 
         Args:
@@ -212,7 +234,7 @@ class AWSS3Mixin:
         self,
         bucket: str,
         key: str,
-        data: dict[str, Any] | list,
+        data: dict[str, Any] | list[Any],
         indent: int = 2,
         metadata: dict[str, str] | None = None,
         execution_role_arn: str | None = None,

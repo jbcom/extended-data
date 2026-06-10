@@ -24,6 +24,9 @@ from extended_data.connectors.base import VendorConnectorBase
 from extended_data.logging import Logging
 
 
+AWSSecretValue = str | dict[str, Any] | None
+
+
 if TYPE_CHECKING:
     import boto3
 
@@ -66,8 +69,8 @@ class AWSConnector(VendorConnectorBase):
         self,
         execution_role_arn: str | None = None,
         logger: Logging | None = None,
-        **kwargs,
-    ):
+        **kwargs: Any,
+    ) -> None:
         super().__init__(logger=logger, **kwargs)
         self._boto3 = _load_aws_sdk()
         self.execution_role_arn = execution_role_arn
@@ -160,7 +163,7 @@ class AWSConnector(VendorConnectorBase):
         execution_role_arn: str | None = None,
         role_session_name: str | None = None,
         config: Config | None = None,
-        **client_args,
+        **client_args: Any,
     ) -> boto3.client:
         """Get a boto3 client for the specified service.
 
@@ -185,7 +188,7 @@ class AWSConnector(VendorConnectorBase):
         execution_role_arn: str | None = None,
         role_session_name: str | None = None,
         config: Config | None = None,
-        **resource_args,
+        **resource_args: Any,
     ) -> ServiceResource:
         """Get a boto3 resource for the specified service.
 
@@ -275,14 +278,14 @@ class AWSConnector(VendorConnectorBase):
 
     def list_secrets(
         self,
-        filters: list[dict] | None = None,
+        filters: list[dict[str, Any]] | None = None,
         prefix: str | None = None,
         get_secret_values: bool = False,
         skip_empty_secrets: bool = False,
         execution_role_arn: str | None = None,
         role_session_name: str | None = None,
-        **kwargs,
-    ) -> dict[str, str | dict]:
+        **kwargs: Any,
+    ) -> dict[str, AWSSecretValue]:
         """List secrets from AWS Secrets Manager.
 
         Args:
@@ -318,16 +321,16 @@ class AWSConnector(VendorConnectorBase):
             role_session_name=role_session_name,
         )
 
-        secrets: dict[str, str | dict] = {}
+        secrets: dict[str, AWSSecretValue] = {}
         paginator = secretsmanager.get_paginator("list_secrets")
 
-        effective_filters: list[dict] = []
+        effective_filters: list[dict[str, Any]] = []
         if filters:
             effective_filters.extend(filters)
         if prefix:
             effective_filters.append({"Key": "name", "Values": [prefix]})
 
-        paginate_kwargs: dict = {"IncludePlannedDeletion": False}
+        paginate_kwargs: dict[str, Any] = {"IncludePlannedDeletion": False}
         if effective_filters:
             paginate_kwargs["Filters"] = effective_filters
 
@@ -465,7 +468,7 @@ class AWSConnector(VendorConnectorBase):
         force_delete: bool = False,
         dry_run: bool = True,
         execution_role_arn: str | None = None,
-        **kwargs,
+        **kwargs: Any,
     ) -> list[str]:
         """Delete all secrets that match the provided name prefix."""
         prefix = prefix or kwargs.get("name_prefix")
@@ -514,7 +517,7 @@ class AWSConnector(VendorConnectorBase):
 
     def copy_secrets_to_s3(
         self,
-        secrets: dict[str, str | dict],
+        secrets: dict[str, AWSSecretValue],
         bucket: str,
         key: str,
         execution_role_arn: str | None = None,
@@ -599,7 +602,15 @@ class AWSConnector(VendorConnectorBase):
         return vendors
 
 
-if is_connector_available("aws"):
+if TYPE_CHECKING:
+    from extended_data.connectors.aws.codedeploy import (
+        create_codedeploy_deployment,
+        get_aws_codedeploy_deployments,
+    )
+    from extended_data.connectors.aws.organizations import AWSOrganizationsMixin
+    from extended_data.connectors.aws.s3 import AWSS3Mixin
+    from extended_data.connectors.aws.sso import AWSSSOmixin
+elif is_connector_available("aws"):
     # Import submodule operations to make them available when the AWS SDK is present.
     from extended_data.connectors.aws.codedeploy import create_codedeploy_deployment, get_aws_codedeploy_deployments
     from extended_data.connectors.aws.organizations import AWSOrganizationsMixin

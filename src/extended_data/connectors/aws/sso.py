@@ -27,6 +27,19 @@ class AWSSSOmixin:
     - execution_role_arn
     """
 
+    if TYPE_CHECKING:
+        logger: Any
+        execution_role_arn: str | None
+
+        def get_aws_client(
+            self,
+            client_name: str,
+            execution_role_arn: str | None = None,
+            role_session_name: str | None = None,
+            config: Any | None = None,
+            **client_args: Any,
+        ) -> Any: ...
+
     def get_identity_store_id(
         self,
         execution_role_arn: str | None = None,

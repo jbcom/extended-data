@@ -132,7 +132,12 @@ uv run mypy \
   src/extended_data/connectors/slack/tools.py \
   src/extended_data/connectors/vault/__init__.py \
   src/extended_data/connectors/github/__init__.py \
-  src/extended_data/connectors/github/tools.py
+  src/extended_data/connectors/github/tools.py \
+  src/extended_data/connectors/aws/__init__.py \
+  src/extended_data/connectors/aws/tools.py \
+  src/extended_data/connectors/aws/s3.py \
+  src/extended_data/connectors/aws/sso.py \
+  src/extended_data/connectors/aws/organizations.py
 uv build
 ```
 

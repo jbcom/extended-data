@@ -9,6 +9,7 @@ from __future__ import annotations
 import re
 
 from collections import defaultdict
+from collections.abc import Iterator
 from copy import deepcopy
 from typing import TYPE_CHECKING, Any
 
@@ -29,6 +30,21 @@ class AWSOrganizationsMixin:
     - logger
     - execution_role_arn
     """
+
+    if TYPE_CHECKING:
+        logger: Any
+        execution_role_arn: str | None
+
+        def get_aws_client(
+            self,
+            client_name: str,
+            execution_role_arn: str | None = None,
+            role_session_name: str | None = None,
+            config: Any | None = None,
+            **client_args: Any,
+        ) -> Any: ...
+
+        def get_caller_account_id(self) -> str: ...
 
     def get_organization_accounts(
         self,
@@ -80,7 +96,7 @@ class AWSOrganizationsMixin:
         ou_paginator = orgs.get_paginator("list_organizational_units_for_parent")
         tags_paginator = orgs.get_paginator("list_tags_for_resource")
 
-        def yield_tag_keypairs(tags: list[dict[str, str]]):
+        def yield_tag_keypairs(tags: list[dict[str, str]]) -> Iterator[tuple[str, str]]:
             for tag in tags:
                 yield tag["Key"], tag["Value"]
 
@@ -102,7 +118,7 @@ class AWSOrganizationsMixin:
                 for ou in page["OrganizationalUnits"]:
                     ou_id = ou["Id"]
                     ou_data = org_units.get(ou_id)
-                    if is_nothing(ou_data):
+                    if ou_data is None or is_nothing(ou_data):
                         ou_data = {}
                         for k, v in deepcopy(ou).items():
                             ou_data[f"Ou{k.title()}"] = v
@@ -275,7 +291,7 @@ class AWSOrganizationsMixin:
         ou_paginator = orgs.get_paginator("list_organizational_units_for_parent")
         org_units: dict[str, dict[str, Any]] = {}
 
-        def get_ous_recursive(parent_id: str, parent_path: str = ""):
+        def get_ous_recursive(parent_id: str, parent_path: str = "") -> None:
             for page in ou_paginator.paginate(ParentId=parent_id):
                 for ou in page["OrganizationalUnits"]:
                     ou_id = ou["Id"]
@@ -319,7 +335,7 @@ class AWSOrganizationsMixin:
                     tag_map[tag["Key"]] = tag["Value"]
             return tag_map
 
-        def walk(parent_id: str):
+        def walk(parent_id: str) -> None:
             for page in ou_paginator.paginate(ParentId=parent_id):
                 for ou in page["OrganizationalUnits"]:
                     ou_id = ou["Id"]

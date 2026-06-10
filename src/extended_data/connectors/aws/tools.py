@@ -126,15 +126,24 @@ def list_s3_objects(bucket: str) -> list[dict[str, Any]]:
     from extended_data.connectors.aws import AWSConnectorFull
 
     connector = AWSConnectorFull()
-    objects = connector.list_objects(bucket)
-    return [
-        {
-            "key": key,
-            "size": data.get("Size", 0),
-            "last_modified": str(data.get("LastModified", "")),
-        }
-        for key, data in objects.items()
-    ]
+    objects_raw: Any = connector.list_objects(bucket)
+    if isinstance(objects_raw, dict):
+        objects = [{"key": key, **data} for key, data in objects_raw.items()]
+    else:
+        objects = objects_raw
+
+    result: list[dict[str, Any]] = []
+    for data in objects:
+        if not isinstance(data, dict):
+            continue
+        result.append(
+            {
+                "key": data.get("key", data.get("Key", "")),
+                "size": data.get("size", data.get("Size", 0)),
+                "last_modified": str(data.get("last_modified", data.get("LastModified", ""))),
+            }
+        )
+    return result
 
 
 def list_accounts() -> list[dict[str, Any]]:
@@ -216,7 +225,7 @@ def list_secrets(
 
     connector = AWSConnectorFull()
     # Align with tests: only pass arguments that match test expectations
-    kwargs = {}
+    kwargs: dict[str, Any] = {}
     if prefix:
         kwargs["prefix"] = prefix
     if get_values:
@@ -224,10 +233,12 @@ def list_secrets(
 
     secrets = connector.list_secrets(**kwargs)
 
-    result = []
+    result: list[dict[str, Any]] = []
     for name, data in secrets.items():
         if isinstance(data, str):
             result.append({"name": name, "arn": data})
+        elif data is None:
+            result.append({"name": name, "arn": None, "value": None})
         else:
             result.append({"name": name, "arn": data.get("ARN"), "value": data})
     return result

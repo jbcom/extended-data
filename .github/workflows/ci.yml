@@ -55,6 +55,11 @@ jobs:
           src/extended_data/connectors/vault/__init__.py
           src/extended_data/connectors/github/__init__.py
           src/extended_data/connectors/github/tools.py
+          src/extended_data/connectors/aws/__init__.py
+          src/extended_data/connectors/aws/tools.py
+          src/extended_data/connectors/aws/s3.py
+          src/extended_data/connectors/aws/sso.py
+          src/extended_data/connectors/aws/organizations.py
       - run: uv run pytest tests/core tests/logging tests/inputs
       - run: uv run pytest tests/connectors/test_cloud_params.py tests/connectors/test_connectors.py tests/connectors/test_secrets.py tests/connectors/test_cli.py tests/connectors/test_mcp.py tests/connectors/meshy/test_models.py
       - run: uv build
