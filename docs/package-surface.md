@@ -293,17 +293,16 @@ assert payload["service"]["name"].upper_first() == "Api"
 ```
 
 The `secrets` adapter is the Python-facing bridge to the standalone SecretSync
-project (`jbcom/secrets-sync`). It uses the optional native `secretssync`
-Python module when present and otherwise falls back to the `secretsync` CLI,
-which must emit the stable `secretsync pipeline --output json` result envelope
-for both dry-run and apply runs.
+project (`jbcom/secrets-sync`). It uses the `secretsync` CLI, which must emit
+the stable `secretsync pipeline --output json` result envelope for both dry-run
+and apply runs.
 Secrets tool factories are exported from `extended_data.secrets`; the duplicate
 `extended_data.secrets.tools` module path is intentionally not preserved.
 
 ```python
 from extended_data import SecretsConnector, SyncOptions
 
-result = SecretsConnector(prefer_native=False).run_pipeline(
+result = SecretsConnector().run_pipeline(
     "pipeline.yaml",
     SyncOptions(dry_run=True),
 )

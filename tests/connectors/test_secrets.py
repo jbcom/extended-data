@@ -1,5 +1,6 @@
 import json
 
+from inspect import signature
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -33,8 +34,15 @@ def mock_logger() -> MagicMock:
 
 @pytest.fixture
 def connector(mock_logger: MagicMock) -> SecretsConnector:
-    # Force CLI mode by setting prefer_native=False
-    return SecretsConnector(cli_path="/usr/bin/secretsync", prefer_native=False, logger=mock_logger)
+    return SecretsConnector(cli_path="/usr/bin/secretsync", logger=mock_logger)
+
+
+def test_secrets_connector_has_single_cli_runtime_contract() -> None:
+    """SecretSync integration should not expose unowned native binding switches."""
+    parameters = signature(SecretsConnector).parameters
+
+    assert "prefer_native" not in parameters
+    assert not hasattr(SecretsConnector(cli_path="/usr/bin/secretsync"), "native_available")
 
 
 def test_cli_get_config_info_valid(connector: SecretsConnector, tmp_path: Path) -> None:
@@ -234,6 +242,7 @@ def test_cli_run_pipeline_rejects_legacy_raw_diff_json(mock_run: MagicMock, conn
     assert isinstance(result, ExtendedDict)
     assert result["success"] is False
     assert "expected pipeline result envelope" in result["error_message"]
+    assert "native bindings" not in result["error_message"]
 
 
 @patch("subprocess.run")

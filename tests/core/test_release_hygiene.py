@@ -29,7 +29,7 @@ OLD_PACKAGE_NAMESPACES = (
     "lifecyclelogging",
     "vendor_connectors",
 )
-REMOVED_PUBLIC_KEYWORDS = ("unhump_results",)
+REMOVED_PUBLIC_KEYWORDS = ("prefer_native", "unhump_results")
 SECRETSSYNC_PROJECT_PATTERNS = (
     re.compile(r"\bsecretssync\s+(?:Go\s+)?(?:project|library|repo|repository|CLI|connector|bindings?)\b", re.IGNORECASE),
     re.compile(r"\b(?:project|library|repo|repository|CLI|connector|bindings?)\s+secretssync\b", re.IGNORECASE),
@@ -334,7 +334,7 @@ def test_public_guidance_does_not_use_removed_runtime_keywords() -> None:
 
 
 def test_public_guidance_names_secrets_sync_roles_precisely() -> None:
-    """Use SecretSync for the product and reserve exact names for CLI/native modules."""
+    """Use SecretSync for the product and reserve exact names for CLI modules."""
     offenders: list[str] = []
     paths = [REPO_ROOT / "README.md"]
     paths.extend(path for root in (REPO_ROOT / "docs", REPO_ROOT / "src") for path in root.rglob("*"))

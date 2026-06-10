@@ -5,10 +5,9 @@ This connector integrates with the standalone SecretSync project
 HashiCorp Vault to AWS Secrets Manager with two-phase architecture,
 inheritance, versioning, and CI/CD integration.
 
-The connector can operate in two modes:
-1. Native mode: Uses the optional gopy-generated `secretssync` Python module
-2. CLI mode: Falls back to the `secretsync` subprocess CLI when bindings are
-   not available
+The connector executes the supported `secretsync` subprocess CLI contract.
+Alternate runtime adapters should be added only after SecretSync publishes a
+stable adapter contract.
 
 Example usage:
     from extended_data.connectors.secrets import SecretsConnector
@@ -43,16 +42,6 @@ from typing import Any
 from extended_data.connectors.base import VendorConnectorBase
 from extended_data.containers import ExtendedDict, extend_data
 from extended_data.logging import Logging
-
-
-# Try to import native bindings
-_NATIVE_AVAILABLE = False
-try:
-    import secretssync as _native
-
-    _NATIVE_AVAILABLE = True
-except ImportError:
-    _native = None
 
 
 class SyncOperation(str, Enum):
@@ -103,23 +92,6 @@ class SyncResult:
     diff_output: str = ""
 
     @classmethod
-    def from_native(cls, native_result: Any) -> SyncResult:
-        """Create from native gopy result."""
-        return cls(
-            success=native_result.Success,
-            target_count=native_result.TargetCount,
-            secrets_processed=native_result.SecretsProcessed,
-            secrets_added=native_result.SecretsAdded,
-            secrets_modified=native_result.SecretsModified,
-            secrets_removed=native_result.SecretsRemoved,
-            secrets_unchanged=native_result.SecretsUnchanged,
-            duration_ms=native_result.DurationMs,
-            error_message=native_result.ErrorMessage,
-            results_json=native_result.ResultsJSON,
-            diff_output=native_result.DiffOutput,
-        )
-
-    @classmethod
     def from_cli_output(cls, output: dict[str, Any]) -> SyncResult:
         """Create from CLI JSON output."""
         return cls(
@@ -155,21 +127,6 @@ class ConfigInfo:
     vault_address: str = ""
     aws_region: str = ""
 
-    @classmethod
-    def from_native(cls, native_info: Any) -> ConfigInfo:
-        """Create from native gopy result."""
-        return cls(
-            valid=native_info.Valid,
-            error_message=native_info.ErrorMessage,
-            source_count=native_info.SourceCount,
-            target_count=native_info.TargetCount,
-            sources=list(native_info.Sources) if native_info.Sources else [],
-            targets=list(native_info.Targets) if native_info.Targets else [],
-            has_merge_store=native_info.HasMergeStore,
-            vault_address=native_info.VaultAddress,
-            aws_region=native_info.AWSRegion,
-        )
-
     def to_dict(self) -> ExtendedDict:
         """Return an extended config info payload."""
         return extend_data(asdict(self))
@@ -179,8 +136,7 @@ class SecretsConnector(VendorConnectorBase):
     """Enterprise-grade SecretSync connector.
 
     This connector wraps the standalone SecretSync project
-    (`jbcom/secrets-sync`) through either the optional native `secretssync`
-    Python bindings or the `secretsync` CLI.
+    (`jbcom/secrets-sync`) through the supported `secretsync` CLI.
 
     Features:
     - Two-phase pipeline architecture (merge → sync)
@@ -189,15 +145,13 @@ class SecretsConnector(VendorConnectorBase):
     - Dry-run with visual diff output
     - CI/CD integration with exit codes
 
-    The connector operates in two modes:
-    1. Native mode: Uses gopy-generated bindings (faster)
-    2. CLI mode: Falls back to subprocess if bindings unavailable
+    Alternate runtime adapters are intentionally not accepted here until
+    SecretSync publishes a stable adapter contract.
     """
 
     def __init__(
         self,
         cli_path: str | None = None,
-        prefer_native: bool = True,
         logger: Logging | None = None,
         **kwargs: Any,
     ) -> None:
@@ -205,17 +159,14 @@ class SecretsConnector(VendorConnectorBase):
 
         Args:
             cli_path: Path to secretsync CLI binary (for CLI mode)
-            prefer_native: Prefer native bindings over CLI
             logger: Logger instance
             **kwargs: Passed to VendorConnectorBase
         """
         super().__init__(logger=logger, **kwargs)
 
-        self._prefer_native = prefer_native and _NATIVE_AVAILABLE
         self._cli_path = cli_path or self._find_cli()
 
-        mode = "native" if self._prefer_native else "CLI"
-        self.logger.info(f"SecretsConnector initialized in {mode} mode")
+        self.logger.info("SecretsConnector initialized in CLI mode")
 
     def _find_cli(self) -> str | None:
         """Find the SecretSync `secretsync` CLI binary."""
@@ -234,11 +185,6 @@ class SecretsConnector(VendorConnectorBase):
         return None
 
     @property
-    def native_available(self) -> bool:
-        """Check if native bindings are available."""
-        return _NATIVE_AVAILABLE
-
-    @property
     def cli_available(self) -> bool:
         """Check if CLI is available."""
         return self._cli_path is not None
@@ -252,10 +198,7 @@ class SecretsConnector(VendorConnectorBase):
         Returns:
             Extended validation payload.
         """
-        if self._prefer_native:
-            is_valid, message = _native.ValidateConfig(config_path)
-        else:
-            is_valid, message = self._cli_validate_config(config_path)
+        is_valid, message = self._cli_validate_config(config_path)
 
         return extend_data({
             "valid": is_valid,
@@ -293,10 +236,6 @@ class SecretsConnector(VendorConnectorBase):
         Returns:
             Extended configuration details payload.
         """
-        if self._prefer_native:
-            native_info = _native.GetConfigInfo(config_path)
-            return ConfigInfo.from_native(native_info).to_dict()
-
         return self._cli_get_config_info(config_path).to_dict()
 
     def _cli_get_config_info(self, config_path: str) -> ConfigInfo:
@@ -345,28 +284,7 @@ class SecretsConnector(VendorConnectorBase):
         """
         options = options or SyncOptions()
 
-        if self._prefer_native:
-            return self._native_run_pipeline(config_path, options).to_dict()
-
         return self._cli_run_pipeline(config_path, options).to_dict()
-
-    def _native_run_pipeline(
-        self,
-        config_path: str,
-        options: SyncOptions,
-    ) -> SyncResult:
-        """Run pipeline via native bindings."""
-        native_opts = _native.DefaultSyncOptions()
-        native_opts.DryRun = options.dry_run
-        native_opts.Operation = options.operation.value
-        native_opts.Targets = ",".join(options.targets)
-        native_opts.ContinueOnError = options.continue_on_error
-        native_opts.Parallelism = options.parallelism
-        native_opts.ComputeDiff = options.compute_diff
-        native_opts.OutputFormat = options.output_format.value
-
-        native_result = _native.RunPipeline(config_path, native_opts)
-        return SyncResult.from_native(native_result)
 
     def _cli_run_pipeline(
         self,
@@ -377,7 +295,7 @@ class SecretsConnector(VendorConnectorBase):
         if not self._cli_path:
             return SyncResult(
                 success=False,
-                error_message="CLI not available and native bindings not installed",
+                error_message="secretsync CLI not available",
             )
 
         # CLI mode always requests JSON so this Python surface can reliably
@@ -432,7 +350,7 @@ class SecretsConnector(VendorConnectorBase):
                             success=False,
                             error_message=(
                                 "Unsupported secretsync JSON output: expected pipeline result envelope. "
-                                "Upgrade secretsync or use native bindings."
+                                "Upgrade secretsync to a version that emits the stable result envelope."
                             ),
                         )
                     parsed = SyncResult.from_cli_output(output)
@@ -475,10 +393,6 @@ class SecretsConnector(VendorConnectorBase):
         Returns:
             Extended dry-run result payload.
         """
-        if self._prefer_native:
-            native_result = _native.DryRun(config_path)
-            return SyncResult.from_native(native_result).to_dict()
-
         options = SyncOptions(dry_run=True, compute_diff=True)
         return self._cli_run_pipeline(config_path, options).to_dict()
 
@@ -492,10 +406,6 @@ class SecretsConnector(VendorConnectorBase):
         Returns:
             Extended merge result payload.
         """
-        if self._prefer_native:
-            native_result = _native.Merge(config_path, dry_run)
-            return SyncResult.from_native(native_result).to_dict()
-
         options = SyncOptions(
             operation=SyncOperation.MERGE,
             dry_run=dry_run,
@@ -513,10 +423,6 @@ class SecretsConnector(VendorConnectorBase):
         Returns:
             Extended sync result payload.
         """
-        if self._prefer_native:
-            native_result = _native.Sync(config_path, dry_run)
-            return SyncResult.from_native(native_result).to_dict()
-
         options = SyncOptions(
             operation=SyncOperation.SYNC,
             dry_run=dry_run,
@@ -533,11 +439,6 @@ class SecretsConnector(VendorConnectorBase):
         Returns:
             Extended targets payload.
         """
-        if self._prefer_native:
-            targets, err = _native.GetTargets(config_path)
-            target_list = list(targets) if targets else []
-            return extend_data({"targets": target_list, "count": len(target_list), "error_message": err})
-
         info = self.get_config_info(config_path)
         targets = info.get("targets", [])
         return extend_data({
@@ -555,11 +456,6 @@ class SecretsConnector(VendorConnectorBase):
         Returns:
             Extended sources payload.
         """
-        if self._prefer_native:
-            sources, err = _native.GetSources(config_path)
-            source_list = list(sources) if sources else []
-            return extend_data({"sources": source_list, "count": len(source_list), "error_message": err})
-
         info = self.get_config_info(config_path)
         sources = info.get("sources", [])
         return extend_data({

@@ -151,15 +151,14 @@ Raw SDK/client objects and raw transport responses remain available from the
 methods that explicitly return them.
 
 The `secrets` connector integrates with the standalone SecretSync project
-(`jbcom/secrets-sync`) through either the optional native `secretssync` Python
-module or the `secretsync` CLI. CLI fallback expects
+(`jbcom/secrets-sync`) through the `secretsync` CLI. It expects
 `secretsync pipeline --output json` to return the stable pipeline result
 envelope used by this package.
 
 ```python
 from extended_data import SecretsConnector, SyncOptions
 
-result = SecretsConnector(prefer_native=False).run_pipeline(
+result = SecretsConnector().run_pipeline(
     "pipeline.yaml",
     SyncOptions(dry_run=True),
 )
