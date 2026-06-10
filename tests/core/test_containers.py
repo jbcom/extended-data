@@ -228,12 +228,21 @@ def test_extended_set_named_mutators_preserve_extended_values() -> None:
 def test_extended_tuple_preserves_immutable_sequence_shape() -> None:
     """ExtendedTuple composes sequence primitives without becoming an ExtendedList."""
     value = ExtendedTuple((1, (2, [3]), "", 2))
+    typed = ExtendedTuple(("api", 2, True, ["nested"]))
+    split = typed.split_by_type(primitive_only=True)
 
     assert value.flatten() == (1, 2, 3, "", 2)
     assert value.compact() == (1, (2, [3]), 2)
     assert value.unique() == (1, (2, [3]), "", 2)
     assert value.filter(lambda item: isinstance(item, int)) == (1, 2)
     assert value.map(lambda item: item * 2 if isinstance(item, int) else item) == (2, (2, [3]), "", 4)
+    assert isinstance(split, ExtendedDict)
+    assert isinstance(split["str"], ExtendedTuple)
+    assert isinstance(split["list"], ExtendedTuple)
+    assert split["str"] == ("api",)
+    assert split["int"] == (2,)
+    assert split["bool"] == (True,)
+    assert split["list"] == (["nested"],)
 
 
 def test_extended_tuple_promotes_nested_values() -> None:

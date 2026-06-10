@@ -67,6 +67,7 @@ payload = ExtendedDict({"outer": {"inner": 1}}).flatten()
 items = ExtendedList([1, [2, [3]]]).flatten()
 services = ExtendedList(["api", "worker", "db"]).filter_values(allowlist=["api", "worker"])
 typed_items = ExtendedList(["api", 2, True]).split_by_type(primitive_only=True)
+typed_aliases = ExtendedTuple(("api", 2, True)).split_by_type(primitive_only=True)
 aliases = ExtendedTuple(("api", ("gateway",))).flatten()
 tags = ExtendedSet({"prod", "prod", ""}).compact()
 words = number_to_words(42)
@@ -97,9 +98,10 @@ values containing `ExtendedString` parts, while `partition()` and
 Container methods that return derived collections stay in Tier 2 as well:
 `ExtendedDict.filter()` returns an `ExtendedTuple` of accepted and rejected
 `ExtendedDict` values, and `ExtendedDict.all_values()` returns an
-`ExtendedList`. `ExtendedList.split_by_type()` and
-`ExtendedDict.split_by_type()` expose the Tier 1 split helpers as type-name
-keyed `ExtendedDict` results.
+`ExtendedList`. `ExtendedList.split_by_type()`,
+`ExtendedTuple.split_by_type()`, and `ExtendedDict.split_by_type()` expose the
+Tier 1 split helpers as type-name keyed `ExtendedDict` results; tuple inputs
+keep tuple-shaped grouped values.
 Generic type routing can still ask for plain data roles:
 `typeof(value, primitive_only=True)` reports Extended strings, lists, tuples,
 mappings, and sets as `str`, `list`, `list`, `dict`, and `set`.

@@ -208,6 +208,13 @@ class ExtendedTuple(tuple[T, ...]):
             values.append(item)
         return ExtendedTuple(values)
 
+    def split_by_type(self, *, primitive_only: bool = False) -> ExtendedDict:
+        """Return values grouped by type name while keeping tuple-shaped groups."""
+        from extended_data.containers.factory import extend_data, to_builtin
+
+        grouped = split_list_by_type(list(to_builtin(self)), primitive_only=primitive_only)
+        return extend_data({type_key.__name__: tuple(values) for type_key, values in grouped.items()})
+
     def to_tuple(self) -> tuple[T, ...]:
         """Return a plain tuple copy."""
         return tuple(self)
