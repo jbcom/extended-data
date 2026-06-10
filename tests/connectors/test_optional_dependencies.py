@@ -27,7 +27,35 @@ def test_builtin_connector_metadata_maps_stay_aligned() -> None:
     assert names == set(_optional.CONNECTOR_EXTRAS)
 
     for name, spec in registry.BUILTIN_CONNECTORS.items():
-        assert _optional.get_extra_for_connector(name) == spec.extra
+        extra = _optional.get_extra_for_connector(name)
+        assert isinstance(extra, ExtendedString)
+        assert extra == spec.extra
+
+
+def test_connector_optional_metadata_returns_extended_values(monkeypatch) -> None:
+    """Connector optional dependency metadata helpers return extended values."""
+    monkeypatch.setattr(_optional, "is_available", lambda package: package == "present")
+    monkeypatch.setitem(_optional.CONNECTOR_REQUIREMENTS, "custom", ["present", "missing"])
+    monkeypatch.setitem(_optional.CONNECTOR_EXTRAS, "custom", "custom-extra")
+
+    package_extra = _optional.get_extra_for_package("boto3")
+    connector_extra = _optional.get_extra_for_connector("custom")
+    requirements = _optional.get_connector_requirements("custom")
+    missing = _optional.get_missing_connector_requirements("custom")
+    install = _optional.get_connector_install_command("custom")
+
+    assert isinstance(package_extra, ExtendedString)
+    assert package_extra == "aws"
+    assert isinstance(connector_extra, ExtendedString)
+    assert connector_extra == "custom-extra"
+    assert isinstance(requirements, ExtendedList)
+    assert requirements == ["present", "missing"]
+    assert isinstance(requirements[0], ExtendedString)
+    assert isinstance(missing, ExtendedList)
+    assert missing == ["missing"]
+    assert isinstance(missing[0], ExtendedString)
+    assert isinstance(install, ExtendedString)
+    assert install == "pip install extended-data[custom-extra]"
 
 
 def test_builtin_connectors_are_registered_as_entry_points() -> None:

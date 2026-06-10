@@ -18,7 +18,7 @@ from __future__ import annotations
 
 import importlib
 
-from typing import Any
+from typing import Any, cast
 
 from extended_data.containers import ExtendedDict, ExtendedList, ExtendedString, extend_data
 
@@ -84,7 +84,7 @@ def is_available(package: str) -> bool:
         return False
 
 
-def get_extra_for_package(package: str) -> str | None:
+def get_extra_for_package(package: str) -> ExtendedString | None:
     """Get the extra name for a package.
 
     Args:
@@ -93,7 +93,10 @@ def get_extra_for_package(package: str) -> str | None:
     Returns:
         Extra name or None if not mapped
     """
-    return PACKAGE_TO_EXTRA.get(package)
+    extra = PACKAGE_TO_EXTRA.get(package)
+    if extra is None:
+        return None
+    return ExtendedString(extra)
 
 
 def require_extra(package: str, extra: str | None = None) -> Any:
@@ -114,7 +117,7 @@ def require_extra(package: str, extra: str | None = None) -> Any:
     except ImportError as e:
         if package in PACKAGE_INSTALL_HINTS:
             raise ImportError(f"Package '{package}' is required but not installed.\n{PACKAGE_INSTALL_HINTS[package]}") from e
-        extra_name = extra or get_extra_for_package(package) or package
+        extra_name = str(extra or get_extra_for_package(package) or package)
         raise ImportError(
             f"Package '{package}' is required but not installed.\n"
             f"Install with: pip install extended-data[{extra_name}]"
@@ -231,27 +234,36 @@ def _normalize_connector_name(connector: str) -> str:
     return connector.strip().lower()
 
 
-def get_extra_for_connector(connector: str) -> str | None:
+def get_extra_for_connector(connector: str) -> ExtendedString | None:
     """Get the optional dependency extra for a connector."""
-    return CONNECTOR_EXTRAS.get(_normalize_connector_name(connector))
+    extra = CONNECTOR_EXTRAS.get(_normalize_connector_name(connector))
+    if extra is None:
+        return None
+    return ExtendedString(extra)
 
 
-def get_connector_requirements(connector: str) -> list[str]:
+def get_connector_requirements(connector: str) -> ExtendedList[ExtendedString]:
     """Get package imports required by a connector."""
-    return list(CONNECTOR_REQUIREMENTS.get(_normalize_connector_name(connector), []))
+    return cast(
+        ExtendedList[ExtendedString],
+        extend_data(list(CONNECTOR_REQUIREMENTS.get(_normalize_connector_name(connector), []))),
+    )
 
 
-def get_missing_connector_requirements(connector: str) -> list[str]:
+def get_missing_connector_requirements(connector: str) -> ExtendedList[ExtendedString]:
     """Get missing package imports for a connector."""
-    return [pkg for pkg in get_connector_requirements(connector) if not is_available(pkg)]
+    return cast(
+        ExtendedList[ExtendedString],
+        extend_data([str(pkg) for pkg in get_connector_requirements(connector) if not is_available(str(pkg))]),
+    )
 
 
-def get_connector_install_command(connector: str) -> str | None:
+def get_connector_install_command(connector: str) -> ExtendedString | None:
     """Get the pip install command for a connector extra."""
     extra = get_extra_for_connector(connector)
     if extra is None:
         return None
-    return f"pip install extended-data[{extra}]"
+    return ExtendedString(f"pip install extended-data[{extra}]")
 
 
 def is_connector_available(connector: str) -> bool:
@@ -290,6 +302,6 @@ def require_connector(connector: str) -> None:
         extra = get_extra_for_connector(connector) or connector
         raise ImportError(
             f"The '{connector}' connector requires additional dependencies.\n"
-            f"Missing packages: {', '.join(missing)}\n"
+            f"Missing packages: {', '.join(str(package) for package in missing)}\n"
             f"Install with: pip install extended-data[{extra}]"
         )

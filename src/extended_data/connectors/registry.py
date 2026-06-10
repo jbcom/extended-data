@@ -160,14 +160,14 @@ def _discover_connectors() -> dict[str, builtins.type[VendorConnectorBase]]:
 
 def _raise_missing_builtin_connector(name: str, error: ImportError) -> NoReturn:
     """Raise a clear install hint for a known built-in connector."""
-    install = get_connector_install_command(name) or f"pip install extended-data[{BUILTIN_CONNECTORS[name].extra}]"
+    install = str(get_connector_install_command(name) or f"pip install extended-data[{BUILTIN_CONNECTORS[name].extra}]")
     missing = get_missing_connector_requirements(name)
     msg = (
         f"The '{name}' connector is built in but its optional dependencies are not installed.\n"
         f"Install with: {install}"
     )
     if missing:
-        msg = f"{msg}\nMissing packages: {', '.join(missing)}"
+        msg = f"{msg}\nMissing packages: {', '.join(str(package) for package in missing)}"
     if str(error):
         msg = f"{msg}\nOriginal import error: {error}"
     raise ImportError(msg) from error
@@ -218,7 +218,7 @@ def get_connector_class(name: str) -> builtins.type[VendorConnectorBase]:
     if name_lower in BUILTIN_CONNECTORS:
         missing = get_missing_connector_requirements(name_lower)
         if missing:
-            error = ImportError(f"Missing packages: {', '.join(missing)}")
+            error = ImportError(f"Missing packages: {', '.join(str(package) for package in missing)}")
             _raise_missing_builtin_connector(name_lower, error)
 
     return connectors[name_lower]
@@ -267,16 +267,18 @@ def _available_connector_info(name: str, cls: builtins.type[VendorConnectorBase]
     """Build metadata for a loadable connector."""
     spec = BUILTIN_CONNECTORS.get(name)
     source = "builtin" if spec else "entry_point"
-    extra = spec.extra if spec else get_extra_for_connector(name)
-    requirements = tuple(get_connector_requirements(name))
-    missing = tuple(get_missing_connector_requirements(name))
+    extra_value = spec.extra if spec else get_extra_for_connector(name)
+    extra = str(extra_value) if extra_value is not None else None
+    requirements = tuple(str(requirement) for requirement in get_connector_requirements(name))
+    missing = tuple(str(requirement) for requirement in get_missing_connector_requirements(name))
+    install_value = get_connector_install_command(name)
 
     return ConnectorInfo(
         name=name,
         available=not missing,
         source=source,
         extra=extra,
-        install=get_connector_install_command(name),
+        install=str(install_value) if install_value is not None else None,
         requirements=requirements,
         missing=missing,
         class_name=cls.__name__,
@@ -301,9 +303,9 @@ def _missing_builtin_connector_info(name: str, error: ImportError | None) -> Con
         available=False,
         source="builtin",
         extra=spec.extra,
-        install=get_connector_install_command(name),
-        requirements=tuple(get_connector_requirements(name)),
-        missing=tuple(get_missing_connector_requirements(name)),
+        install=str(install) if (install := get_connector_install_command(name)) is not None else None,
+        requirements=tuple(str(requirement) for requirement in get_connector_requirements(name)),
+        missing=tuple(str(requirement) for requirement in get_missing_connector_requirements(name)),
         class_name=spec.class_name,
         module=spec.module_path,
         base_url=None,
