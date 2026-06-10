@@ -10,6 +10,7 @@ from typing import Any, SupportsIndex, TypeVar, cast, overload
 from extended_data.containers.mappings import ExtendedDict
 from extended_data.primitives.sequences import filter_list, flatten_list
 from extended_data.primitives.splitting import split_list_by_type
+from extended_data.primitives.state import first_non_empty as primitive_first_non_empty
 from extended_data.primitives.state import is_nothing
 from extended_data.primitives.types import make_hashable
 
@@ -102,6 +103,10 @@ class ExtendedList(UserList[T]):
 
         grouped = split_list_by_type(to_builtin(self.data), primitive_only=primitive_only)
         return extend_data({type_key.__name__: values for type_key, values in grouped.items()})
+
+    def first_non_empty(self) -> T | None:
+        """Return the first value not considered empty."""
+        return cast(T | None, primitive_first_non_empty(*self.data))
 
     def unique(self) -> ExtendedList[T]:
         """Return a copy with duplicate values removed while preserving order."""
@@ -214,6 +219,10 @@ class ExtendedTuple(tuple[T, ...]):
 
         grouped = split_list_by_type(list(to_builtin(self)), primitive_only=primitive_only)
         return extend_data({type_key.__name__: tuple(values) for type_key, values in grouped.items()})
+
+    def first_non_empty(self) -> T | None:
+        """Return the first value not considered empty."""
+        return cast(T | None, primitive_first_non_empty(*self))
 
     def to_tuple(self) -> tuple[T, ...]:
         """Return a plain tuple copy."""
