@@ -336,9 +336,33 @@ Install only the vendor or AI layers you need:
 ```bash
 pip install "extended-data[aws,github,vault]"
 pip install "extended-data[google,slack,zoom]"
+pip install "extended-data[anthropic,cursor]"
 pip install "extended-data[ai]"        # LangChain, MCP, and Strands
+pip install "extended-data[langchain,mcp,strands]"
 pip install "extended-data[meshy,mcp]"
+pip install "extended-data[meshy,vector,webhooks]"
 ```
+
+Published runtime extras:
+
+| Extra | Purpose |
+| --- | --- |
+| `extended-data[anthropic]` | Anthropic API connector and tools |
+| `extended-data[aws]` | AWS connector operations |
+| `extended-data[cursor]` | Cursor connector helpers |
+| `extended-data[github]` | GitHub connector operations |
+| `extended-data[google]` | Google Workspace, Cloud, Billing, and services |
+| `extended-data[langchain]` | LangChain tool adapters |
+| `extended-data[mcp]` | MCP server bridge |
+| `extended-data[meshy]` | Meshy 3D asset connector |
+| `extended-data[secrets]` | SecretSync Python bridge dependencies |
+| `extended-data[slack]` | Slack connector operations |
+| `extended-data[strands]` | Strands tool adapters |
+| `extended-data[vault]` | Vault connector operations |
+| `extended-data[vector]` | Local vector search for generated asset metadata |
+| `extended-data[webhooks]` | Webhook listener support |
+| `extended-data[zoom]` | Zoom connector operations |
+| `extended-data[ai]` | Aggregate LangChain, MCP, and Strands install target |
 
 CrewAI tool adapters are still importable when users install `crewai` directly,
 but `extended-data` does not expose a CrewAI extra while current CrewAI

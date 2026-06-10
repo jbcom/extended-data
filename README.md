@@ -18,10 +18,17 @@ Optional integrations are installed by feature:
 ```bash
 pip install "extended-data[aws,github,vault]"
 pip install "extended-data[google,slack,zoom]"
+pip install "extended-data[anthropic,cursor]"
 pip install "extended-data[ai]"        # LangChain, MCP, and Strands
+pip install "extended-data[langchain,mcp,strands]"
 pip install "extended-data[meshy,mcp]"
+pip install "extended-data[meshy,vector,webhooks]"
 pip install "extended-data[secrets]"
 ```
+
+Published runtime extras are `anthropic`, `aws`, `cursor`, `github`, `google`,
+`langchain`, `mcp`, `meshy`, `secrets`, `slack`, `strands`, `vault`, `vector`,
+`webhooks`, `zoom`, and aggregate `ai`.
 
 CrewAI adapters remain available when `crewai` is installed independently, but
 `extended-data` intentionally does not publish a CrewAI extra while current

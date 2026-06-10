@@ -251,6 +251,26 @@ def test_public_install_guidance_names_known_extras() -> None:
     assert offenders == []
 
 
+def test_public_install_guidance_documents_every_runtime_extra() -> None:
+    """Every runtime optional extra should be discoverable from public install guidance."""
+    runtime_extras = set(_pyproject()["project"]["optional-dependencies"]) - NON_RUNTIME_EXTRAS
+    documented_extras: set[str] = set()
+    text = "\n".join(
+        [
+            (REPO_ROOT / "README.md").read_text(encoding="utf-8"),
+            (REPO_ROOT / "docs" / "package-surface.md").read_text(encoding="utf-8"),
+        ],
+    )
+
+    for match in EXTRA_REFERENCE_RE.finditer(text):
+        extra_group = match.group(1)
+        if "..." in extra_group or "{" in extra_group or "}" in extra_group:
+            continue
+        documented_extras.update(extra.strip() for extra in extra_group.split(",") if extra.strip())
+
+    assert runtime_extras <= documented_extras
+
+
 def test_project_scripts_point_to_callables() -> None:
     """Console-script metadata should resolve to importable callables."""
     scripts = _pyproject()["project"]["scripts"]
