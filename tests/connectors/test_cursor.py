@@ -124,6 +124,20 @@ class TestValidators:
         assert "raw_token" not in redacted
         assert "[REDACTED]" in redacted
 
+    def test_agent_model_payload_redacts_error(self):
+        """Cursor agent payload serialization should redact agent error text."""
+        agent = Agent(
+            id="test-agent-123",
+            state=AgentState.ERRORED,
+            error="failed password=hunter2 Authorization: Bearer raw_token",
+        )
+
+        payload = CursorConnector._model_payload(agent)
+
+        assert "hunter2" not in payload["error"]
+        assert "raw_token" not in payload["error"]
+        assert "[REDACTED]" in payload["error"]
+
 
 class TestModels:
     """Tests for Pydantic models."""

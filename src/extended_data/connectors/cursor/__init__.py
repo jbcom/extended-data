@@ -408,7 +408,10 @@ class CursorConnector(VendorConnectorBase):
     @staticmethod
     def _model_payload(model: BaseModel) -> dict[str, Any]:
         """Serialize a Cursor model into JSON-compatible API field names."""
-        return model.model_dump(mode="json")
+        payload = model.model_dump(mode="json")
+        if isinstance(model, Agent) and payload.get("error"):
+            payload["error"] = sanitize_error(payload["error"])
+        return payload
 
     # =========================================================================
     # Agent Operations

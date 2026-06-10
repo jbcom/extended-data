@@ -13,6 +13,16 @@ from pydantic import BaseModel, Field
 from extended_data.containers import ExtendedDict, extend_data
 
 
+def _error_value(error: Any) -> Any:
+    """Return a sanitized error value while preserving empty values."""
+    if not error:
+        return error
+
+    from extended_data.connectors.cursor import sanitize_error
+
+    return sanitize_error(error)
+
+
 def _state_value(state: Any) -> Any:
     """Return enum values for tool payloads while preserving plain strings."""
     return getattr(state, "value", state)
@@ -87,7 +97,7 @@ def cursor_get_agent_status(agent_id: str) -> ExtendedDict:
         {
             "agent_id": agent.get("id", ""),
             "state": _state_value(agent.get("state")),
-            "error": agent.get("error"),
+            "error": _error_value(agent.get("error")),
             "pr_url": agent.get("pr_url"),
         }
     )

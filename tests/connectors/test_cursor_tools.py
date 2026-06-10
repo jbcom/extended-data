@@ -55,3 +55,28 @@ def test_cursor_get_agent_status():
         assert result["agent_id"] == "agent_123"
         assert result["state"] == "finished"
         assert result["pr_url"] == "https://github.com/org/repo/pull/1"
+
+
+def test_cursor_get_agent_status_redacts_error():
+    """Cursor status tool should not expose secret-bearing agent errors."""
+    from extended_data.connectors.cursor.tools import cursor_get_agent_status
+
+    with patch("extended_data.connectors.cursor.CursorConnector") as mock_connector_class:
+        mock_connector = MagicMock()
+        mock_agent = extend_data(
+            {
+                "id": "agent_123",
+                "state": AgentState.ERRORED,
+                "error": "failed password=hunter2 Authorization: Bearer raw_token",
+                "pr_url": None,
+            }
+        )
+        mock_connector.get_agent_status.return_value = mock_agent
+        mock_connector_class.return_value = mock_connector
+
+        result = cursor_get_agent_status(agent_id="agent_123")
+
+        assert isinstance(result, ExtendedDict)
+        assert "hunter2" not in result["error"]
+        assert "raw_token" not in result["error"]
+        assert "[REDACTED]" in result["error"]
