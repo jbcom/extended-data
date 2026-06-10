@@ -512,6 +512,23 @@ def test_validate_config_tool_returns_extended_payload(mock_connector_class: Mag
 
 
 @patch("extended_data.connectors.secrets.SecretsConnector")
+def test_validate_config_tool_redacts_connector_payload(mock_connector_class: MagicMock) -> None:
+    mock_connector = mock_connector_class.return_value
+    mock_connector.validate_config.return_value = {
+        "valid": False,
+        "message": "invalid password=hunter2 Authorization: Bearer raw_token",
+        "config_path": "config.yaml",
+    }
+
+    result = validate_config("config.yaml")
+
+    assert result["valid"] is False
+    assert "hunter2" not in result["message"]
+    assert "raw_token" not in result["message"]
+    assert "[REDACTED]" in result["message"]
+
+
+@patch("extended_data.connectors.secrets.SecretsConnector")
 def test_dry_run_tool_returns_extended_payload(mock_connector_class: MagicMock) -> None:
     mock_connector = mock_connector_class.return_value
     mock_connector.dry_run.return_value = SyncResult(
@@ -529,6 +546,44 @@ def test_dry_run_tool_returns_extended_payload(mock_connector_class: MagicMock) 
     assert isinstance(result, ExtendedDict)
     assert isinstance(result["diff_output"], ExtendedString)
     assert result["secrets_would_add"] == 1
+
+
+@patch("extended_data.connectors.secrets.SecretsConnector")
+def test_run_pipeline_tool_redacts_connector_payload_summary(mock_connector_class: MagicMock) -> None:
+    mock_connector = mock_connector_class.return_value
+    mock_connector.run_pipeline.return_value = {
+        "success": False,
+        "error_message": "pipeline failed password=hunter2 Authorization: Bearer raw_token",
+        "diff_output": "changed token=tok_123",
+    }
+
+    result = run_pipeline("config.yaml", dry_run=True)
+
+    assert result["success"] is False
+    assert "hunter2" not in result["error_message"]
+    assert "raw_token" not in result["error_message"]
+    assert "tok_123" not in result["diff_output"]
+    assert "[REDACTED]" in result["error_message"]
+    assert "[REDACTED]" in result["diff_output"]
+
+
+@patch("extended_data.connectors.secrets.SecretsConnector")
+def test_dry_run_tool_redacts_connector_payload_summary(mock_connector_class: MagicMock) -> None:
+    mock_connector = mock_connector_class.return_value
+    mock_connector.dry_run.return_value = {
+        "success": False,
+        "error_message": "dry run failed password=hunter2 Authorization: Bearer raw_token",
+        "diff_output": "changed token=tok_123",
+    }
+
+    result = dry_run("config.yaml")
+
+    assert result["success"] is False
+    assert "hunter2" not in result["error_message"]
+    assert "raw_token" not in result["error_message"]
+    assert "tok_123" not in result["diff_output"]
+    assert "[REDACTED]" in result["error_message"]
+    assert "[REDACTED]" in result["diff_output"]
 
 
 @patch("extended_data.connectors.secrets.SecretsConnector")

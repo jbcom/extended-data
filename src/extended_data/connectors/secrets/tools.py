@@ -6,10 +6,12 @@ multiple AI agent frameworks including LangChain, CrewAI, and AWS Strands.
 
 from __future__ import annotations
 
-from typing import Any
+from collections.abc import Mapping
+from typing import Any, cast
 
 from pydantic import BaseModel, Field
 
+from extended_data.connectors.redaction import redact_sensitive_data
 from extended_data.containers import ExtendedDict, extend_data
 
 
@@ -54,6 +56,19 @@ class GetConfigInfoSchema(BaseModel):
 # =============================================================================
 
 
+def _redacted_extended_payload(value: Any) -> ExtendedDict:
+    """Promote a connector payload after redacting terminal-sensitive fields."""
+    return cast(ExtendedDict, extend_data(redact_sensitive_data(value)))
+
+
+def _redacted_mapping(value: Any) -> Mapping[str, Any]:
+    """Return a redacted mapping view for tool payload summaries."""
+    redacted = redact_sensitive_data(value)
+    if isinstance(redacted, Mapping):
+        return redacted
+    return {}
+
+
 def validate_config(config_path: str) -> ExtendedDict:
     """Validate a secrets sync pipeline configuration file.
 
@@ -66,7 +81,7 @@ def validate_config(config_path: str) -> ExtendedDict:
     from extended_data.connectors.secrets import SecretsConnector
 
     connector = SecretsConnector()
-    return extend_data(connector.validate_config(config_path))
+    return _redacted_extended_payload(connector.validate_config(config_path))
 
 
 def run_pipeline(
@@ -120,9 +135,9 @@ def run_pipeline(
         compute_diff=dry_run,
     )
 
-    result = connector.run_pipeline(config_path, options)
+    result = _redacted_mapping(connector.run_pipeline(config_path, options))
 
-    return extend_data({
+    return _redacted_extended_payload({
         "success": result.get("success", False),
         "target_count": result.get("target_count", 0),
         "secrets_processed": result.get("secrets_processed", 0),
@@ -148,9 +163,9 @@ def dry_run(config_path: str) -> ExtendedDict:
     from extended_data.connectors.secrets import SecretsConnector
 
     connector = SecretsConnector()
-    result = connector.dry_run(config_path)
+    result = _redacted_mapping(connector.dry_run(config_path))
 
-    return extend_data({
+    return _redacted_extended_payload({
         "success": result.get("success", False),
         "target_count": result.get("target_count", 0),
         "secrets_would_add": result.get("secrets_added", 0),
@@ -174,7 +189,7 @@ def get_config_info(config_path: str) -> ExtendedDict:
     from extended_data.connectors.secrets import SecretsConnector
 
     connector = SecretsConnector()
-    return extend_data(connector.get_config_info(config_path))
+    return _redacted_extended_payload(connector.get_config_info(config_path))
 
 
 def get_targets(config_path: str) -> ExtendedDict:
@@ -189,7 +204,7 @@ def get_targets(config_path: str) -> ExtendedDict:
     from extended_data.connectors.secrets import SecretsConnector
 
     connector = SecretsConnector()
-    return extend_data(connector.get_targets(config_path))
+    return _redacted_extended_payload(connector.get_targets(config_path))
 
 
 def get_sources(config_path: str) -> ExtendedDict:
@@ -204,7 +219,7 @@ def get_sources(config_path: str) -> ExtendedDict:
     from extended_data.connectors.secrets import SecretsConnector
 
     connector = SecretsConnector()
-    return extend_data(connector.get_sources(config_path))
+    return _redacted_extended_payload(connector.get_sources(config_path))
 
 
 # =============================================================================
