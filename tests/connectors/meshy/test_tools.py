@@ -7,9 +7,13 @@ since those frameworks are optional dependencies.
 
 from __future__ import annotations
 
+import importlib.util
+
 from unittest.mock import MagicMock, patch
 
 import pytest
+
+from extended_data.containers import ExtendedDict, ExtendedList, ExtendedString
 
 
 # Expected tools list - canonical reference for all Meshy tools
@@ -80,6 +84,8 @@ class TestText3DGenerate:
                 art_style="realistic",
             )
 
+        assert isinstance(result, ExtendedDict)
+        assert isinstance(result["task_id"], ExtendedString)
         assert result["task_id"] == "task_123"
         assert result["status"] == "SUCCEEDED"
         assert result["model_url"] == "https://example.com/model.glb"
@@ -114,6 +120,7 @@ class TestText3DGenerate:
                 wait=True,
             )
 
+        assert isinstance(result, ExtendedDict)
         assert result["task_id"] == "task_456"
 
 
@@ -137,6 +144,8 @@ class TestImage3DGenerate:
                 topology="quad",
             )
 
+        assert isinstance(result, ExtendedDict)
+        assert isinstance(result["model_url"], ExtendedString)
         assert result["task_id"] == "img_task_456"
         assert result["status"] == "SUCCEEDED"
         assert result["model_url"] == "https://example.com/img_model.glb"
@@ -156,6 +165,8 @@ class TestRigModel:
         with patch("extended_data.connectors.meshy.rigging.rig", return_value=mock_result):
             result = rig_model(model_id="model_123", wait=True)
 
+        assert isinstance(result, ExtendedDict)
+        assert isinstance(result["message"], ExtendedString)
         assert result["task_id"] == "rig_789"
         assert result["status"] == "SUCCEEDED"
         assert "Rigging completed" in result["message"]
@@ -168,6 +179,7 @@ class TestRigModel:
         with patch("extended_data.connectors.meshy.rigging.rig", return_value="pending_rig_task"):
             result = rig_model(model_id="model_123", wait=False)
 
+        assert isinstance(result, ExtendedDict)
         assert result["task_id"] == "pending_rig_task"
         assert result["status"] == "pending"
 
@@ -191,6 +203,8 @@ class TestApplyAnimation:
                 wait=True,
             )
 
+        assert isinstance(result, ExtendedDict)
+        assert isinstance(result["glb_url"], ExtendedString)
         assert result["task_id"] == "anim_task_123"
         assert result["status"] == "SUCCEEDED"
         assert result["glb_url"] == "https://example.com/animated.glb"
@@ -206,6 +220,7 @@ class TestApplyAnimation:
                 wait=False,
             )
 
+        assert isinstance(result, ExtendedDict)
         assert result["task_id"] == "anim_pending"
         assert result["status"] == "pending"
 
@@ -228,6 +243,7 @@ class TestRetextureModel:
                 texture_prompt="golden metallic finish",
             )
 
+        assert isinstance(result, ExtendedDict)
         assert result["task_id"] == "retex_123"
         assert result["status"] == "SUCCEEDED"
 
@@ -257,6 +273,9 @@ class TestListAnimations:
         with patch("extended_data.connectors.meshy.animations.ANIMATIONS", mock_animations):
             result = list_animations()
 
+        assert isinstance(result, ExtendedDict)
+        assert isinstance(result["animations"], ExtendedList)
+        assert isinstance(result["animations"][0], ExtendedDict)
         assert result["count"] == 2
         assert result["total"] == 2
         assert len(result["animations"]) == 2
@@ -282,6 +301,8 @@ class TestListAnimations:
         with patch("extended_data.connectors.meshy.animations.ANIMATIONS", mock_animations):
             result = list_animations(category="Fighting")
 
+        assert isinstance(result, ExtendedDict)
+        assert isinstance(result["animations"][0]["name"], ExtendedString)
         assert result["count"] == 1
         assert result["animations"][0]["name"] == "Punch"
 
@@ -324,6 +345,8 @@ class TestCheckTaskStatus:
                 task_type="text-to-3d",
             )
 
+        assert isinstance(result, ExtendedDict)
+        assert isinstance(result["task_id"], ExtendedString)
         assert result["task_id"] == "task_123"
         assert result["status"] == "SUCCEEDED"
         assert result["progress"] == 100
@@ -357,6 +380,8 @@ class TestGetAnimation:
         with patch("extended_data.connectors.meshy.animations.ANIMATIONS", {42: mock_anim}):
             result = get_animation(animation_id=42)
 
+        assert isinstance(result, ExtendedDict)
+        assert isinstance(result["name"], ExtendedString)
         assert result["id"] == 42
         assert result["name"] == "Dance"
         assert result["preview_url"] == "https://example.com/preview.gif"
@@ -374,7 +399,7 @@ class TestLangChainTools:
     """Tests for LangChain tools (optional dependency)."""
 
     @pytest.mark.skipif(
-        not pytest.importorskip("langchain_core", reason="langchain-core not installed"),
+        importlib.util.find_spec("langchain_core") is None,
         reason="langchain-core not installed",
     )
     def test_get_langchain_tools_returns_structured_tools(self):

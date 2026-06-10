@@ -12,6 +12,8 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
+from extended_data.containers import extend_data
+
 
 # =============================================================================
 # Pydantic Schemas for Tool Inputs
@@ -118,11 +120,11 @@ def _extract_result_fields(result: object) -> dict[str, object]:
     # Extract thumbnail_url
     thumbnail_url = getattr(result, "thumbnail_url", None)
 
-    return {
+    return extend_data({
         "status": status,
         "model_url": model_url,
         "thumbnail_url": thumbnail_url,
-    }
+    })
 
 
 def text3d_generate(
@@ -158,17 +160,17 @@ def text3d_generate(
     )
 
     if isinstance(result, str):
-        return {
+        return extend_data({
             "task_id": result,
             "status": "pending",
             "message": "Text-to-3D task submitted",
-        }
+        })
 
     fields = _extract_result_fields(result)
-    return {
+    return extend_data({
         "task_id": result.id,
         **fields,
-    }
+    })
 
 
 def image3d_generate(
@@ -199,17 +201,17 @@ def image3d_generate(
     )
 
     if isinstance(result, str):
-        return {
+        return extend_data({
             "task_id": result,
             "status": "pending",
             "message": "Image-to-3D task submitted",
-        }
+        })
 
     fields = _extract_result_fields(result)
-    return {
+    return extend_data({
         "task_id": result.id,
         **fields,
-    }
+    })
 
 
 def rig_model(model_id: str, wait: bool = True) -> dict[str, Any]:
@@ -227,18 +229,18 @@ def rig_model(model_id: str, wait: bool = True) -> dict[str, Any]:
     result = rigging.rig(model_id, wait=wait)
 
     if isinstance(result, str):
-        return {
+        return extend_data({
             "task_id": result,
             "status": "pending",
             "message": "Rigging task submitted",
-        }
+        })
 
     if wait:
-        return {
+        return extend_data({
             "task_id": result.id,
             "status": result.status.value if hasattr(result.status, "value") else str(result.status),
             "message": "Rigging completed",
-        }
+        })
 
     msg = "Expected rigging task id when wait=False"
     raise TypeError(msg)
@@ -260,19 +262,19 @@ def apply_animation(model_id: str, animation_id: int, wait: bool = True) -> dict
     result = animate.apply(model_id, int(animation_id), wait=wait)
 
     if isinstance(result, str):
-        return {
+        return extend_data({
             "task_id": result,
             "status": "pending",
             "message": "Animation task submitted",
-        }
+        })
 
     if wait:
-        return {
+        return extend_data({
             "task_id": result.id,
             "status": result.status.value if hasattr(result.status, "value") else str(result.status),
             "message": "Animation completed",
             "glb_url": result.animation_glb_url,
-        }
+        })
 
     msg = "Expected animation task id when wait=False"
     raise TypeError(msg)
@@ -305,19 +307,19 @@ def retexture_model(
     )
 
     if isinstance(result, str):
-        return {
+        return extend_data({
             "task_id": result,
             "status": "pending",
             "message": "Retexture task submitted",
-        }
+        })
 
     if wait:
-        return {
+        return extend_data({
             "task_id": result.id,
             "status": result.status.value if hasattr(result.status, "value") else str(result.status),
             "message": "Retexture completed",
             "model_url": getattr(result, "model_url", None),
-        }
+        })
 
     msg = "Expected retexture task id when wait=False"
     raise TypeError(msg)
@@ -351,11 +353,11 @@ def list_animations(category: str = "", limit: int = 50) -> dict[str, Any]:
             }
         )
 
-    return {
+    return extend_data({
         "count": len(results),
         "total": len(animations),
         "animations": results,
-    }
+    })
 
 
 def check_task_status(task_id: str, task_type: str = "text-to-3d") -> dict[str, Any]:
@@ -393,12 +395,12 @@ def check_task_status(task_id: str, task_type: str = "text-to-3d") -> dict[str, 
     elif hasattr(result, "glb_url"):
         model_url = result.glb_url
 
-    return {
+    return extend_data({
         "task_id": task_id,
         "status": status,
         "progress": getattr(result, "progress", None),
         "model_url": model_url,
-    }
+    })
 
 
 def get_animation(animation_id: int) -> dict[str, Any]:
@@ -417,13 +419,13 @@ def get_animation(animation_id: int) -> dict[str, Any]:
 
     anim = ANIMATIONS[animation_id]
 
-    return {
+    return extend_data({
         "id": anim.id,
         "name": anim.name,
         "category": anim.category,
         "subcategory": anim.subcategory,
         "preview_url": anim.preview_url,
-    }
+    })
 
 
 # =============================================================================
