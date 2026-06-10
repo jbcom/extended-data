@@ -37,6 +37,11 @@ CONNECTOR_EXAMPLES = [
     "examples/connectors/mcp_server.py",
 ]
 ALL_EXAMPLES = SAFE_EXAMPLES + CONNECTOR_EXAMPLES
+STALE_EXAMPLE_COMMANDS = (
+    "python examples/mcp_server.py",
+    "python -m examples.decorator_api",
+    "python -m examples.encoding_decoding",
+)
 
 
 def _readme_usage_snippet() -> str:
@@ -82,6 +87,19 @@ def test_readme_usage_snippet_runs(tmp_path: Path) -> None:
     )
 
     assert result.returncode == 0, f"README usage snippet failed\nSTDOUT:\n{result.stdout}\nSTDERR:\n{result.stderr}"
+
+
+def test_examples_do_not_document_stale_command_paths() -> None:
+    """Example command snippets should point at the current directory layout."""
+    offenders: list[str] = []
+
+    for example_path in ALL_EXAMPLES:
+        text = (REPO_ROOT / example_path).read_text(encoding="utf-8")
+        for command in STALE_EXAMPLE_COMMANDS:
+            if command in text:
+                offenders.append(f"{example_path}: {command}")
+
+    assert offenders == []
 
 
 @pytest.mark.parametrize("example_path", ALL_EXAMPLES)

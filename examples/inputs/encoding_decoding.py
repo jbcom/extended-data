@@ -8,7 +8,7 @@ This example demonstrates input decoding capabilities:
 - Combined Base64 + JSON/YAML decoding
 
 Run with:
-    python -m examples.encoding_decoding
+    python examples/inputs/encoding_decoding.py
 """
 
 from __future__ import annotations

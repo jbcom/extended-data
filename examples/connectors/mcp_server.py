@@ -13,7 +13,7 @@ Environment Variables:
 
 Usage:
     # Run the server (connects via stdio)
-    python examples/mcp_server.py
+    python examples/connectors/mcp_server.py
 
     # Or use the installed command
     meshy-mcp

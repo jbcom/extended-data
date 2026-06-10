@@ -8,7 +8,7 @@ This example demonstrates the modern decorator-based API:
 - JSON decoding from inputs
 
 Run with:
-    python -m examples.decorator_api
+    python examples/inputs/decorator_api.py
 """
 
 from __future__ import annotations

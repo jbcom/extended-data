@@ -6,7 +6,7 @@ to create an AI agent capable of generating 3D assets.
 
 Requirements:
     pip install extended-data[meshy,langchain]
-    pip install langchain-anthropic  # For Claude as the LLM
+    pip install langchain-anthropic langgraph  # For Claude as the LLM and agent loop
 
 Environment Variables:
     MESHY_API_KEY: Your Meshy API key
@@ -39,7 +39,7 @@ def main() -> int:
         from extended_data.connectors.meshy.tools import get_tools
     except ImportError:
         print("Error: Could not import required packages.")
-        print("Install with: pip install extended-data[meshy,langchain] langchain-anthropic")
+        print("Install with: pip install extended-data[meshy,langchain] langchain-anthropic langgraph")
         return 1
 
     # Get Meshy tools for LangChain
