@@ -451,13 +451,12 @@ class TestGetTools:
         with pytest.raises(ValueError, match="Unknown framework"):
             get_tools(framework="invalid")
 
-    def test_get_tools_strands_alias(self):
-        """Test 'functions' is an alias for 'strands'."""
+    def test_get_tools_rejects_functions_alias(self):
+        """Plain-function tools should use the canonical strands framework name."""
         from extended_data.connectors.google.tools import get_tools
 
-        tools = get_tools(framework="functions")
-        assert len(tools) == 6
-        assert all(callable(t) for t in tools)
+        with pytest.raises(ValueError, match="Unknown framework"):
+            get_tools(framework="functions")
 
     def test_all_exports_exist(self):
         """Test that all expected exports are available."""

@@ -1,5 +1,5 @@
 # ruff: noqa: I001
-"""Tests for GitHub connector aliases and behavior."""
+"""Tests for GitHub connector exports and behavior."""
 
 from __future__ import annotations
 
@@ -17,7 +17,7 @@ from extended_data.containers import ExtendedDict, ExtendedList, ExtendedString
 class TestGitHubConnector:
     """Test suite for GitHub connector behavior."""
 
-    def test_root_export_alias_points_to_same_connector(self):
+    def test_root_export_points_to_same_connector(self):
         """The canonical root export and canonical class should resolve to the same class."""
         assert RootGitHubConnector is GitHubConnector
 

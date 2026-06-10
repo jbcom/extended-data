@@ -290,7 +290,7 @@ def get_tools(framework: str = "auto") -> list[Any]:
     """Get secrets sync tools for the specified or auto-detected framework.
 
     Args:
-        framework: One of 'auto', 'langchain', 'crewai', 'strands', 'functions'
+        framework: One of 'auto', 'langchain', 'crewai', 'strands'
 
     Returns:
         List of tools in the appropriate format
@@ -308,7 +308,7 @@ def get_tools(framework: str = "auto") -> list[Any]:
         return get_langchain_tools()
     if framework == "crewai":
         return get_crewai_tools()
-    if framework in ("strands", "functions"):
+    if framework == "strands":
         return get_strands_tools()
 
     raise ValueError(f"Unknown framework: {framework}")

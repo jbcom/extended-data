@@ -477,10 +477,17 @@ class TestAutoDetection:
         """Test get_tools with explicit framework selection."""
         from extended_data.connectors.meshy.tools import get_tools
 
-        # Strands/functions always works (no deps)
-        tools = get_tools("functions")
+        # Strands always works because it returns plain functions.
+        tools = get_tools("strands")
         assert isinstance(tools, list)
         assert all(callable(t) for t in tools)
+
+    def test_get_tools_rejects_functions_alias(self):
+        """Plain-function tools should use the canonical strands framework name."""
+        from extended_data.connectors.meshy.tools import get_tools
+
+        with pytest.raises(ValueError, match="Unknown framework"):
+            get_tools("functions")
 
     def test_get_tools_invalid_framework(self):
         """Test get_tools raises ValueError for invalid framework."""

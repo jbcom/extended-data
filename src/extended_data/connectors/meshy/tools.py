@@ -601,7 +601,6 @@ def get_tools(framework: str = "auto") -> list[Any]:
             - "langchain": Force LangChain StructuredTools
             - "crewai": Force CrewAI tools
             - "strands": Force plain functions for Strands
-            - "functions": Force plain functions (alias for strands)
 
     Returns:
         List of tools in the appropriate format for the framework.
@@ -621,7 +620,7 @@ def get_tools(framework: str = "auto") -> list[Any]:
     from extended_data.connectors._optional import is_available
 
     if framework == "auto":
-        # Priority: CrewAI > LangChain > Strands/functions
+        # Priority: CrewAI > LangChain > Strands
         # (CrewAI first since it's more opinionated about tool format)
         if is_available("crewai"):
             return get_crewai_tools()
@@ -634,10 +633,10 @@ def get_tools(framework: str = "auto") -> list[Any]:
         return get_langchain_tools()
     if framework == "crewai":
         return get_crewai_tools()
-    if framework in ("strands", "functions"):
+    if framework == "strands":
         return get_strands_tools()
 
-    raise ValueError(f"Unknown framework: {framework}. Options: auto, langchain, crewai, strands, functions")
+    raise ValueError(f"Unknown framework: {framework}. Options: auto, langchain, crewai, strands")
 
 
 # =============================================================================

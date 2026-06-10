@@ -151,7 +151,7 @@ def get_tools(framework: str = "auto") -> list[Any]:
         return get_langchain_tools()
     if framework == "crewai":
         return get_crewai_tools()
-    if framework in ("strands", "functions"):
+    if framework == "strands":
         return get_strands_tools()
 
     raise ValueError(f"Unknown framework: {framework}")

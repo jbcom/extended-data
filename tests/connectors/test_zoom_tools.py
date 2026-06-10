@@ -310,13 +310,12 @@ class TestGetTools:
         assert len(tools) == 4
         assert all(callable(t) for t in tools)
 
-    def test_get_tools_functions(self):
-        """Test get_tools with functions framework (alias for strands)."""
+    def test_get_tools_rejects_functions_alias(self):
+        """Plain-function tools should use the canonical strands framework name."""
         from extended_data.connectors.zoom.tools import get_tools
 
-        tools = get_tools(framework="functions")
-        assert len(tools) == 4
-        assert all(callable(t) for t in tools)
+        with pytest.raises(ValueError, match="Unknown framework"):
+            get_tools(framework="functions")
 
     def test_get_tools_invalid_framework(self):
         """Test get_tools with invalid framework raises error."""
