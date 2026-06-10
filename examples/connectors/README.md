@@ -1,6 +1,7 @@
-# Examples
+# Connector Examples
 
-This directory contains working examples demonstrating how to use extended-data.
+This directory contains working examples for `extended_data.connectors` and the
+vendor adapters that hang off `ConnectorFabric`.
 
 ## Quick Start
 
@@ -8,17 +9,17 @@ Install extended-data with the extras you need:
 
 ```bash
 # Install with all connectors
-pip install extended-data[all]
+pip install "extended-data[all]"
 
 # Or install specific connectors
-pip install extended-data[aws,google,meshy]
+pip install "extended-data[aws,google,meshy]"
 
 # For AI framework integration
-pip install extended-data[langchain]
-pip install extended-data[crewai]
+pip install "extended-data[langchain]"
+pip install "extended-data[crewai]"
 
 # For the Meshy MCP server
-pip install extended-data[meshy,mcp]
+pip install "extended-data[meshy,mcp]"
 ```
 
 ## Examples
@@ -57,8 +58,8 @@ export ANTHROPIC_API_KEY="sk-ant-..."
 
 ```bash
 # Run any example
-python examples/basic_meshy.py
+uv run python examples/connectors/basic_meshy.py
 
 # Run with debug logging
-LOGLEVEL=DEBUG python examples/basic_meshy.py
+LOGLEVEL=DEBUG uv run python examples/connectors/basic_meshy.py
 ```

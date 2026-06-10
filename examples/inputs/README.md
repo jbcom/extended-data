@@ -1,19 +1,20 @@
-# Examples
+# Input Examples
 
-This directory contains working examples demonstrating the features of `Extended Data inputs`.
+This directory contains working examples for `InputProvider` and the decorator
+helpers in `extended_data.inputs`.
 
 ## Running Examples
 
 All examples can be run as Python modules from the project root:
 
 ```bash
-# Install the package first
-uv sync
+# Install the local package first
+uv sync --extra tests
 
 # Run examples
-uv run python -m examples.basic_usage
-uv run python -m examples.decorator_api
-uv run python -m examples.encoding_decoding
+uv run python examples/inputs/basic_usage.py
+uv run python examples/inputs/decorator_api.py
+uv run python examples/inputs/encoding_decoding.py
 ```
 
 ## Available Examples

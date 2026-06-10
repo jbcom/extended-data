@@ -38,6 +38,15 @@ items = ExtendedList([1, [2, [3]]]).flatten()
 tags = ExtendedSet({"prod", "prod", ""}).compact()
 ```
 
+`ExtendedDict`, `ExtendedList`, and `ExtendedSet` recursively promote nested
+plain values on construction and mutation, so method chains can continue through
+data loaded from normal Python literals:
+
+```python
+payload = ExtendedDict({"service": {"name": "api"}})
+payload["service"]["name"].upper_first()
+```
+
 Tier 3 decode surfaces can promote plain decoded values into Tier 2 containers:
 
 ```python

@@ -1,6 +1,7 @@
-# LifecycleLogging Examples
+# Logging Examples
 
-This directory contains working examples demonstrating the features of the `extended_data.logging` package.
+This directory contains working examples for structured lifecycle logging in
+`extended_data.logging`.
 
 ## Examples
 
@@ -13,7 +14,7 @@ Demonstrates fundamental logging capabilities:
 - Adding identifiers to messages
 
 ```bash
-python examples/basic_logging.py
+uv run python examples/logging/basic_logging.py
 ```
 
 ### markers_and_storage.py
@@ -24,7 +25,7 @@ Shows how to use markers for message organization:
 - Combining both marker types
 
 ```bash
-python examples/markers_and_storage.py
+uv run python examples/logging/markers_and_storage.py
 ```
 
 ### verbosity_control.py
@@ -35,7 +36,7 @@ Demonstrates verbosity settings:
 - Registering bypass markers that ignore verbosity settings
 
 ```bash
-python examples/verbosity_control.py
+uv run python examples/logging/verbosity_control.py
 ```
 
 ### exit_run_formatting.py
@@ -47,22 +48,22 @@ Shows result formatting and transformation:
 - Custom transform functions
 
 ```bash
-python examples/exit_run_formatting.py
+uv run python examples/logging/exit_run_formatting.py
 ```
 
 ## Running the Examples
 
 1. Install the package:
    ```bash
-   pip install extended_data.logging
+   pip install extended-data
    ```
 
 2. Run any example:
    ```bash
-   python examples/<example_name>.py
+   python examples/logging/<example_name>.py
    ```
 
 Or from the repository root:
 ```bash
-uv run python examples/<example_name>.py
+uv run python examples/logging/<example_name>.py
 ```

@@ -69,7 +69,7 @@ def demonstrate_file_operations() -> None:
     with tempfile.TemporaryDirectory() as tmpdir:
         # Write a file
         test_file = Path(tmpdir) / "test.txt"
-        content = "Hello, Extended Data Types!\nThis is a test file."
+        content = "Hello, extended-data!\nThis is a test file."
 
         write_file(test_file, content)
         print(f"Wrote file: {test_file}")

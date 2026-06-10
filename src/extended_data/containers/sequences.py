@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections import UserList
 from collections.abc import Callable, Iterable, Iterator, MutableSet
-from typing import Any, TypeVar
+from typing import Any, SupportsIndex, TypeVar, cast, overload
 
 from extended_data.primitives.sequences import flatten_list
 from extended_data.primitives.state import is_nothing
@@ -20,11 +20,46 @@ class ExtendedList(UserList[T]):
 
     def __init__(self, initlist: Iterable[T] | None = None) -> None:
         """Initialize the extended list."""
-        super().__init__(list(initlist or []))
+        super().__init__()
+        self.extend(initlist or [])
+
+    @staticmethod
+    def _wrap_item(item: T) -> T:
+        """Promote nested built-in containers to extended containers."""
+        from extended_data.containers.factory import extend_data
+
+        return cast(T, extend_data(item))
+
+    @overload
+    def __setitem__(self, i: SupportsIndex, item: T) -> None: ...
+
+    @overload
+    def __setitem__(self, i: slice, item: Iterable[T]) -> None: ...
+
+    def __setitem__(self, i: SupportsIndex | slice, item: T | Iterable[T]) -> None:
+        """Set values while preserving extended nested containers."""
+        if isinstance(i, slice):
+            self.data[i] = [self._wrap_item(value) for value in cast(Iterable[T], item)]
+            return
+        self.data[i] = self._wrap_item(cast(T, item))
+
+    def append(self, item: T) -> None:
+        """Append a value while preserving extended nested containers."""
+        self.data.append(self._wrap_item(item))
+
+    def extend(self, other: Iterable[T]) -> None:
+        """Extend values while preserving extended nested containers."""
+        self.data.extend(self._wrap_item(item) for item in other)
+
+    def insert(self, i: int, item: T) -> None:
+        """Insert a value while preserving extended nested containers."""
+        self.data.insert(i, self._wrap_item(item))
 
     def flatten(self) -> ExtendedList[Any]:
         """Return a recursively flattened copy."""
-        return ExtendedList(flatten_list(list(self.data)))
+        from extended_data.containers.factory import extend_data, to_builtin
+
+        return extend_data(flatten_list(to_builtin(self.data)))
 
     def compact(self) -> ExtendedList[T]:
         """Return a copy without values considered empty."""
@@ -56,7 +91,16 @@ class ExtendedSet(MutableSet[T]):
 
     def __init__(self, values: Iterable[T] | None = None) -> None:
         """Initialize the extended set."""
-        self._data: set[T] = set(values or [])
+        self._data: set[T] = set()
+        for value in values or []:
+            self.add(value)
+
+    @staticmethod
+    def _wrap_item(item: T) -> T:
+        """Promote nested built-in containers to extended containers."""
+        from extended_data.containers.factory import extend_data
+
+        return cast(T, extend_data(item))
 
     def __contains__(self, value: object) -> bool:
         """Return whether the set contains a value."""
@@ -72,7 +116,7 @@ class ExtendedSet(MutableSet[T]):
 
     def add(self, value: T) -> None:
         """Add a value to the set."""
-        self._data.add(value)
+        self._data.add(self._wrap_item(value))
 
     def discard(self, value: T) -> None:
         """Remove a value from the set if present."""

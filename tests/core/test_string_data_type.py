@@ -1,4 +1,4 @@
-"""Test Suite for Extended Data Types - String Operations
+"""Test suite for extended-data string operations.
 
 This module contains test functions and fixtures for verifying the functionality of various string operations
 provided by the `extended_data` package. The module covers a wide range of string manipulation and validation

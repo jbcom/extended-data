@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 import extended_data
 
 from extended_data.containers import ExtendedDict, ExtendedList, ExtendedSet, ExtendedString, extend_data, to_builtin
@@ -33,6 +35,21 @@ def test_extended_dict_composes_mapping_primitives() -> None:
     assert "items" in rejected
 
 
+def test_extended_dict_promotes_nested_values_on_mutation() -> None:
+    """ExtendedDict keeps nested values in the Tier 2 surface."""
+    value = ExtendedDict({"service": {"name": "api"}})
+
+    value["owner"] = "platform"
+    value.update({"ports": [8080, "9090"]})
+
+    assert isinstance(value["service"], ExtendedDict)
+    assert isinstance(value["service"]["name"], ExtendedString)
+    assert isinstance(value["owner"], ExtendedString)
+    assert isinstance(value["ports"], ExtendedList)
+    assert isinstance(value["ports"][1], ExtendedString)
+    assert value["service"]["name"].upper_first() == "Api"
+
+
 def test_extended_list_composes_sequence_primitives() -> None:
     """ExtendedList composes Tier 1 sequence primitives."""
     value = ExtendedList([1, [2, [3]], "", 2])
@@ -44,6 +61,25 @@ def test_extended_list_composes_sequence_primitives() -> None:
     assert ExtendedList([1, 2]).map(lambda item: item * 2) == [2, 4]
 
 
+def test_extended_list_promotes_nested_values_on_mutation() -> None:
+    """ExtendedList keeps nested values in the Tier 2 surface."""
+    value: ExtendedList[Any] = ExtendedList([{"name": "api"}])
+
+    value.append("worker")
+    value.extend([{"name": "scheduler"}])
+    value.insert(0, ["frontdoor"])
+    value[1] = {"name": "gateway"}
+    value[2:3] = ["jobs"]
+
+    assert isinstance(value[0], ExtendedList)
+    assert isinstance(value[0][0], ExtendedString)
+    assert isinstance(value[1], ExtendedDict)
+    assert isinstance(value[1]["name"], ExtendedString)
+    assert isinstance(value[2], ExtendedString)
+    assert isinstance(value[3], ExtendedDict)
+    assert value[1]["name"].upper_first() == "Gateway"
+
+
 def test_extended_set_composes_set_operations() -> None:
     """ExtendedSet provides chainable set operations."""
     value = ExtendedSet({1, 2, 3, None})
@@ -52,6 +88,17 @@ def test_extended_set_composes_set_operations() -> None:
     assert value.union({4}).to_set() == {1, 2, 3, 4, None}
     assert value.intersection({2, 3, 5}).to_set() == {2, 3}
     assert value.difference({1, None}).to_set() == {2, 3}
+
+
+def test_extended_set_promotes_string_values() -> None:
+    """ExtendedSet keeps hashable nested values in the Tier 2 surface."""
+    value = ExtendedSet({"api"})
+
+    value.add("worker")
+
+    assert all(isinstance(item, ExtendedString) for item in value)
+    assert value.to_set() == {"api", "worker"}
+    assert to_builtin(value) == {"api", "worker"}
 
 
 def test_extend_data_recursively_wraps_builtin_containers() -> None:

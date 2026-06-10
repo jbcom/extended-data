@@ -1,8 +1,9 @@
-# Extended Data Types Examples
+# Core Examples
 
-This directory contains working code samples demonstrating the capabilities of
-the `Extended Data core` library. The examples intentionally mirror the public
-guides and are part of the documented contract, not throwaway snippets.
+This directory contains working code samples for the core `extended-data`
+package surface: Tier 1 primitives, Tier 2 containers, and Tier 3 file/data
+processors. The examples intentionally mirror the public README and package
+surface docs, so treat them as part of the documented contract.
 
 ## Examples
 
@@ -16,21 +17,23 @@ guides and are part of the documented contract, not throwaway snippets.
 
 ## Related Documentation
 
-- [Package docs](https://extended-data.dev/core/data-types/)
-- [Getting started](https://extended-data.dev/getting-started/)
-- [Packages overview](https://extended-data.dev/packages/)
+- [Package surface](../../docs/package-surface.md)
+- [Repository README](../../README.md)
 
 ## Running Examples
 
 ```bash
-# From the repository root, run the full example suite
-tox -e edt-examples
+# From the repository root, install the local package
+uv sync --extra tests --extra typing
 
-# Or run a single example with the prepared tox environment
+# Run a single example
 uv run python examples/core/basic_usage.py
+
+# Run the core test suite
+uv run pytest tests/core
 ```
 
 ## Requirements
 
 - Python 3.10-3.14
-- Extended Data core package
+- `extended-data`

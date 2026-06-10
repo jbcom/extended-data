@@ -23,7 +23,14 @@ class ExtendedDict(UserDict[str, Any]):
 
     def __init__(self, initialdata: Mapping[str, Any] | None = None, **kwargs: Any) -> None:
         """Initialize the extended dictionary."""
-        super().__init__(dict(initialdata or {}, **kwargs))
+        super().__init__()
+        self.update(dict(initialdata or {}, **kwargs))
+
+    def __setitem__(self, key: str, item: Any) -> None:
+        """Set a value while preserving extended nested containers."""
+        from extended_data.containers.factory import extend_data
+
+        self.data[key] = extend_data(item)
 
     def deep_merge(self, *mappings: Mapping[str, Any]) -> ExtendedDict:
         """Return a deeply merged copy."""
