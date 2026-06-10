@@ -27,9 +27,27 @@ from extended_data.connectors.base import VendorConnectorBase
 from extended_data.containers import ExtendedDict, ExtendedList, ExtendedString, to_builtin
 from extended_data.logging import Logging
 from extended_data.primitives import is_nothing
+from extended_data.primitives.redaction import REDACTED, redact_sensitive_text
 
 
 AWSSecretValue = str | ExtendedString | Mapping[str, Any] | None
+
+
+def _safe_aws_text(value: Any, *sensitive_values: Any) -> str:
+    """Redact secrets and resource identifiers from AWS diagnostics."""
+    text = redact_sensitive_text(value)
+    for sensitive_value in sensitive_values:
+        if sensitive_value is None:
+            continue
+        raw_value = str(sensitive_value)
+        if raw_value:
+            text = text.replace(raw_value, REDACTED)
+    return text
+
+
+def _aws_secret_error(action: str, exc: BaseException, *sensitive_values: Any) -> str:
+    """Build a redacted AWS Secrets Manager operation error message."""
+    return f"{action}: {_safe_aws_text(exc, *sensitive_values)}"
 
 
 if TYPE_CHECKING:
@@ -255,7 +273,8 @@ class AWSConnector(AWSOrganizationsMixin, AWSSSOmixin, AWSS3Mixin, VendorConnect
         Returns:
             The secret value as a string, or None if not found.
         """
-        self.logger.debug(f"Getting AWS secret: {secret_id}")
+        safe_secret_id = _safe_aws_text(secret_id, secret_id)
+        self.logger.debug(f"Getting AWS secret: {safe_secret_id}")
 
         if secretsmanager is None:
             secretsmanager = self.get_aws_client(
@@ -266,14 +285,15 @@ class AWSConnector(AWSOrganizationsMixin, AWSSSOmixin, AWSS3Mixin, VendorConnect
 
         try:
             response = secretsmanager.get_secret_value(SecretId=secret_id)
-            self.logger.debug(f"Successfully retrieved secret: {secret_id}")
+            self.logger.debug(f"Successfully retrieved secret: {safe_secret_id}")
         except ClientError as e:
             error_code = e.response.get("Error", {}).get("Code", "")
             if error_code == "ResourceNotFoundException":
-                self.logger.warning(f"Secret not found: {secret_id}")
+                self.logger.warning(f"Secret not found: {safe_secret_id}")
                 return None
-            self.logger.exception(f"Failed to get secret {secret_id}: {e}")
-            raise ValueError(f"Failed to get secret for ID '{secret_id}'") from e
+            error_message = _aws_secret_error("Failed to get secret", e, secret_id)
+            self.logger.exception(error_message)
+            raise ValueError(error_message) from e
 
         if "SecretString" in response:
             return self.extend_result(response["SecretString"])
@@ -372,7 +392,8 @@ class AWSConnector(AWSOrganizationsMixin, AWSSSOmixin, AWSS3Mixin, VendorConnect
             msg = "secret_value is required to create a secret"
             raise ValueError(msg)
 
-        self.logger.info(f"Creating AWS secret: {name}")
+        safe_name = _safe_aws_text(name, name)
+        self.logger.info(f"Creating AWS secret: {safe_name}")
         role_arn = execution_role_arn or self.execution_role_arn
         secretsmanager = self.get_aws_client(
             client_name="secretsmanager",
@@ -387,11 +408,12 @@ class AWSConnector(AWSOrganizationsMixin, AWSSSOmixin, AWSS3Mixin, VendorConnect
 
         try:
             response = secretsmanager.create_secret(**create_kwargs)
-            self.logger.info(f"Created AWS secret ARN: {response.get('ARN')}")
+            self.logger.info(f"Created AWS secret ARN: {_safe_aws_text(response.get('ARN'), response.get('ARN'))}")
             return self.extend_result(response)
         except ClientError as exc:
-            self.logger.error(f"Failed to create secret {name}", exc_info=True)
-            raise RuntimeError(f"Failed to create secret '{name}'") from exc
+            error_message = _aws_secret_error("Failed to create secret", exc, name, secret_value)
+            self.logger.error(error_message, exc_info=True)
+            raise RuntimeError(error_message) from exc
 
     def update_secret(
         self,
@@ -407,7 +429,8 @@ class AWSConnector(AWSOrganizationsMixin, AWSSSOmixin, AWSS3Mixin, VendorConnect
             msg = "secret_value is required to update a secret"
             raise ValueError(msg)
 
-        self.logger.info(f"Updating AWS secret: {secret_id}")
+        safe_secret_id = _safe_aws_text(secret_id, secret_id)
+        self.logger.info(f"Updating AWS secret: {safe_secret_id}")
 
         role_arn = execution_role_arn or self.execution_role_arn
         secretsmanager = self.get_aws_client(
@@ -417,11 +440,13 @@ class AWSConnector(AWSOrganizationsMixin, AWSSSOmixin, AWSS3Mixin, VendorConnect
 
         try:
             response = secretsmanager.update_secret(SecretId=secret_id, SecretString=secret_value)
-            self.logger.info(f"Updated AWS secret ARN: {response.get('ARN', secret_id)}")
+            response_arn = response.get("ARN", secret_id)
+            self.logger.info(f"Updated AWS secret ARN: {_safe_aws_text(response_arn, response_arn)}")
             return self.extend_result(response)
         except ClientError as exc:
-            self.logger.error(f"Failed to update secret {secret_id}", exc_info=True)
-            raise RuntimeError(f"Failed to update secret '{secret_id}'") from exc
+            error_message = _aws_secret_error("Failed to update secret", exc, secret_id, secret_value)
+            self.logger.error(error_message, exc_info=True)
+            raise RuntimeError(error_message) from exc
 
     def delete_secret(
         self,
@@ -439,7 +464,8 @@ class AWSConnector(AWSOrganizationsMixin, AWSSSOmixin, AWSS3Mixin, VendorConnect
             msg = "recovery_window_days must be between 7 and 30 when not forcing deletion"
             raise ValueError(msg)
 
-        self.logger.info(f"Deleting AWS secret: {secret_id}")
+        safe_secret_id = _safe_aws_text(secret_id, secret_id)
+        self.logger.info(f"Deleting AWS secret: {safe_secret_id}")
 
         role_arn = execution_role_arn or self.execution_role_arn
         secretsmanager = self.get_aws_client(
@@ -455,11 +481,13 @@ class AWSConnector(AWSOrganizationsMixin, AWSSSOmixin, AWSS3Mixin, VendorConnect
 
         try:
             response = secretsmanager.delete_secret(**delete_kwargs)
-            self.logger.info(f"Delete secret request submitted for: {response.get('ARN', secret_id)}")
+            response_arn = response.get("ARN", secret_id)
+            self.logger.info(f"Delete secret request submitted for: {_safe_aws_text(response_arn, response_arn)}")
             return self.extend_result(response)
         except ClientError as exc:
-            self.logger.error(f"Failed to delete secret {secret_id}", exc_info=True)
-            raise RuntimeError(f"Failed to delete secret '{secret_id}'") from exc
+            error_message = _aws_secret_error("Failed to delete secret", exc, secret_id)
+            self.logger.error(error_message, exc_info=True)
+            raise RuntimeError(error_message) from exc
 
     def delete_secrets_matching(
         self,
@@ -473,7 +501,8 @@ class AWSConnector(AWSOrganizationsMixin, AWSSSOmixin, AWSS3Mixin, VendorConnect
             msg = "prefix is required to delete matching secrets"
             raise ValueError(msg)
 
-        self.logger.info(f"Deleting secrets matching prefix: {prefix} (dry_run={dry_run})")
+        safe_prefix = _safe_aws_text(prefix, prefix)
+        self.logger.info(f"Deleting secrets matching prefix: {safe_prefix} (dry_run={dry_run})")
 
         role_arn = execution_role_arn or self.execution_role_arn
         secrets = self.list_secrets(
@@ -488,14 +517,14 @@ class AWSConnector(AWSOrganizationsMixin, AWSSSOmixin, AWSS3Mixin, VendorConnect
             elif isinstance(value, Mapping) and "ARN" in value:
                 secret_arns.append(value["ARN"])
             else:
-                self.logger.debug(f"Skipping secret {secret_name} due to missing ARN data")
+                self.logger.debug(f"Skipping secret {_safe_aws_text(secret_name, secret_name)} due to missing ARN data")
 
         if not secret_arns:
-            self.logger.info(f"No secrets found for prefix: {prefix}")
+            self.logger.info(f"No secrets found for prefix: {safe_prefix}")
             return self.extend_result([])
 
         if dry_run:
-            self.logger.info(f"Dry run enabled; would delete {len(secret_arns)} secrets for prefix {prefix}")
+            self.logger.info(f"Dry run enabled; would delete {len(secret_arns)} secrets for prefix {safe_prefix}")
             return self.extend_result(secret_arns)
 
         deleted_arns: list[str] = []
@@ -508,7 +537,7 @@ class AWSConnector(AWSOrganizationsMixin, AWSSSOmixin, AWSS3Mixin, VendorConnect
             )
             deleted_arns.append(response.get("ARN", secret_arn))
 
-        self.logger.info(f"Deleted {len(deleted_arns)} secrets for prefix {prefix}")
+        self.logger.info(f"Deleted {len(deleted_arns)} secrets for prefix {safe_prefix}")
         return self.extend_result(deleted_arns)
 
     def copy_secrets_to_s3(
@@ -533,7 +562,7 @@ class AWSConnector(AWSOrganizationsMixin, AWSSSOmixin, AWSS3Mixin, VendorConnect
         """
         import json as json_module
 
-        self.logger.info(f"Copying {len(secrets)} secrets to s3://{bucket}/{key}")
+        self.logger.info(f"Copying {len(secrets)} secrets to S3")
 
         s3_client = self.get_aws_client(
             client_name="s3",
@@ -550,7 +579,7 @@ class AWSConnector(AWSOrganizationsMixin, AWSSSOmixin, AWSS3Mixin, VendorConnect
         )
 
         s3_uri = f"s3://{bucket}/{key}"
-        self.logger.info(f"Uploaded secrets to {s3_uri}")
+        self.logger.info("Uploaded secrets to S3")
         return self.extend_result(s3_uri)
 
     def load_secrets_by_prefix(

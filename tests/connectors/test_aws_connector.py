@@ -16,6 +16,11 @@ from extended_data.containers import ExtendedDict, ExtendedList, ExtendedString,
 from extended_data.connectors.aws import AWSConnector
 
 
+def _logged_text(logger: MagicMock) -> str:
+    """Return concatenated mock logger messages."""
+    return "\n".join(str(arg) for call in logger.method_calls for arg in call.args)
+
+
 class TestAWSConnector:
     """Test suite for AWSConnector."""
 
@@ -253,6 +258,41 @@ class TestAWSConnector:
         assert isinstance(value, ExtendedString)
         assert value == "secret-value"
 
+    def test_get_secret_redacts_client_error_diagnostics(self, base_connector_kwargs):
+        """AWS secret lookup failures should not expose IDs or secret-bearing error text."""
+        connector = AWSConnector(**base_connector_kwargs)
+        mock_client = MagicMock()
+        mock_client.get_secret_value.side_effect = ClientError(
+            {"Error": {"Code": "AccessDeniedException", "Message": "denied token=raw_token password=hunter2"}},
+            "GetSecretValue",
+        )
+        connector.get_aws_client = MagicMock(return_value=mock_client)
+
+        with pytest.raises(ValueError) as exc_info:
+            connector.get_secret("prod/customer-private")
+
+        diagnostics = _logged_text(connector.logger) + str(exc_info.value)
+        assert "prod/customer-private" not in diagnostics
+        assert "raw_token" not in diagnostics
+        assert "hunter2" not in diagnostics
+        assert "[REDACTED]" in diagnostics
+
+    def test_get_secret_redacts_missing_secret_log(self, base_connector_kwargs):
+        """AWS missing-secret logs should not expose raw requested IDs."""
+        connector = AWSConnector(**base_connector_kwargs)
+        mock_client = MagicMock()
+        mock_client.get_secret_value.side_effect = ClientError(
+            {"Error": {"Code": "ResourceNotFoundException", "Message": "missing"}},
+            "GetSecretValue",
+        )
+        connector.get_aws_client = MagicMock(return_value=mock_client)
+
+        assert connector.get_secret("prod/customer-private") is None
+
+        logs = _logged_text(connector.logger)
+        assert "prod/customer-private" not in logs
+        assert "[REDACTED]" in logs
+
     def test_create_secret_with_tags_and_description(self, base_connector_kwargs):
         """Ensure create_secret builds payload and sends to AWS."""
         connector = AWSConnector(**base_connector_kwargs)
@@ -290,6 +330,26 @@ class TestAWSConnector:
 
         with pytest.raises(ValueError, match="name is required"):
             connector.create_secret(name="", secret_value="value")
+
+    def test_create_secret_redacts_error_diagnostics(self, base_connector_kwargs):
+        """AWS secret creation failures should not expose names, values, or exception secrets."""
+        connector = AWSConnector(**base_connector_kwargs)
+        mock_client = MagicMock()
+        mock_client.create_secret.side_effect = ClientError(
+            {"Error": {"Code": "AccessDeniedException", "Message": "denied secret=raw-secret api_key=key_123"}},
+            "CreateSecret",
+        )
+        connector.get_aws_client = MagicMock(return_value=mock_client)
+
+        with pytest.raises(RuntimeError) as exc_info:
+            connector.create_secret(name="/vendors/private", secret_value="super-secret")
+
+        diagnostics = _logged_text(connector.logger) + str(exc_info.value)
+        assert "/vendors/private" not in diagnostics
+        assert "super-secret" not in diagnostics
+        assert "raw-secret" not in diagnostics
+        assert "key_123" not in diagnostics
+        assert "[REDACTED]" in diagnostics
 
     def test_update_secret_calls_aws(self, base_connector_kwargs):
         """Ensure update_secret forwards call to boto3 client."""
@@ -369,6 +429,9 @@ class TestAWSConnector:
         assert isinstance(to_delete[0], ExtendedString)
         assert to_delete == ["arn:a", "arn:b"]
         connector.delete_secret.assert_not_called()
+        logs = _logged_text(connector.logger)
+        assert "/vendors/" not in logs
+        assert "[REDACTED]" in logs
         connector.list_secrets.assert_called_once_with(
             prefix="/vendors/",
             execution_role_arn="arn:role:override",
@@ -430,6 +493,9 @@ class TestAWSConnector:
 
         assert isinstance(uri, ExtendedString)
         assert uri == "s3://target-bucket/secrets.json"
+        logs = _logged_text(connector.logger)
+        assert "target-bucket" not in logs
+        assert "secrets.json" not in logs
         mock_client.put_object.assert_called_once_with(
             Bucket="target-bucket",
             Key="secrets.json",
