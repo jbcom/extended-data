@@ -32,8 +32,14 @@ def test_extended_dict_composes_mapping_primitives() -> None:
     value = ExtendedDict({"outer": {"inner": 1}, "items": [1, 1, 2], "empty": ""})
 
     merged = value.deep_merge({"outer": {"other": 2}})
-    accepted, rejected = merged.filter(allowlist=["outer"])
+    filtered = merged.filter(allowlist=["outer"])
+    accepted, rejected = filtered
+    all_values = value.all_values()
 
+    assert isinstance(filtered, ExtendedTuple)
+    assert isinstance(accepted, ExtendedDict)
+    assert isinstance(rejected, ExtendedDict)
+    assert isinstance(all_values, ExtendedList)
     assert merged["outer"] == {"inner": 1, "other": 2}
     assert value["outer"] == {"inner": 1}
     assert value.flatten() == {"outer.inner": 1, "items.0": 1, "items.1": 1, "items.2": 2, "empty": ""}
@@ -41,6 +47,8 @@ def test_extended_dict_composes_mapping_primitives() -> None:
     assert value.compact() == {"outer": {"inner": 1}, "items": [1, 1, 2]}
     assert accepted == {"outer": {"inner": 1, "other": 2}}
     assert "items" in rejected
+    assert all_values == [1, 1, 1, 2, ""]
+    assert isinstance(all_values[-1], ExtendedString)
 
 
 def test_extended_dict_promotes_nested_values_on_mutation() -> None:

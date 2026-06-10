@@ -62,6 +62,11 @@ payload = ExtendedDict({"service": {"name": "api"}})
 payload["service"]["name"].upper_first()
 ```
 
+Container methods that return derived collections stay in Tier 2 as well:
+`ExtendedDict.filter()` returns an `ExtendedTuple` of accepted and rejected
+`ExtendedDict` values, and `ExtendedDict.all_values()` returns an
+`ExtendedList`.
+
 Tier 3 decode surfaces can promote plain decoded values into Tier 2 containers:
 
 ```python

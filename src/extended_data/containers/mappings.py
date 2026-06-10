@@ -10,6 +10,8 @@ from typing import TYPE_CHECKING, Any, overload
 if TYPE_CHECKING:
     from _typeshed import SupportsKeysAndGetItem
 
+    from extended_data.containers.sequences import ExtendedList, ExtendedTuple
+
 from extended_data.primitives.mappings import (
     all_values_from_map,
     deduplicate_map,
@@ -83,12 +85,13 @@ class ExtendedDict(UserDict[str, Any]):
         *,
         allowlist: list[str] | None = None,
         denylist: list[str] | None = None,
-    ) -> tuple[ExtendedDict, ExtendedDict]:
+    ) -> ExtendedTuple[ExtendedDict]:
         """Return accepted and rejected mapping entries."""
         from extended_data.containers.factory import extend_data, to_builtin
+        from extended_data.containers.sequences import ExtendedTuple
 
         accepted, rejected = filter_map(to_builtin(self.data), allowlist=allowlist, denylist=denylist)
-        return extend_data(accepted), extend_data(rejected)
+        return ExtendedTuple((extend_data(accepted), extend_data(rejected)))
 
     def compact(self) -> ExtendedDict:
         """Return a copy without values considered empty."""
@@ -108,11 +111,11 @@ class ExtendedDict(UserDict[str, Any]):
 
         return extend_data(unhump_map(to_builtin(self.data), drop_without_prefix=drop_without_prefix))
 
-    def all_values(self) -> list[Any]:
+    def all_values(self) -> ExtendedList[Any]:
         """Return all values from the nested mapping."""
-        from extended_data.containers.factory import to_builtin
+        from extended_data.containers.factory import extend_data, to_builtin
 
-        return all_values_from_map(to_builtin(self.data))
+        return extend_data(all_values_from_map(to_builtin(self.data)))
 
     def first_non_empty_value(self, *keys: str) -> Any:
         """Return the first non-empty value for the provided keys."""
