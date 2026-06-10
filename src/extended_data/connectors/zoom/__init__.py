@@ -5,16 +5,37 @@ from __future__ import annotations
 import base64
 
 from typing import Any
+from urllib.parse import quote
 
 import requests
 
 from extended_data.connectors.base import VendorConnectorBase
 from extended_data.containers import ExtendedDict, ExtendedList
 from extended_data.logging import Logging
+from extended_data.primitives.redaction import REDACTED, redact_sensitive_text
 
 
 # Default timeout for HTTP requests in seconds
 DEFAULT_REQUEST_TIMEOUT = 30
+
+
+def _safe_zoom_text(value: Any, *sensitive_values: Any) -> str:
+    """Redact secrets and request identifiers from Zoom diagnostics."""
+    text = redact_sensitive_text(value)
+    for sensitive_value in sensitive_values:
+        if sensitive_value is None:
+            continue
+        raw_value = str(sensitive_value)
+        if not raw_value:
+            continue
+        for candidate in {raw_value, quote(raw_value, safe="")}:
+            text = text.replace(candidate, REDACTED)
+    return text
+
+
+def _zoom_error(action: str, exc: BaseException, *sensitive_values: Any) -> str:
+    """Build a redacted Zoom operational error message."""
+    return f"{action}: {_safe_zoom_text(exc, *sensitive_values)}"
 
 
 class ZoomConnector(VendorConnectorBase):
@@ -89,7 +110,7 @@ class ZoomConnector(VendorConnectorBase):
                 if not next_page_token:
                     break
             except requests.exceptions.RequestException as exc:
-                raise RuntimeError(f"Failed to get Zoom users: {exc}") from exc
+                raise RuntimeError(_zoom_error("Failed to get Zoom users", exc)) from exc
 
         return self.extend_result(users)
 
@@ -100,9 +121,9 @@ class ZoomConnector(VendorConnectorBase):
         try:
             response = requests.delete(url, headers=headers, timeout=DEFAULT_REQUEST_TIMEOUT)
             response.raise_for_status()
-            self.logger.warning(f"Removed Zoom user {email}")
+            self.logger.warning("Removed Zoom user")
         except requests.exceptions.RequestException as exc:
-            error_msg = f"Failed to remove Zoom user {email}: {exc}"
+            error_msg = _zoom_error("Failed to remove Zoom user", exc, email)
             self.errors.append(error_msg)
             self.logger.exception(error_msg)
 
@@ -117,10 +138,10 @@ class ZoomConnector(VendorConnectorBase):
         try:
             response = requests.post(url, headers=headers, json=user_info, timeout=DEFAULT_REQUEST_TIMEOUT)
             response.raise_for_status()
-            self.logger.info(f"Created Zoom user {email}")
+            self.logger.info("Created Zoom user")
             return True
         except requests.exceptions.RequestException as exc:
-            error_msg = f"Failed to create Zoom user {email}: {exc}"
+            error_msg = _zoom_error("Failed to create Zoom user", exc, email, first_name, last_name)
             self.errors.append(error_msg)
             self.logger.exception(error_msg)
             return False
@@ -142,7 +163,7 @@ class ZoomConnector(VendorConnectorBase):
             response.raise_for_status()
             return self.extend_result(response.json())
         except requests.exceptions.RequestException as exc:
-            raise RuntimeError(f"Failed to get Zoom user {user_id}: {exc}") from exc
+            raise RuntimeError(_zoom_error("Failed to get Zoom user", exc, user_id)) from exc
 
     def list_meetings(self, user_id: str, meeting_type: str = "scheduled") -> ExtendedList[ExtendedDict]:
         """List meetings for a specific user.
@@ -164,7 +185,7 @@ class ZoomConnector(VendorConnectorBase):
             data = response.json()
             return self.extend_result(data.get("meetings", []))
         except requests.exceptions.RequestException as exc:
-            raise RuntimeError(f"Failed to list meetings for user {user_id}: {exc}") from exc
+            raise RuntimeError(_zoom_error("Failed to list Zoom meetings", exc, user_id)) from exc
 
     def get_meeting(self, meeting_id: str) -> ExtendedDict:
         """Get details of a specific meeting.
@@ -183,7 +204,7 @@ class ZoomConnector(VendorConnectorBase):
             response.raise_for_status()
             return self.extend_result(response.json())
         except requests.exceptions.RequestException as exc:
-            raise RuntimeError(f"Failed to get meeting {meeting_id}: {exc}") from exc
+            raise RuntimeError(_zoom_error("Failed to get Zoom meeting", exc, meeting_id)) from exc
 
 
 from extended_data.connectors.zoom.tools import (

@@ -524,15 +524,16 @@ class SlackConnector(VendorConnectorBase):
             TimeoutError: If rate-limited retries exceed `MAX_RETRY_TIMEOUT_SECONDS`.
         """
         call = getattr(self.web_client, method, None)
+        safe_method = redact_sensitive_text(method)
         if call is None:
-            raise AttributeError(f"{method} is not supported by the Slack WebClient")
+            raise AttributeError(f"{safe_method} is not supported by the Slack WebClient")
 
         response: Any | None = None
         attempt = 1
         total_delay = 0
 
         while not response:
-            self.logger.debug(f"[Attempt {attempt}] Calling Slack WebClient {method}...")
+            self.logger.debug(f"[Attempt {attempt}] Calling Slack WebClient {safe_method}...")
             try:
                 response = call(**kwargs)
             except SlackApiError as exc:
@@ -540,7 +541,9 @@ class SlackConnector(VendorConnectorBase):
                     delay = int(exc.response.headers["Retry-After"])
                     total_delay += delay
                     if total_delay > MAX_RETRY_TIMEOUT_SECONDS:
-                        raise TimeoutError(f"Slack WebClient {method} timed out after {total_delay} seconds") from exc
+                        raise TimeoutError(
+                            f"Slack WebClient {safe_method} timed out after {total_delay} seconds"
+                        ) from exc
                     self.logger.warning(f"Rate limited. Retrying in {delay} seconds")
                     sleep(delay)
                     attempt += 1
@@ -554,7 +557,9 @@ class SlackConnector(VendorConnectorBase):
         for datum in response.get(group_by, {}):
             datum_id = datum.get(id_field_name)
             if is_nothing(datum_id):
-                raise RuntimeError(f"No ID for field {id_field_name} in returned datum: {datum}")
+                safe_field_name = redact_sensitive_text(id_field_name)
+                safe_datum = redact_sensitive_data(datum)
+                raise RuntimeError(f"No ID for field {safe_field_name} in returned datum: {safe_datum}")
             grouped[datum_id] = datum
 
         return grouped

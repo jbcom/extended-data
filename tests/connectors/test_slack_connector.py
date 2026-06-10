@@ -169,6 +169,26 @@ class TestSlackConnector:
         assert result["error"] == "channel_not_found"
         assert result["password"] == "[REDACTED]"
 
+    @patch("extended_data.connectors.slack.WebClient")
+    def test_call_api_redacts_grouping_failure_payload(self, mock_webclient_class, base_connector_kwargs):
+        """Slack grouping failures should not dump raw secret-bearing response data."""
+        mock_user_client = MagicMock()
+        mock_user_client.users_list.return_value = {
+            "members": [{"name": "missing-id", "password": "hunter2", "authorization": "Bearer raw_token"}]
+        }
+        mock_bot_client = MagicMock()
+        mock_webclient_class.side_effect = [mock_user_client, mock_bot_client]
+
+        connector = SlackConnector(token="test-token", bot_token="bot-token", **base_connector_kwargs)
+
+        with pytest.raises(RuntimeError) as exc_info:
+            connector._call_api("users_list", group_by="members")
+
+        message = str(exc_info.value)
+        assert "hunter2" not in message
+        assert "raw_token" not in message
+        assert "[REDACTED]" in message
+
     @patch("extended_data.connectors.slack.SlackConnector._call_api")
     @patch("extended_data.connectors.slack.WebClient")
     def test_list_users_filters_deleted(
