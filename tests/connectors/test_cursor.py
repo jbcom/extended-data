@@ -22,7 +22,7 @@ from extended_data.connectors.cursor import (
     validate_repository,
     validate_webhook_url,
 )
-from extended_data.containers import ExtendedList, ExtendedString
+from extended_data.containers import ExtendedDict, ExtendedList, ExtendedString, extend_data
 
 
 class TestValidators:
@@ -202,9 +202,59 @@ class TestCursorConnector:
         connector = CursorConnector(api_key="test-key")
         agents = connector.list_agents()
 
+        assert isinstance(agents, ExtendedList)
+        assert isinstance(agents[0], ExtendedDict)
+        assert isinstance(agents[0]["id"], ExtendedString)
         assert len(agents) == 1
-        assert agents[0].id == "agent-1"
-        assert agents[0].state == AgentState.RUNNING
+        assert agents[0]["id"] == "agent-1"
+        assert agents[0]["state"] == "running"
+
+    @patch("extended_data.connectors.cursor.httpx.Client")
+    def test_get_agent_status_returns_extended_dict(self, mock_client_class):
+        """get_agent_status should return an extended agent payload."""
+        mock_client = MagicMock()
+        mock_client_class.return_value = mock_client
+
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.is_success = True
+        mock_response.headers = {"content-type": "application/json"}
+        mock_response.text = '{"id": "agent-1", "state": "finished", "pr_url": "https://github.com/org/repo/pull/1"}'
+        mock_response.json.return_value = {
+            "id": "agent-1",
+            "state": "finished",
+            "pr_url": "https://github.com/org/repo/pull/1",
+        }
+        mock_client.request.return_value = mock_response
+
+        connector = CursorConnector(api_key="test-key")
+        agent = connector.get_agent_status("agent-1")
+
+        assert isinstance(agent, ExtendedDict)
+        assert isinstance(agent["state"], ExtendedString)
+        assert agent["pr_url"] == "https://github.com/org/repo/pull/1"
+
+    @patch("extended_data.connectors.cursor.httpx.Client")
+    def test_get_agent_conversation_returns_extended_dict(self, mock_client_class):
+        """get_agent_conversation should return an extended conversation payload."""
+        mock_client = MagicMock()
+        mock_client_class.return_value = mock_client
+
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.is_success = True
+        mock_response.headers = {"content-type": "application/json"}
+        mock_response.text = '{"messages": [{"role": "user", "content": "hello"}]}'
+        mock_response.json.return_value = {"messages": [{"role": "user", "content": "hello"}]}
+        mock_client.request.return_value = mock_response
+
+        connector = CursorConnector(api_key="test-key")
+        conversation = connector.get_agent_conversation("agent-1")
+
+        assert isinstance(conversation, ExtendedDict)
+        assert isinstance(conversation["messages"], ExtendedList)
+        assert isinstance(conversation["messages"][0], ExtendedDict)
+        assert conversation["messages"][0]["content"] == "hello"
 
     @patch("extended_data.connectors.cursor.httpx.Client")
     def test_launch_agent(self, mock_client_class):
@@ -223,10 +273,13 @@ class TestCursorConnector:
         agent = connector.launch_agent(
             prompt_text="Implement feature X",
             repository="owner/repo",
+            images=extend_data([{"data": "base64", "dimensions": {"width": 16, "height": 16}}]),
         )
 
-        assert agent.id == "new-agent"
-        assert agent.state == AgentState.PENDING
+        assert isinstance(agent, ExtendedDict)
+        assert isinstance(agent["id"], ExtendedString)
+        assert agent["id"] == "new-agent"
+        assert agent["state"] == "pending"
 
         # Verify request was made correctly
         call_args = mock_client.request.call_args
@@ -234,6 +287,8 @@ class TestCursorConnector:
         assert "/agents" in call_args.args[1]
         assert "prompt" in call_args.kwargs["json"]
         assert "source" in call_args.kwargs["json"]
+        assert isinstance(call_args.kwargs["json"]["prompt"]["images"], list)
+        assert isinstance(call_args.kwargs["json"]["prompt"]["images"][0], dict)
 
     @patch("extended_data.connectors.cursor.httpx.Client")
     def test_launch_agent_validation(self, mock_client_class):
@@ -247,6 +302,27 @@ class TestCursorConnector:
 
         with pytest.raises(CursorValidationError, match="format"):
             connector.launch_agent(prompt_text="Hello", repository="invalid")
+
+    @patch("extended_data.connectors.cursor.httpx.Client")
+    def test_list_repositories_returns_extended_list(self, mock_client_class):
+        """list_repositories should return extended repository payloads."""
+        mock_client = MagicMock()
+        mock_client_class.return_value = mock_client
+
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.is_success = True
+        mock_response.headers = {"content-type": "application/json"}
+        mock_response.text = '{"repositories": [{"name": "org/repo", "default_branch": "main"}]}'
+        mock_response.json.return_value = {"repositories": [{"name": "org/repo", "default_branch": "main"}]}
+        mock_client.request.return_value = mock_response
+
+        connector = CursorConnector(api_key="test-key")
+        repositories = connector.list_repositories()
+
+        assert isinstance(repositories, ExtendedList)
+        assert isinstance(repositories[0], ExtendedDict)
+        assert repositories[0]["name"] == "org/repo"
 
     @patch("extended_data.connectors.cursor.httpx.Client")
     def test_list_models_returns_extended_list(self, mock_client_class):

@@ -69,6 +69,7 @@ class TestSlackConnector:
 
         ts = connector.send_message(channel_name="general", text="Test message", blocks=[])
 
+        assert isinstance(ts, ExtendedString)
         assert ts == "1234567890.123456"
         mock_bot_client.chat_postMessage.assert_called_once()
 

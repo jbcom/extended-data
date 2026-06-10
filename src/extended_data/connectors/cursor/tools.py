@@ -62,9 +62,9 @@ def cursor_launch_agent(
 
     return extend_data(
         {
-            "agent_id": agent.id,
-            "state": _state_value(agent.state),
-            "repository": agent.repository,
+            "agent_id": agent.get("id", ""),
+            "state": _state_value(agent.get("state")),
+            "repository": agent.get("repository"),
         }
     )
 
@@ -85,10 +85,10 @@ def cursor_get_agent_status(agent_id: str) -> dict[str, Any]:
 
     return extend_data(
         {
-            "agent_id": agent.id,
-            "state": _state_value(agent.state),
-            "error": agent.error,
-            "pr_url": agent.pr_url,
+            "agent_id": agent.get("id", ""),
+            "state": _state_value(agent.get("state")),
+            "error": agent.get("error"),
+            "pr_url": agent.get("pr_url"),
         }
     )
 

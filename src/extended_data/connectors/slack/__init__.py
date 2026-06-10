@@ -277,7 +277,7 @@ class SlackConnector(VendorConnectorBase):
             opts["thread_ts"] = thread_id
 
         try:
-            return self.bot_web_client.chat_postMessage(**opts).get("ts")
+            return self.extend_result(self.bot_web_client.chat_postMessage(**opts).get("ts"))
         except SlackApiError as exc:
             if raise_on_api_error:
                 raise SlackAPIError(exc.response) from exc

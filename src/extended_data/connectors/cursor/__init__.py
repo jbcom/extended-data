@@ -34,6 +34,7 @@ import httpx
 from pydantic import BaseModel, ConfigDict, Field
 
 from extended_data.connectors.base import VendorConnectorBase
+from extended_data.containers import to_builtin
 from extended_data.logging import Logging
 
 
@@ -408,15 +409,20 @@ class CursorConnector(VendorConnectorBase):
                 raise
             raise CursorAPIError(sanitize_error(str(e))) from e
 
+    @staticmethod
+    def _model_payload(model: BaseModel) -> dict[str, Any]:
+        """Serialize a Cursor model into JSON-compatible API field names."""
+        return model.model_dump(mode="json")
+
     # =========================================================================
     # Agent Operations
     # =========================================================================
 
-    def list_agents(self) -> list[Agent]:
+    def list_agents(self) -> list[dict[str, Any]]:
         """List all agents.
 
         Returns:
-            List of Agent objects.
+            List of agent payload dictionaries.
 
         Raises:
             CursorAPIError: If the API request fails.
@@ -424,19 +430,19 @@ class CursorConnector(VendorConnectorBase):
         self.logger.info("Listing agents")
         data = self._request_api("/agents")
         if not data:
-            return []
+            return self.extend_result([])
 
         agents_data = data.get("agents", [])
-        return [Agent.model_validate(a) for a in agents_data]
+        return self.extend_result([self._model_payload(Agent.model_validate(a)) for a in agents_data])
 
-    def get_agent_status(self, agent_id: str) -> Agent:
+    def get_agent_status(self, agent_id: str) -> dict[str, Any]:
         """Get status of a specific agent.
 
         Args:
             agent_id: The agent identifier.
 
         Returns:
-            Agent object with current status.
+            Agent payload dictionary with current status.
 
         Raises:
             CursorValidationError: If agent_id is invalid.
@@ -448,16 +454,16 @@ class CursorConnector(VendorConnectorBase):
         data = self._request_api(f"/agents/{agent_id}")
         if not data:
             raise CursorAPIError(f"Empty response when getting agent status for {agent_id}")
-        return Agent.model_validate(data)
+        return self.extend_result(self._model_payload(Agent.model_validate(data)))
 
-    def get_agent_conversation(self, agent_id: str) -> Conversation:
+    def get_agent_conversation(self, agent_id: str) -> dict[str, Any]:
         """Get conversation history for an agent.
 
         Args:
             agent_id: The agent identifier.
 
         Returns:
-            Conversation object with message history.
+            Conversation payload dictionary with message history.
 
         Raises:
             CursorValidationError: If agent_id is invalid.
@@ -468,10 +474,10 @@ class CursorConnector(VendorConnectorBase):
 
         data = self._request_api(f"/agents/{agent_id}/conversation")
         if not data:
-            return Conversation(agent_id=agent_id, messages=[])
+            return self.extend_result(self._model_payload(Conversation(agent_id=agent_id, messages=[])))
 
         messages = [ConversationMessage.model_validate(m) for m in data.get("messages", [])]
-        return Conversation(agent_id=agent_id, messages=messages)
+        return self.extend_result(self._model_payload(Conversation(agent_id=agent_id, messages=messages)))
 
     def launch_agent(
         self,
@@ -485,7 +491,7 @@ class CursorConnector(VendorConnectorBase):
         skip_reviewer_request: bool = False,
         webhook_url: str | None = None,
         webhook_secret: str | None = None,
-    ) -> Agent:
+    ) -> dict[str, Any]:
         """Launch a new agent.
 
         Args:
@@ -501,7 +507,7 @@ class CursorConnector(VendorConnectorBase):
             webhook_secret: Webhook secret for signature verification.
 
         Returns:
-            The launched Agent object.
+            The launched agent payload dictionary.
 
         Raises:
             CursorValidationError: If inputs are invalid.
@@ -552,11 +558,11 @@ class CursorConnector(VendorConnectorBase):
                 webhook["secret"] = webhook_secret
             body["webhook"] = webhook
 
-        data = self._request_api("/agents", method="POST", json_body=body)
+        data = self._request_api("/agents", method="POST", json_body=to_builtin(body))
         if not data:
             msg = "Empty response when launching agent"
             raise CursorAPIError(msg)
-        return Agent.model_validate(data)
+        return self.extend_result(self._model_payload(Agent.model_validate(data)))
 
     def add_followup(self, agent_id: str, prompt_text: str) -> None:
         """Send a follow-up message to an agent.
@@ -584,11 +590,11 @@ class CursorConnector(VendorConnectorBase):
     # Repository Operations
     # =========================================================================
 
-    def list_repositories(self) -> list[Repository]:
+    def list_repositories(self) -> list[dict[str, Any]]:
         """List available repositories.
 
         Returns:
-            List of Repository objects.
+            List of repository payload dictionaries.
 
         Raises:
             CursorAPIError: If the API request fails.
@@ -596,10 +602,10 @@ class CursorConnector(VendorConnectorBase):
         self.logger.info("Listing repositories")
         data = self._request_api("/repositories")
         if not data:
-            return []
+            return self.extend_result([])
 
         repos_data = data.get("repositories", [])
-        return [Repository.model_validate(r) for r in repos_data]
+        return self.extend_result([self._model_payload(Repository.model_validate(r)) for r in repos_data])
 
     # =========================================================================
     # Model Operations

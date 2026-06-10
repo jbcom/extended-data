@@ -5,7 +5,7 @@ from __future__ import annotations
 from unittest.mock import MagicMock, patch
 
 from extended_data.connectors.cursor import AgentState
-from extended_data.containers import ExtendedDict, ExtendedString
+from extended_data.containers import ExtendedDict, ExtendedString, extend_data
 
 
 def test_cursor_launch_agent():
@@ -14,10 +14,13 @@ def test_cursor_launch_agent():
 
     with patch("extended_data.connectors.cursor.CursorConnector") as mock_connector_class:
         mock_connector = MagicMock()
-        mock_agent = MagicMock()
-        mock_agent.id = "agent_123"
-        mock_agent.state = AgentState.RUNNING
-        mock_agent.repository = "org/repo"
+        mock_agent = extend_data(
+            {
+                "id": "agent_123",
+                "state": AgentState.RUNNING,
+                "repository": "org/repo",
+            }
+        )
         mock_connector.launch_agent.return_value = mock_agent
         mock_connector_class.return_value = mock_connector
 
@@ -35,11 +38,14 @@ def test_cursor_get_agent_status():
 
     with patch("extended_data.connectors.cursor.CursorConnector") as mock_connector_class:
         mock_connector = MagicMock()
-        mock_agent = MagicMock()
-        mock_agent.id = "agent_123"
-        mock_agent.state = AgentState.FINISHED
-        mock_agent.error = None
-        mock_agent.pr_url = "https://github.com/org/repo/pull/1"
+        mock_agent = extend_data(
+            {
+                "id": "agent_123",
+                "state": AgentState.FINISHED,
+                "error": None,
+                "pr_url": "https://github.com/org/repo/pull/1",
+            }
+        )
         mock_connector.get_agent_status.return_value = mock_agent
         mock_connector_class.return_value = mock_connector
 
