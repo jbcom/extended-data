@@ -20,6 +20,18 @@ class ExampleConnector:
         """Fetch example data."""
         return ExtendedDict({"enabled": enabled, "count": count})
 
+    def secrets(self) -> ExtendedDict:
+        """Fetch example sensitive data."""
+        return ExtendedDict(
+            {
+                "password": "hunter2",
+                "access_token": "tok_123",
+                "id_token": 12345,
+                "nested": {"api_key": "key_456"},
+                "ok": True,
+            }
+        )
+
 
 def test_cli_list() -> None:
     """Test the list command."""
@@ -139,6 +151,31 @@ def test_cli_call_serializes_extended_containers_as_data() -> None:
     assert json.loads(mock_write.call_args.args[0]) == {"service": {"name": "api"}}
 
 
+def test_cli_call_redacts_sensitive_json_output() -> None:
+    """Call command should not write common secret fields to stdout."""
+    connector = MagicMock()
+    connector.secrets.return_value = ExampleConnector().secrets()
+    args = argparse.Namespace(connector="example", method="secrets", extra=[], json=True)
+
+    with (
+        patch("extended_data.connectors.cli.get_connector_class", return_value=ExampleConnector),
+        patch("extended_data.connectors.cli.get_connector", return_value=connector),
+        patch("sys.stdout.write") as mock_write,
+    ):
+        exit_code = cmd_call(args)
+
+    assert exit_code == 0
+    output = mock_write.call_args.args[0]
+    assert "hunter2" not in output
+    assert "tok_123" not in output
+    assert "12345" not in output
+    assert "key_456" not in output
+    assert json.loads(output)["id_token"] == "[REDACTED]"
+    assert '"password": "[REDACTED]"' in output
+    assert '"access_token": "[REDACTED]"' in output
+    assert '"api_key": "[REDACTED]"' in output
+
+
 def test_cli_call_reports_missing_method() -> None:
     """Call command reports missing methods instead of failing silently."""
     args = argparse.Namespace(connector="example", method="missing", extra=[], json=False)
@@ -179,6 +216,28 @@ def test_cli_call_reports_connector_errors() -> None:
 
     assert exit_code == 1
     assert "boom" in mock_write.call_args.args[0]
+
+
+def test_cli_call_redacts_sensitive_error_output() -> None:
+    """Call command should sanitize common secret values in stderr."""
+    args = argparse.Namespace(connector="example", method="fetch", extra=[], json=False)
+    error = RuntimeError("failed password=hunter2 token: tok_123 Authorization: Bearer raw_token")
+
+    with (
+        patch("extended_data.connectors.cli.get_connector_class", return_value=ExampleConnector),
+        patch("extended_data.connectors.cli.get_connector", side_effect=error),
+        patch("sys.stderr.write") as mock_write,
+    ):
+        exit_code = cmd_call(args)
+
+    assert exit_code == 1
+    output = mock_write.call_args.args[0]
+    assert "hunter2" not in output
+    assert "tok_123" not in output
+    assert "raw_token" not in output
+    assert "password=[REDACTED]" in output
+    assert "token: [REDACTED]" in output
+    assert "Authorization: [REDACTED]" in output
 
 
 def test_cli_main_help() -> None:

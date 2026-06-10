@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 
 from collections.abc import Mapping
@@ -32,6 +33,43 @@ from extended_data.connectors.registry import (
 from extended_data.connectors.surface import connector_data_methods, is_connector_data_method
 from extended_data.containers import ExtendedList
 from extended_data.containers.factory import to_builtin
+
+
+_SENSITIVE_KEY_PATTERN = (
+    r"api[_-]?key|access[_-]?token|refresh[_-]?token|id[_-]?token|token|secret|password|passwd|pwd|"
+    r"authorization|client[_-]?secret|private[_-]?key"
+)
+_JSON_SECRET_RE = re.compile(
+    rf"(?i)([\"']?(?:{_SENSITIVE_KEY_PATTERN})[\"']?\s*:\s*)"
+    rf"([\"'][^\"']*[\"']|Bearer\s+[^\s,;}}\]]+|[^,\s}}\]]+)"
+)
+_KEY_VALUE_SECRET_RE = re.compile(rf"(?i)(\b(?:{_SENSITIVE_KEY_PATTERN})\b\s*=\s*)([^\s,;]+)")
+_CLI_SECRET_RE = re.compile(rf"(?i)(--(?:{_SENSITIVE_KEY_PATTERN})(?:=|\s+))(\S+)")
+_BEARER_SECRET_RE = re.compile(r"(?i)(\bBearer\s+)[A-Za-z0-9._~+/=-]+")
+
+
+def _redacted_value(value: str) -> str:
+    """Return a redacted placeholder while preserving matching quotes."""
+    quote = value[:1] if value[:1] in {"'", '"'} else ""
+    return f"{quote}[REDACTED]{quote}"
+
+
+def _redacted_field(match: re.Match[str]) -> str:
+    """Return a redacted key/value field while preserving JSON shape."""
+    prefix = match.group(1)
+    value = match.group(2)
+    if prefix.lstrip().startswith(('"', "'")) and value[:1] not in {"'", '"'}:
+        return f'{prefix}"[REDACTED]"'
+    return f"{prefix}{_redacted_value(value)}"
+
+
+def _redact_sensitive_text(message: Any) -> str:
+    """Redact common secret fields before CLI terminal output."""
+    text = str(message)
+    text = _JSON_SECRET_RE.sub(_redacted_field, text)
+    text = _KEY_VALUE_SECRET_RE.sub(lambda match: f"{match.group(1)}[REDACTED]", text)
+    text = _CLI_SECRET_RE.sub(lambda match: f"{match.group(1)}[REDACTED]", text)
+    return _BEARER_SECRET_RE.sub(r"\1[REDACTED]", text)
 
 
 def _json_output(data: Any) -> str:
@@ -82,12 +120,12 @@ def _format_list(values: list[Any] | tuple[Any, ...] | ExtendedList[Any] | None)
 
 def _write_stdout(message: str) -> None:
     """Write one CLI output line."""
-    sys.stdout.write(f"{message}\n")
+    sys.stdout.write(f"{_redact_sensitive_text(message)}\n")
 
 
 def _write_stderr(message: str) -> None:
     """Write one CLI error line."""
-    sys.stderr.write(f"{message}\n")
+    sys.stderr.write(f"{_redact_sensitive_text(message)}\n")
 
 
 # =============================================================================
