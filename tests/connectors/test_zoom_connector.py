@@ -54,9 +54,9 @@ class TestZoomConnector:
     @patch("extended_data.connectors.zoom.requests.post")
     def test_get_access_token_failure(self, mock_post, base_connector_kwargs):
         """Test failed access token retrieval."""
-        import requests
-
-        mock_post.side_effect = requests.exceptions.RequestException("Connection error")
+        mock_post.side_effect = requests.exceptions.RequestException(
+            "Connection error test-account-id client_secret=raw-secret"
+        )
 
         connector = ZoomConnector(
             client_id="test-client-id",
@@ -65,8 +65,15 @@ class TestZoomConnector:
             **base_connector_kwargs,
         )
 
-        with pytest.raises(RuntimeError, match="Failed to get Zoom access token"):
+        with pytest.raises(RuntimeError, match="Failed to get Zoom access token") as exc_info:
             connector.get_access_token()
+
+        message = str(exc_info.value)
+        assert "test-account-id" not in message
+        assert "test-client-secret" not in message
+        assert "raw-secret" not in message
+        assert "[REDACTED]" in message
+        assert exc_info.value.__cause__ is None
 
     @patch("extended_data.connectors.zoom.requests.get")
     @patch("extended_data.connectors.zoom.requests.post")
@@ -94,6 +101,7 @@ class TestZoomConnector:
         assert "hunter2" not in message
         assert "raw_token" not in message
         assert "[REDACTED]" in message
+        assert exc_info.value.__cause__ is None
 
     @patch("extended_data.connectors.zoom.requests.get")
     @patch("extended_data.connectors.zoom.requests.post")
@@ -189,6 +197,37 @@ class TestZoomConnector:
         assert "private-user@example.com" not in diagnostics
         assert "raw_token" not in diagnostics
         assert "[REDACTED]" in diagnostics
+        connector.logger.exception.assert_not_called()
+        assert all("exc_info" not in logged_call.kwargs for logged_call in connector.logger.method_calls)
+
+    @patch("extended_data.connectors.zoom.requests.post")
+    def test_create_zoom_user_redacts_error_state_and_logs(self, mock_post, base_connector_kwargs):
+        """Zoom create failures should redact user PII and avoid traceback logs."""
+        mock_token_response = MagicMock()
+        mock_token_response.json.return_value = {"access_token": "test-token"}
+        mock_token_response.raise_for_status = MagicMock()
+        mock_post.side_effect = [
+            mock_token_response,
+            requests.exceptions.RequestException("failed Jane SecretUser newuser@example.com token=raw-token"),
+        ]
+
+        connector = ZoomConnector(
+            client_id="test-client-id",
+            client_secret="test-client-secret",
+            account_id="test-account-id",
+            **base_connector_kwargs,
+        )
+
+        assert connector.create_zoom_user("newuser@example.com", "Jane", "SecretUser") is False
+
+        diagnostics = "\n".join(connector.errors) + _logged_text(connector.logger)
+        assert "newuser@example.com" not in diagnostics
+        assert "Jane" not in diagnostics
+        assert "SecretUser" not in diagnostics
+        assert "raw-token" not in diagnostics
+        assert "[REDACTED]" in diagnostics
+        connector.logger.exception.assert_not_called()
+        assert all("exc_info" not in logged_call.kwargs for logged_call in connector.logger.method_calls)
 
     @patch("extended_data.connectors.zoom.requests.get")
     @patch("extended_data.connectors.zoom.requests.post")
@@ -249,6 +288,7 @@ class TestZoomConnector:
         assert "user1%40example.com" not in message
         assert "s3cr3t" not in message
         assert "[REDACTED]" in message
+        assert exc_info.value.__cause__ is None
 
     @patch("extended_data.connectors.zoom.requests.get")
     @patch("extended_data.connectors.zoom.requests.post")
@@ -284,6 +324,34 @@ class TestZoomConnector:
 
     @patch("extended_data.connectors.zoom.requests.get")
     @patch("extended_data.connectors.zoom.requests.post")
+    def test_list_meetings_redacts_identifier_and_secret_details(self, mock_post, mock_get, base_connector_kwargs):
+        """Zoom meeting list failures should not chain raw user identifiers."""
+        mock_token_response = MagicMock()
+        mock_token_response.json.return_value = {"access_token": "test-token"}
+        mock_token_response.raise_for_status = MagicMock()
+        mock_post.return_value = mock_token_response
+        mock_get.side_effect = requests.exceptions.RequestException(
+            "failed for private-user@example.com type=scheduled token=raw-token"
+        )
+
+        connector = ZoomConnector(
+            client_id="test-client-id",
+            client_secret="test-client-secret",
+            account_id="test-account-id",
+            **base_connector_kwargs,
+        )
+
+        with pytest.raises(RuntimeError) as exc_info:
+            connector.list_meetings("private-user@example.com")
+
+        message = str(exc_info.value)
+        assert "private-user@example.com" not in message
+        assert "raw-token" not in message
+        assert "[REDACTED]" in message
+        assert exc_info.value.__cause__ is None
+
+    @patch("extended_data.connectors.zoom.requests.get")
+    @patch("extended_data.connectors.zoom.requests.post")
     def test_get_meeting(self, mock_post, mock_get, base_connector_kwargs):
         """Test getting a specific meeting."""
         mock_token_response = MagicMock()
@@ -312,3 +380,29 @@ class TestZoomConnector:
         assert isinstance(meeting["topic"], ExtendedString)
         assert meeting["id"] == "111"
         assert meeting["topic"] == "Team Meeting"
+
+    @patch("extended_data.connectors.zoom.requests.get")
+    @patch("extended_data.connectors.zoom.requests.post")
+    def test_get_meeting_redacts_identifier_and_secret_details(self, mock_post, mock_get, base_connector_kwargs):
+        """Zoom meeting lookup failures should not chain raw meeting identifiers."""
+        mock_token_response = MagicMock()
+        mock_token_response.json.return_value = {"access_token": "test-token"}
+        mock_token_response.raise_for_status = MagicMock()
+        mock_post.return_value = mock_token_response
+        mock_get.side_effect = requests.exceptions.RequestException("meeting private-meeting token=raw-token")
+
+        connector = ZoomConnector(
+            client_id="test-client-id",
+            client_secret="test-client-secret",
+            account_id="test-account-id",
+            **base_connector_kwargs,
+        )
+
+        with pytest.raises(RuntimeError) as exc_info:
+            connector.get_meeting("private-meeting")
+
+        message = str(exc_info.value)
+        assert "private-meeting" not in message
+        assert "raw-token" not in message
+        assert "[REDACTED]" in message
+        assert exc_info.value.__cause__ is None

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import base64
 
+from collections.abc import Iterable, Mapping
 from typing import Any
 
 import requests
@@ -20,7 +21,22 @@ DEFAULT_REQUEST_TIMEOUT = 30
 
 def _safe_zoom_text(value: Any, *sensitive_values: Any) -> str:
     """Redact secrets and request identifiers from Zoom diagnostics."""
-    return redact_sensitive_text(value, values=sensitive_values)
+    return redact_sensitive_text(value, values=_iter_diagnostic_values(sensitive_values))
+
+
+def _iter_diagnostic_values(values: Iterable[Any]) -> Iterable[Any]:
+    """Yield scalar values from nested diagnostic context."""
+    for value in values:
+        if value is None:
+            continue
+        if isinstance(value, Mapping):
+            yield from _iter_diagnostic_values(value.values())
+        elif isinstance(value, (str, bytes)):
+            yield value
+        elif isinstance(value, Iterable):
+            yield from _iter_diagnostic_values(value)
+        else:
+            yield value
 
 
 def _zoom_error(action: str, exc: BaseException, *sensitive_values: Any) -> str:
@@ -61,8 +77,14 @@ class ZoomConnector(VendorConnectorBase):
             response.raise_for_status()
             return response.json().get("access_token")
         except requests.exceptions.RequestException as exc:
-            msg = "Failed to get Zoom access token"
-            raise RuntimeError(msg) from exc
+            msg = _zoom_error(
+                "Failed to get Zoom access token",
+                exc,
+                self.client_id,
+                self.client_secret,
+                self.account_id,
+            )
+            raise RuntimeError(msg) from None
 
     def get_headers(self) -> dict[str, str]:
         """Get headers with authorization for Zoom API calls."""
@@ -100,7 +122,7 @@ class ZoomConnector(VendorConnectorBase):
                 if not next_page_token:
                     break
             except requests.exceptions.RequestException as exc:
-                raise RuntimeError(_zoom_error("Failed to get Zoom users", exc)) from exc
+                raise RuntimeError(_zoom_error("Failed to get Zoom users", exc, next_page_token, params)) from None
 
         return self.extend_result(users)
 
@@ -115,7 +137,7 @@ class ZoomConnector(VendorConnectorBase):
         except requests.exceptions.RequestException as exc:
             error_msg = _zoom_error("Failed to remove Zoom user", exc, email)
             self.errors.append(error_msg)
-            self.logger.exception(error_msg)
+            self.logger.error(error_msg)  # noqa: TRY400 - traceback can expose raw Zoom user identifiers.
 
     def create_zoom_user(self, email: str, first_name: str, last_name: str) -> bool:
         """Create a Zoom user with a paid license."""
@@ -133,7 +155,7 @@ class ZoomConnector(VendorConnectorBase):
         except requests.exceptions.RequestException as exc:
             error_msg = _zoom_error("Failed to create Zoom user", exc, email, first_name, last_name)
             self.errors.append(error_msg)
-            self.logger.exception(error_msg)
+            self.logger.error(error_msg)  # noqa: TRY400 - traceback can expose raw Zoom user identifiers.
             return False
 
     def get_user(self, user_id: str) -> ExtendedDict:
@@ -153,7 +175,7 @@ class ZoomConnector(VendorConnectorBase):
             response.raise_for_status()
             return self.extend_result(response.json())
         except requests.exceptions.RequestException as exc:
-            raise RuntimeError(_zoom_error("Failed to get Zoom user", exc, user_id)) from exc
+            raise RuntimeError(_zoom_error("Failed to get Zoom user", exc, user_id)) from None
 
     def list_meetings(self, user_id: str, meeting_type: str = "scheduled") -> ExtendedList[ExtendedDict]:
         """List meetings for a specific user.
@@ -175,7 +197,7 @@ class ZoomConnector(VendorConnectorBase):
             data = response.json()
             return self.extend_result(data.get("meetings", []))
         except requests.exceptions.RequestException as exc:
-            raise RuntimeError(_zoom_error("Failed to list Zoom meetings", exc, user_id)) from exc
+            raise RuntimeError(_zoom_error("Failed to list Zoom meetings", exc, user_id, params)) from None
 
     def get_meeting(self, meeting_id: str) -> ExtendedDict:
         """Get details of a specific meeting.
@@ -194,7 +216,7 @@ class ZoomConnector(VendorConnectorBase):
             response.raise_for_status()
             return self.extend_result(response.json())
         except requests.exceptions.RequestException as exc:
-            raise RuntimeError(_zoom_error("Failed to get Zoom meeting", exc, meeting_id)) from exc
+            raise RuntimeError(_zoom_error("Failed to get Zoom meeting", exc, meeting_id)) from None
 
 
 from extended_data.connectors.zoom.tools import (
