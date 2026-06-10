@@ -22,6 +22,16 @@ def test_logger_initialization() -> None:
     assert logger.logger is not None
 
 
+def test_logger_does_not_write_files_by_default(tmp_path, monkeypatch) -> None:
+    """Default logging should not create files in the caller's working directory."""
+    monkeypatch.chdir(tmp_path)
+
+    logger = Logging(logger_name="default_logger")
+
+    assert logger.enable_file is False
+    assert not (tmp_path / "default_logger.log").exists()
+
+
 def test_basic_logging(logger: Logging) -> None:
     """Test basic message logging without any markers or verbosity.
 

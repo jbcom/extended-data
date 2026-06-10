@@ -73,7 +73,7 @@ class Logging:
     def __init__(
         self,
         enable_console: bool = False,
-        enable_file: bool = True,
+        enable_file: bool = False,
         logger: logging.Logger | None = None,
         logger_name: str | None = None,
         log_file_name: str | None = None,
@@ -91,7 +91,8 @@ class Logging:
 
         Args:
             enable_console: Whether to enable console output.
-            enable_file: Whether to enable file output.
+            enable_file: Whether to enable file output. Defaults to False so library
+                consumers do not get log files unless they opt in.
             logger: An existing logger instance to use.
             logger_name: The name for a new logger instance.
             log_file_name: The name of the log file if file logging enabled.

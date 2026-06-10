@@ -26,6 +26,16 @@ def _connector() -> ExampleConnector:
     return ExampleConnector(from_environment=False, logger=logger)
 
 
+def test_connector_default_logging_does_not_create_cwd_log_file(tmp_path, monkeypatch) -> None:
+    """Default connector construction should not write log files as a side effect."""
+    monkeypatch.chdir(tmp_path)
+
+    connector = ExampleConnector(from_environment=False)
+
+    assert connector.logging.enable_file is False
+    assert not (tmp_path / "ExampleConnector.log").exists()
+
+
 def test_decode_response_promotes_json_to_extended_containers() -> None:
     """JSON responses flow through the Tier 2 container bridge."""
     connector = _connector()
