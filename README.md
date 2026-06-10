@@ -137,7 +137,14 @@ uv run mypy \
   src/extended_data/connectors/aws/tools.py \
   src/extended_data/connectors/aws/s3.py \
   src/extended_data/connectors/aws/sso.py \
-  src/extended_data/connectors/aws/organizations.py
+  src/extended_data/connectors/aws/organizations.py \
+  src/extended_data/connectors/google/__init__.py \
+  src/extended_data/connectors/google/services.py \
+  src/extended_data/connectors/google/workspace.py \
+  src/extended_data/connectors/google/cloud.py \
+  src/extended_data/connectors/google/billing.py \
+  src/extended_data/connectors/google/tools.py \
+  src/extended_data/connectors/google/jules.py
 uv build
 ```
 

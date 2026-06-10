@@ -229,15 +229,18 @@ def list_workspace_users(
     from extended_data.connectors.google import GoogleConnectorFull
 
     connector = GoogleConnectorFull()
-    users = connector.list_users(
+    users_raw: Any = connector.list_users(
         domain=domain or None,
         flatten_names=True,
         key_by_email=False,
     )
+    users = list(users_raw.values()) if isinstance(users_raw, dict) else users_raw
 
     # Limit results and extract key fields
-    result = []
+    result: list[dict[str, Any]] = []
     for user in users[:max_results]:
+        if not isinstance(user, dict):
+            continue
         result.append(
             {
                 "email": user.get("primaryEmail", ""),
@@ -267,14 +270,17 @@ def list_workspace_groups(
     from extended_data.connectors.google import GoogleConnectorFull
 
     connector = GoogleConnectorFull()
-    groups = connector.list_groups(
+    groups_raw: Any = connector.list_groups(
         domain=domain or None,
         key_by_email=False,
     )
+    groups = list(groups_raw.values()) if isinstance(groups_raw, dict) else groups_raw
 
     # Limit results and extract key fields
-    result = []
+    result: list[dict[str, Any]] = []
     for group in groups[:max_results]:
+        if not isinstance(group, dict):
+            continue
         result.append(
             {
                 "email": group.get("email", ""),

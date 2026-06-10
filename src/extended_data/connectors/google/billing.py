@@ -6,7 +6,7 @@ and project billing associations.
 
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from extended_data import unhump_map
 
@@ -18,6 +18,12 @@ class GoogleBillingMixin:
     - get_billing_service()
     - logger
     """
+
+    if TYPE_CHECKING:
+        logger: Any
+        service_account_info: dict[str, Any]
+
+        def get_billing_service(self) -> Any: ...
 
     def list_billing_accounts(
         self,

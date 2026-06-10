@@ -29,6 +29,8 @@ from __future__ import annotations
 from enum import Enum
 from typing import Any
 
+import httpx
+
 from pydantic import BaseModel, Field
 
 from extended_data.connectors.base import VendorConnectorBase
@@ -74,14 +76,14 @@ class Source(BaseModel):
 
     name: str = Field(..., description="Resource name (e.g., sources/github/org/repo)")
     id: str = Field(..., description="Source ID")
-    github_repo: dict | None = Field(None, alias="githubRepo")
+    github_repo: dict[str, Any] | None = Field(None, alias="githubRepo")
 
 
 class SourceContext(BaseModel):
     """Context for a session's source."""
 
     source: str = Field(..., description="Source resource name")
-    github_repo_context: dict | None = Field(None, alias="githubRepoContext")
+    github_repo_context: dict[str, Any] | None = Field(None, alias="githubRepoContext")
 
 
 class PullRequestOutput(BaseModel):
@@ -103,7 +105,7 @@ class Session(BaseModel):
     prompt: str = Field("", description="Original prompt")
     state: str | None = Field(None, description="Current state")
     source_context: SourceContext | None = Field(None, alias="sourceContext")
-    outputs: list[dict] = Field(default_factory=list, description="Session outputs")
+    outputs: list[dict[str, Any]] = Field(default_factory=list, description="Session outputs")
 
     @property
     def pull_request(self) -> PullRequestOutput | None:
@@ -137,8 +139,8 @@ class JulesConnector(VendorConnectorBase):
         api_key: str | None = None,
         base_url: str | None = None,
         timeout: float = 60.0,
-        **kwargs,
-    ):
+        **kwargs: Any,
+    ) -> None:
         """Initialize the Jules connector.
 
         Args:
@@ -156,7 +158,7 @@ class JulesConnector(VendorConnectorBase):
             "Content-Type": "application/json",
         }
 
-    def _handle_response(self, response) -> dict:
+    def _handle_response(self, response: httpx.Response) -> dict[str, Any]:
         """Handle API response, raising on errors."""
         if not response.is_success:
             try:
@@ -184,7 +186,7 @@ class JulesConnector(VendorConnectorBase):
         Returns:
             List of Source objects.
         """
-        params = {"pageSize": page_size}
+        params: dict[str, Any] = {"pageSize": page_size}
         if page_token:
             params["pageToken"] = page_token
 
@@ -219,7 +221,7 @@ class JulesConnector(VendorConnectorBase):
         Returns:
             Created Session object.
         """
-        body = {
+        body: dict[str, Any] = {
             "prompt": prompt,
             "sourceContext": {
                 "source": source,
@@ -268,7 +270,7 @@ class JulesConnector(VendorConnectorBase):
         Returns:
             List of Session objects.
         """
-        params = {"pageSize": page_size}
+        params: dict[str, Any] = {"pageSize": page_size}
         if page_token:
             params["pageToken"] = page_token
 

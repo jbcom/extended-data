@@ -6,7 +6,7 @@ through the Admin Directory API.
 
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from extended_data import unhump_map
 
@@ -20,7 +20,13 @@ class GoogleWorkspaceMixin:
     - logger
     """
 
-    def list_users(
+    if TYPE_CHECKING:
+        logger: Any
+        service_account_info: dict[str, Any]
+
+        def get_admin_directory_service(self, subject: str | None = None) -> Any: ...
+
+    def list_workspace_users(
         self,
         domain: str | None = None,
         max_results: int = 500,
@@ -98,7 +104,7 @@ class GoogleWorkspaceMixin:
         change_password_at_next_login: bool = True,
         org_unit_path: str = "/",
         subject: str | None = None,
-        **additional_fields,
+        **additional_fields: Any,
     ) -> dict[str, Any]:
         """Create a user in Google Workspace.
 
@@ -142,7 +148,7 @@ class GoogleWorkspaceMixin:
         self,
         user_key: str,
         subject: str | None = None,
-        **fields,
+        **fields: Any,
     ) -> dict[str, Any]:
         """Update a user in Google Workspace.
 
@@ -174,7 +180,7 @@ class GoogleWorkspaceMixin:
         service.users().delete(userKey=user_key).execute()
         self.logger.info(f"Deleted user: {user_key}")
 
-    def list_groups(
+    def list_workspace_groups(
         self,
         domain: str | None = None,
         max_results: int = 200,
@@ -419,7 +425,7 @@ class GoogleWorkspaceMixin:
         change_password_at_next_login: bool = True,
         org_unit_path: str = "/",
         subject: str | None = None,
-        **additional_fields,
+        **additional_fields: Any,
     ) -> dict[str, Any]:
         """Create or update a user in Google Workspace.
 
@@ -487,7 +493,7 @@ class GoogleWorkspaceMixin:
         description: str = "",
         update_if_exists: bool = False,
         subject: str | None = None,
-        **additional_fields,
+        **additional_fields: Any,
     ) -> dict[str, Any]:
         """Create or update a group in Google Workspace.
 

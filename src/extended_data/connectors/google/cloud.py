@@ -6,7 +6,7 @@ folders, projects, and IAM.
 
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from extended_data import unhump_map
 
@@ -19,6 +19,13 @@ class GoogleCloudMixin:
     - get_iam_service()
     - logger
     """
+
+    if TYPE_CHECKING:
+        logger: Any
+
+        def get_cloud_resource_manager_service(self) -> Any: ...
+
+        def get_iam_service(self) -> Any: ...
 
     def get_organization_id(self) -> str:
         """Get the Google Cloud organization ID.

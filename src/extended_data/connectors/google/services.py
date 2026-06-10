@@ -6,7 +6,7 @@ services like GKE, Compute Engine, Cloud Storage, Cloud SQL, Pub/Sub, etc.
 
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from extended_data import unhump_map
 
@@ -24,6 +24,25 @@ class GoogleServicesMixin:
     - get_cloudkms_service()
     - logger
     """
+
+    if TYPE_CHECKING:
+        logger: Any
+
+        def get_compute_service(self) -> Any: ...
+
+        def get_container_service(self) -> Any: ...
+
+        def get_storage_service(self) -> Any: ...
+
+        def get_sqladmin_service(self) -> Any: ...
+
+        def get_pubsub_service(self) -> Any: ...
+
+        def get_serviceusage_service(self) -> Any: ...
+
+        def get_cloudkms_service(self) -> Any: ...
+
+        def get_cloud_resource_manager_service(self) -> Any: ...
 
     # =========================================================================
     # Compute Engine
@@ -54,11 +73,11 @@ class GoogleServicesMixin:
             # List instances in specific zone
             page_token = None
             while True:
-                params: dict[str, Any] = {"project": project_id, "zone": zone}
+                zone_params: dict[str, Any] = {"project": project_id, "zone": zone}
                 if page_token:
-                    params["pageToken"] = page_token
+                    zone_params["pageToken"] = page_token
 
-                response = service.instances().list(**params).execute()
+                response = service.instances().list(**zone_params).execute()
                 instances.extend(response.get("items", []))
 
                 page_token = response.get("nextPageToken")
@@ -68,11 +87,11 @@ class GoogleServicesMixin:
             # Aggregate list across all zones
             page_token = None
             while True:
-                params: dict[str, Any] = {"project": project_id}
+                aggregate_params: dict[str, Any] = {"project": project_id}
                 if page_token:
-                    params["pageToken"] = page_token
+                    aggregate_params["pageToken"] = page_token
 
-                response = service.instances().aggregatedList(**params).execute()
+                response = service.instances().aggregatedList(**aggregate_params).execute()
                 for zone_data in response.get("items", {}).values():
                     instances.extend(zone_data.get("instances", []))
 

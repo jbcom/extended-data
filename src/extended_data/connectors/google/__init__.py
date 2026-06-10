@@ -63,8 +63,8 @@ class GoogleConnector(VendorConnectorBase):
         scopes: list[str] | None = None,
         subject: str | None = None,
         logger: Logging | None = None,
-        **kwargs,
-    ):
+        **kwargs: Any,
+    ) -> None:
         """Initialize the Google connector.
 
         Args:
@@ -93,7 +93,11 @@ class GoogleConnector(VendorConnectorBase):
                 self.logger.exception(f"Failed to parse GOOGLE_SERVICE_ACCOUNT JSON: {e}")
                 raise
 
-        self.service_account_info = service_account_info
+        if not isinstance(service_account_info, dict):
+            msg = "Google service account info must be a JSON object"
+            raise TypeError(msg)
+
+        self.service_account_info: dict[str, Any] = service_account_info
         self._credentials: service_account.Credentials | None = None
         self._services: dict[str, Any] = {}
 
@@ -274,8 +278,8 @@ class GoogleConnector(VendorConnectorBase):
             return None
 
         if isinstance(value, str):
-            normalized = [item.strip() for item in value.split(",") if item.strip()]
-            return normalized or None
+            parts = [item.strip() for item in value.split(",") if item.strip()]
+            return parts or None
 
         normalized: list[str] = []
         for item in value:
