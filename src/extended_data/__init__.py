@@ -108,7 +108,7 @@ from extended_data.type_utils import (
 from extended_data.yaml_utils import decode_yaml, encode_yaml, is_yaml_data
 
 
-__version__ = "6.2.2"
+__version__ = "7.0.0"  # x-release-please-version
 
 __all__ = [
     "FilePath",

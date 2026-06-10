@@ -5,7 +5,13 @@
     ".": {
       "package-name": "extended-data",
       "release-type": "python",
-      "changelog-path": "CHANGELOG.md"
+      "changelog-path": "CHANGELOG.md",
+      "extra-files": [
+        {
+          "type": "generic",
+          "path": "src/extended_data/__init__.py"
+        }
+      ]
     }
   },
   "changelog-sections": [
