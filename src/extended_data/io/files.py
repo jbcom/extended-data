@@ -316,7 +316,7 @@ def decode_file(
     file_path: FilePath | None = None,
     suffix: str | None = None,
     *,
-    as_extended: bool = False,
+    as_extended: bool = True,
 ) -> Any:
     """Decodes file data based on file extension or explicit suffix.
 
@@ -328,7 +328,7 @@ def decode_file(
         file_path (FilePath | None): Optional file path to infer format from extension.
         suffix (str | None): Explicit format suffix (e.g., "yaml", "json", "toml", "hcl").
             Takes precedence over file_path extension.
-        as_extended (bool): Wrap decoded container values in Tier 2 Extended Data containers.
+        as_extended (bool): Wrap decoded values in Tier 2 Extended Data containers.
 
     Returns:
         Any: The decoded data structure, or the original string if format is unknown.

@@ -158,8 +158,8 @@ def test_layered_config_workflow_round_trip(tmp_path: Path) -> None:
     write_file("config/base.yaml", base_config, tld=tmp_path)
     write_file("config/dev.yaml", env_config, tld=tmp_path)
 
-    base_data = decode_file(read_file("config/base.yaml", tld=tmp_path), file_path="config/base.yaml", as_extended=True)
-    env_data = decode_file(read_file("config/dev.yaml", tld=tmp_path), file_path="config/dev.yaml", as_extended=True)
+    base_data = decode_file(read_file("config/base.yaml", tld=tmp_path), file_path="config/base.yaml")
+    env_data = decode_file(read_file("config/dev.yaml", tld=tmp_path), file_path="config/dev.yaml")
     merged = base_data.deep_merge(env_data)
 
     output_path = write_file("build/config.yaml", merged, tld=tmp_path)
@@ -228,7 +228,7 @@ def test_api_payload_factory_workflow_round_trip(tmp_path: Path) -> None:
     }
 
     raw_path = write_file("build/raw-payload.json", raw_payload, tld=tmp_path)
-    decoded = decode_file(read_file(raw_path), file_path=raw_path, as_extended=True)
+    decoded = decode_file(read_file(raw_path), file_path=raw_path)
     normalized = decoded.deduplicate().unhump()
 
     output_path = write_file("build/payload.json", normalized, tld=tmp_path)
@@ -251,7 +251,7 @@ def test_yaml_native_workflow_round_trip(tmp_path: Path) -> None:
     }
 
     output_path = write_file("template.yaml", template, tld=tmp_path)
-    decoded = decode_file(read_file(output_path), file_path=output_path, as_extended=True)
+    decoded = decode_file(read_file(output_path), file_path=output_path)
 
     assert output_path == tmp_path / "template.yaml"
     assert isinstance(decoded, ExtendedDict)

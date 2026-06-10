@@ -52,6 +52,7 @@ def sanitize_key(key: str, delim: str = "_") -> str:
     Returns:
         str: The sanitized key.
     """
+    key = str(key)
     return "".join(x if (x.isalnum() or x == delim) else delim for x in key)
 
 
@@ -66,6 +67,8 @@ def truncate(msg: str, max_length: int, ender: str = "...") -> str:
     Returns:
         str: The truncated message.
     """
+    msg = str(msg)
+    ender = str(ender)
     if max_length <= 0:
         return ""
 
@@ -85,6 +88,7 @@ def lower_first_char(inp: str) -> str:
     Returns:
         str: The string with the first character in lowercase.
     """
+    inp = str(inp)
     return inp[:1].lower() + inp[1:] if inp else ""
 
 
@@ -97,6 +101,7 @@ def upper_first_char(inp: str) -> str:
     Returns:
         str: The string with the first character in uppercase.
     """
+    inp = str(inp)
     return inp[:1].upper() + inp[1:] if inp else ""
 
 
@@ -109,7 +114,7 @@ def is_url(url: str) -> bool:
     Returns:
         bool: True if the string is a valid URL, False otherwise.
     """
-    parsed = urlparse(url.strip())
+    parsed = urlparse(str(url).strip())
     return all([parsed.scheme, parsed.netloc])
 
 
@@ -122,7 +127,7 @@ def titleize_name(name: str) -> str:
     Returns:
         str: The TitleCase name.
     """
-    return inflection.titleize(inflection.underscore(name))
+    return inflection.titleize(inflection.underscore(str(name)))
 
 
 def removeprefix(string: str, prefix: str) -> str:
@@ -135,7 +140,7 @@ def removeprefix(string: str, prefix: str) -> str:
     Returns:
         str: The string with the prefix removed if it was present, otherwise the original string.
     """
-    return string.removeprefix(prefix)
+    return str(string).removeprefix(str(prefix))
 
 
 def removesuffix(string: str, suffix: str) -> str:
@@ -148,6 +153,8 @@ def removesuffix(string: str, suffix: str) -> str:
     Returns:
         str: The string with the suffix removed if it was present, otherwise the original string.
     """
+    string = str(string)
+    suffix = str(suffix)
     if not suffix:
         return string
     return string.removesuffix(suffix)

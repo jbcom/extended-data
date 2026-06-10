@@ -17,14 +17,14 @@ def unwrap_raw_data_from_import(
     wrapped_data: str | memoryview | bytes | bytearray,
     encoding: str = "yaml",
     *,
-    as_extended: bool = False,
+    as_extended: bool = True,
 ) -> Any:
     """Unwraps the data that was wrapped for import.
 
     Args:
         wrapped_data (str | memoryview | bytes | bytearray): The wrapped data.
         encoding (str): The encoding format (default is 'yaml').
-        as_extended (bool): Wrap decoded container values in Tier 2 Extended Data containers.
+        as_extended (bool): Wrap decoded values in Tier 2 Extended Data containers.
 
     Returns:
         Any: The unwrapped data.

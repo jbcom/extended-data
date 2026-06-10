@@ -12,6 +12,7 @@ import inflection
 
 
 def _normalize_separators(text: str) -> str:
+    text = str(text)
     spaced = re.sub(r"(?<=[a-z])(?=[A-Z])", " ", text)
     return spaced.replace("-", " ").replace("_", " ")
 
@@ -41,13 +42,13 @@ def to_kebab_case(text: str) -> str:
 
 def pluralize(text: str) -> str:
     """Convert string to plural form."""
-    return inflection.pluralize(text)
+    return inflection.pluralize(str(text))
 
 
 def singularize(text: str) -> str:
     """Convert string to singular form."""
-    normalized = text
-    if text.lower() == "criteria":
+    normalized = str(text)
+    if normalized.lower() == "criteria":
         return "criterion"
     return inflection.singularize(normalized)
 

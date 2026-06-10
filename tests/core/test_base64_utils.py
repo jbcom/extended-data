@@ -179,15 +179,24 @@ def test_base64_decode_with_tf_alias_unwrap() -> None:
     assert result == {"locals": [{"region": "us-east-1"}]}
 
 
-def test_base64_decode_can_return_extended_containers() -> None:
-    """Base64 decoding can opt into the Tier 2 container layer."""
+def test_base64_decode_returns_extended_containers_by_default() -> None:
+    """Base64 unwrapping enters the Tier 2 container layer by default."""
     encoded_data = base64.b64encode(b'{"service": {"name": "api"}, "ports": [8080]}').decode("utf-8")
-    result = base64_decode(encoded_data, unwrap_raw_data=True, encoding="json", as_extended=True)
+    result = base64_decode(encoded_data, unwrap_raw_data=True, encoding="json")
 
     assert isinstance(result, ExtendedDict)
     assert isinstance(result["service"], ExtendedDict)
     assert isinstance(result["service"]["name"], ExtendedString)
     assert isinstance(result["ports"], ExtendedList)
+
+
+def test_base64_decode_can_return_builtin_containers() -> None:
+    """Base64 unwrapping can explicitly return plain Python containers."""
+    encoded_data = base64.b64encode(b'{"service": {"name": "api"}}').decode("utf-8")
+    result = base64_decode(encoded_data, unwrap_raw_data=True, encoding="json", as_extended=False)
+
+    assert isinstance(result, dict)
+    assert not isinstance(result, ExtendedDict)
 
 
 def test_base64_decode_rejects_non_utf8_when_unwrapping() -> None:

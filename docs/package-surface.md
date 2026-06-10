@@ -67,17 +67,19 @@ Container methods that return derived collections stay in Tier 2 as well:
 `ExtendedDict` values, and `ExtendedDict.all_values()` returns an
 `ExtendedList`.
 
-Tier 3 decode surfaces can promote plain decoded values into Tier 2 containers:
+Tier 3 decode surfaces promote decoded values into Tier 2 containers by
+default:
 
 ```python
 from extended_data import decode_file
 
-payload = decode_file('{"service": {"name": "api"}}', suffix="json", as_extended=True)
+payload = decode_file('{"service": {"name": "api"}}', suffix="json")
 assert payload["service"]["name"].upper_first() == "Api"
 ```
 
-Use `extend_data(value)` to promote existing plain data and `to_builtin(value)`
-to lower extended containers back to standard Python data.
+Pass `as_extended=False` when a decode boundary should return standard Python
+containers. Use `extend_data(value)` to promote existing plain data and
+`to_builtin(value)` to lower extended containers back to standard Python data.
 Tuple values are promoted to `ExtendedTuple` and lowered back to Python tuples,
 so the Tier 2 surface does not silently turn immutable input data into mutable
 lists.

@@ -468,10 +468,10 @@ def test_read_file_return_path(tmp_path: Path) -> None:
 @pytest.mark.parametrize(
     ("data", "suffix", "expected_type"),
     [
-        ('{"key": "value"}', "json", dict),
-        ("key: value", "yaml", dict),
-        ("key: value", "yml", dict),
-        ("plain text", "txt", str),
+        ('{"key": "value"}', "json", ExtendedDict),
+        ("key: value", "yaml", ExtendedDict),
+        ("key: value", "yml", ExtendedDict),
+        ("plain text", "txt", ExtendedString),
     ],
 )
 def test_decode_file(data: str, suffix: str, expected_type: type) -> None:
@@ -489,6 +489,14 @@ def test_decode_file(data: str, suffix: str, expected_type: type) -> None:
     assert isinstance(result, expected_type)
 
 
+def test_decode_file_can_return_builtin_containers() -> None:
+    """File decoding can explicitly lower back to plain Python containers."""
+    result = decode_file('{"key": "value"}', suffix="json", as_extended=False)
+
+    assert isinstance(result, dict)
+    assert not isinstance(result, ExtendedDict)
+
+
 def test_decode_file_infer_suffix() -> None:
     """Tests decode_file inferring suffix from file path.
 
@@ -496,34 +504,36 @@ def test_decode_file_infer_suffix() -> None:
         Suffix is correctly inferred from file path.
     """
     result = decode_file('{"key": "value"}', file_path="/path/to/file.json")
-    assert isinstance(result, dict)
+    assert isinstance(result, ExtendedDict)
     assert result == {"key": "value"}
 
 
 def test_decode_file_infer_hcl_suffix() -> None:
     """Infer HCL decoding from a Terraform file path."""
     result = decode_file('variable "region" { default = "us-east-1" }', file_path="/path/to/variables.tf")
+    assert isinstance(result, ExtendedDict)
     assert result == {"variable": [{"region": {"default": "us-east-1"}}]}
 
 
 def test_decode_file_infer_toml_alias_suffix() -> None:
     """Infer TOML decoding from historical .tml suffixes."""
     result = decode_file('title = "Example"\n', file_path="/path/to/config.tml")
+    assert isinstance(result, ExtendedDict)
     assert result == {"title": "Example"}
 
 
 def test_decode_file_accepts_bytes_payload() -> None:
     """Decode bytes-like payloads through the same file helper."""
     result = decode_file(b'{"key":"value"}', file_path="/path/to/file.json")
+    assert isinstance(result, ExtendedDict)
     assert result == {"key": "value"}
 
 
-def test_decode_file_can_return_extended_containers() -> None:
-    """File decoding can opt into the Tier 2 container layer."""
+def test_decode_file_returns_extended_containers_by_default() -> None:
+    """File decoding enters the Tier 2 container layer by default."""
     result = decode_file(
         '{"service": {"name": "api"}, "ports": [8080]}',
         file_path="/path/to/file.json",
-        as_extended=True,
     )
 
     assert isinstance(result, ExtendedDict)

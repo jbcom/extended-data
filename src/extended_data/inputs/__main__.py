@@ -277,6 +277,7 @@ class InputProvider:
                     conf,
                     unwrap_raw_data=decode_from_json or decode_from_yaml,
                     encoding="json" if decode_from_json else "yaml",
+                    as_extended=False,
                 )
             except (binascii.Error, DataDecodeError) as exc:
                 message = f"Failed to decode input {k} from Base64."

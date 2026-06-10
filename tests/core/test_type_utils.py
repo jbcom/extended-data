@@ -14,6 +14,7 @@ from typing import Any
 
 import pytest
 
+from extended_data.containers import ExtendedDict, ExtendedList, ExtendedSet, ExtendedString
 from extended_data.primitives.formats.yaml import YamlPairs, YamlTagged
 from extended_data.primitives.types import (
     ConversionError,
@@ -195,6 +196,25 @@ def test_strtobool_rejects_non_strings_when_requested() -> None:
     """Reject unsupported non-string inputs when raise_on_error is enabled."""
     with pytest.raises(ConversionError, match=r"Invalid <class 'bool'> value: 123"):
         strtobool(123, raise_on_error=True)
+
+
+def test_string_type_converters_accept_extended_string_values() -> None:
+    """Type conversion primitives compose with Tier 2 ExtendedString values."""
+    assert strtobool(ExtendedString("true")) is True
+    assert strtofloat(ExtendedString("3.14")) == EXPECTED_FLOAT_1
+    assert strtoint(ExtendedString("42")) == EXPECTED_INT_1
+    assert strtodate(ExtendedString("2023-09-05")) == datetime.date(2023, 9, 5)
+    assert strtodatetime(ExtendedString("2023-09-05T12:30:00")) == datetime.datetime(
+        2023,
+        9,
+        5,
+        12,
+        30,
+        0,
+        tzinfo=datetime.timezone.utc,
+    )
+    assert strtotime(ExtendedString("12:30")) == datetime.time(12, 30, 0)
+    assert strtopath(ExtendedString("/valid/path")) == Path("/valid/path")
 
 
 def test_strtofloat(strtofloat_data: tuple[str, float | None]) -> None:
@@ -498,6 +518,23 @@ def test_convert_special_type_handles_mappings_and_sequences_directly() -> None:
     assert convert_special_type((Path("/tmp/a"), datetime.date(2025, 1, 15))) == ["/tmp/a", "2025-01-15"]
 
 
+def test_convert_special_types_handles_extended_containers() -> None:
+    """Normalize Tier 2 containers without stringifying nested collections."""
+    value = ExtendedDict(
+        {
+            "enabled": ExtendedString("true"),
+            "paths": ExtendedList([Path("/tmp/a"), datetime.date(2025, 1, 15)]),
+            "tags": ExtendedSet({ExtendedString("api")}),
+        }
+    )
+
+    result = convert_special_types(value)
+
+    assert result["enabled"] == "true"
+    assert result["paths"] == ["/tmp/a", "2025-01-15"]
+    assert result["tags"] == ["api"]
+
+
 # Test for convert_special_types function
 @pytest.mark.parametrize(
     ("obj", "expected"),
@@ -633,6 +670,25 @@ def test_reconstruct_special_types_handles_tuples_and_frozensets() -> None:
 
     assert tuple_result == (datetime.date(2023, 9, 5), True)
     assert frozenset_result == frozenset([datetime.date(2023, 9, 5), True])
+
+
+def test_reconstruct_special_types_handles_extended_containers() -> None:
+    """Reconstruct special values inside Tier 2 containers."""
+    value = ExtendedDict(
+        {
+            "enabled": ExtendedString("true"),
+            "count": ExtendedString("5"),
+            "items": ExtendedList([ExtendedString("2023-09-05")]),
+            "tags": ExtendedSet({ExtendedString("false")}),
+        }
+    )
+
+    result = reconstruct_special_types(value, fail_silently=False)
+
+    assert result["enabled"] is True
+    assert result["count"] == 5
+    assert result["items"] == [datetime.date(2023, 9, 5)]
+    assert result["tags"] == {False}
 
 
 def test_reconstruct_special_types_leaves_non_container_values_alone() -> None:

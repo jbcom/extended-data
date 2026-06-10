@@ -37,7 +37,7 @@ inputs = InputProvider(inputs={"GITHUB_OWNER": "jbcom"}, from_environment=False)
 connectors = ConnectorFabric(inputs=inputs.inputs, logger=logger)
 data = decode_json('{"status": "ok"}')
 payload = ExtendedDict(data).deep_merge({"source": "example"})
-decoded_file = decode_file('{"service": {"name": "api"}}', suffix="json", as_extended=True)
+decoded_file = decode_file('{"service": {"name": "api"}}', suffix="json")
 workflow = DataWorkflow.from_value(payload).then(("normalize", lambda data: data.unhump())).result()
 
 print(encode_yaml(payload))
@@ -119,7 +119,7 @@ The package is intentionally tiered:
 - Tier 3 processors use the first two tiers to handle files, inputs, API data,
   vendor integrations, and workflows.
 
-Tier 3 decoders can opt into Tier 2 containers with `as_extended=True`, so
+Tier 3 decoders return Tier 2 containers by default, so
 decoded files, Base64 payloads, and directed inputs can immediately use
 `ExtendedDict`, `ExtendedList`, `ExtendedTuple`, `ExtendedSet`, and
 `ExtendedString` methods.

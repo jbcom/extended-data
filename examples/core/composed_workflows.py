@@ -120,7 +120,7 @@ def demonstrate_yaml_native_workflow() -> None:
         tld = Path(tmpdir)
         write_file("template.yaml", template, tld=tld)
         rendered = read_file("template.yaml", tld=tld)
-        decoded = decode_file(rendered, file_path="template.yaml", as_extended=True)
+        decoded = decode_file(rendered, file_path="template.yaml")
 
     print(rendered)
     print(f"\nDecoded tag: {decoded['bucket_name'].tag}")

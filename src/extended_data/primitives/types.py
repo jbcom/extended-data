@@ -37,7 +37,9 @@ import os
 import pathlib
 import re
 
+from collections import UserList, UserString
 from collections.abc import Mapping
+from collections.abc import Set as AbstractSet
 from pathlib import Path
 from typing import Any
 
@@ -127,6 +129,9 @@ def strtobool(val: str | bool | None, raise_on_error: bool = False) -> bool | No
     if isinstance(val, bool) or val is None:
         return val
 
+    if isinstance(val, UserString):
+        val = str(val)
+
     if isinstance(val, str):
         if TRUTHY_PATTERN.match(val):
             return True
@@ -152,6 +157,7 @@ def strtofloat(val: str, raise_on_error: bool = False) -> float | None:
     Raises:
         ConversionError: If the value is invalid and raise_on_error is True.
     """
+    val = str(val)
     if NUMBER_PATTERN.match(val):
         try:
             return float(val)
@@ -178,6 +184,7 @@ def strtoint(val: str, raise_on_error: bool = False) -> int | None:
     Raises:
         ConversionError: If the value is invalid and raise_on_error is True.
     """
+    val = str(val)
     try:
         float_value = strtofloat(val, raise_on_error=raise_on_error)
         if float_value is not None:
@@ -216,7 +223,8 @@ def strtopath(val: str | bytes | os.PathLike[str] | None, raise_on_error: bool =
                     raise ConversionError(Path, val) from exc
                 return None
         # Ensure val is converted to string before matching
-        if not PATH_PATTERN.match(str(val)):
+        val = str(val)
+        if not PATH_PATTERN.match(val):
             raise ConversionError(Path, val)
         return Path(val)
     except (ValueError, TypeError) as exc:
@@ -238,6 +246,7 @@ def strtodate(val: str, raise_on_error: bool = False) -> datetime.date | None:
     Raises:
         ConversionError: If the value is invalid and raise_on_error is True.
     """
+    val = str(val)
     if not DATE_PATTERN.match(val):
         if raise_on_error:
             raise ConversionError(datetime.date, val)
@@ -264,6 +273,7 @@ def strtodatetime(val: str, raise_on_error: bool = False) -> datetime.datetime |
     Raises:
         ConversionError: If the value is invalid and raise_on_error is True.
     """
+    val = str(val)
     if not DATETIME_PATTERN.match(val):
         if raise_on_error:
             raise ConversionError(datetime.datetime, val)
@@ -293,6 +303,7 @@ def strtotime(val: str, raise_on_error: bool = False) -> datetime.time | None:
     Raises:
         ConversionError: If the value is invalid and raise_on_error is True.
     """
+    val = str(val)
     if not TIME_PATTERN.match(val):
         if raise_on_error:
             raise ConversionError(datetime.time, val)
@@ -347,15 +358,15 @@ def convert_special_type(obj: Any) -> Any:
         return [convert_special_types(list(pair)) for pair in obj]
     if isinstance(obj, Mapping):
         return {k: convert_special_types(v) for k, v in obj.items()}
-    if isinstance(obj, (set, list, tuple, frozenset)):
+    if isinstance(obj, (set, list, tuple, frozenset, UserList, AbstractSet)) and not isinstance(obj, str | UserString):
         return [convert_special_types(v) for v in obj]
 
     if isinstance(obj, (datetime.date, datetime.datetime)):
         return removesuffix(obj.isoformat(), "+00:00")
     if isinstance(obj, pathlib.Path):
         return str(obj)
-    if isinstance(obj, (int, float, str, bool, type(None))):
-        return obj
+    if isinstance(obj, (int, float, str, bool, type(None), UserString)):
+        return str(obj) if isinstance(obj, UserString) else obj
 
     return str(obj)
 
@@ -368,7 +379,7 @@ def convert_special_types(obj: Any) -> Any:
         return [convert_special_types(list(pair)) for pair in obj]
     if isinstance(obj, Mapping):
         return {k: convert_special_types(v) for k, v in obj.items()}
-    if isinstance(obj, (set, list, tuple, frozenset)):
+    if isinstance(obj, (set, list, tuple, frozenset, UserList, AbstractSet)) and not isinstance(obj, str | UserString):
         return [convert_special_types(v) for v in obj]
 
     return convert_special_type(obj)
@@ -452,11 +463,11 @@ def reconstruct_special_types(obj: Any, fail_silently: bool = False) -> Any:
     Returns:
         Any: The reconstructed object with special types restored where applicable.
     """
-    if isinstance(obj, str):
-        return reconstruct_special_type(obj, fail_silently=fail_silently)
+    if isinstance(obj, str | UserString):
+        return reconstruct_special_type(str(obj), fail_silently=fail_silently)
     if isinstance(obj, Mapping):
         return {k: reconstruct_special_types(v, fail_silently=fail_silently) for k, v in obj.items()}
-    if isinstance(obj, list):
+    if isinstance(obj, list | UserList):
         return [reconstruct_special_types(v, fail_silently=fail_silently) for v in obj]
     if isinstance(obj, tuple):
         return tuple(reconstruct_special_types(v, fail_silently=fail_silently) for v in obj)
@@ -464,6 +475,8 @@ def reconstruct_special_types(obj: Any, fail_silently: bool = False) -> Any:
         return {reconstruct_special_types(v, fail_silently=fail_silently) for v in obj}
     if isinstance(obj, frozenset):
         return frozenset(reconstruct_special_types(v, fail_silently=fail_silently) for v in obj)
+    if isinstance(obj, AbstractSet):
+        return {reconstruct_special_types(v, fail_silently=fail_silently) for v in obj}
     return obj
 
 

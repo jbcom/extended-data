@@ -47,6 +47,7 @@ from typing import Any
 
 import pytest
 
+from extended_data.containers import ExtendedString
 from extended_data.primitives.strings import (
     bytestostr,
     is_url,
@@ -317,3 +318,17 @@ def test_removesuffix(removesuffix_data: tuple[str, str, str]) -> None:
     """
     string, suffix, expected = removesuffix_data
     assert removesuffix(string, suffix) == expected
+
+
+def test_string_utilities_accept_extended_string_values() -> None:
+    """Tier 1 string utilities compose with Tier 2 ExtendedString values."""
+    value = ExtendedString("helloWorld")
+
+    assert sanitize_key(ExtendedString("key-with*invalid_chars")) == "key_with_invalid_chars"
+    assert truncate(ExtendedString("abcdef"), 4) == "a..."
+    assert lower_first_char(ExtendedString("Hello")) == "hello"
+    assert upper_first_char(ExtendedString("hello")) == "Hello"
+    assert is_url(ExtendedString("https://example.com"))
+    assert titleize_name(value) == "Hello World"
+    assert removeprefix(ExtendedString("pre_value"), ExtendedString("pre_")) == "value"
+    assert removesuffix(ExtendedString("value_suffix"), ExtendedString("_suffix")) == "value"

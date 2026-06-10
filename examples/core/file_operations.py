@@ -90,7 +90,7 @@ settings:
         write_file(yaml_file, yaml_content)
 
         yaml_text = read_file(yaml_file)
-        data = decode_file(yaml_text, file_path=yaml_file, as_extended=True)
+        data = decode_file(yaml_text, file_path=yaml_file)
         print(f"\nDecoded YAML file: {data}")
         print(f"YAML service keys: {data.flatten().keys()}")
 
@@ -100,7 +100,7 @@ settings:
         write_file(json_file, json_content)
 
         json_text = read_file(json_file)
-        data = decode_file(json_text, file_path=json_file, as_extended=True)
+        data = decode_file(json_text, file_path=json_file)
         print(f"Decoded JSON file: {data}")
 
 

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import pytest
 
+from extended_data.containers import ExtendedString
 from extended_data.primitives.string_transforms import (
     humanize,
     ordinalize,
@@ -94,3 +95,17 @@ def test_ordinalize_rejects_non_numeric_values() -> None:
     """Reject non-numeric ordinal inputs."""
     with pytest.raises(ValueError, match="ordinalize expects a numeric value"):
         ordinalize("forty-two")
+
+
+def test_string_transforms_accept_extended_string_values() -> None:
+    """Tier 1 string transforms compose with Tier 2 ExtendedString values."""
+    value = ExtendedString("helloWorld")
+
+    assert to_snake_case(value) == "hello_world"
+    assert to_camel_case(ExtendedString("hello_world")) == "helloWorld"
+    assert to_pascal_case(value) == "HelloWorld"
+    assert to_kebab_case(value) == "hello-world"
+    assert pluralize(ExtendedString("book")) == "books"
+    assert singularize(ExtendedString("criteria")) == "criterion"
+    assert humanize(ExtendedString("api_key")) == "API key"
+    assert titleize(ExtendedString("HELLO WORLD")) == "Hello World"
