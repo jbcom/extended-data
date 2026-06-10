@@ -32,6 +32,7 @@ SECRETSSYNC_PROJECT_PATTERNS = (
     re.compile(r"\bsecretssync\s+(?:Go\s+)?(?:project|library|repo|repository|CLI|connector|bindings?)\b", re.IGNORECASE),
     re.compile(r"\b(?:project|library|repo|repository|CLI|connector|bindings?)\s+secretssync\b", re.IGNORECASE),
 )
+NON_RUNTIME_EXTRAS = {"all", "dev", "tests", "typing"}
 
 
 def _pyproject() -> tomlkit.TOMLDocument:
@@ -104,6 +105,24 @@ def test_typed_classifier_has_pep561_marker() -> None:
     assert "Typing :: Typed" in classifiers
     assert (REPO_ROOT / "src" / "extended_data" / "py.typed").is_file()
     assert resources.files("extended_data").joinpath("py.typed").is_file()
+
+
+def test_all_extra_contains_every_runtime_extra_dependency() -> None:
+    """The broad install target should be the union of runtime feature extras."""
+    extras = _pyproject()["project"]["optional-dependencies"]
+    all_dependencies = {str(dependency) for dependency in extras["all"]}
+    missing: list[str] = []
+
+    for extra_name, dependencies in extras.items():
+        if extra_name in NON_RUNTIME_EXTRAS:
+            continue
+
+        for dependency in dependencies:
+            dependency_text = str(dependency)
+            if dependency_text not in all_dependencies:
+                missing.append(f"{extra_name}: {dependency_text}")
+
+    assert missing == []
 
 
 def test_public_guidance_does_not_use_removed_runtime_keywords() -> None:
