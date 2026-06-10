@@ -96,6 +96,13 @@ extended_data/
   workflows/    Tier 3 higher-order workflow composition
 ```
 
+Tier 1 primitive names are explicit in this major version. Use
+`bytes_to_string()` for bytes-like coercion and `string_to_bool()`,
+`string_to_int()`, `string_to_float()`, `string_to_path()`,
+`string_to_date()`, `string_to_datetime()`, and `string_to_time()` for scalar
+string conversion. The old `bytestostr` and `strto*` helper names are not
+preserved.
+
 Vendor connectors are first-class adapters in the data fabric. `ConnectorFabric`
 uses the registry to resolve connectors by name, injects shared input/logging
 context, caches connector instances, and lets specialized helpers coexist with

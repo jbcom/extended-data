@@ -46,6 +46,13 @@ from extended_data import (
 - Tier 3 processors use the first two tiers to handle files, imports, exports,
   inputs, API data, vendor integrations, and workflows.
 
+Clean major-version primitive names prefer explicit Python words over inherited
+helper spellings: use `bytes_to_string()` and the `string_to_*()` conversion
+family (`string_to_bool()`, `string_to_int()`, `string_to_float()`,
+`string_to_path()`, `string_to_date()`, `string_to_datetime()`, and
+`string_to_time()`). The old `bytestostr` and `strto*` helper names are
+intentionally not preserved.
+
 Direct JSON, YAML, TOML, and HCL decode failures raise `DataDecodeError` with
 format and position context while preserving the parser exception as the cause;
 the public error message does not echo the raw payload.
