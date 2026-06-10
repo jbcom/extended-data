@@ -58,6 +58,8 @@ def test_slack_api_error_redacts_sensitive_response_text() -> None:
     assert "hunter2" not in message
     assert "raw_token" not in message
     assert "[REDACTED]" in message
+    assert error.response["password"] == "[REDACTED]"
+    assert error.response["authorization"] == "[REDACTED]"
 
 
 class TestSlackConnector:
@@ -170,6 +172,91 @@ class TestSlackConnector:
         assert result["password"] == "[REDACTED]"
 
     @patch("extended_data.connectors.slack.WebClient")
+    def test_send_message_api_error_redacts_response_without_raw_cause(
+        self,
+        mock_webclient_class,
+        base_connector_kwargs,
+    ):
+        """Raising Slack send failures should not preserve raw SDK exceptions."""
+
+        class FakeSlackApiError(Exception):
+            def __init__(self, response):
+                self.response = response
+
+        mock_bot_client = MagicMock()
+        mock_bot_client.users_conversations.return_value = {"channels": [{"name": "general", "id": "C12345"}]}
+        mock_bot_client.chat_postMessage.side_effect = FakeSlackApiError(
+            {"ok": False, "error": "channel_not_found", "password": "hunter2", "token": "raw-token"}
+        )
+
+        mock_user_client = MagicMock()
+        mock_webclient_class.side_effect = [mock_user_client, mock_bot_client]
+
+        connector = SlackConnector(token="test-token", bot_token="bot-token", **base_connector_kwargs)
+
+        with (
+            patch("extended_data.connectors.slack.SlackApiError", FakeSlackApiError),
+            pytest.raises(SlackAPIError) as exc_info,
+        ):
+            connector.send_message(channel_name="general", text="Test message", blocks=[])
+
+        diagnostics = str(exc_info.value) + str(exc_info.value.response)
+        assert "hunter2" not in diagnostics
+        assert "raw-token" not in diagnostics
+        assert "[REDACTED]" in diagnostics
+        assert exc_info.value.__cause__ is None
+
+    @patch("extended_data.connectors.slack.WebClient")
+    def test_send_message_redacts_missing_channel_name(self, mock_webclient_class, base_connector_kwargs):
+        """Missing-channel errors should not echo caller-provided channel names."""
+        mock_bot_client = MagicMock()
+        mock_bot_client.users_conversations.return_value = {"channels": []}
+
+        mock_user_client = MagicMock()
+        mock_webclient_class.side_effect = [mock_user_client, mock_bot_client]
+
+        connector = SlackConnector(token="test-token", bot_token="bot-token", **base_connector_kwargs)
+
+        with pytest.raises(RuntimeError) as exc_info:
+            connector.send_message(channel_name="private-channel", text="Test message", blocks=[])
+
+        assert "private-channel" not in str(exc_info.value)
+        assert "[REDACTED]" in str(exc_info.value)
+
+    @patch("extended_data.connectors.slack.WebClient")
+    def test_get_bot_channels_api_error_redacts_response_without_raw_cause(
+        self,
+        mock_webclient_class,
+        base_connector_kwargs,
+    ):
+        """Bot-channel lookup failures should wrap redacted Slack responses."""
+
+        class FakeSlackApiError(Exception):
+            def __init__(self, response):
+                self.response = response
+
+        mock_bot_client = MagicMock()
+        mock_bot_client.users_conversations.side_effect = FakeSlackApiError(
+            {"ok": False, "error": "token_revoked", "authorization": "Bearer raw_token"}
+        )
+
+        mock_user_client = MagicMock()
+        mock_webclient_class.side_effect = [mock_user_client, mock_bot_client]
+
+        connector = SlackConnector(token="test-token", bot_token="bot-token", **base_connector_kwargs)
+
+        with (
+            patch("extended_data.connectors.slack.SlackApiError", FakeSlackApiError),
+            pytest.raises(SlackAPIError) as exc_info,
+        ):
+            connector.get_bot_channels()
+
+        diagnostics = str(exc_info.value) + str(exc_info.value.response)
+        assert "raw_token" not in diagnostics
+        assert "[REDACTED]" in diagnostics
+        assert exc_info.value.__cause__ is None
+
+    @patch("extended_data.connectors.slack.WebClient")
     def test_call_api_redacts_grouping_failure_payload(self, mock_webclient_class, base_connector_kwargs):
         """Slack grouping failures should not dump raw secret-bearing response data."""
         mock_user_client = MagicMock()
@@ -188,6 +275,37 @@ class TestSlackConnector:
         assert "hunter2" not in message
         assert "raw_token" not in message
         assert "[REDACTED]" in message
+
+    @patch("extended_data.connectors.slack.WebClient")
+    def test_call_api_non_rate_error_redacts_response_without_raw_cause(
+        self,
+        mock_webclient_class,
+        base_connector_kwargs,
+    ):
+        """Slack API failures should not preserve raw SDK exception causes."""
+
+        class FakeSlackApiError(Exception):
+            def __init__(self, response):
+                self.response = response
+
+        mock_response = {"ok": False, "error": "bad_auth", "authorization": "Bearer raw_token"}
+        mock_user_client = MagicMock()
+        mock_user_client.users_list.side_effect = FakeSlackApiError(mock_response)
+        mock_bot_client = MagicMock()
+        mock_webclient_class.side_effect = [mock_user_client, mock_bot_client]
+
+        connector = SlackConnector(token="test-token", bot_token="bot-token", **base_connector_kwargs)
+
+        with (
+            patch("extended_data.connectors.slack.SlackApiError", FakeSlackApiError),
+            pytest.raises(SlackAPIError) as exc_info,
+        ):
+            connector._call_api("users_list")
+
+        diagnostics = str(exc_info.value) + str(exc_info.value.response)
+        assert "raw_token" not in diagnostics
+        assert "[REDACTED]" in diagnostics
+        assert exc_info.value.__cause__ is None
 
     @patch("extended_data.connectors.slack.SlackConnector._call_api")
     @patch("extended_data.connectors.slack.WebClient")

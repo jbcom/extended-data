@@ -65,9 +65,9 @@ class SlackAPIError(RuntimeError):
     """Slack API error wrapper."""
 
     def __init__(self, response: Any) -> None:
-        self.response = response
+        self.response = _slack_response_payload(response)
         self.status_code = response.status_code if hasattr(response, "status_code") else None
-        super().__init__(f"Slack API error: {redact_sensitive_text(response)}")
+        super().__init__(f"Slack API error: {redact_sensitive_text(self.response)}")
 
 
 def _slack_response_payload(response: Any) -> dict[str, Any]:
@@ -295,11 +295,13 @@ class SlackConnector(VendorConnectorBase):
 
         channels = self.get_bot_channels()
         if channel_name not in channels:
-            raise RuntimeError(f"Bot not in channel {channel_name}. Add the bot first.")
+            safe_channel_name = redact_sensitive_text(channel_name, values=[channel_name])
+            raise RuntimeError(f"Bot not in channel {safe_channel_name}. Add the bot first.")
 
         channel_id = channels[channel_name].get("id")
         if is_nothing(channel_id):
-            raise RuntimeError(f"{channel_name} does not have a channel ID")
+            safe_channel_name = redact_sensitive_text(channel_name, values=[channel_name])
+            raise RuntimeError(f"{safe_channel_name} does not have a channel ID")
 
         opts: dict[str, Any] = {"channel": channel_id, "text": text}
         if not is_nothing(blocks):
@@ -311,7 +313,7 @@ class SlackConnector(VendorConnectorBase):
             return self.extend_result(self.bot_web_client.chat_postMessage(**to_builtin(opts)).get("ts"))
         except SlackApiError as exc:
             if raise_on_api_error:
-                raise SlackAPIError(exc.response) from exc
+                raise SlackAPIError(exc.response) from None
             return self.extend_result(_slack_response_payload(exc.response))
 
     def get_bot_channels(self) -> ExtendedDict:
@@ -327,7 +329,7 @@ class SlackConnector(VendorConnectorBase):
             channels = {channel["name"]: channel for channel in self.bot_web_client.users_conversations()["channels"]}
             return self.extend_result(channels)
         except SlackApiError as exc:
-            raise SlackAPIError(exc.response) from exc
+            raise SlackAPIError(exc.response) from None
 
     def list_users(
         self,
@@ -543,12 +545,12 @@ class SlackConnector(VendorConnectorBase):
                     if total_delay > MAX_RETRY_TIMEOUT_SECONDS:
                         raise TimeoutError(
                             f"Slack WebClient {safe_method} timed out after {total_delay} seconds"
-                        ) from exc
+                        ) from None
                     self.logger.warning(f"Rate limited. Retrying in {delay} seconds")
                     sleep(delay)
                     attempt += 1
                 else:
-                    raise SlackAPIError(exc.response) from exc
+                    raise SlackAPIError(exc.response) from None
 
         if is_nothing(response) or is_nothing(group_by):
             return response
