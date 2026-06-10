@@ -23,7 +23,7 @@ from extended_data.connectors.secrets.tools import (
     run_pipeline,
     validate_config,
 )
-from extended_data.containers import ExtendedDict, ExtendedList, ExtendedString
+from extended_data.containers import ExtendedDict, ExtendedList, ExtendedString, extend_data
 
 
 @pytest.fixture
@@ -50,21 +50,24 @@ def test_cli_get_config_info_valid(connector: SecretsConnector, tmp_path: Path) 
 
     info = connector.get_config_info(str(config_file))
 
-    assert info.valid is True
-    assert info.source_count == 2
-    assert info.target_count == 1
-    assert "src1" in info.sources
-    assert "src2" in info.sources
-    assert "tgt1" in info.targets
-    assert info.has_merge_store is True
-    assert info.vault_address == "http://vault:8200"
-    assert info.aws_region == "us-east-1"
+    assert isinstance(info, ExtendedDict)
+    assert isinstance(info["sources"], ExtendedList)
+    assert info["valid"] is True
+    assert info["source_count"] == 2
+    assert info["target_count"] == 1
+    assert "src1" in info["sources"]
+    assert "src2" in info["sources"]
+    assert "tgt1" in info["targets"]
+    assert info["has_merge_store"] is True
+    assert info["vault_address"] == "http://vault:8200"
+    assert info["aws_region"] == "us-east-1"
 
 
 def test_cli_get_config_info_not_found(connector: SecretsConnector) -> None:
     info = connector.get_config_info("/non/existent/path.yaml")
-    assert info.valid is False
-    assert "Configuration file not found" in info.error_message
+    assert isinstance(info, ExtendedDict)
+    assert info["valid"] is False
+    assert "Configuration file not found" in info["error_message"]
 
 
 def test_cli_get_config_info_invalid_yaml(connector: SecretsConnector, tmp_path: Path) -> None:
@@ -72,8 +75,9 @@ def test_cli_get_config_info_invalid_yaml(connector: SecretsConnector, tmp_path:
     config_file.write_text("invalid: yaml: :")
 
     info = connector.get_config_info(str(config_file))
-    assert info.valid is False
-    assert "Error parsing YAML file" in info.error_message
+    assert isinstance(info, ExtendedDict)
+    assert info["valid"] is False
+    assert "Error parsing YAML file" in info["error_message"]
 
 
 def test_cli_get_config_info_empty_file(connector: SecretsConnector, tmp_path: Path) -> None:
@@ -81,8 +85,31 @@ def test_cli_get_config_info_empty_file(connector: SecretsConnector, tmp_path: P
     config_file.write_text("")
 
     info = connector.get_config_info(str(config_file))
-    assert info.valid is True
-    assert info.source_count == 0
+    assert isinstance(info, ExtendedDict)
+    assert info["valid"] is True
+    assert info["source_count"] == 0
+
+
+def test_cli_get_targets_and_sources_return_extended_payloads(connector: SecretsConnector, tmp_path: Path) -> None:
+    config_file = tmp_path / "config.yaml"
+    config_file.write_text(
+        yaml.dump({
+            "sources": {"vault/prod": {}, "vault/dev": {}},
+            "targets": {"prod": {}, "dev": {}},
+        })
+    )
+
+    targets = connector.get_targets(str(config_file))
+    sources = connector.get_sources(str(config_file))
+
+    assert isinstance(targets, ExtendedDict)
+    assert isinstance(targets["targets"], ExtendedList)
+    assert isinstance(targets["targets"][0], ExtendedString)
+    assert targets["count"] == 2
+    assert set(targets["targets"]) == {"prod", "dev"}
+    assert isinstance(sources, ExtendedDict)
+    assert isinstance(sources["sources"], ExtendedList)
+    assert set(sources["sources"]) == {"vault/prod", "vault/dev"}
 
 
 @patch("subprocess.run")
@@ -96,8 +123,9 @@ def test_cli_run_pipeline_operation(mock_run: MagicMock, connector: SecretsConne
     options = SyncOptions(operation=SyncOperation.MERGE)
     result = connector.run_pipeline("config.yaml", options)
 
-    assert result.success is True
-    assert result.secrets_processed == 5
+    assert isinstance(result, ExtendedDict)
+    assert result["success"] is True
+    assert result["secrets_processed"] == 5
 
     # Check that it uses "pipeline" command with "--merge-only" flag
     args = mock_run.call_args[0][0]
@@ -121,7 +149,8 @@ def test_cli_run_pipeline_diff_and_format(mock_run: MagicMock, connector: Secret
     )
     result = connector.run_pipeline("config.yaml", options)
 
-    assert result.success is True
+    assert isinstance(result, ExtendedDict)
+    assert result["success"] is True
 
     args = mock_run.call_args[0][0]
     assert "--diff" in args
@@ -139,7 +168,8 @@ def test_cli_run_pipeline_default_output_is_json(mock_run: MagicMock, connector:
 
     result = connector.run_pipeline("config.yaml")
 
-    assert result.success is True
+    assert isinstance(result, ExtendedDict)
+    assert result["success"] is True
     args = mock_run.call_args[0][0]
     assert args.count("--output") == 1
     assert args[args.index("--output") + 1] == "json"
@@ -173,15 +203,16 @@ def test_cli_run_pipeline_parses_result_envelope(mock_run: MagicMock, connector:
 
     result = connector.run_pipeline("config.yaml")
 
-    assert result.success is True
-    assert result.target_count == 2
-    assert result.secrets_processed == 5
-    assert result.secrets_added == 1
-    assert result.secrets_modified == 2
-    assert result.secrets_unchanged == 2
-    assert result.duration_ms == 321
-    assert json.loads(result.results_json) == output["results"]
-    assert result.diff_output == '{"summary":{"added":1}}'
+    assert isinstance(result, ExtendedDict)
+    assert result["success"] is True
+    assert result["target_count"] == 2
+    assert result["secrets_processed"] == 5
+    assert result["secrets_added"] == 1
+    assert result["secrets_modified"] == 2
+    assert result["secrets_unchanged"] == 2
+    assert result["duration_ms"] == 321
+    assert json.loads(str(result["results_json"])) == output["results"]
+    assert result["diff_output"] == '{"summary":{"added":1}}'
 
 
 @patch("subprocess.run")
@@ -200,8 +231,9 @@ def test_cli_run_pipeline_rejects_legacy_raw_diff_json(mock_run: MagicMock, conn
 
     result = connector.run_pipeline("config.yaml", SyncOptions(dry_run=True, compute_diff=True))
 
-    assert result.success is False
-    assert "expected pipeline result envelope" in result.error_message
+    assert isinstance(result, ExtendedDict)
+    assert result["success"] is False
+    assert "expected pipeline result envelope" in result["error_message"]
 
 
 @patch("subprocess.run")
@@ -222,11 +254,12 @@ def test_cli_run_pipeline_parses_failure_result_envelope(mock_run: MagicMock, co
 
     result = connector.run_pipeline("config.yaml")
 
-    assert result.success is False
-    assert result.target_count == 1
-    assert result.secrets_processed == 2
-    assert result.error_message == "pipeline completed with errors"
-    assert json.loads(result.results_json)[0]["error"] == "denied"
+    assert isinstance(result, ExtendedDict)
+    assert result["success"] is False
+    assert result["target_count"] == 1
+    assert result["secrets_processed"] == 2
+    assert result["error_message"] == "pipeline completed with errors"
+    assert json.loads(str(result["results_json"]))[0]["error"] == "denied"
 
 
 @patch("subprocess.run")
@@ -242,8 +275,9 @@ def test_cli_run_pipeline_failure_envelope_uses_stderr_when_error_message_missin
 
     result = connector.run_pipeline("config.yaml")
 
-    assert result.success is False
-    assert result.error_message == "Error: boom\n"
+    assert isinstance(result, ExtendedDict)
+    assert result["success"] is False
+    assert result["error_message"] == "Error: boom\n"
 
 
 @patch("subprocess.run")
@@ -256,8 +290,9 @@ def test_cli_run_pipeline_success_without_json_is_error(mock_run: MagicMock, con
 
     result = connector.run_pipeline("config.yaml")
 
-    assert result.success is False
-    assert "produced no JSON output" in result.error_message
+    assert isinstance(result, ExtendedDict)
+    assert result["success"] is False
+    assert "produced no JSON output" in result["error_message"]
 
 
 @patch("subprocess.run")
@@ -270,8 +305,9 @@ def test_cli_run_pipeline_non_json_failure_uses_cli_output(mock_run: MagicMock, 
 
     result = connector.run_pipeline("config.yaml")
 
-    assert result.success is False
-    assert result.error_message == "not json"
+    assert isinstance(result, ExtendedDict)
+    assert result["success"] is False
+    assert result["error_message"] == "not json"
 
 
 @patch("subprocess.run")
@@ -305,9 +341,10 @@ def test_cli_validate_config(mock_run: MagicMock, connector: SecretsConnector) -
         stderr="",
     )
 
-    is_valid, message = connector.validate_config("config.yaml")
-    assert is_valid is True
-    assert "valid" in message.lower()
+    validation = connector.validate_config("config.yaml")
+    assert isinstance(validation, ExtendedDict)
+    assert validation["valid"] is True
+    assert "valid" in validation["message"].lower()
 
     args = mock_run.call_args[0][0]
     assert "validate" in args
@@ -316,7 +353,7 @@ def test_cli_validate_config(mock_run: MagicMock, connector: SecretsConnector) -
 @patch("extended_data.connectors.secrets.SecretsConnector")
 def test_run_pipeline_tool_default_continue_on_error_matches_cli(mock_connector_class: MagicMock) -> None:
     mock_connector = mock_connector_class.return_value
-    mock_connector.run_pipeline.return_value = SyncResult(success=True, secrets_processed=3)
+    mock_connector.run_pipeline.return_value = SyncResult(success=True, secrets_processed=3).to_dict()
 
     result = run_pipeline("config.yaml")
 
@@ -332,7 +369,7 @@ def test_run_pipeline_tool_default_continue_on_error_matches_cli(mock_connector_
 @patch("extended_data.connectors.secrets.SecretsConnector")
 def test_run_pipeline_tool_can_disable_continue_on_error(mock_connector_class: MagicMock) -> None:
     mock_connector = mock_connector_class.return_value
-    mock_connector.run_pipeline.return_value = SyncResult(success=True)
+    mock_connector.run_pipeline.return_value = SyncResult(success=True).to_dict()
 
     run_pipeline("config.yaml", continue_on_error=False)
 
@@ -350,7 +387,11 @@ def test_run_pipeline_schema_default_continue_on_error_matches_cli() -> None:
 @patch("extended_data.connectors.secrets.SecretsConnector")
 def test_validate_config_tool_returns_extended_payload(mock_connector_class: MagicMock) -> None:
     mock_connector = mock_connector_class.return_value
-    mock_connector.validate_config.return_value = (True, "valid config")
+    mock_connector.validate_config.return_value = extend_data({
+        "valid": True,
+        "message": "valid config",
+        "config_path": "config.yaml",
+    })
 
     result = validate_config("config.yaml")
 
@@ -371,7 +412,7 @@ def test_dry_run_tool_returns_extended_payload(mock_connector_class: MagicMock) 
         secrets_removed=0,
         secrets_unchanged=3,
         diff_output="diff",
-    )
+    ).to_dict()
 
     result = dry_run("config.yaml")
 
@@ -392,7 +433,7 @@ def test_get_config_info_tool_returns_extended_payload(mock_connector_class: Mag
         has_merge_store=True,
         vault_address="https://vault.example.com",
         aws_region="us-east-1",
-    )
+    ).to_dict()
 
     result = get_config_info("config.yaml")
 
@@ -405,7 +446,11 @@ def test_get_config_info_tool_returns_extended_payload(mock_connector_class: Mag
 @patch("extended_data.connectors.secrets.SecretsConnector")
 def test_get_targets_tool_returns_extended_payload(mock_connector_class: MagicMock) -> None:
     mock_connector = mock_connector_class.return_value
-    mock_connector.get_targets.return_value = (["prod", "dev"], "")
+    mock_connector.get_targets.return_value = extend_data({
+        "targets": ["prod", "dev"],
+        "count": 2,
+        "error_message": "",
+    })
 
     result = get_targets("config.yaml")
 
@@ -418,7 +463,11 @@ def test_get_targets_tool_returns_extended_payload(mock_connector_class: MagicMo
 @patch("extended_data.connectors.secrets.SecretsConnector")
 def test_get_sources_tool_returns_extended_payload(mock_connector_class: MagicMock) -> None:
     mock_connector = mock_connector_class.return_value
-    mock_connector.get_sources.return_value = (["vault/prod"], "")
+    mock_connector.get_sources.return_value = extend_data({
+        "sources": ["vault/prod"],
+        "count": 1,
+        "error_message": "",
+    })
 
     result = get_sources("config.yaml")
 

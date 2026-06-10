@@ -66,13 +66,7 @@ def validate_config(config_path: str) -> dict[str, Any]:
     from extended_data.connectors.secrets import SecretsConnector
 
     connector = SecretsConnector()
-    is_valid, message = connector.validate_config(config_path)
-
-    return extend_data({
-        "valid": is_valid,
-        "message": message,
-        "config_path": config_path,
-    })
+    return extend_data(connector.validate_config(config_path))
 
 
 def run_pipeline(
@@ -129,16 +123,16 @@ def run_pipeline(
     result = connector.run_pipeline(config_path, options)
 
     return extend_data({
-        "success": result.success,
-        "target_count": result.target_count,
-        "secrets_processed": result.secrets_processed,
-        "secrets_added": result.secrets_added,
-        "secrets_modified": result.secrets_modified,
-        "secrets_removed": result.secrets_removed,
-        "secrets_unchanged": result.secrets_unchanged,
-        "duration_ms": result.duration_ms,
-        "error_message": result.error_message,
-        "diff_output": result.diff_output if dry_run else "",
+        "success": result.get("success", False),
+        "target_count": result.get("target_count", 0),
+        "secrets_processed": result.get("secrets_processed", 0),
+        "secrets_added": result.get("secrets_added", 0),
+        "secrets_modified": result.get("secrets_modified", 0),
+        "secrets_removed": result.get("secrets_removed", 0),
+        "secrets_unchanged": result.get("secrets_unchanged", 0),
+        "duration_ms": result.get("duration_ms", 0),
+        "error_message": result.get("error_message", ""),
+        "diff_output": result.get("diff_output", "") if dry_run else "",
     })
 
 
@@ -157,14 +151,14 @@ def dry_run(config_path: str) -> dict[str, Any]:
     result = connector.dry_run(config_path)
 
     return extend_data({
-        "success": result.success,
-        "target_count": result.target_count,
-        "secrets_would_add": result.secrets_added,
-        "secrets_would_modify": result.secrets_modified,
-        "secrets_would_remove": result.secrets_removed,
-        "secrets_unchanged": result.secrets_unchanged,
-        "diff_output": result.diff_output,
-        "error_message": result.error_message,
+        "success": result.get("success", False),
+        "target_count": result.get("target_count", 0),
+        "secrets_would_add": result.get("secrets_added", 0),
+        "secrets_would_modify": result.get("secrets_modified", 0),
+        "secrets_would_remove": result.get("secrets_removed", 0),
+        "secrets_unchanged": result.get("secrets_unchanged", 0),
+        "diff_output": result.get("diff_output", ""),
+        "error_message": result.get("error_message", ""),
     })
 
 
@@ -180,19 +174,7 @@ def get_config_info(config_path: str) -> dict[str, Any]:
     from extended_data.connectors.secrets import SecretsConnector
 
     connector = SecretsConnector()
-    info = connector.get_config_info(config_path)
-
-    return extend_data({
-        "valid": info.valid,
-        "error_message": info.error_message,
-        "source_count": info.source_count,
-        "target_count": info.target_count,
-        "sources": info.sources,
-        "targets": info.targets,
-        "has_merge_store": info.has_merge_store,
-        "vault_address": info.vault_address,
-        "aws_region": info.aws_region,
-    })
+    return extend_data(connector.get_config_info(config_path))
 
 
 def get_targets(config_path: str) -> dict[str, Any]:
@@ -207,13 +189,7 @@ def get_targets(config_path: str) -> dict[str, Any]:
     from extended_data.connectors.secrets import SecretsConnector
 
     connector = SecretsConnector()
-    targets, error = connector.get_targets(config_path)
-
-    return extend_data({
-        "targets": targets,
-        "count": len(targets),
-        "error_message": error,
-    })
+    return extend_data(connector.get_targets(config_path))
 
 
 def get_sources(config_path: str) -> dict[str, Any]:
@@ -228,13 +204,7 @@ def get_sources(config_path: str) -> dict[str, Any]:
     from extended_data.connectors.secrets import SecretsConnector
 
     connector = SecretsConnector()
-    sources, error = connector.get_sources(config_path)
-
-    return extend_data({
-        "sources": sources,
-        "count": len(sources),
-        "error_message": error,
-    })
+    return extend_data(connector.get_sources(config_path))
 
 
 # =============================================================================

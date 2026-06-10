@@ -16,16 +16,16 @@ Example usage:
     connector = SecretsConnector()
 
     # Validate a configuration
-    is_valid, message = connector.validate_config("pipeline.yaml")
+    validation = connector.validate_config("pipeline.yaml")
 
     # Run a dry-run to see what would change
     result = connector.dry_run("pipeline.yaml")
-    print(f"Would sync {result.secrets_processed} secrets")
+    print(f"Would sync {result['secrets_processed']} secrets")
 
     # Execute the full pipeline
     result = connector.run_pipeline("pipeline.yaml")
-    if result.success:
-        print(f"Synced {result.secrets_added} secrets")
+    if result["success"]:
+        print(f"Synced {result['secrets_added']} secrets")
 """
 
 from __future__ import annotations
@@ -34,12 +34,13 @@ import json
 import shutil
 import subprocess
 
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 from enum import Enum
 from pathlib import Path
 from typing import Any
 
 from extended_data.connectors.base import VendorConnectorBase
+from extended_data.containers import ExtendedDict, extend_data
 from extended_data.logging import Logging
 
 
@@ -134,6 +135,10 @@ class SyncResult:
             diff_output=output.get("diff_output", ""),
         )
 
+    def to_dict(self) -> ExtendedDict:
+        """Return an extended sync result payload."""
+        return extend_data(asdict(self))
+
 
 @dataclass
 class ConfigInfo:
@@ -163,6 +168,10 @@ class ConfigInfo:
             vault_address=native_info.VaultAddress,
             aws_region=native_info.AWSRegion,
         )
+
+    def to_dict(self) -> ExtendedDict:
+        """Return an extended config info payload."""
+        return extend_data(asdict(self))
 
 
 class SecretsConnector(VendorConnectorBase):
@@ -233,19 +242,25 @@ class SecretsConnector(VendorConnectorBase):
         """Check if CLI is available."""
         return self._cli_path is not None
 
-    def validate_config(self, config_path: str) -> tuple[bool, str]:
+    def validate_config(self, config_path: str) -> ExtendedDict:
         """Validate a pipeline configuration file.
 
         Args:
             config_path: Path to YAML configuration file
 
         Returns:
-            Tuple of (is_valid, message)
+            Extended validation payload.
         """
         if self._prefer_native:
-            return _native.ValidateConfig(config_path)
+            is_valid, message = _native.ValidateConfig(config_path)
+        else:
+            is_valid, message = self._cli_validate_config(config_path)
 
-        return self._cli_validate_config(config_path)
+        return extend_data({
+            "valid": is_valid,
+            "message": message,
+            "config_path": config_path,
+        })
 
     def _cli_validate_config(self, config_path: str) -> tuple[bool, str]:
         """Validate config via CLI."""
@@ -268,20 +283,20 @@ class SecretsConnector(VendorConnectorBase):
         except Exception as e:
             return False, str(e)
 
-    def get_config_info(self, config_path: str) -> ConfigInfo:
+    def get_config_info(self, config_path: str) -> ExtendedDict:
         """Get detailed information about a configuration.
 
         Args:
             config_path: Path to YAML configuration file
 
         Returns:
-            ConfigInfo with configuration details
+            Extended configuration details payload.
         """
         if self._prefer_native:
             native_info = _native.GetConfigInfo(config_path)
-            return ConfigInfo.from_native(native_info)
+            return ConfigInfo.from_native(native_info).to_dict()
 
-        return self._cli_get_config_info(config_path)
+        return self._cli_get_config_info(config_path).to_dict()
 
     def _cli_get_config_info(self, config_path: str) -> ConfigInfo:
         """Get config info via CLI."""
@@ -317,7 +332,7 @@ class SecretsConnector(VendorConnectorBase):
         self,
         config_path: str,
         options: SyncOptions | None = None,
-    ) -> SyncResult:
+    ) -> ExtendedDict:
         """Execute the secrets synchronization pipeline.
 
         Args:
@@ -325,14 +340,14 @@ class SecretsConnector(VendorConnectorBase):
             options: Execution options (defaults to full pipeline)
 
         Returns:
-            SyncResult with operation details
+            Extended sync result payload.
         """
         options = options or SyncOptions()
 
         if self._prefer_native:
-            return self._native_run_pipeline(config_path, options)
+            return self._native_run_pipeline(config_path, options).to_dict()
 
-        return self._cli_run_pipeline(config_path, options)
+        return self._cli_run_pipeline(config_path, options).to_dict()
 
     def _native_run_pipeline(
         self,
@@ -450,23 +465,23 @@ class SecretsConnector(VendorConnectorBase):
                 error_message=str(e),
             )
 
-    def dry_run(self, config_path: str) -> SyncResult:
+    def dry_run(self, config_path: str) -> ExtendedDict:
         """Perform a dry run of the pipeline.
 
         Args:
             config_path: Path to YAML configuration file
 
         Returns:
-            SyncResult with what would be changed
+            Extended dry-run result payload.
         """
         if self._prefer_native:
             native_result = _native.DryRun(config_path)
-            return SyncResult.from_native(native_result)
+            return SyncResult.from_native(native_result).to_dict()
 
         options = SyncOptions(dry_run=True, compute_diff=True)
-        return self._cli_run_pipeline(config_path, options)
+        return self._cli_run_pipeline(config_path, options).to_dict()
 
-    def merge(self, config_path: str, dry_run: bool = False) -> SyncResult:
+    def merge(self, config_path: str, dry_run: bool = False) -> ExtendedDict:
         """Run only the merge phase of the pipeline.
 
         Args:
@@ -474,20 +489,20 @@ class SecretsConnector(VendorConnectorBase):
             dry_run: If True, don't make actual changes
 
         Returns:
-            SyncResult with merge operation details
+            Extended merge result payload.
         """
         if self._prefer_native:
             native_result = _native.Merge(config_path, dry_run)
-            return SyncResult.from_native(native_result)
+            return SyncResult.from_native(native_result).to_dict()
 
         options = SyncOptions(
             operation=SyncOperation.MERGE,
             dry_run=dry_run,
             compute_diff=dry_run,
         )
-        return self._cli_run_pipeline(config_path, options)
+        return self._cli_run_pipeline(config_path, options).to_dict()
 
-    def sync(self, config_path: str, dry_run: bool = False) -> SyncResult:
+    def sync(self, config_path: str, dry_run: bool = False) -> ExtendedDict:
         """Run only the sync phase of the pipeline.
 
         Args:
@@ -495,50 +510,62 @@ class SecretsConnector(VendorConnectorBase):
             dry_run: If True, don't make actual changes
 
         Returns:
-            SyncResult with sync operation details
+            Extended sync result payload.
         """
         if self._prefer_native:
             native_result = _native.Sync(config_path, dry_run)
-            return SyncResult.from_native(native_result)
+            return SyncResult.from_native(native_result).to_dict()
 
         options = SyncOptions(
             operation=SyncOperation.SYNC,
             dry_run=dry_run,
             compute_diff=dry_run,
         )
-        return self._cli_run_pipeline(config_path, options)
+        return self._cli_run_pipeline(config_path, options).to_dict()
 
-    def get_targets(self, config_path: str) -> tuple[list[str], str]:
+    def get_targets(self, config_path: str) -> ExtendedDict:
         """Get the list of targets from a configuration.
 
         Args:
             config_path: Path to YAML configuration file
 
         Returns:
-            Tuple of (targets, error_message)
+            Extended targets payload.
         """
         if self._prefer_native:
             targets, err = _native.GetTargets(config_path)
-            return list(targets) if targets else [], err
+            target_list = list(targets) if targets else []
+            return extend_data({"targets": target_list, "count": len(target_list), "error_message": err})
 
         info = self.get_config_info(config_path)
-        return info.targets, info.error_message
+        targets = info.get("targets", [])
+        return extend_data({
+            "targets": targets,
+            "count": len(targets),
+            "error_message": info.get("error_message", ""),
+        })
 
-    def get_sources(self, config_path: str) -> tuple[list[str], str]:
+    def get_sources(self, config_path: str) -> ExtendedDict:
         """Get the list of sources from a configuration.
 
         Args:
             config_path: Path to YAML configuration file
 
         Returns:
-            Tuple of (sources, error_message)
+            Extended sources payload.
         """
         if self._prefer_native:
             sources, err = _native.GetSources(config_path)
-            return list(sources) if sources else [], err
+            source_list = list(sources) if sources else []
+            return extend_data({"sources": source_list, "count": len(source_list), "error_message": err})
 
         info = self.get_config_info(config_path)
-        return info.sources, info.error_message
+        sources = info.get("sources", [])
+        return extend_data({
+            "sources": sources,
+            "count": len(sources),
+            "error_message": info.get("error_message", ""),
+        })
 
 
 # Import tools for AI framework integration
