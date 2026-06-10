@@ -17,7 +17,6 @@ from extended_data import (
     base64_encode,
     decode_hcl2,
     encode_hcl2,
-    filter_list,
     read_data_file,
     write_file,
 )
@@ -206,7 +205,7 @@ def test_api_payload_normalization_workflow_round_trip(tmp_path: Path) -> None:
     payload = ExtendedDict(
         {
             "HTTPResponseCode": 200,
-            "SelectedServices": filter_list(["api", "worker", "db"], denylist=["db"]),
+            "SelectedServices": ExtendedList(["api", "worker", "db"]).filter_values(denylist=["db"]),
             "Tags": ["api", "api", "docs"],
         }
     )
@@ -228,7 +227,7 @@ def test_api_payload_factory_workflow_round_trip(tmp_path: Path) -> None:
     """Promote decoded API payloads into containers before normalization."""
     raw_payload = {
         "HTTPResponseCode": 200,
-        "SelectedServices": filter_list(["api", "worker", "db"], denylist=["db"]),
+        "SelectedServices": ExtendedList(["api", "worker", "db"]).filter_values(denylist=["db"]),
         "Tags": ["api", "api", "docs"],
     }
 

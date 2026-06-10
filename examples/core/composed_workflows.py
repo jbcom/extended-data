@@ -13,11 +13,11 @@ from tempfile import TemporaryDirectory
 from extended_data import (
     DataWorkflow,
     ExtendedDict,
+    ExtendedList,
     base64_decode,
     base64_encode,
     decode_hcl2,
     encode_hcl2,
-    filter_list,
     read_data_file,
     read_file,
     write_file,
@@ -92,7 +92,7 @@ def demonstrate_api_payload_workflow() -> None:
     payload = ExtendedDict(
         {
             "HTTPResponseCode": 200,
-            "SelectedServices": filter_list(["api", "worker", "db"], denylist=["db"]),
+            "SelectedServices": ExtendedList(["api", "worker", "db"]).filter_values(denylist=["db"]),
             "Tags": ["api", "api", "docs"],
         }
     )
