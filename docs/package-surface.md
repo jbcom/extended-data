@@ -73,6 +73,10 @@ Mutation and common operator paths are part of that contract: `setdefault()`,
 in-place dict merge, list in-place concatenation, list in-place repetition,
 tuple slicing, tuple concatenation, and tuple repetition preserve Tier 2
 containers instead of leaking plain nested values.
+String tokenization and partitioning paths are covered too:
+`ExtendedString.split()`, `rsplit()`, and `splitlines()` return `ExtendedList`
+values containing `ExtendedString` parts, while `partition()` and
+`rpartition()` return `ExtendedTuple` values.
 
 Container methods that return derived collections stay in Tier 2 as well:
 `ExtendedDict.filter()` returns an `ExtendedTuple` of accepted and rejected

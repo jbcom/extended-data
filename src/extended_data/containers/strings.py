@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 from collections import UserString
+from collections.abc import Iterable
+from typing import TYPE_CHECKING
 
 from extended_data.primitives.string_transforms import (
     humanize,
@@ -26,6 +28,15 @@ from extended_data.primitives.strings import (
     upper_first_char,
 )
 from extended_data.primitives.types import strtobool
+
+
+if TYPE_CHECKING:
+    from extended_data.containers.sequences import ExtendedList, ExtendedTuple
+
+
+def _coerce_string_argument(value: str | UserString) -> str:
+    """Coerce stdlib user strings while preserving normal str errors elsewhere."""
+    return str(value) if isinstance(value, UserString) else value
 
 
 class ExtendedString(UserString):
@@ -94,6 +105,42 @@ class ExtendedString(UserString):
     def ordinalize(self) -> ExtendedString:
         """Return an ordinalized copy."""
         return ExtendedString(ordinalize(self.data))
+
+    def split(self, sep: str | UserString | None = None, maxsplit: int = -1) -> ExtendedList[ExtendedString]:  # type: ignore[override]
+        """Split into extended string parts."""
+        from extended_data.containers.sequences import ExtendedList
+
+        separator = None if sep is None else _coerce_string_argument(sep)
+        return ExtendedList(ExtendedString(part) for part in self.data.split(separator, maxsplit))
+
+    def rsplit(self, sep: str | UserString | None = None, maxsplit: int = -1) -> ExtendedList[ExtendedString]:  # type: ignore[override]
+        """Split from the right into extended string parts."""
+        from extended_data.containers.sequences import ExtendedList
+
+        separator = None if sep is None else _coerce_string_argument(sep)
+        return ExtendedList(ExtendedString(part) for part in self.data.rsplit(separator, maxsplit))
+
+    def splitlines(self, keepends: bool = False) -> ExtendedList[ExtendedString]:  # type: ignore[override]
+        """Split lines into extended string parts."""
+        from extended_data.containers.sequences import ExtendedList
+
+        return ExtendedList(ExtendedString(part) for part in self.data.splitlines(keepends))
+
+    def partition(self, sep: str | UserString) -> ExtendedTuple[ExtendedString]:  # type: ignore[override]
+        """Partition into extended string parts."""
+        from extended_data.containers.sequences import ExtendedTuple
+
+        return ExtendedTuple(ExtendedString(part) for part in self.data.partition(_coerce_string_argument(sep)))
+
+    def rpartition(self, sep: str | UserString) -> ExtendedTuple[ExtendedString]:  # type: ignore[override]
+        """Partition from the right into extended string parts."""
+        from extended_data.containers.sequences import ExtendedTuple
+
+        return ExtendedTuple(ExtendedString(part) for part in self.data.rpartition(_coerce_string_argument(sep)))
+
+    def join(self, seq: Iterable[str | UserString]) -> ExtendedString:  # type: ignore[override]
+        """Join string-like values into an extended string."""
+        return ExtendedString(self.data.join(_coerce_string_argument(item) for item in seq))
 
     def is_url(self) -> bool:
         """Return whether the string is a URL."""

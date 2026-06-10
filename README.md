@@ -134,6 +134,9 @@ Tier 3 decoders return Tier 2 containers by default, so
 decoded files, Base64 payloads, and directed inputs can immediately use
 `ExtendedDict`, `ExtendedList`, `ExtendedTuple`, `ExtendedSet`, and
 `ExtendedString` methods.
+String tokenization stays inside the same surface: `ExtendedString.split()`
+returns an `ExtendedList` of `ExtendedString` values, and partition operations
+return `ExtendedTuple` values.
 `DataWorkflow` makes those compositions first-class: read or decode data,
 apply named transformations, write an output artifact, and keep the step trail
 in a `WorkflowResult`. Missing workflow inputs and empty writes fail loudly.

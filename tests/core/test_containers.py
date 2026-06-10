@@ -20,11 +20,32 @@ from extended_data.containers import (
 def test_extended_string_chains_primitive_transforms() -> None:
     """ExtendedString composes Tier 1 string primitives."""
     value = ExtendedString("API Response Value")
+    partitioned = ExtendedString("api.gateway.worker").partition(".")
+    right_partitioned = ExtendedString("api.gateway.worker").rpartition(".")
+    split = ExtendedString("api,gateway,worker").split(",")
+    right_split = ExtendedString("api,gateway,worker").rsplit(",", 1)
+    lines = ExtendedString("api\ngateway").splitlines()
+    joined = ExtendedString(",").join([ExtendedString("api"), "gateway"])
 
     assert value.to_snake_case().remove_suffix("_value") == "api_response"
     assert value.to_kebab_case() == "api-response-value"
     assert ExtendedString("1").ordinalize() == "1st"
     assert ExtendedString("yes").to_bool() is True
+    assert isinstance(partitioned, ExtendedTuple)
+    assert isinstance(partitioned[0], ExtendedString)
+    assert partitioned == ("api", ".", "gateway.worker")
+    assert isinstance(right_partitioned, ExtendedTuple)
+    assert right_partitioned == ("api.gateway", ".", "worker")
+    assert isinstance(split, ExtendedList)
+    assert all(isinstance(item, ExtendedString) for item in split)
+    assert split == ["api", "gateway", "worker"]
+    assert isinstance(right_split, ExtendedList)
+    assert right_split == ["api,gateway", "worker"]
+    assert isinstance(lines, ExtendedList)
+    assert all(isinstance(item, ExtendedString) for item in lines)
+    assert lines == ["api", "gateway"]
+    assert isinstance(joined, ExtendedString)
+    assert joined == "api,gateway"
 
 
 def test_extended_dict_composes_mapping_primitives() -> None:
