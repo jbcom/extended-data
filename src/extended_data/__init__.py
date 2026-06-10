@@ -103,7 +103,7 @@ from extended_data.primitives.string_transforms import (
     to_snake_case,
 )
 from extended_data.primitives.strings import (
-    bytestostr,
+    bytes_to_string,
     lower_first_char,
     sanitize_key,
     titleize_name,
@@ -254,7 +254,7 @@ __all__ = [
     "are_nothing",
     "base64_decode",
     "base64_encode",
-    "bytestostr",
+    "bytes_to_string",
     "clone_repository_to_temp",
     "convert_special_type",
     "convert_special_types",

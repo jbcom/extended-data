@@ -65,7 +65,7 @@ from extended_data.primitives.string_transforms import (
     to_snake_case,
 )
 from extended_data.primitives.strings import (
-    bytestostr,
+    bytes_to_string,
     lower_first_char,
     sanitize_key,
     titleize_name,
@@ -99,7 +99,7 @@ __all__ = [
     "all_values_from_map",
     "any_non_empty",
     "are_nothing",
-    "bytestostr",
+    "bytes_to_string",
     "convert_special_type",
     "convert_special_types",
     "create_merger",

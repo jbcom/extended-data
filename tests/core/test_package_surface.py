@@ -81,8 +81,10 @@ def test_clean_major_version_public_names() -> None:
     assert not hasattr(connectors, "VendorConnectors")
     assert not hasattr(primitives, "removeprefix")
     assert not hasattr(primitives, "removesuffix")
+    assert not hasattr(primitives, "bytestostr")
     assert not hasattr(extended_data, "removeprefix")
     assert not hasattr(extended_data, "removesuffix")
+    assert not hasattr(extended_data, "bytestostr")
 
 
 def test_old_monorepo_import_namespaces_are_not_preserved() -> None:

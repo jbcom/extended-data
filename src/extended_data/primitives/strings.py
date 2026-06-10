@@ -12,34 +12,31 @@ from urllib.parse import urlparse
 import inflection
 
 
-def bytestostr(bstr: str | memoryview | bytes | bytearray) -> str:
-    """Converts bytes, memoryview, or bytearray to a UTF-8 decoded string.
+def bytes_to_string(value: object) -> str:
+    """Convert bytes, memoryview, bytearray, or another object to a string.
 
-    This function takes an input which could be a string, memoryview, bytes, or bytearray,
-    and returns the corresponding UTF-8 decoded string. If the input is already a string,
-    it returns it unchanged.
+    Bytes-like values are decoded as UTF-8. Strings are returned unchanged and
+    all other objects use their standard string representation.
 
     Args:
-        bstr (str | memoryview | bytes | bytearray): The input to convert to a string.
-            Can be a `str`, `memoryview`, `bytes`, or `bytearray`.
+        value: The value to convert.
 
     Returns:
-        str: The UTF-8 decoded string representation of the input.
+        The string representation of the input.
 
     Raises:
         UnicodeDecodeError: If the bytes or bytearray cannot be decoded into a valid UTF-8 string.
     """
-    if isinstance(bstr, str):
-        return bstr
+    if isinstance(value, str):
+        return value
 
-    if isinstance(bstr, memoryview):
-        bstr = bstr.tobytes()
+    if isinstance(value, memoryview):
+        value = value.tobytes()
 
-    if isinstance(bstr, (bytes, bytearray)):
-        return bstr.decode("utf-8")
+    if isinstance(value, (bytes, bytearray)):
+        return value.decode("utf-8")
 
-    # This return handles both bytes, bytearray, and memoryview after conversion to bytes
-    return str(bstr)
+    return str(value)
 
 
 def sanitize_key(key: str, delim: str = "_") -> str:

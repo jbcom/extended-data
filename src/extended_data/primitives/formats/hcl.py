@@ -15,7 +15,7 @@ from lark.exceptions import LarkError
 
 from extended_data.primitives.formats._normalization import lower_extended_data
 from extended_data.primitives.formats.errors import DataDecodeError, invalid_utf8_error
-from extended_data.primitives.strings import bytestostr
+from extended_data.primitives.strings import bytes_to_string
 from extended_data.primitives.types import convert_special_types
 
 
@@ -235,7 +235,7 @@ def decode_hcl2(hcl2_data: str | memoryview | bytes | bytearray) -> Any:
         UnexpectedToken If the HCL2 data cannot be parsed.
     """
     try:
-        hcl2_data = bytestostr(hcl2_data)
+        hcl2_data = bytes_to_string(hcl2_data)
     except UnicodeDecodeError as exc:
         raise invalid_utf8_error("HCL2") from exc
 

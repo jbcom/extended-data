@@ -11,7 +11,7 @@ import tomlkit
 
 from extended_data.primitives.formats._normalization import lower_extended_data
 from extended_data.primitives.formats.errors import DataDecodeError, invalid_utf8_error
-from extended_data.primitives.strings import bytestostr
+from extended_data.primitives.strings import bytes_to_string
 from extended_data.primitives.types import convert_special_types
 
 
@@ -25,7 +25,7 @@ def decode_toml(toml_data: str | memoryview | bytes | bytearray) -> Any:
         Any: The decoded Python object with any special types processed.
     """
     try:
-        toml_data = bytestostr(toml_data)
+        toml_data = bytes_to_string(toml_data)
     except UnicodeDecodeError as exc:
         raise invalid_utf8_error("TOML") from exc
     try:

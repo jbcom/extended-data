@@ -10,7 +10,7 @@ from extended_data.primitives.formats.json import decode_json
 from extended_data.primitives.formats.toml import decode_toml
 from extended_data.primitives.formats.yaml import decode_yaml
 from extended_data.primitives.serialization import normalize_data_encoding
-from extended_data.primitives.strings import bytestostr
+from extended_data.primitives.strings import bytes_to_string
 
 
 def unwrap_raw_data_from_import(
@@ -43,7 +43,7 @@ def unwrap_raw_data_from_import(
     elif normalized_encoding == "hcl":
         decoded = decode_hcl2(wrapped_data)
     elif normalized_encoding == "raw":
-        decoded = bytestostr(wrapped_data)
+        decoded = bytes_to_string(wrapped_data)
     else:
         error_message = f"Unsupported encoding format: {encoding}"
         raise ValueError(error_message)

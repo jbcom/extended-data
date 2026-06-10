@@ -15,7 +15,7 @@ from extended_data.primitives.formats.errors import DataDecodeError, invalid_utf
 from extended_data.primitives.formats.yaml.dumpers import PureDumper
 from extended_data.primitives.formats.yaml.loaders import PureLoader
 from extended_data.primitives.formats.yaml.tag_classes import YamlPairs, YamlTagged
-from extended_data.primitives.strings import bytestostr
+from extended_data.primitives.strings import bytes_to_string
 
 
 def decode_yaml(yaml_data: str | memoryview | bytes | bytearray) -> Any:
@@ -28,7 +28,7 @@ def decode_yaml(yaml_data: str | memoryview | bytes | bytearray) -> Any:
         Any: The decoded Python object.
     """
     try:
-        yaml_data = bytestostr(yaml_data)
+        yaml_data = bytes_to_string(yaml_data)
     except UnicodeDecodeError as exc:
         raise invalid_utf8_error("YAML") from exc
     try:

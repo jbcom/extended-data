@@ -45,7 +45,7 @@ import pytest
 
 from extended_data.containers import ExtendedString
 from extended_data.primitives.strings import (
-    bytestostr,
+    bytes_to_string,
     is_url,
     lower_first_char,
     sanitize_key,
@@ -144,7 +144,7 @@ def titleize_name_data(request: Any) -> tuple[str, str]:
         (memoryview(b"memoryview data"), "memoryview data"),  # Memoryview input
     ],
 )
-def test_bytestostr(input_value: str | memoryview | bytes | bytearray, expected_output: str) -> None:
+def test_bytes_to_string(input_value: str | memoryview | bytes | bytearray, expected_output: str) -> None:
     """Tests converting various byte-like objects and strings into a UTF-8 decoded string.
 
     Args:
@@ -152,25 +152,25 @@ def test_bytestostr(input_value: str | memoryview | bytes | bytearray, expected_
         expected_output (str): The expected UTF-8 decoded string.
 
     Asserts:
-        The result of bytestostr matches the expected UTF-8 decoded string for valid inputs.
+        The result of bytes_to_string matches the expected UTF-8 decoded string for valid inputs.
     """
-    assert bytestostr(input_value) == expected_output
+    assert bytes_to_string(input_value) == expected_output
 
 
-def test_bytestostr_invalid_bytes() -> None:
+def test_bytes_to_string_invalid_bytes() -> None:
     """Tests handling of invalid byte sequences during conversion to string.
 
     Asserts:
-        The bytestostr function raises a ConversionError when invalid bytes cannot be decoded.
+        The bytes_to_string function raises a ConversionError when invalid bytes cannot be decoded.
     """
     invalid_bytes = b"\x80invalid"
     with pytest.raises(UnicodeDecodeError):
-        bytestostr(invalid_bytes)
+        bytes_to_string(invalid_bytes)
 
 
-def test_bytestostr_falls_back_to_string_conversion() -> None:
+def test_bytes_to_string_falls_back_to_string_conversion() -> None:
     """Convert non-bytes objects with a plain string fallback."""
-    assert bytestostr(123) == "123"
+    assert bytes_to_string(123) == "123"
 
 
 def test_sanitize_key(test_key: str, sanitized_key: str) -> None:
