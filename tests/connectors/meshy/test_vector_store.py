@@ -2,8 +2,12 @@
 
 from __future__ import annotations
 
+import sys
+
+from types import ModuleType
+
 from extended_data.connectors.meshy.persistence import vector_store as vector_store_module
-from extended_data.connectors.meshy.persistence.vector_store import VectorStore
+from extended_data.connectors.meshy.persistence.vector_store import VectorStore, get_embedding
 from extended_data.containers import ExtendedDict, ExtendedList, ExtendedString
 
 
@@ -103,3 +107,25 @@ def test_search_similar_without_vector_extension_returns_extended_list(temp_dir,
 
     assert isinstance(result, ExtendedList)
     assert result == []
+
+
+def test_get_embedding_returns_extended_vector(monkeypatch) -> None:
+    """Embedding helper should promote vectors when the optional encoder exists."""
+
+    class _FakeEmbedding:
+        def tolist(self) -> list[float]:
+            return [0.1, 0.2, 0.3]
+
+    class _FakeEncoder:
+        def encode(self, text: str) -> _FakeEmbedding:
+            assert text == "cute otter"
+            return _FakeEmbedding()
+
+    module = ModuleType("sentence_transformers")
+    module.SentenceTransformer = lambda model: _FakeEncoder()  # type: ignore[attr-defined]
+    monkeypatch.setitem(sys.modules, "sentence_transformers", module)
+
+    result = get_embedding("cute otter")
+
+    assert isinstance(result, ExtendedList)
+    assert result == [0.1, 0.2, 0.3]

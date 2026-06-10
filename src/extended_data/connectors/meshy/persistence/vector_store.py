@@ -570,7 +570,7 @@ class VectorStore:
 
 
 # Convenience function for getting embeddings
-def get_embedding(text: str, model: str = "all-MiniLM-L6-v2") -> list[float] | None:
+def get_embedding(text: str, model: str = "all-MiniLM-L6-v2") -> ExtendedList[float] | None:
     """Get embedding for text using sentence-transformers.
 
     Args:
@@ -578,13 +578,13 @@ def get_embedding(text: str, model: str = "all-MiniLM-L6-v2") -> list[float] | N
         model: Model name (default: all-MiniLM-L6-v2)
 
     Returns:
-        Embedding vector or None if sentence-transformers not available
+        Extended embedding vector or None if sentence-transformers not available
     """
     try:
         from sentence_transformers import SentenceTransformer
 
         encoder = SentenceTransformer(model)
         embedding = encoder.encode(text)
-        return embedding.tolist()
+        return cast(ExtendedList[float], extend_data(embedding.tolist()))
     except ImportError:
         return None
