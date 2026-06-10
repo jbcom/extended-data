@@ -65,6 +65,17 @@ def _readme_usage_snippet() -> str:
     return match.group("code")
 
 
+def test_example_inventory_is_complete() -> None:
+    """Every Python example should be explicitly classified for test coverage."""
+    discovered = sorted(
+        str(path.relative_to(REPO_ROOT))
+        for path in (REPO_ROOT / "examples").rglob("*.py")
+        if path.name != "__init__.py"
+    )
+
+    assert sorted(ALL_EXAMPLES) == discovered
+
+
 @pytest.mark.parametrize("example_path", SAFE_EXAMPLES)
 def test_safe_example_runs(example_path: str, tmp_path: Path) -> None:
     """Keep runnable examples aligned with the installed package surface."""

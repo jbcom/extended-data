@@ -34,6 +34,7 @@ SECRETSSYNC_PROJECT_PATTERNS = (
 )
 EXTRA_REFERENCE_RE = re.compile(r"extended-data\[([^\]\n]+)\]")
 NON_RUNTIME_EXTRAS = {"all", "dev", "tests", "typing"}
+PACKAGE_SHAPE_RE = re.compile(r"^  ([a-z_]+)/\s+")
 
 
 def _pyproject() -> tomlkit.TOMLDocument:
@@ -173,6 +174,27 @@ def test_project_scripts_point_to_callables() -> None:
             offenders.append(f"{script_name}: {target} is not callable")
 
     assert offenders == []
+
+
+def test_readme_package_shape_matches_public_subpackages() -> None:
+    """The documented tier layout should match the actual top-level package directories."""
+    source_root = REPO_ROOT / "src" / "extended_data"
+    actual_subpackages = {
+        path.name
+        for path in source_root.iterdir()
+        if path.is_dir() and not path.name.startswith("__") and (path / "__init__.py").is_file()
+    }
+    readme = (REPO_ROOT / "README.md").read_text(encoding="utf-8")
+    try:
+        package_shape = readme.split("## Package Shape", 1)[1].split("```", 2)[1]
+    except IndexError as exc:
+        raise AssertionError("README.md must document the package shape in a fenced block") from exc
+
+    documented_subpackages = {
+        match.group(1) for line in package_shape.splitlines() if (match := PACKAGE_SHAPE_RE.match(line))
+    }
+
+    assert documented_subpackages == actual_subpackages
 
 
 def test_public_guidance_does_not_use_removed_runtime_keywords() -> None:
