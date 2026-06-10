@@ -26,7 +26,7 @@ else:
 from extended_data import is_nothing, wrap_raw_data_for_export
 from extended_data.connectors._optional import require_extra
 from extended_data.connectors.base import VendorConnectorBase
-from extended_data.containers import ExtendedDict, ExtendedList, extend_data, to_builtin
+from extended_data.containers import ExtendedDict, ExtendedList, ExtendedString, extend_data, to_builtin
 from extended_data.logging import Logging
 
 
@@ -66,6 +66,30 @@ class SlackAPIError(RuntimeError):
         self.response = response
         self.status_code = response.status_code if hasattr(response, "status_code") else None
         super().__init__(f"Slack API error: {response}")
+
+
+def _slack_response_payload(response: Any) -> dict[str, Any]:
+    """Normalize Slack SDK response objects into a serializable payload."""
+    if isinstance(response, Mapping):
+        return dict(response)
+
+    data = getattr(response, "data", None)
+    if isinstance(data, Mapping):
+        return dict(data)
+
+    payload: dict[str, Any] = {}
+    response_get = getattr(response, "get", None)
+    if callable(response_get):
+        for key in ("ok", "error", "warning"):
+            value = response_get(key)
+            if value is not None:
+                payload[key] = value
+
+    status_code = getattr(response, "status_code", None)
+    if status_code is not None:
+        payload["status_code"] = status_code
+
+    return payload or {"response": str(response)}
 
 
 def get_divider() -> ExtendedDict:
@@ -239,7 +263,7 @@ class SlackConnector(VendorConnectorBase):
         strike: bool = False,
         thread_id: str | None = None,
         raise_on_api_error: bool = True,
-    ) -> Any:
+    ) -> ExtendedString | ExtendedDict:
         """Send a message to a Slack channel using the bot token.
 
         Args:
@@ -254,7 +278,8 @@ class SlackConnector(VendorConnectorBase):
             raise_on_api_error: When True, raise `SlackAPIError` on API failures.
 
         Returns:
-            str | Any: Timestamp string for the posted message or the Slack API response.
+            Extended timestamp string, or an extended error payload when
+            `raise_on_api_error=False`.
 
         Raises:
             RuntimeError: If the bot is not a member of the channel.
@@ -285,7 +310,7 @@ class SlackConnector(VendorConnectorBase):
         except SlackApiError as exc:
             if raise_on_api_error:
                 raise SlackAPIError(exc.response) from exc
-            return exc.response
+            return self.extend_result(_slack_response_payload(exc.response))
 
     def get_bot_channels(self) -> ExtendedDict:
         """Return channels the bot account is a member of.

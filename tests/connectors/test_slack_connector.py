@@ -122,6 +122,39 @@ class TestSlackConnector:
         assert not isinstance(kwargs["blocks"][0], ExtendedDict)
         assert isinstance(kwargs["channel"], str)
 
+    @patch("extended_data.connectors.slack.WebClient")
+    def test_send_message_non_raising_api_error_returns_extended_payload(
+        self,
+        mock_webclient_class,
+        base_connector_kwargs,
+    ):
+        """Non-raising Slack send failures should not leak raw SDK response objects."""
+
+        class FakeSlackApiError(Exception):
+            def __init__(self, response):
+                self.response = response
+
+        mock_bot_client = MagicMock()
+        mock_bot_client.users_conversations.return_value = {"channels": [{"name": "general", "id": "C12345"}]}
+        mock_bot_client.chat_postMessage.side_effect = FakeSlackApiError({"ok": False, "error": "channel_not_found"})
+
+        mock_user_client = MagicMock()
+        mock_webclient_class.side_effect = [mock_user_client, mock_bot_client]
+
+        connector = SlackConnector(token="test-token", bot_token="bot-token", **base_connector_kwargs)
+
+        with patch("extended_data.connectors.slack.SlackApiError", FakeSlackApiError):
+            result = connector.send_message(
+                channel_name="general",
+                text="Test message",
+                blocks=[],
+                raise_on_api_error=False,
+            )
+
+        assert isinstance(result, ExtendedDict)
+        assert isinstance(result["error"], ExtendedString)
+        assert result["error"] == "channel_not_found"
+
     @patch("extended_data.connectors.slack.SlackConnector._call_api")
     @patch("extended_data.connectors.slack.WebClient")
     def test_list_users_filters_deleted(

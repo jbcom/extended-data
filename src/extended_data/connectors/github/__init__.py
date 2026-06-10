@@ -19,7 +19,7 @@ from extended_data import (
 )
 from extended_data.connectors._optional import require_extra
 from extended_data.connectors.base import VendorConnectorBase
-from extended_data.containers import ExtendedDict
+from extended_data.containers import ExtendedDict, ExtendedList, ExtendedString, ExtendedTuple
 from extended_data.logging import Logging
 
 
@@ -167,7 +167,7 @@ class GitHubConnector(VendorConnectorBase):
         charset: str | None = "utf-8",
         errors: str | None = "strict",
         raise_on_not_found: bool = False,
-    ) -> Any:
+    ) -> ExtendedDict | ExtendedList[Any] | ExtendedString | ExtendedTuple[Any] | None:
         """Get a file from the repository."""
         file_path_text = os.fspath(file_path)
         if self.repo is None:

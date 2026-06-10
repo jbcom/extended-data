@@ -27,7 +27,7 @@ from extended_data.connectors.meshy.connector import MeshyConnector
 from extended_data.connectors.slack import SlackConnector
 from extended_data.connectors.vault import VaultConnector
 from extended_data.connectors.zoom import ZoomConnector
-from extended_data.containers import ExtendedDict, ExtendedList, ExtendedString
+from extended_data.containers import ExtendedDict, ExtendedList, ExtendedString, ExtendedTuple
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -95,6 +95,7 @@ PAYLOAD_METHODS = (
     (GitHubConnector.get_repository, ExtendedDict | None),
     (GitHubConnector.list_teams, ExtendedDict),
     (GitHubConnector.get_team, ExtendedDict | None),
+    (GitHubConnector.get_repository_file, ExtendedDict | ExtendedList[Any] | ExtendedString | ExtendedTuple[Any] | None),
     (GitHubConnector.execute_graphql, ExtendedDict),
     (GitHubConnector.get_users_with_verified_emails, ExtendedDict),
     (GitHubConnector.build_workflow, ExtendedDict),
@@ -171,6 +172,7 @@ PAYLOAD_METHODS = (
     (MeshyConnector.rig_model, ExtendedDict | ExtendedString),
     (MeshyConnector.apply_animation, ExtendedDict | ExtendedString),
     (MeshyConnector.retexture_model, ExtendedDict | ExtendedString),
+    (SlackConnector.send_message, ExtendedString | ExtendedDict),
     (SlackConnector.get_bot_channels, ExtendedDict),
     (SlackConnector.list_users, ExtendedDict),
     (SlackConnector.list_usergroups, ExtendedDict),
