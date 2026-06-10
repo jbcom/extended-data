@@ -105,12 +105,15 @@ def test_extended_list_composes_sequence_primitives() -> None:
 def test_extended_list_promotes_nested_values_on_mutation() -> None:
     """ExtendedList keeps nested values in the Tier 2 surface."""
     value: ExtendedList[Any] = ExtendedList([{"name": "api"}])
+    in_place: ExtendedList[Any] = ExtendedList([{"name": "api"}])
 
     value.append("worker")
     value.extend([{"name": "scheduler"}])
     value.insert(0, ["frontdoor"])
     value[1] = {"name": "gateway"}
     value[2:3] = ["jobs"]
+    in_place += [{"name": "worker"}, ["jobs"]]
+    in_place *= 2
 
     assert isinstance(value[0], ExtendedList)
     assert isinstance(value[0][0], ExtendedString)
@@ -119,6 +122,12 @@ def test_extended_list_promotes_nested_values_on_mutation() -> None:
     assert isinstance(value[2], ExtendedString)
     assert isinstance(value[3], ExtendedDict)
     assert value[1]["name"].upper_first() == "Gateway"
+    assert isinstance(in_place[1], ExtendedDict)
+    assert isinstance(in_place[1]["name"], ExtendedString)
+    assert isinstance(in_place[2], ExtendedList)
+    assert isinstance(in_place[2][0], ExtendedString)
+    assert isinstance(in_place[4], ExtendedDict)
+    assert isinstance(in_place[5], ExtendedList)
 
 
 def test_extended_set_composes_set_operations() -> None:

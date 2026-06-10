@@ -52,6 +52,17 @@ class ExtendedList(UserList[T]):
         """Extend values while preserving extended nested containers."""
         self.data.extend(self._wrap_item(item) for item in other)
 
+    def __iadd__(self, other: Iterable[T]) -> ExtendedList[T]:
+        """Extend in place while preserving extended nested containers."""
+        self.extend(other)
+        return self
+
+    def __imul__(self, count: SupportsIndex) -> ExtendedList[T]:
+        """Repeat in place while preserving extended nested containers."""
+        self.data *= operator_index(count)
+        self.data[:] = [self._wrap_item(item) for item in self.data]
+        return self
+
     def insert(self, i: int, item: T) -> None:
         """Insert a value while preserving extended nested containers."""
         self.data.insert(i, self._wrap_item(item))
