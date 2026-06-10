@@ -84,6 +84,8 @@ class InputConfig:
                 allow_none=self.allow_none,
                 as_extended=self.as_extended,
             )
+        elif source_present and provider.inputs.get(key) is None and self.allow_none and not self.required:
+            value = None
         else:
             value = provider.get_input(
                 key,

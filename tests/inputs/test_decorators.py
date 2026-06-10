@@ -31,6 +31,14 @@ class ExampleService:
     def parse_raw_extended_config(self, raw_config: ExtendedDict) -> ExtendedDict:
         return raw_config
 
+    @input_config("optional_value", allow_none=True)
+    def optional_plain_value(self, optional_value: str | None = "method-default") -> str | None:
+        return optional_value
+
+    @input_config("required_value", required=True, allow_none=True)
+    def required_plain_value(self, required_value: str | None = "method-default") -> str | None:
+        return required_value
+
     def greet(self, prefix: str = "hello") -> str:
         return prefix
 
@@ -75,6 +83,19 @@ def test_plain_input_config_can_return_extended_containers() -> None:
 
     assert isinstance(parsed, ExtendedDict)
     assert isinstance(parsed["name"], ExtendedString)
+
+
+def test_plain_input_config_honors_explicit_none() -> None:
+    service = ExampleService(_input_provider_config={"inputs": {"optional_value": None}})
+
+    assert service.optional_plain_value() is None
+
+
+def test_plain_input_config_required_none_still_raises() -> None:
+    service = ExampleService(_input_provider_config={"inputs": {"required_value": None}})
+
+    with pytest.raises(RuntimeError, match="Required input required_value not passed"):
+        service.required_plain_value()
 
 
 def test_method_default_used_when_input_missing() -> None:
