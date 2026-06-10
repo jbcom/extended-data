@@ -34,6 +34,7 @@ import httpx
 from pydantic import BaseModel, Field
 
 from extended_data.connectors.base import VendorConnectorBase
+from extended_data.containers import ExtendedDict, ExtendedList
 
 
 __all__ = [
@@ -181,7 +182,7 @@ class JulesConnector(VendorConnectorBase):
         """Serialize a Jules model using API field aliases."""
         return model.model_dump(by_alias=True)
 
-    def list_sources(self, page_size: int = 100, page_token: str = "") -> list[dict[str, Any]]:
+    def list_sources(self, page_size: int = 100, page_token: str = "") -> ExtendedList[ExtendedDict]:
         """List available sources (connected GitHub repos).
 
         Args:
@@ -212,7 +213,7 @@ class JulesConnector(VendorConnectorBase):
         starting_branch: str = "main",
         automation_mode: str = "AUTO_CREATE_PR",
         require_plan_approval: bool = False,
-    ) -> dict[str, Any]:
+    ) -> ExtendedDict:
         """Create a new Jules session.
 
         Args:
@@ -247,7 +248,7 @@ class JulesConnector(VendorConnectorBase):
 
         return self.extend_result(self._model_payload(Session(**data)))
 
-    def get_session(self, session_name: str) -> dict[str, Any]:
+    def get_session(self, session_name: str) -> ExtendedDict:
         """Get a session by name.
 
         Args:
@@ -265,7 +266,7 @@ class JulesConnector(VendorConnectorBase):
 
         return self.extend_result(self._model_payload(Session(**data)))
 
-    def list_sessions(self, page_size: int = 20, page_token: str = "") -> list[dict[str, Any]]:
+    def list_sessions(self, page_size: int = 20, page_token: str = "") -> ExtendedList[ExtendedDict]:
         """List sessions.
 
         Args:
@@ -284,7 +285,7 @@ class JulesConnector(VendorConnectorBase):
 
         return self.extend_result([self._model_payload(Session(**s)) for s in data.get("sessions", [])])
 
-    def approve_plan(self, session_name: str) -> dict[str, Any]:
+    def approve_plan(self, session_name: str) -> ExtendedDict:
         """Approve the plan for a session that requires approval.
 
         Args:
@@ -302,7 +303,7 @@ class JulesConnector(VendorConnectorBase):
         # API returns empty on success, fetch updated session
         return self.get_session(session_name)
 
-    def add_user_response(self, session_name: str, message: str = "") -> dict[str, Any]:
+    def add_user_response(self, session_name: str, message: str = "") -> ExtendedDict:
         """Add a follow-up message to a session or resume it.
 
         Note: The Jules API uses :sendMessage endpoint. An empty body
@@ -325,7 +326,7 @@ class JulesConnector(VendorConnectorBase):
         # API returns empty on success, fetch updated session
         return self.get_session(session_name)
 
-    def resume_session(self, session_name: str) -> dict[str, Any]:
+    def resume_session(self, session_name: str) -> ExtendedDict:
         """Resume a paused or awaiting session.
 
         Args:

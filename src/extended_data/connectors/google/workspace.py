@@ -9,7 +9,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 from extended_data import unhump_map
-from extended_data.containers import to_builtin
+from extended_data.containers import ExtendedDict, ExtendedList, to_builtin
 
 
 class GoogleWorkspaceMixin:
@@ -35,7 +35,7 @@ class GoogleWorkspaceMixin:
         max_results: int = 500,
         unhump_users: bool = False,
         subject: str | None = None,
-    ) -> list[dict[str, Any]]:
+    ) -> ExtendedList[ExtendedDict]:
         """List users from Google Workspace.
 
         Args:
@@ -76,7 +76,7 @@ class GoogleWorkspaceMixin:
         self,
         user_key: str,
         subject: str | None = None,
-    ) -> dict[str, Any] | None:
+    ) -> ExtendedDict | None:
         """Get a specific user from Google Workspace.
 
         Args:
@@ -108,7 +108,7 @@ class GoogleWorkspaceMixin:
         org_unit_path: str = "/",
         subject: str | None = None,
         **additional_fields: Any,
-    ) -> dict[str, Any]:
+    ) -> ExtendedDict:
         """Create a user in Google Workspace.
 
         Args:
@@ -152,7 +152,7 @@ class GoogleWorkspaceMixin:
         user_key: str,
         subject: str | None = None,
         **fields: Any,
-    ) -> dict[str, Any]:
+    ) -> ExtendedDict:
         """Update a user in Google Workspace.
 
         Args:
@@ -189,7 +189,7 @@ class GoogleWorkspaceMixin:
         max_results: int = 200,
         unhump_groups: bool = False,
         subject: str | None = None,
-    ) -> list[dict[str, Any]]:
+    ) -> ExtendedList[ExtendedDict]:
         """List groups from Google Workspace.
 
         Args:
@@ -230,7 +230,7 @@ class GoogleWorkspaceMixin:
         self,
         group_key: str,
         subject: str | None = None,
-    ) -> dict[str, Any] | None:
+    ) -> ExtendedDict | None:
         """Get a specific group from Google Workspace.
 
         Args:
@@ -258,7 +258,7 @@ class GoogleWorkspaceMixin:
         name: str,
         description: str = "",
         subject: str | None = None,
-    ) -> dict[str, Any]:
+    ) -> ExtendedDict:
         """Create a group in Google Workspace.
 
         Args:
@@ -303,7 +303,7 @@ class GoogleWorkspaceMixin:
         roles: list[str] | None = None,
         unhump_members: bool = False,
         subject: str | None = None,
-    ) -> list[dict[str, Any]]:
+    ) -> ExtendedList[ExtendedDict]:
         """List members of a Google Workspace group.
 
         Args:
@@ -346,7 +346,7 @@ class GoogleWorkspaceMixin:
         email: str,
         role: str = "MEMBER",
         subject: str | None = None,
-    ) -> dict[str, Any]:
+    ) -> ExtendedDict:
         """Add a member to a Google Workspace group.
 
         Args:
@@ -391,7 +391,7 @@ class GoogleWorkspaceMixin:
         org_unit_path: str = "/",
         org_unit_type: str = "all",
         subject: str | None = None,
-    ) -> list[dict[str, Any]]:
+    ) -> ExtendedList[ExtendedDict]:
         """List organizational units in Google Workspace.
 
         Args:
@@ -429,7 +429,7 @@ class GoogleWorkspaceMixin:
         org_unit_path: str = "/",
         subject: str | None = None,
         **additional_fields: Any,
-    ) -> dict[str, Any]:
+    ) -> ExtendedDict:
         """Create or update a user in Google Workspace.
 
         This method provides terraform-style idempotent user management.
@@ -497,7 +497,7 @@ class GoogleWorkspaceMixin:
         update_if_exists: bool = False,
         subject: str | None = None,
         **additional_fields: Any,
-    ) -> dict[str, Any]:
+    ) -> ExtendedDict:
         """Create or update a group in Google Workspace.
 
         This method provides terraform-style idempotent group management.
@@ -549,7 +549,7 @@ class GoogleWorkspaceMixin:
         customer_id: str = "my_customer",
         product_id: str | None = None,
         subject: str | None = None,
-    ) -> list[dict[str, Any]]:
+    ) -> ExtendedList[ExtendedDict]:
         """List available Google Workspace licenses.
 
         Args:
@@ -631,7 +631,7 @@ class GoogleWorkspaceMixin:
         self,
         customer_id: str = "my_customer",
         subject: str | None = None,
-    ) -> dict[str, dict[str, int]]:
+    ) -> ExtendedDict:
         """Get a summary of license usage by product.
 
         Args:

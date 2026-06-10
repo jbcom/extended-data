@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, Any
 
 from extended_data.connectors._optional import require_extra
 from extended_data.connectors.base import VendorConnectorBase
+from extended_data.containers import ExtendedDict, ExtendedList
 from extended_data.logging import Logging
 
 
@@ -414,7 +415,7 @@ class GoogleConnector(VendorConnectorBase):
         exclude_bots: bool | None = None,
         flatten_names: bool | None = None,
         key_by_email: bool | None = None,
-    ) -> list[dict[str, Any]] | dict[str, dict[str, Any]]:
+    ) -> ExtendedList[ExtendedDict] | ExtendedDict:
         """List users from Google Workspace with optional filtering.
 
         Args:
@@ -487,7 +488,7 @@ class GoogleConnector(VendorConnectorBase):
         exclude_bots: bool | None = None,
         flatten_names: bool | None = None,
         key_by_email: bool | None = None,
-    ) -> list[dict[str, Any]] | dict[str, dict[str, Any]]:
+    ) -> ExtendedList[ExtendedDict] | ExtendedDict:
         """List groups from Google Workspace with optional filtering.
 
         Args:

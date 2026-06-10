@@ -6,10 +6,11 @@ folders, projects, and IAM.
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from typing import TYPE_CHECKING, Any
 
 from extended_data import unhump_map
-from extended_data.containers import to_builtin
+from extended_data.containers import ExtendedDict, ExtendedList, ExtendedString, to_builtin
 
 
 class GoogleCloudMixin:
@@ -30,7 +31,7 @@ class GoogleCloudMixin:
 
         def extend_result(self, value: Any) -> Any: ...
 
-    def get_organization_id(self) -> str:
+    def get_organization_id(self) -> ExtendedString:
         """Get the Google Cloud organization ID.
 
         Returns:
@@ -54,7 +55,7 @@ class GoogleCloudMixin:
         self.logger.info(f"Organization ID: {org_id}")
         return self.extend_result(org_id)
 
-    def get_organization(self) -> dict[str, Any]:
+    def get_organization(self) -> ExtendedDict:
         """Get the Google Cloud organization details.
 
         Returns:
@@ -80,7 +81,7 @@ class GoogleCloudMixin:
         parent: str | None = None,
         filter_query: str | None = None,
         unhump_projects: bool = False,
-    ) -> list[dict[str, Any]]:
+    ) -> ExtendedList[ExtendedDict]:
         """List Google Cloud projects.
 
         Args:
@@ -120,7 +121,7 @@ class GoogleCloudMixin:
 
         return self.extend_result(projects)
 
-    def get_project(self, project_id: str) -> dict[str, Any] | None:
+    def get_project(self, project_id: str) -> ExtendedDict | None:
         """Get a specific Google Cloud project.
 
         Args:
@@ -147,7 +148,7 @@ class GoogleCloudMixin:
         display_name: str,
         parent: str | None = None,
         labels: dict[str, str] | None = None,
-    ) -> dict[str, Any]:
+    ) -> ExtendedDict:
         """Create a Google Cloud project.
 
         Args:
@@ -176,7 +177,7 @@ class GoogleCloudMixin:
         self.logger.info(f"Created project: {project_id}")
         return self.extend_result(result)
 
-    def delete_project(self, project_id: str) -> dict[str, Any]:
+    def delete_project(self, project_id: str) -> ExtendedDict:
         """Delete a Google Cloud project.
 
         Args:
@@ -196,7 +197,7 @@ class GoogleCloudMixin:
         self,
         project_id: str,
         destination_parent: str,
-    ) -> dict[str, Any]:
+    ) -> ExtendedDict:
         """Move a project to a different folder/organization.
 
         Args:
@@ -224,7 +225,7 @@ class GoogleCloudMixin:
         self,
         parent: str,
         unhump_folders: bool = False,
-    ) -> list[dict[str, Any]]:
+    ) -> ExtendedList[ExtendedDict]:
         """List folders under a parent.
 
         Args:
@@ -263,7 +264,7 @@ class GoogleCloudMixin:
         self,
         resource: str,
         constraint: str,
-    ) -> dict[str, Any] | None:
+    ) -> ExtendedDict | None:
         """Get an organization policy.
 
         Args:
@@ -295,7 +296,7 @@ class GoogleCloudMixin:
         self,
         resource: str,
         policy: dict[str, Any],
-    ) -> dict[str, Any]:
+    ) -> ExtendedDict:
         """Set an organization policy.
 
         Args:
@@ -321,7 +322,7 @@ class GoogleCloudMixin:
         self,
         resource: str,
         resource_type: str = "projects",
-    ) -> dict[str, Any]:
+    ) -> ExtendedDict:
         """Get IAM policy for a resource.
 
         Args:
@@ -366,9 +367,9 @@ class GoogleCloudMixin:
     def set_iam_policy(
         self,
         resource: str,
-        policy: dict[str, Any],
+        policy: Mapping[str, Any],
         resource_type: str = "projects",
-    ) -> dict[str, Any]:
+    ) -> ExtendedDict:
         """Set IAM policy for a resource.
 
         Args:
@@ -421,7 +422,7 @@ class GoogleCloudMixin:
         role: str,
         member: str,
         resource_type: str = "projects",
-    ) -> dict[str, Any]:
+    ) -> ExtendedDict:
         """Add an IAM binding to a resource.
 
         Args:
@@ -458,7 +459,7 @@ class GoogleCloudMixin:
         self,
         project_id: str,
         unhump_accounts: bool = False,
-    ) -> list[dict[str, Any]]:
+    ) -> ExtendedList[ExtendedDict]:
         """List service accounts in a project.
 
         Args:
@@ -499,7 +500,7 @@ class GoogleCloudMixin:
         account_id: str,
         display_name: str,
         description: str = "",
-    ) -> dict[str, Any]:
+    ) -> ExtendedDict:
         """Create a service account in a project.
 
         Args:

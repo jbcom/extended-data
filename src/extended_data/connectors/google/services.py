@@ -8,9 +8,11 @@ from __future__ import annotations
 
 import datetime as dt
 
+from collections.abc import Mapping, MutableMapping
 from typing import TYPE_CHECKING, Any
 
 from extended_data import unhump_map
+from extended_data.containers import ExtendedDict, ExtendedList
 
 
 _PROJECT_ACTIVITY_TIME_FIELDS = (
@@ -47,7 +49,7 @@ def _parse_project_activity_time(value: Any) -> dt.datetime | None:
     return parsed.astimezone(dt.timezone.utc)
 
 
-def _latest_project_activity_time(project_data: dict[str, Any]) -> dt.datetime | None:
+def _latest_project_activity_time(project_data: Mapping[str, Any]) -> dt.datetime | None:
     """Return the latest activity timestamp available on project metadata."""
     timestamps = [
         parsed
@@ -58,7 +60,7 @@ def _latest_project_activity_time(project_data: dict[str, Any]) -> dt.datetime |
 
 
 def _project_activity_is_stale(
-    project_data: dict[str, Any],
+    project_data: Mapping[str, Any],
     *,
     days_since_activity: int,
     now: dt.datetime | None = None,
@@ -119,7 +121,7 @@ class GoogleServicesMixin:
         project_id: str,
         zone: str | None = None,
         unhump_instances: bool = False,
-    ) -> list[dict[str, Any]]:
+    ) -> ExtendedList[ExtendedDict]:
         """List Compute Engine instances in a project.
 
         Args:
@@ -181,7 +183,7 @@ class GoogleServicesMixin:
         project_id: str,
         location: str = "-",
         unhump_clusters: bool = False,
-    ) -> list[dict[str, Any]]:
+    ) -> ExtendedList[ExtendedDict]:
         """List GKE clusters in a project.
 
         Args:
@@ -211,7 +213,7 @@ class GoogleServicesMixin:
         project_id: str,
         location: str,
         cluster_id: str,
-    ) -> dict[str, Any] | None:
+    ) -> ExtendedDict | None:
         """Get a specific GKE cluster.
 
         Args:
@@ -243,7 +245,7 @@ class GoogleServicesMixin:
         self,
         project_id: str,
         unhump_buckets: bool = False,
-    ) -> list[dict[str, Any]]:
+    ) -> ExtendedList[ExtendedDict]:
         """List Cloud Storage buckets in a project.
 
         Args:
@@ -286,7 +288,7 @@ class GoogleServicesMixin:
         self,
         project_id: str,
         unhump_instances: bool = False,
-    ) -> list[dict[str, Any]]:
+    ) -> ExtendedList[ExtendedDict]:
         """List Cloud SQL instances in a project.
 
         Args:
@@ -329,7 +331,7 @@ class GoogleServicesMixin:
         self,
         project_id: str,
         unhump_topics: bool = False,
-    ) -> list[dict[str, Any]]:
+    ) -> ExtendedList[ExtendedDict]:
         """List Pub/Sub topics in a project.
 
         Args:
@@ -368,7 +370,7 @@ class GoogleServicesMixin:
         self,
         project_id: str,
         unhump_subscriptions: bool = False,
-    ) -> list[dict[str, Any]]:
+    ) -> ExtendedList[ExtendedDict]:
         """List Pub/Sub subscriptions in a project.
 
         Args:
@@ -411,7 +413,7 @@ class GoogleServicesMixin:
         self,
         project_id: str,
         unhump_services: bool = False,
-    ) -> list[dict[str, Any]]:
+    ) -> ExtendedList[ExtendedDict]:
         """List enabled APIs/services in a project.
 
         Args:
@@ -453,7 +455,7 @@ class GoogleServicesMixin:
         self,
         project_id: str,
         service_name: str,
-    ) -> dict[str, Any]:
+    ) -> ExtendedDict:
         """Enable an API/service in a project.
 
         Args:
@@ -477,7 +479,7 @@ class GoogleServicesMixin:
         project_id: str,
         service_name: str,
         force: bool = False,
-    ) -> dict[str, Any]:
+    ) -> ExtendedDict:
         """Disable an API/service in a project.
 
         Args:
@@ -505,7 +507,7 @@ class GoogleServicesMixin:
         self,
         project_id: str,
         service_names: list[str],
-    ) -> dict[str, Any]:
+    ) -> ExtendedDict:
         """Enable multiple APIs/services in a project.
 
         Args:
@@ -540,7 +542,7 @@ class GoogleServicesMixin:
         project_id: str,
         location: str,
         unhump_keyrings: bool = False,
-    ) -> list[dict[str, Any]]:
+    ) -> ExtendedList[ExtendedDict]:
         """List KMS key rings in a project location.
 
         Args:
@@ -582,7 +584,7 @@ class GoogleServicesMixin:
         project_id: str,
         location: str,
         keyring_id: str,
-    ) -> dict[str, Any]:
+    ) -> ExtendedDict:
         """Create a KMS key ring.
 
         Args:
@@ -620,7 +622,7 @@ class GoogleServicesMixin:
         key_id: str,
         purpose: str = "ENCRYPT_DECRYPT",
         algorithm: str = "GOOGLE_SYMMETRIC_ENCRYPTION",
-    ) -> dict[str, Any]:
+    ) -> ExtendedDict:
         """Create a KMS crypto key.
 
         Args:
@@ -731,7 +733,7 @@ class GoogleServicesMixin:
     def get_project_iam_users(
         self,
         project_id: str,
-    ) -> dict[str, dict[str, Any]]:
+    ) -> ExtendedDict:
         """Get IAM users (members) with access to a project.
 
         Args:
@@ -761,7 +763,7 @@ class GoogleServicesMixin:
         project_id: str,
         include_subscriptions: bool = True,
         unhump_resources: bool = False,
-    ) -> dict[str, Any]:
+    ) -> ExtendedDict:
         """Get all Pub/Sub topics and subscriptions for a project.
 
         Args:
@@ -799,10 +801,10 @@ class GoogleServicesMixin:
 
     def find_inactive_projects(
         self,
-        projects: dict[str, dict[str, Any]] | None = None,
+        projects: MutableMapping[str, MutableMapping[str, Any]] | None = None,
         check_resources: bool = True,
         days_since_activity: int = 90,
-    ) -> list[dict[str, Any]]:
+    ) -> ExtendedList[ExtendedDict]:
         """Find projects that appear to be inactive or dead.
 
         A project is considered inactive if:
@@ -829,12 +831,12 @@ class GoogleServicesMixin:
         if projects is None:
             # Get projects from cloud module - requires GoogleCloudMixin
             if hasattr(self, "list_projects"):
-                projects = {p["projectId"]: p for p in self.list_projects()}
+                projects = {str(p["projectId"]): p for p in self.list_projects()}
             else:
                 self.logger.warning("list_projects not available, cannot find inactive projects")
                 return self.extend_result([])
 
-        inactive: list[dict[str, Any]] = []
+        inactive: list[MutableMapping[str, Any]] = []
 
         for project_id, project_data in projects.items():
             lifecycle_state = project_data.get("lifecycleState", "ACTIVE")

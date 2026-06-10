@@ -9,7 +9,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 from extended_data import unhump_map
-from extended_data.containers import to_builtin
+from extended_data.containers import ExtendedDict, ExtendedList, to_builtin
 
 
 class GoogleBillingMixin:
@@ -32,7 +32,7 @@ class GoogleBillingMixin:
         self,
         filter_query: str | None = None,
         unhump_accounts: bool = False,
-    ) -> list[dict[str, Any]]:
+    ) -> ExtendedList[ExtendedDict]:
         """List Google Cloud billing accounts.
 
         Args:
@@ -69,7 +69,7 @@ class GoogleBillingMixin:
 
         return self.extend_result(accounts)
 
-    def get_billing_account(self, billing_account_id: str) -> dict[str, Any] | None:
+    def get_billing_account(self, billing_account_id: str) -> ExtendedDict | None:
         """Get a specific billing account.
 
         Args:
@@ -93,7 +93,7 @@ class GoogleBillingMixin:
                 return None
             raise
 
-    def get_project_billing_info(self, project_id: str) -> dict[str, Any] | None:
+    def get_project_billing_info(self, project_id: str) -> ExtendedDict | None:
         """Get billing info for a project.
 
         Args:
@@ -118,7 +118,7 @@ class GoogleBillingMixin:
         self,
         project_id: str,
         billing_account_name: str,
-    ) -> dict[str, Any]:
+    ) -> ExtendedDict:
         """Link a project to a billing account.
 
         Args:
@@ -146,7 +146,7 @@ class GoogleBillingMixin:
         self.logger.info(f"Linked project {project_id} to billing account")
         return self.extend_result(result)
 
-    def disable_project_billing(self, project_id: str) -> dict[str, Any]:
+    def disable_project_billing(self, project_id: str) -> ExtendedDict:
         """Disable billing for a project.
 
         Args:
@@ -174,7 +174,7 @@ class GoogleBillingMixin:
         self,
         billing_account_id: str,
         unhump_projects: bool = False,
-    ) -> list[dict[str, Any]]:
+    ) -> ExtendedList[ExtendedDict]:
         """List projects linked to a billing account.
 
         Args:
@@ -216,7 +216,7 @@ class GoogleBillingMixin:
     def get_billing_account_iam_policy(
         self,
         billing_account_id: str,
-    ) -> dict[str, Any]:
+    ) -> ExtendedDict:
         """Get IAM policy for a billing account.
 
         Args:
@@ -237,7 +237,7 @@ class GoogleBillingMixin:
         self,
         billing_account_id: str,
         policy: dict[str, Any],
-    ) -> dict[str, Any]:
+    ) -> ExtendedDict:
         """Set IAM policy for a billing account.
 
         Args:
@@ -267,7 +267,7 @@ class GoogleBillingMixin:
         self,
         project_id: str,
         dataset_id: str = "billing_export",
-    ) -> dict[str, Any] | None:
+    ) -> ExtendedDict | None:
         """Get BigQuery billing export dataset configuration.
 
         Args:
@@ -325,7 +325,7 @@ class GoogleBillingMixin:
         project_id: str,
         dataset_id: str = "billing_export",
         location: str = "US",
-    ) -> dict[str, Any]:
+    ) -> ExtendedDict:
         """Set up BigQuery billing export for a billing account.
 
         Creates the dataset if it doesn't exist and returns configuration.
