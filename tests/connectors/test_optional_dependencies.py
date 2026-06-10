@@ -2,11 +2,58 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
+import tomlkit
 
-from extended_data.connectors import _optional
+from extended_data.connectors import _optional, registry
+
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
+
+
+def _pyproject() -> tomlkit.TOMLDocument:
+    return tomlkit.parse((REPO_ROOT / "pyproject.toml").read_text())
+
+
+def test_builtin_connector_metadata_maps_stay_aligned() -> None:
+    """Built-in connector registries should fail fast when metadata drifts."""
+    names = set(registry.BUILTIN_CONNECTORS)
+
+    assert names == set(_optional.CONNECTOR_REQUIREMENTS)
+    assert names == set(_optional.CONNECTOR_EXTRAS)
+
+    for name, spec in registry.BUILTIN_CONNECTORS.items():
+        assert _optional.get_extra_for_connector(name) == spec.extra
+
+
+def test_builtin_connectors_are_registered_as_entry_points() -> None:
+    """Every built-in connector should be published through the connector entry point group."""
+    entry_points = _pyproject()["project"]["entry-points"]["extended_data.connectors"]
+
+    assert set(entry_points) == set(registry.BUILTIN_CONNECTORS)
+
+    for name, spec in registry.BUILTIN_CONNECTORS.items():
+        assert entry_points[name] == f"{spec.module_path}:{spec.class_name}"
+
+
+def test_connector_extras_exist_in_pyproject() -> None:
+    """Connector extras referenced by registry metadata should exist in pyproject."""
+    extras = _pyproject()["project"]["optional-dependencies"]
+
+    for name, extra in _optional.CONNECTOR_EXTRAS.items():
+        assert extra in extras, f"{name} uses missing extra {extra}"
+
+
+def test_connector_requirement_packages_map_to_connector_extras() -> None:
+    """Connector import checks should point users to the same extra as the connector itself."""
+    for name, requirements in _optional.CONNECTOR_REQUIREMENTS.items():
+        extra = _optional.CONNECTOR_EXTRAS[name]
+
+        for requirement in requirements:
+            assert _optional.PACKAGE_TO_EXTRA[requirement] == extra
 
 
 def test_get_crewai_tool_decorator_explains_user_managed_install(monkeypatch) -> None:
