@@ -85,13 +85,12 @@ class TestExitRunNoExit:
         output = logger.exit_run(None, exit_on_completion=False)
         assert output == {}
 
-    def test_exit_run_unhump_results(self, logger: Logging, tmp_path: Path) -> None:
-        """Test that exit_run converts camelCase to snake_case."""
+    def test_exit_run_unhump_results_is_not_preserved(self, logger: Logging, tmp_path: Path) -> None:
+        """The clean major-version API should not keep the old shorthand flag."""
         os.chdir(tmp_path)
         results = {"myKey": {"nestedKey": "value"}}
-        output = logger.exit_run(results, unhump_results=True, exit_on_completion=False)
-        assert "my_key" in output
-        assert "nested_key" in output["my_key"]
+        with pytest.raises(TypeError, match="unhump_results"):
+            logger.exit_run(results, unhump_results=True, exit_on_completion=False)
 
     def test_exit_run_key_transform_snake_case(self, logger: Logging, tmp_path: Path) -> None:
         """Test key_transform with snake_case string."""

@@ -402,14 +402,12 @@ class Logging:
     def _resolve_key_transform(
         self,
         key_transform: KeyTransform | str | None,
-        unhump_results: bool,
         prefix: str | None,
     ) -> KeyTransform | None:
         """Resolve key_transform parameter to a callable.
 
         Args:
             key_transform: User-provided transform (callable, string name, or None).
-            unhump_results: Legacy flag for snake_case transformation.
             prefix: If set, implies transformation is needed.
 
         Returns:
@@ -425,8 +423,7 @@ class Logging:
                     raise ValueError(f"Unknown key_transform '{key_transform}'. Available: {available}")
                 return self.KEY_TRANSFORMS[key_transform]
 
-        # Legacy unhump_results flag
-        if unhump_results or prefix:
+        if prefix:
             return to_snake_case
 
         return None
@@ -462,7 +459,6 @@ class Logging:
     def exit_run(
         self,
         results: Mapping[str, Any] | None = None,
-        unhump_results: bool = False,
         key_transform: KeyTransform | str | None = None,
         prefix: str | None = None,
         prefix_allowlist: Sequence[str] | None = None,
@@ -488,14 +484,11 @@ class Logging:
 
         Args:
             results: The results to format and output. Defaults to empty dict.
-            unhump_results: Convert camelCase keys to snake_case (shorthand for
-                key_transform="snake_case").
             key_transform: Transform function for result keys. Can be:
                 - A callable that takes a string and returns a string
                 - A string naming a built-in transform: "snake_case", "camel_case",
                   "pascal_case", "kebab_case"
                 - None to skip transformation
-                When unhump_results=True, defaults to "snake_case".
             prefix: Prefix to add to result keys (implies key transformation).
             prefix_allowlist: Keys to include when prefixing.
             prefix_denylist: Keys to exclude when prefixing.
@@ -519,7 +512,7 @@ class Logging:
 
         Examples:
             # Simple snake_case transformation (most common)
-            logging.exit_run(results, unhump_results=True)
+            logging.exit_run(results, key_transform="snake_case")
 
             # Explicit transform
             logging.exit_run(results, key_transform="kebab_case")
@@ -527,8 +520,11 @@ class Logging:
             # Custom transform function
             logging.exit_run(results, key_transform=lambda k: k.upper())
         """
+        if "unhump_results" in format_opts:
+            raise TypeError("exit_run() got an unexpected keyword argument 'unhump_results'")
+
         # Resolve key_transform from various inputs
-        transform_fn = self._resolve_key_transform(key_transform, unhump_results, prefix)
+        transform_fn = self._resolve_key_transform(key_transform, prefix)
         try:
             self.log_results(results, "results")
 
