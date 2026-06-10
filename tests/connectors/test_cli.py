@@ -34,6 +34,7 @@ def test_cli_list_json():
     output = mock_write.call_args.args[0]
     assert '"name": "github"' in output
     assert '"available":' in output
+    assert "api_key_env" not in output
 
 
 def test_cli_info():

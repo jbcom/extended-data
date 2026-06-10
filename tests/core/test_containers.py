@@ -41,12 +41,20 @@ def test_extended_dict_promotes_nested_values_on_mutation() -> None:
 
     value["owner"] = "platform"
     value.update({"ports": [8080, "9090"]})
+    value.update([("metadata", {"tier": "prod"})], runtime={"python": "3.13"})
+    value.update(other={"literal": "key"})
 
     assert isinstance(value["service"], ExtendedDict)
     assert isinstance(value["service"]["name"], ExtendedString)
     assert isinstance(value["owner"], ExtendedString)
     assert isinstance(value["ports"], ExtendedList)
     assert isinstance(value["ports"][1], ExtendedString)
+    assert isinstance(value["metadata"], ExtendedDict)
+    assert isinstance(value["metadata"]["tier"], ExtendedString)
+    assert isinstance(value["runtime"], ExtendedDict)
+    assert isinstance(value["runtime"]["python"], ExtendedString)
+    assert isinstance(value["other"], ExtendedDict)
+    assert isinstance(value["other"]["literal"], ExtendedString)
     assert value["service"]["name"].upper_first() == "Api"
 
 

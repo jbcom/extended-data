@@ -70,7 +70,6 @@ class ConnectorInfo:
     class_name: str | None
     module: str | None
     base_url: str | None
-    api_key_env: str | None
     description: str | None
     error: str | None
 
@@ -87,7 +86,6 @@ class ConnectorInfo:
             "class": self.class_name,
             "module": self.module,
             "base_url": self.base_url,
-            "api_key_env": self.api_key_env,
             "description": self.description,
             "error": self.error,
         }
@@ -297,7 +295,6 @@ def _available_connector_info(name: str, cls: builtins.type[VendorConnectorBase]
         class_name=cls.__name__,
         module=cls.__module__,
         base_url=getattr(cls, "BASE_URL", None),
-        api_key_env=getattr(cls, "API_KEY_ENV", None),
         description=_get_description(cls),
         error=None,
     )
@@ -318,7 +315,6 @@ def _missing_builtin_connector_info(name: str, error: ImportError | None) -> Con
         class_name=spec.class_name,
         module=spec.module_path,
         base_url=None,
-        api_key_env=None,
         description=None,
         error=str(error) if error else "Connector class could not be loaded.",
     )

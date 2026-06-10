@@ -3,8 +3,12 @@
 from __future__ import annotations
 
 from collections import UserDict
-from collections.abc import Mapping
-from typing import Any
+from collections.abc import Iterable, Mapping
+from typing import TYPE_CHECKING, Any, overload
+
+
+if TYPE_CHECKING:
+    from _typeshed import SupportsKeysAndGetItem
 
 from extended_data.primitives.mappings import (
     all_values_from_map,
@@ -24,13 +28,43 @@ class ExtendedDict(UserDict[str, Any]):
     def __init__(self, initialdata: Mapping[str, Any] | None = None, **kwargs: Any) -> None:
         """Initialize the extended dictionary."""
         super().__init__()
-        self.update(dict(initialdata or {}, **kwargs))
+        self.update(initialdata or {}, **kwargs)
 
     def __setitem__(self, key: str, item: Any) -> None:
         """Set a value while preserving extended nested containers."""
         from extended_data.containers.factory import extend_data
 
         self.data[key] = extend_data(item)
+
+    @overload
+    def update(self, other: SupportsKeysAndGetItem[str, Any], /) -> None: ...
+
+    @overload
+    def update(self, other: SupportsKeysAndGetItem[str, Any], /, **kwargs: Any) -> None: ...
+
+    @overload
+    def update(self, other: Iterable[tuple[str, Any]], /) -> None: ...
+
+    @overload
+    def update(self, other: Iterable[tuple[str, Any]], /, **kwargs: Any) -> None: ...
+
+    @overload
+    def update(self, **kwargs: Any) -> None: ...
+
+    def update(self, *args: Any, **kwargs: Any) -> None:  # type: ignore[misc]
+        """Update values while preserving extended nested containers."""
+        if len(args) > 1:
+            msg = f"update expected at most 1 argument, got {len(args)}"
+            raise TypeError(msg)
+
+        if args:
+            other = args[0]
+            items = other.items() if hasattr(other, "items") else other
+            for key, value in items:
+                self[key] = value
+
+        for key, value in kwargs.items():
+            self[key] = value
 
     def deep_merge(self, *mappings: Mapping[str, Any]) -> ExtendedDict:
         """Return a deeply merged copy."""
