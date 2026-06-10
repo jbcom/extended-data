@@ -9,6 +9,8 @@ import extended_data.logging as lifecycle_logging
 
 from extended_data import connectors, inputs
 from extended_data.connectors.connectors import ConnectorFabric
+from extended_data.inputs import InputProvider
+from extended_data.logging import Logging
 
 
 def test_package_version_is_distribution_version() -> None:
@@ -27,3 +29,12 @@ def test_clean_major_version_public_names() -> None:
     assert connectors.ConnectorFabric is ConnectorFabric
     assert not hasattr(inputs, "DirectedInputsClass")
     assert not hasattr(connectors, "VendorConnectors")
+
+
+def test_root_exports_first_class_integrated_primitives() -> None:
+    """Inputs, logging, and connector fabric are available from the root package."""
+    assert extended_data.InputProvider is InputProvider
+    assert extended_data.Logging is Logging
+    assert extended_data.ConnectorFabric is ConnectorFabric
+    assert callable(extended_data.directed_inputs)
+    assert callable(extended_data.get_connector)

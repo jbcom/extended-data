@@ -26,13 +26,13 @@ pip install "extended-data[secrets]"
 ## Usage
 
 ```python
-from extended_data import decode_json, encode_yaml
-from extended_data.inputs import directed_inputs
-from extended_data.logging import Logging
-from extended_data.connectors.github import GitHubConnector
+from extended_data import ConnectorFabric, InputProvider, Logging, decode_json, encode_yaml
 
 logger = Logging(logger_name="example")
+inputs = InputProvider(inputs={"GITHUB_OWNER": "jbcom"}, from_environment=False)
+connectors = ConnectorFabric(inputs=inputs.inputs, logger=logger)
 data = decode_json('{"status": "ok"}')
+
 print(encode_yaml(data))
 ```
 
@@ -41,16 +41,18 @@ print(encode_yaml(data))
 ```text
 extended_data/
   core serialization, files, types, transforms
-  inputs/
-  logging/
-  connectors/
-  secrets/
-  workflows/
+  inputs/       InputProvider and decorator-based input injection
+  logging/      structured lifecycle logging
+  connectors/   ConnectorFabric and vendor adapters
+  secrets/      Python access to secret sync primitives
+  workflows/    higher-order workflow composition
 ```
 
 Vendor connectors are first-class adapters in the data fabric. They share the
 same primitives for input loading, structured logging, data normalization,
 retry behavior, and serialization.
+
+More detail lives in [`docs/package-surface.md`](docs/package-surface.md).
 
 ## Development
 
