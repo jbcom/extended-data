@@ -337,6 +337,33 @@ class InputProvider:
         self.frozen_inputs = ExtendedDict()
         return self.inputs
 
+    def snapshot_inputs(self, *, frozen: bool = False) -> ExtendedDict:
+        """Return a detached Tier 2 snapshot of active or frozen inputs.
+
+        Args:
+            frozen (bool): Return frozen inputs instead of active inputs.
+
+        Returns:
+            ExtendedDict: A promoted copy of the requested input state.
+        """
+        source = self.frozen_inputs if frozen else self.inputs
+        return ExtendedDict(deepcopy(to_builtin(source)))
+
+    def replace_inputs(self, new_inputs: Mapping[str, Any] | None, *, clear_frozen: bool = True) -> ExtendedDict:
+        """Replace active inputs with a normalized Tier 2 snapshot.
+
+        Args:
+            new_inputs (Mapping[str, Any] | None): New active input values.
+            clear_frozen (bool): Whether to clear frozen inputs after replacement.
+
+        Returns:
+            ExtendedDict: The updated active input mapping.
+        """
+        self.inputs = ExtendedDict(deepcopy(self._normalize_inputs(new_inputs)))
+        if clear_frozen:
+            self.frozen_inputs = ExtendedDict()
+        return self.inputs
+
     def merge_inputs(self, new_inputs: Mapping[str, Any] | None) -> ExtendedDict:
         """Merge new inputs into the current inputs using deep merge semantics.
 

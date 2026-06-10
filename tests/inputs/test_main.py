@@ -323,6 +323,59 @@ def test_thaw_inputs():
     assert dic.frozen_inputs == {}
 
 
+def test_snapshot_inputs_returns_detached_extended_copy():
+    """Input snapshots are promoted copies, not mutable internal state."""
+    dic = InputProvider(inputs={"service": {"name": "api"}})
+
+    snapshot = dic.snapshot_inputs()
+    snapshot["service"]["name"] = "worker"
+
+    assert isinstance(snapshot, ExtendedDict)
+    assert isinstance(snapshot["service"], ExtendedDict)
+    assert isinstance(snapshot["service"]["name"], ExtendedString)
+    assert dic.inputs["service"]["name"] == "api"
+    assert dic.snapshot_inputs()["service"]["name"].upper_first() == "Api"
+
+
+def test_snapshot_inputs_can_select_frozen_state():
+    """Frozen input snapshots can be inspected without thawing state."""
+    dic = InputProvider(inputs={"service": {"name": "api"}}, from_environment=False)
+    dic.freeze_inputs()
+
+    frozen = dic.snapshot_inputs(frozen=True)
+
+    assert isinstance(frozen, ExtendedDict)
+    assert isinstance(frozen["service"], ExtendedDict)
+    assert frozen["service"]["name"].upper_first() == "Api"
+    assert dic.inputs == {}
+    assert dic.frozen_inputs["service"]["name"] == "api"
+
+
+def test_replace_inputs_promotes_values_and_clears_frozen_state_by_default():
+    """Replacing inputs should be explicit and should not keep stale frozen state."""
+    dic = InputProvider(inputs={"service": {"name": "api"}}, from_environment=False)
+    dic.freeze_inputs()
+
+    replaced = dic.replace_inputs({"service": {"name": "worker"}})
+
+    assert isinstance(replaced, ExtendedDict)
+    assert isinstance(replaced["service"], ExtendedDict)
+    assert replaced["service"]["name"].upper_first() == "Worker"
+    assert dic.inputs["service"]["name"] == "worker"
+    assert dic.frozen_inputs == {}
+
+
+def test_replace_inputs_can_preserve_frozen_state_when_requested():
+    """Replacement can keep frozen inputs for explicit staged-state workflows."""
+    dic = InputProvider(inputs={"service": {"name": "api"}}, from_environment=False)
+    dic.freeze_inputs()
+
+    dic.replace_inputs({"region": "us-east-1"}, clear_frozen=False)
+
+    assert dic.inputs["region"].upper_first() == "Us-east-1"
+    assert dic.snapshot_inputs(frozen=True)["service"]["name"].upper_first() == "Api"
+
+
 def test_shift_inputs():
     """Test shifting between frozen and thawed inputs.
 

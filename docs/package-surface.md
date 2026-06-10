@@ -129,12 +129,15 @@ payloads. Active, frozen, shifted, and merged input snapshots are `ExtendedDict`
 values, and input decorator metadata/options are promoted the same way. The old
 case-insensitive input mapping is intentionally not preserved; exact keys keep
 configuration wiring explicit while still letting direct snapshots use Tier 2
-methods.
+methods. Use `snapshot_inputs()` for a detached promoted copy of active or
+frozen state, and `replace_inputs()` when a workflow should install a new
+active snapshot instead of mutating `.inputs` directly.
 
 ```python
 inputs = InputProvider(inputs={"service": {"name": "api"}}, from_environment=False)
 assert inputs.inputs["service"]["name"].upper_first() == "Api"
 assert isinstance(inputs.merge_inputs({"service": {"region": "us-east-1"}}), ExtendedDict)
+assert inputs.snapshot_inputs()["service"]["region"].upper_first() == "Us-east-1"
 ```
 
 `get_input()` is the scalar coercion boundary for booleans, numbers, paths,

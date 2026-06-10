@@ -138,9 +138,11 @@ apply named transformations, write an output artifact, and keep the step trail
 in a `WorkflowResult`. Missing workflow inputs and empty writes fail loudly.
 `InputProvider` stores its active, frozen, and merged input snapshots as
 `ExtendedDict` values, so direct input-data access can use Tier 2 container
-methods. `get_input()` remains the scalar coercion boundary for booleans,
-numbers, paths, datetimes, and credential strings; pass `as_extended=True` when
-an injected raw input value should stay in Tier 2 form.
+methods. `snapshot_inputs()` returns detached active or frozen snapshots, and
+`replace_inputs()` installs a new active snapshot while clearing stale frozen
+state by default. `get_input()` remains the scalar coercion boundary for
+booleans, numbers, paths, datetimes, and credential strings; pass
+`as_extended=True` when an injected raw input value should stay in Tier 2 form.
 `Logging` stores marked log message collections as `ExtendedDict` and
 `ExtendedSet` values while keeping Python logger and handler objects plain.
 
