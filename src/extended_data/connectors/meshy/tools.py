@@ -7,6 +7,7 @@ with native wrappers for each supported framework.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import Any
 
 from pydantic import BaseModel, Field
@@ -156,6 +157,13 @@ def text3d_generate(
         wait=True,
     )
 
+    if isinstance(result, str):
+        return {
+            "task_id": result,
+            "status": "pending",
+            "message": "Text-to-3D task submitted",
+        }
+
     fields = _extract_result_fields(result)
     return {
         "task_id": result.id,
@@ -190,6 +198,13 @@ def image3d_generate(
         wait=True,
     )
 
+    if isinstance(result, str):
+        return {
+            "task_id": result,
+            "status": "pending",
+            "message": "Image-to-3D task submitted",
+        }
+
     fields = _extract_result_fields(result)
     return {
         "task_id": result.id,
@@ -211,6 +226,13 @@ def rig_model(model_id: str, wait: bool = True) -> dict[str, Any]:
 
     result = rigging.rig(model_id, wait=wait)
 
+    if isinstance(result, str):
+        return {
+            "task_id": result,
+            "status": "pending",
+            "message": "Rigging task submitted",
+        }
+
     if wait:
         return {
             "task_id": result.id,
@@ -218,11 +240,8 @@ def rig_model(model_id: str, wait: bool = True) -> dict[str, Any]:
             "message": "Rigging completed",
         }
 
-    return {
-        "task_id": result,  # task_id string when wait=False
-        "status": "pending",
-        "message": "Rigging task submitted",
-    }
+    msg = "Expected rigging task id when wait=False"
+    raise TypeError(msg)
 
 
 def apply_animation(model_id: str, animation_id: int, wait: bool = True) -> dict[str, Any]:
@@ -240,6 +259,13 @@ def apply_animation(model_id: str, animation_id: int, wait: bool = True) -> dict
 
     result = animate.apply(model_id, int(animation_id), wait=wait)
 
+    if isinstance(result, str):
+        return {
+            "task_id": result,
+            "status": "pending",
+            "message": "Animation task submitted",
+        }
+
     if wait:
         return {
             "task_id": result.id,
@@ -248,11 +274,8 @@ def apply_animation(model_id: str, animation_id: int, wait: bool = True) -> dict
             "glb_url": result.animation_glb_url,
         }
 
-    return {
-        "task_id": result,  # task_id string when wait=False
-        "status": "pending",
-        "message": "Animation task submitted",
-    }
+    msg = "Expected animation task id when wait=False"
+    raise TypeError(msg)
 
 
 def retexture_model(
@@ -281,6 +304,13 @@ def retexture_model(
         wait=wait,
     )
 
+    if isinstance(result, str):
+        return {
+            "task_id": result,
+            "status": "pending",
+            "message": "Retexture task submitted",
+        }
+
     if wait:
         return {
             "task_id": result.id,
@@ -289,11 +319,8 @@ def retexture_model(
             "model_url": getattr(result, "model_url", None),
         }
 
-    return {
-        "task_id": result,  # task_id string when wait=False
-        "status": "pending",
-        "message": "Retexture task submitted",
-    }
+    msg = "Expected retexture task id when wait=False"
+    raise TypeError(msg)
 
 
 def list_animations(category: str = "", limit: int = 50) -> dict[str, Any]:
@@ -344,7 +371,7 @@ def check_task_status(task_id: str, task_type: str = "text-to-3d") -> dict[str, 
     from extended_data.connectors.meshy import animate, image3d, retexture, rigging, text3d
 
     # Call the appropriate get function based on task type
-    get_funcs = {
+    get_funcs: dict[str, Callable[[str], Any]] = {
         "text-to-3d": text3d.get,
         "image-to-3d": image3d.get,
         "rigging": rigging.get,

@@ -120,9 +120,17 @@ uv run mypy \
   src/extended_data/connectors/secrets/__init__.py \
   src/extended_data/connectors/meshy/jobs.py \
   src/extended_data/connectors/meshy/persistence/vector_store.py \
+  src/extended_data/connectors/meshy/base.py \
+  src/extended_data/connectors/meshy/tools.py \
+  src/extended_data/connectors/meshy/mcp.py \
+  src/extended_data/connectors/mcp.py \
+  src/extended_data/connectors/meshy/connector.py \
   src/extended_data/connectors/zoom/__init__.py \
   src/extended_data/connectors/cursor/__init__.py \
-  src/extended_data/connectors/anthropic/__init__.py
+  src/extended_data/connectors/anthropic/__init__.py \
+  src/extended_data/connectors/slack/__init__.py \
+  src/extended_data/connectors/slack/tools.py \
+  src/extended_data/connectors/vault/__init__.py
 uv build
 ```
 

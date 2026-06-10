@@ -31,13 +31,14 @@ from __future__ import annotations
 
 import json
 
+from collections.abc import Callable
 from typing import Any
 
 
 MCP_INSTALL_MESSAGE = "MCP SDK not installed. Install with: pip install extended-data[meshy,mcp]"
 
 
-def _create_mcp_tools() -> list[Any]:
+def _create_mcp_tools() -> list[tuple[Any, Callable[..., Any]]]:
     """Create MCP tool definitions from Meshy functions.
 
     Returns:
@@ -52,7 +53,7 @@ def _create_mcp_tools() -> list[Any]:
     from extended_data.connectors.meshy import tools
 
     # Define tool schemas manually for better control
-    tool_schemas = [
+    tool_schemas: list[dict[str, Any]] = [
         {
             "name": "text3d_generate",
             "description": (
@@ -219,8 +220,8 @@ def _create_mcp_tools() -> list[Any]:
     mcp_tools = []
     for schema in tool_schemas:
         # Build JSON schema properties and required list
-        properties = {}
-        required = []
+        properties: dict[str, Any] = {}
+        required: list[str] = []
 
         for param_name, param_def in schema["parameters"].items():
             prop = {
@@ -253,7 +254,7 @@ def _create_mcp_tools() -> list[Any]:
     return mcp_tools
 
 
-def create_server():
+def create_server() -> Any:
     """Create an MCP server with Meshy AI tools.
 
     Returns:
@@ -275,12 +276,12 @@ def create_server():
     tool_list = [tool for tool, _ in mcp_tools]
 
     # Register tools
-    @server.list_tools()
-    async def list_tools():
+    @server.list_tools()  # type: ignore[untyped-decorator]
+    async def list_tools() -> list[Any]:
         return tool_list
 
     # Handle tool calls
-    @server.call_tool()
+    @server.call_tool()  # type: ignore[untyped-decorator]
     async def call_tool(name: str, arguments: dict[str, Any]) -> list[Any]:
         from mcp.types import TextContent
 
@@ -307,7 +308,7 @@ def create_server():
     return server
 
 
-def run_server(server=None):
+def run_server(server: Any | None = None) -> None:
     """Run the MCP server.
 
     Args:
@@ -323,7 +324,7 @@ def run_server(server=None):
     if server is None:
         server = create_server()
 
-    async def main():
+    async def main() -> None:
         async with stdio_server() as (read_stream, write_stream):
             await server.run(
                 read_stream,
@@ -334,7 +335,7 @@ def run_server(server=None):
     asyncio.run(main())
 
 
-def main():
+def main() -> None:
     """Entry point for the MCP server."""
     run_server()
 

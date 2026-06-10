@@ -25,9 +25,13 @@ from __future__ import annotations
 
 import os
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, Field
+
+
+if TYPE_CHECKING:
+    from extended_data.connectors.slack import SlackConnector
 
 
 # =============================================================================
@@ -71,7 +75,7 @@ class GetChannelHistorySchema(BaseModel):
 # =============================================================================
 
 
-def _get_connector():
+def _get_connector() -> SlackConnector:
     """Create a SlackConnector with tokens from environment variables.
 
     The slack_sdk WebClient only falls back to environment variables when

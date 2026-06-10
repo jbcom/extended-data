@@ -11,7 +11,10 @@ extended-data. Credentials can come from:
 
 from __future__ import annotations
 
+import threading
 import time
+
+from typing import Any
 
 import httpx
 
@@ -36,6 +39,7 @@ class MeshyAPIError(Exception):
 _client: httpx.Client | None = None
 _inputs: InputProvider | None = None
 _last_request_time: float = 0
+_rate_limit_lock = threading.Lock()
 _min_request_interval: float = 0.5  # 500ms between requests
 
 BASE_URL = "https://api.meshy.ai"
@@ -49,7 +53,7 @@ def _get_inputs() -> InputProvider:
     return _inputs
 
 
-def configure(api_key: str | None = None, **kwargs) -> None:
+def configure(api_key: str | None = None, **kwargs: Any) -> None:
     """Configure Meshy API credentials.
 
     Args:
@@ -79,7 +83,7 @@ def get_client() -> httpx.Client:
     return _client
 
 
-def close():
+def close() -> None:
     """Close the HTTP client."""
     global _client
     if _client:
@@ -87,14 +91,9 @@ def close():
         _client = None
 
 
-def _rate_limit():
+def _rate_limit() -> None:
     """Simple rate limiting with thread safety."""
-    import threading
-
-    global _last_request_time, _rate_limit_lock
-
-    if "_rate_limit_lock" not in globals():
-        _rate_limit_lock = threading.Lock()
+    global _last_request_time
 
     with _rate_limit_lock:
         now = time.time()
@@ -122,7 +121,7 @@ def request(
     endpoint: str,
     *,
     version: str = "v2",
-    **kwargs,
+    **kwargs: Any,
 ) -> httpx.Response:
     """Make HTTP request with retries and rate limiting.
 

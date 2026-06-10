@@ -26,8 +26,8 @@ class MeshyConnector(VendorConnectorBase):
         api_key: str | None = None,
         base_url: str | None = None,
         timeout: float = 300.0,
-        **kwargs,
-    ):
+        **kwargs: Any,
+    ) -> None:
         super().__init__(api_key=api_key, base_url=base_url, timeout=timeout, **kwargs)
 
     def text3d_generate(

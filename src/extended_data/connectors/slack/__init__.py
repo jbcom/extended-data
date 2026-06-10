@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import sys
 
-from collections.abc import Iterator, Mapping, Sequence
+from collections.abc import Iterable, Iterator, Mapping, Sequence
 from time import sleep
 from typing import TYPE_CHECKING, Any
 
@@ -15,7 +15,7 @@ if sys.version_info >= (3, 12):
 else:
     from itertools import islice
 
-    def batched(iterable, n: int) -> Iterator[tuple]:
+    def batched(iterable: Iterable[Any], n: int) -> Iterator[tuple[Any, ...]]:
         """Batch an iterable into chunks of size n for Python < 3.12."""
         it = iter(iterable)
         while batch := tuple(islice(it, n)):
@@ -58,7 +58,7 @@ MAX_RETRY_TIMEOUT_SECONDS = 30
 class SlackAPIError(RuntimeError):
     """Slack API error wrapper."""
 
-    def __init__(self, response):
+    def __init__(self, response: Any) -> None:
         self.response = response
         self.status_code = response.status_code if hasattr(response, "status_code") else None
         super().__init__(f"Slack API error: {response}")
@@ -88,7 +88,7 @@ def get_header_block(field_title: str) -> list[dict[str, Any]]:
     ]
 
 
-def get_field_context_message_blocks(field_name: str, context_data: Mapping) -> list[dict[str, Any]]:
+def get_field_context_message_blocks(field_name: str, context_data: Mapping[str, Any]) -> list[dict[str, Any]]:
     """Build header and context blocks for detailed field data.
 
     Args:
@@ -99,13 +99,13 @@ def get_field_context_message_blocks(field_name: str, context_data: Mapping) -> 
         list[dict[str, Any]]: Blocks describing the field data.
     """
     field_title = field_name.title()
-    blocks = [
+    blocks: list[dict[str, Any]] = [
         {"type": "header", "text": {"type": "plain_text", "text": field_title}},
         get_divider(),
     ]
 
     for field_keys in batched(context_data.keys(), 10):
-        context_elements = []
+        context_elements: list[dict[str, str]] = []
         for field_key in field_keys:
             field_value = context_data.get(field_key)
             if is_nothing(field_value):
@@ -156,7 +156,7 @@ def get_rich_text_blocks(
     Returns:
         list[dict[str, Any]]: Rich-text block followed by a divider.
     """
-    style = {}
+    style: dict[str, bool] = {}
     if bold:
         style["bold"] = True
     if italic:
@@ -164,9 +164,9 @@ def get_rich_text_blocks(
     if strike:
         style["strike"] = True
 
-    elements = []
+    elements: list[dict[str, Any]] = []
     for line in lines:
-        element = {"type": "text", "text": line}
+        element: dict[str, Any] = {"type": "text", "text": line}
         if not is_nothing(style):
             element["style"] = style
         elements.append(element)
@@ -182,8 +182,8 @@ class SlackConnector(VendorConnectorBase):
         token: str | None = None,
         bot_token: str | None = None,
         logger: Logging | None = None,
-        **kwargs,
-    ):
+        **kwargs: Any,
+    ) -> None:
         """Initialize the Slack connector.
 
         Args:
@@ -213,7 +213,7 @@ class SlackConnector(VendorConnectorBase):
         Returns:
             Optional[set[str]]: Unique identifier set, or None when not provided.
         """
-        if is_nothing(identifiers):
+        if identifiers is None or is_nothing(identifiers):
             return None
 
         if isinstance(identifiers, str):
@@ -228,14 +228,14 @@ class SlackConnector(VendorConnectorBase):
         self,
         channel_name: str,
         text: str,
-        blocks: list | None = None,
+        blocks: list[dict[str, Any]] | None = None,
         lines: list[str] | None = None,
         bold: bool = False,
         italic: bool = False,
         strike: bool = False,
         thread_id: str | None = None,
         raise_on_api_error: bool = True,
-    ):
+    ) -> Any:
         """Send a message to a Slack channel using the bot token.
 
         Args:
@@ -283,7 +283,7 @@ class SlackConnector(VendorConnectorBase):
                 raise SlackAPIError(exc.response) from exc
             return exc.response
 
-    def get_bot_channels(self) -> dict[str, dict]:
+    def get_bot_channels(self) -> dict[str, dict[str, Any]]:
         """Return channels the bot account is a member of.
 
         Returns:
@@ -305,7 +305,7 @@ class SlackConnector(VendorConnectorBase):
         include_deleted: bool | None = None,
         include_bots: bool | None = None,
         include_app_users: bool | None = None,
-        **kwargs,
+        **kwargs: Any,
     ) -> dict[str, dict[str, Any]]:
         """List Slack users with optional filtering flags.
 
@@ -365,7 +365,7 @@ class SlackConnector(VendorConnectorBase):
         include_users: bool | None = None,
         team_id: str | None = None,
         usergroup_ids: str | Sequence[str] | None = None,
-        **kwargs,
+        **kwargs: Any,
     ) -> dict[str, dict[str, Any]]:
         """List Slack user groups with optional filtering.
 
@@ -417,7 +417,7 @@ class SlackConnector(VendorConnectorBase):
         types: str | Sequence[str] | None = None,
         get_members: bool | None = None,
         channels_only: bool | None = None,
-        **kwargs,
+        **kwargs: Any,
     ) -> dict[str, dict[str, Any]]:
         """List Slack conversations with optional filtering.
 
@@ -473,7 +473,7 @@ class SlackConnector(VendorConnectorBase):
         method: str,
         group_by: str | None = None,
         id_field_name: str = "id",
-        **kwargs,
+        **kwargs: Any,
     ) -> Any:
         """Call a Slack WebClient method with retry and grouping support.
 
@@ -495,7 +495,7 @@ class SlackConnector(VendorConnectorBase):
         if call is None:
             raise AttributeError(f"{method} is not supported by the Slack WebClient")
 
-        response = None
+        response: Any | None = None
         attempt = 1
         total_delay = 0
 
@@ -518,7 +518,7 @@ class SlackConnector(VendorConnectorBase):
         if is_nothing(response) or is_nothing(group_by):
             return response
 
-        grouped = {}
+        grouped: dict[str, dict[str, Any]] = {}
         for datum in response.get(group_by, {}):
             datum_id = datum.get(id_field_name)
             if is_nothing(datum_id):

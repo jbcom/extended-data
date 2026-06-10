@@ -50,8 +50,8 @@ class VaultConnector(VendorConnectorBase):
         vault_namespace: str | None = None,
         vault_token: str | None = None,
         logger: Logging | None = None,
-        **kwargs,
-    ):
+        **kwargs: Any,
+    ) -> None:
         super().__init__(logger=logger, **kwargs)
 
         self._hvac = _load_hvac()
@@ -75,7 +75,7 @@ class VaultConnector(VendorConnectorBase):
         vault_namespace = self.vault_namespace or self.get_input(VAULT_NAMESPACE_ENV_VAR, required=False)
         vault_token = self.vault_token or self.get_input("VAULT_TOKEN", required=False)
 
-        vault_opts: dict = {"url": vault_url}
+        vault_opts: dict[str, Any] = {"url": vault_url}
         if vault_namespace:
             vault_opts["namespace"] = vault_namespace
         if vault_token:
@@ -125,7 +125,7 @@ class VaultConnector(VendorConnectorBase):
         msg = "Vault authentication failed: no valid token or AppRole credentials provided"
         raise RuntimeError(msg)
 
-    def _set_token_expiration(self):
+    def _set_token_expiration(self) -> None:
         """Set the token expiration time."""
         if self._vault_client is None:
             return
@@ -162,7 +162,7 @@ class VaultConnector(VendorConnectorBase):
         vault_url: str | None = None,
         vault_namespace: str | None = None,
         vault_token: str | None = None,
-        **kwargs,
+        **kwargs: Any,
     ) -> hvac.Client:
         """Get an instance of the Vault client."""
         instance = cls(vault_url, vault_namespace, vault_token, **kwargs)
@@ -173,7 +173,7 @@ class VaultConnector(VendorConnectorBase):
         root_path: str = "/",
         mount_point: str = "secret",
         max_depth: int | None = None,
-    ) -> dict[str, dict]:
+    ) -> dict[str, dict[str, Any]]:
         """List secrets recursively from Vault KV v2 engine.
 
         Args:
@@ -195,7 +195,7 @@ class VaultConnector(VendorConnectorBase):
         display_root = root_path if root_path not in (None, "", "/") else "/"
         self.logger.info(f"Listing Vault secrets from {mount_point}{display_root}")
 
-        secrets: dict[str, dict] = {}
+        secrets: dict[str, dict[str, Any]] = {}
         client = self.vault_client
 
         normalized_root = (root_path or "").strip("/")
@@ -253,7 +253,7 @@ class VaultConnector(VendorConnectorBase):
         self,
         path: str,
         mount_point: str = "secret",
-    ) -> dict | None:
+    ) -> dict[str, Any] | None:
         """Read a single secret from Vault.
 
         Args:
@@ -279,7 +279,7 @@ class VaultConnector(VendorConnectorBase):
         secret_name: str | None = None,
         matchers: dict[str, str] | None = None,
         mount_point: str = "secret",
-    ) -> dict | None:
+    ) -> dict[str, Any] | None:
         """Get Vault secret by path, name, or by searching with matchers.
 
         This method supports three modes:
@@ -347,7 +347,7 @@ class VaultConnector(VendorConnectorBase):
                 continue
 
             # If no matchers, take the first non-empty secret
-            if is_nothing(matchers):
+            if matchers is None or is_nothing(matchers):
                 self.logger.warning("No matchers provided, taking the first non-empty secret found")
                 secret_data = matching_secret_data
                 continue
@@ -369,7 +369,7 @@ class VaultConnector(VendorConnectorBase):
     def write_secret(
         self,
         path: str,
-        data: dict,
+        data: dict[str, Any],
         mount_point: str = "secret",
     ) -> bool:
         """Write a secret to Vault.
@@ -434,7 +434,7 @@ class VaultConnector(VendorConnectorBase):
         self,
         role_name: str,
         mount_point: str = "aws",
-    ) -> dict | None:
+    ) -> dict[str, Any] | None:
         """Retrieve details about a specific AWS IAM role configured in Vault.
 
         Args:

@@ -41,7 +41,7 @@ def _check_mcp_installed() -> bool:
         return False
 
 
-def _get_method_schema(method: Callable) -> dict[str, Any]:
+def _get_method_schema(method: Callable[..., Any]) -> dict[str, Any]:
     """Generate JSON schema from method signature."""
     sig = inspect.signature(method)
     properties = {}
@@ -90,7 +90,7 @@ def _get_method_schema(method: Callable) -> dict[str, Any]:
     }
 
 
-def _get_public_methods(connector_class: builtins.type[Any]) -> list[tuple[str, Callable]]:
+def _get_public_methods(connector_class: builtins.type[Any]) -> list[tuple[str, Callable[..., Any]]]:
     """Get public methods from a connector class (excluding dunder and private)."""
     methods = []
     for name in dir(connector_class):
@@ -102,7 +102,7 @@ def _get_public_methods(connector_class: builtins.type[Any]) -> list[tuple[str, 
     return methods
 
 
-def create_server():
+def create_server() -> Any:
     """Create the unified MCP server with all registered connectors."""
     try:
         from mcp.server import Server
@@ -148,7 +148,7 @@ def create_server():
                 "parameters": schema,
             }
 
-    @server.list_tools()
+    @server.list_tools()  # type: ignore[untyped-decorator]
     async def list_tools() -> list[Tool]:
         """Return all available tools."""
         return [
@@ -156,8 +156,8 @@ def create_server():
             for name, tool in tools.items()
         ]
 
-    @server.call_tool()
-    async def call_tool(name: str, arguments: dict) -> list[TextContent]:
+    @server.call_tool()  # type: ignore[untyped-decorator]
+    async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
         """Execute a tool and return results."""
         if name not in tools:
             return [TextContent(type="text", text=f"Unknown tool: {name}")]
@@ -203,7 +203,7 @@ def main() -> int:
 
     server = create_server()
 
-    async def run():
+    async def run() -> None:
         async with stdio_server() as (read_stream, write_stream):
             await server.run(read_stream, write_stream, server.create_initialization_options())
 
