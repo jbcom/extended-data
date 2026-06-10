@@ -78,8 +78,8 @@ class SyncOptions:
     dry_run: bool = False
     operation: SyncOperation = SyncOperation.PIPELINE
     targets: list[str] = field(default_factory=list)
-    continue_on_error: bool = False
-    parallelism: int = 4
+    continue_on_error: bool = True
+    parallelism: int = 0
     compute_diff: bool = False
     output_format: OutputFormat = OutputFormat.JSON
 
@@ -387,6 +387,9 @@ class SecretsConnector(VendorConnectorBase):
             cmd.append("--diff")
         if options.targets:
             cmd.extend(["--targets", ",".join(options.targets)])
+        cmd.append(f"--continue-on-error={str(options.continue_on_error).lower()}")
+        if options.parallelism > 0:
+            cmd.extend(["--parallelism", str(options.parallelism)])
 
         try:
             result = subprocess.run(
