@@ -13,6 +13,7 @@ import time
 
 from extended_data.connectors.meshy import base
 from extended_data.connectors.meshy.models import Image3DRequest, Image3DResult, TaskStatus
+from extended_data.containers import extend_data
 
 
 def create(request: Image3DRequest) -> str:
@@ -26,7 +27,7 @@ def create(request: Image3DRequest) -> str:
     data = response.json()
     if "result" not in data:
         raise RuntimeError(f"Unexpected API response: missing 'result' key. Response: {data}")
-    return data["result"]
+    return extend_data(data["result"])
 
 
 def get(task_id: str) -> Image3DResult:
@@ -46,7 +47,7 @@ def refine(task_id: str) -> str:
     data = response.json()
     if "result" not in data:
         raise RuntimeError(f"Unexpected API response: missing 'result' key. Response: {data}")
-    return data["result"]
+    return extend_data(data["result"])
 
 
 def poll(task_id: str, interval: float = 5.0, timeout: float = 600.0) -> Image3DResult:

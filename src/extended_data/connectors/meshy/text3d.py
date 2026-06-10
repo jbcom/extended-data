@@ -13,6 +13,7 @@ import time
 
 from extended_data.connectors.meshy import base
 from extended_data.connectors.meshy.models import ArtStyle, TaskStatus, Text3DRequest, Text3DResult
+from extended_data.containers import extend_data
 
 
 def create(request: Text3DRequest) -> str:
@@ -23,7 +24,7 @@ def create(request: Text3DRequest) -> str:
         version="v2",
         json=request.model_dump(exclude_none=True),
     )
-    return response.json().get("result")
+    return extend_data(response.json().get("result"))
 
 
 def get(task_id: str) -> Text3DResult:
@@ -40,7 +41,7 @@ def refine(task_id: str) -> str:
         version="v2",
         json={},
     )
-    return response.json().get("result")
+    return extend_data(response.json().get("result"))
 
 
 def poll(task_id: str, interval: float = 5.0, timeout: float = 600.0) -> Text3DResult:

@@ -17,6 +17,7 @@ import time
 
 from extended_data.connectors.meshy import base
 from extended_data.connectors.meshy.models import AnimationRequest, AnimationResult, TaskStatus
+from extended_data.containers import extend_data
 
 
 def create(request: AnimationRequest) -> str:
@@ -27,7 +28,7 @@ def create(request: AnimationRequest) -> str:
         version="v1",
         json=request.model_dump(exclude_none=True),
     )
-    return response.json().get("result")
+    return extend_data(response.json().get("result"))
 
 
 def get(task_id: str) -> AnimationResult:

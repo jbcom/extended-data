@@ -12,6 +12,7 @@ import time
 
 from extended_data.connectors.meshy import base
 from extended_data.connectors.meshy.models import RetextureRequest, RetextureResult, TaskStatus
+from extended_data.containers import extend_data
 
 
 def create(request: RetextureRequest) -> str:
@@ -22,7 +23,7 @@ def create(request: RetextureRequest) -> str:
         version="v1",
         json=request.model_dump(exclude_none=True),
     )
-    return response.json().get("result")
+    return extend_data(response.json().get("result"))
 
 
 def get(task_id: str) -> RetextureResult:
