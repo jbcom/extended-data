@@ -26,7 +26,7 @@ import json
 import sys
 
 from collections.abc import Callable
-from typing import Any
+from typing import Any, cast
 
 from extended_data.connectors.registry import get_connector, list_connectors
 
@@ -148,7 +148,10 @@ def create_server() -> Any:
                 "parameters": schema,
             }
 
-    @server.list_tools()  # type: ignore[no-untyped-call,untyped-decorator]
+    tool_decorator = cast(Callable[[], Callable[[Callable[..., Any]], Callable[..., Any]]], server.list_tools)
+    call_decorator = cast(Callable[[], Callable[[Callable[..., Any]], Callable[..., Any]]], server.call_tool)
+
+    @tool_decorator()
     async def list_tools() -> list[Tool]:
         """Return all available tools."""
         return [
@@ -156,7 +159,7 @@ def create_server() -> Any:
             for name, tool in tools.items()
         ]
 
-    @server.call_tool()  # type: ignore[untyped-decorator]
+    @call_decorator()
     async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
         """Execute a tool and return results."""
         if name not in tools:

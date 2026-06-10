@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 
 from collections.abc import Sequence
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 from extended_data.connectors._optional import require_extra
 from extended_data.connectors.base import VendorConnectorBase
@@ -116,7 +116,8 @@ class GoogleConnector(VendorConnectorBase):
             Authenticated service account credentials.
         """
         if self._credentials is None:
-            self._credentials = service_account.Credentials.from_service_account_info(  # type: ignore[no-untyped-call]
+            credentials_class = cast(Any, service_account.Credentials)
+            self._credentials = credentials_class.from_service_account_info(
                 self.service_account_info,
                 scopes=self.scopes,
             )
@@ -134,7 +135,8 @@ class GoogleConnector(VendorConnectorBase):
         Returns:
             Credentials with the specified subject.
         """
-        return service_account.Credentials.from_service_account_info(  # type: ignore[no-untyped-call]
+        credentials_class = cast(Any, service_account.Credentials)
+        return credentials_class.from_service_account_info(
             self.service_account_info,
             scopes=self.scopes,
         ).with_subject(subject)

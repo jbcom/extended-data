@@ -32,7 +32,7 @@ from __future__ import annotations
 import json
 
 from collections.abc import Callable
-from typing import Any
+from typing import Any, cast
 
 
 MCP_INSTALL_MESSAGE = "MCP SDK not installed. Install with: pip install extended-data[meshy,mcp]"
@@ -275,13 +275,16 @@ def create_server() -> Any:
     tool_handlers = {tool.name: func for tool, func in mcp_tools}
     tool_list = [tool for tool, _ in mcp_tools]
 
+    tool_decorator = cast(Callable[[], Callable[[Callable[..., Any]], Callable[..., Any]]], server.list_tools)
+    call_decorator = cast(Callable[[], Callable[[Callable[..., Any]], Callable[..., Any]]], server.call_tool)
+
     # Register tools
-    @server.list_tools()  # type: ignore[no-untyped-call,untyped-decorator]
+    @tool_decorator()
     async def list_tools() -> list[Any]:
         return tool_list
 
     # Handle tool calls
-    @server.call_tool()  # type: ignore[untyped-decorator]
+    @call_decorator()
     async def call_tool(name: str, arguments: dict[str, Any]) -> list[Any]:
         from mcp.types import TextContent
 

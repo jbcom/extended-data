@@ -5,6 +5,7 @@ from __future__ import annotations
 import sys
 
 from collections.abc import Iterable, Iterator, Mapping, Sequence
+from contextlib import suppress
 from time import sleep
 from typing import Any
 
@@ -41,15 +42,17 @@ def _load_slack_sdk() -> None:
     """Load slack-sdk lazily so tool metadata can import without the slack extra."""
     global SlackApiError, WebClient
 
-    if WebClient is None or SlackApiError is SlackFallbackError:
+    if WebClient is None:
         try:
             if SlackApiError is SlackFallbackError:
                 SlackApiError = require_extra("slack_sdk.errors", "slack").SlackApiError
-            if WebClient is None:
-                WebClient = require_extra("slack_sdk.web", "slack").WebClient
+            WebClient = require_extra("slack_sdk.web", "slack").WebClient
         except ImportError as exc:
             msg = "slack-sdk is required for SlackConnector. Install with: pip install extended-data[slack]"
             raise ImportError(msg) from exc
+    elif SlackApiError is SlackFallbackError:
+        with suppress(ImportError):
+            SlackApiError = require_extra("slack_sdk.errors", "slack").SlackApiError
 
 
 # Settings

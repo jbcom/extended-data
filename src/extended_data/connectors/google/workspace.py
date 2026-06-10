@@ -6,7 +6,7 @@ through the Admin Directory API.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 from extended_data import unhump_map
 from extended_data.containers import ExtendedDict, ExtendedList, to_builtin
@@ -568,7 +568,8 @@ class GoogleWorkspaceMixin:
         from google.oauth2 import service_account
         from googleapiclient.discovery import build
 
-        credentials = service_account.Credentials.from_service_account_info(  # type: ignore[no-untyped-call]
+        credentials_class = cast(Any, service_account.Credentials)
+        credentials = credentials_class.from_service_account_info(
             self.service_account_info,
             scopes=["https://www.googleapis.com/auth/apps.licensing"],
         )
