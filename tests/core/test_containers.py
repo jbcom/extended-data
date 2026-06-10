@@ -32,6 +32,9 @@ def test_extended_string_chains_primitive_transforms() -> None:
     )
 
     assert value.to_snake_case().remove_suffix("_value") == "api_response"
+    assert value.to_snake_case().remove_prefix("api_") == "response_value"
+    assert ExtendedString("prefix_value").remove_prefix("prefix_") == "value"
+    assert ExtendedString("value_suffix").remove_suffix("_suffix") == "value"
     assert value.to_kebab_case() == "api-response-value"
     assert ExtendedString("1").ordinalize() == "1st"
     assert ExtendedString("yes").to_bool() is True
