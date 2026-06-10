@@ -1,4 +1,4 @@
-"""Secret synchronization adapters for Extended Data."""
+"""SecretSync CLI bridge exports for Extended Data."""
 
 from extended_data._version import __version__
 from extended_data.connectors.secrets import (

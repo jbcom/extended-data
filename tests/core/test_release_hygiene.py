@@ -34,6 +34,7 @@ SECRETSSYNC_PROJECT_PATTERNS = (
     re.compile(r"\bsecretssync\s+(?:Go\s+)?(?:project|library|repo|repository|CLI|connector|bindings?)\b", re.IGNORECASE),
     re.compile(r"\b(?:project|library|repo|repository|CLI|connector|bindings?)\s+secretssync\b", re.IGNORECASE),
 )
+IMPRECISE_SECRETSSYNC_TERMS = ("secret sync primitives",)
 EXTRA_REFERENCE_RE = re.compile(r"extended-data\[([^\]\n]+)\]")
 NON_RUNTIME_EXTRAS = {"all", "dev", "tests", "typing"}
 PACKAGE_SHAPE_RE = re.compile(r"^  ([a-z_]+)/\s+")
@@ -347,5 +348,8 @@ def test_public_guidance_names_secrets_sync_roles_precisely() -> None:
             if pattern.search(text):
                 offenders.append(str(path.relative_to(REPO_ROOT)))
                 break
+        for term in IMPRECISE_SECRETSSYNC_TERMS:
+            if term in text.lower():
+                offenders.append(f"{path.relative_to(REPO_ROOT)}: {term}")
 
     assert offenders == []

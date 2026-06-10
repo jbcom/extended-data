@@ -105,7 +105,7 @@ extended_data/
   inputs/       InputProvider and decorator-based input injection
   logging/      structured lifecycle logging
   connectors/   Tier 3 ConnectorFabric and vendor adapters
-  secrets/      Python access to secret sync primitives
+  secrets/      SecretSync CLI bridge and typed result exports
   workflows/    Tier 3 higher-order workflow composition
 ```
 
