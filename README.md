@@ -52,6 +52,7 @@ print(encode_yaml(payload))
 print(decoded_file["service"]["name"].upper_first())
 print(number_to_words(42))
 print(redact_sensitive_text("Authorization: Bearer raw_token"))
+print(redact_sensitive_text("failed for user@example.com", values=["user@example.com"]))
 print(workflow.as_builtin())
 ```
 
@@ -116,10 +117,12 @@ Tier 1 primitive names are explicit in this major version and live under
 `string_to_int()`, `string_to_float()`, `string_to_path()`,
 `string_to_date()`, `string_to_datetime()`, and `string_to_time()` for scalar
 string conversion. Use `redact_sensitive_text()` and
-`redact_sensitive_data()` for diagnostic and JSON-like payload redaction. The
-old `bytestostr` and `strto*` helper names are not preserved. Old package
-import namespaces are not shimmed; missing imports are intentional so remaining
-migration work fails fast.
+`redact_sensitive_data()` for diagnostic and JSON-like payload redaction. Pass
+`values=[...]` when a caller knows specific context values, such as resource
+IDs, emails, paths, or URLs, must be withheld in addition to common secret
+fields. The old `bytestostr` and `strto*` helper names are not preserved. Old
+package import namespaces are not shimmed; missing imports are intentional so
+remaining migration work fails fast.
 Tier 1 public exports stay function-oriented; use `get_default_dict()` for
 nested or sorted default mappings instead of importing the internal helper class.
 
@@ -148,10 +151,11 @@ The generic CLI `call` command and MCP bridge expose only methods that
 advertise Extended Data payload returns.
 Serialized CLI/MCP boundaries and connector API error messages reuse the Tier 1
 redaction primitives for common secret-bearing keys and token-shaped strings,
-so connector data methods can return structured vendor payloads without making
-stdout, tool responses, or raised transport errors a secret leak by default.
-Raw SDK/client objects and raw transport responses remain available from the
-methods that explicitly return them.
+including connector-provided `values=[...]` for context-sensitive resource
+identifiers, so connector data methods can return structured vendor payloads
+without making stdout, tool responses, logs, or raised transport errors a
+secret leak by default. Raw SDK/client objects and raw transport responses
+remain available from the methods that explicitly return them.
 
 The `secrets` connector integrates with the standalone SecretSync project
 (`jbcom/secrets-sync`) through the `secretsync` CLI. It expects

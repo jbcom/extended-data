@@ -63,7 +63,10 @@ workflow needs nested or sorted default mappings rather than importing the
 internal sorted-default mapping helper class.
 Use `redact_sensitive_text()` and `redact_sensitive_data()` when diagnostics or
 JSON-like payloads need common secret-bearing keys and token-shaped strings
-removed before display.
+removed before display. Pass `values=[...]` when a caller knows additional
+context-specific identifiers, such as emails, paths, URLs, or vendor resource
+IDs, must be withheld as well; URL-encoded forms of those values are redacted
+too.
 
 Direct JSON, YAML, TOML, and HCL primitive decode failures raise
 `DataDecodeError` with format and position context while preserving the parser
@@ -81,6 +84,10 @@ aliases = ExtendedTuple(("api", ("gateway",))).flatten()
 tags = ExtendedSet({"prod", "prod", ""}).compact()
 words = number_to_words(42)
 encoding = normalize_data_encoding("YML")
+safe_error = redact_sensitive_text(
+    "failed for user@example.com and user%40example.com",
+    values=["user@example.com"],
+)
 ```
 
 `ExtendedDict`, `ExtendedList`, `ExtendedTuple`, and `ExtendedSet` recursively
@@ -294,7 +301,9 @@ same redaction policy before exceptions are raised. Common secret-bearing keys
 such as `password`, `api_key`, `access_token`, `authorization`, and
 `client_secret`, plus token-like strings in error text, are replaced with
 `[REDACTED]` before CLI stdout/stderr, MCP tool responses, or raised transport
-errors expose them.
+errors expose them. Connectors can also pass context-specific `values=[...]`
+for resource IDs, paths, URLs, emails, prompt text, or vendor payload handles
+that are sensitive only in that operation.
 LangChain, CrewAI, Strands, and auto-detection factory functions still return
 plain framework tool object lists.
 
