@@ -8,7 +8,7 @@ import tempfile
 
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from extended_data.connectors.meshy.persistence.schemas import (
     ArtifactRecord,
@@ -19,11 +19,22 @@ from extended_data.connectors.meshy.persistence.schemas import (
     TaskSubmission,
 )
 from extended_data.connectors.meshy.persistence.utils import compute_spec_hash as util_compute_spec_hash
+from extended_data.containers import ExtendedDict, ExtendedList, extend_data
 
 
 def _utc_now() -> datetime:
     """Return current UTC time with timezone info."""
     return datetime.now(timezone.utc)
+
+
+def _manifest_payload(manifest: ProjectManifest) -> dict[str, Any]:
+    """Convert an internal project manifest model to a JSON-friendly payload."""
+    return manifest.model_dump(mode="json")
+
+
+def _asset_payload(asset: AssetManifest) -> dict[str, Any]:
+    """Convert an internal asset manifest model to a JSON-friendly payload."""
+    return asset.model_dump(mode="json")
 
 
 class TaskRepository:
@@ -37,15 +48,8 @@ class TaskRepository:
         """Get path to project manifest file."""
         return self.base_path / project / "manifest.json"
 
-    def load_project_manifest(self, project: str) -> ProjectManifest:
-        """Load manifest for a project, creating empty one if missing.
-
-        Args:
-            project: Project name (e.g., "otter", "beaver")
-
-        Returns:
-            ProjectManifest instance
-        """
+    def _load_project_manifest_model(self, project: str) -> ProjectManifest:
+        """Load the internal project manifest model, creating an empty one if missing."""
         manifest_path = self._manifest_path(project)
 
         if not manifest_path.exists():
@@ -57,6 +61,17 @@ class TaskRepository:
         with open(manifest_path) as f:
             data = json.load(f)
             return ProjectManifest(**data)
+
+    def load_project_manifest(self, project: str) -> ExtendedDict:
+        """Load manifest for a project, creating empty one if missing.
+
+        Args:
+            project: Project name (e.g., "otter", "beaver")
+
+        Returns:
+            Extended project manifest payload.
+        """
+        return cast(ExtendedDict, extend_data(_manifest_payload(self._load_project_manifest_model(project))))
 
     def save_project_manifest(self, manifest: ProjectManifest) -> None:
         """Atomically save project manifest to disk.
@@ -79,7 +94,7 @@ class TaskRepository:
         # Atomic rename
         os.replace(tmp_path, manifest_path)
 
-    def get_asset_record(self, project: str, spec_hash: str) -> AssetManifest | None:
+    def get_asset_record(self, project: str, spec_hash: str) -> ExtendedDict | None:
         """Get asset manifest by spec hash.
 
         Args:
@@ -87,10 +102,13 @@ class TaskRepository:
             spec_hash: Asset spec hash
 
         Returns:
-            AssetManifest if found, None otherwise
+            Extended asset manifest payload if found, None otherwise
         """
-        manifest = self.load_project_manifest(project)
-        return manifest.asset_specs.get(spec_hash)
+        manifest = self._load_project_manifest_model(project)
+        asset = manifest.asset_specs.get(spec_hash)
+        if asset is None:
+            return None
+        return cast(ExtendedDict, extend_data(_asset_payload(asset)))
 
     def upsert_asset_record(self, project: str, asset_manifest: AssetManifest) -> None:
         """Insert or update asset manifest.
@@ -99,7 +117,7 @@ class TaskRepository:
             project: Project name
             asset_manifest: AssetManifest to save
         """
-        manifest = self.load_project_manifest(project)
+        manifest = self._load_project_manifest_model(project)
         asset_manifest.updated_at = _utc_now()
         manifest.asset_specs[asset_manifest.asset_spec_hash] = asset_manifest
         self.save_project_manifest(manifest)
@@ -131,7 +149,7 @@ class TaskRepository:
             source: Update source (orchestrator, webhook, manual)
             error: Error message if failed
         """
-        manifest = self.load_project_manifest(project)
+        manifest = self._load_project_manifest_model(project)
         asset_record = manifest.asset_specs.get(spec_hash)
 
         if not asset_record:
@@ -200,28 +218,28 @@ class TaskRepository:
         # Save updated manifest
         self.save_project_manifest(manifest)
 
-    def list_pending_assets(self, project: str) -> list[AssetManifest]:
+    def list_pending_assets(self, project: str) -> ExtendedList[ExtendedDict]:
         """List all assets with pending/in-progress tasks.
 
         Args:
             project: Project name
 
         Returns:
-            List of AssetManifest with non-terminal tasks
+            Extended asset manifest payloads with non-terminal tasks
         """
-        manifest = self.load_project_manifest(project)
-        pending = []
+        manifest = self._load_project_manifest_model(project)
+        pending: list[dict[str, Any]] = []
 
         terminal_statuses = {"SUCCEEDED", "FAILED", "EXPIRED", "CANCELED"}
 
         for asset_record in manifest.asset_specs.values():
             has_pending = any(task.status not in terminal_statuses for task in asset_record.task_graph)
             if has_pending:
-                pending.append(asset_record)
+                pending.append(_asset_payload(asset_record))
 
-        return pending
+        return cast(ExtendedList[ExtendedDict], extend_data(pending))
 
-    def find_task_by_id(self, task_id: str, project: str | None = None) -> tuple[str, str, AssetManifest] | None:
+    def find_task_by_id(self, task_id: str, project: str | None = None) -> ExtendedDict | None:
         """Find asset by task ID (for webhook lookups).
 
         Args:
@@ -229,7 +247,7 @@ class TaskRepository:
             project: Optional project to narrow search
 
         Returns:
-            Tuple of (project, spec_hash, AssetManifest) if found
+            Extended payload with project, spec_hash, and asset if found
         """
         # Determine which project to search
         if project:
@@ -239,11 +257,18 @@ class TaskRepository:
             project_list = [d.name for d in self.base_path.iterdir() if d.is_dir() and (d / "manifest.json").exists()]
 
         for sp in project_list:
-            manifest = self.load_project_manifest(sp)
+            manifest = self._load_project_manifest_model(sp)
             for spec_hash, asset_record in manifest.asset_specs.items():
                 for task in asset_record.task_graph:
                     if task.task_id == task_id:
-                        return (sp, spec_hash, asset_record)
+                        return cast(
+                            ExtendedDict,
+                            extend_data({
+                                "project": sp,
+                                "spec_hash": spec_hash,
+                                "asset": _asset_payload(asset_record),
+                            }),
+                        )
 
         return None
 
@@ -280,7 +305,7 @@ class TaskRepository:
             msg = "spec_hash cannot be empty"
             raise ValueError(msg)
 
-        manifest = self.load_project_manifest(submission.project)
+        manifest = self._load_project_manifest_model(submission.project)
 
         asset_record = manifest.asset_specs.get(submission.spec_hash)
         if not asset_record:

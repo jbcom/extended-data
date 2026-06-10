@@ -22,7 +22,16 @@ from extended_data.connectors.meshy.webhooks.schemas import (
     WebhookModelUrls,
     WebhookRiggingResult,
 )
-from extended_data.containers import ExtendedDict, ExtendedString
+from extended_data.containers import ExtendedDict, ExtendedString, extend_data
+
+
+def _task_lookup_payload(project: str, spec_hash: str, asset_manifest: AssetManifest) -> ExtendedDict:
+    """Build the repository task lookup payload shape."""
+    return extend_data({
+        "project": project,
+        "spec_hash": spec_hash,
+        "asset": asset_manifest.model_dump(mode="json"),
+    })
 
 
 class TestMeshyWebhookPayload:
@@ -128,7 +137,7 @@ class TestWebhookHandler:
             ],
         )
 
-        repo.find_task_by_id.return_value = ("project1", "hash-abc123", asset_manifest)
+        repo.find_task_by_id.return_value = _task_lookup_payload("project1", "hash-abc123", asset_manifest)
         repo.record_task_update.return_value = None
 
         return repo
@@ -194,7 +203,7 @@ class TestWebhookHandler:
                 )
             ],
         )
-        mock_repository.find_task_by_id.return_value = ("project1", "hash-xyz", asset_manifest)
+        mock_repository.find_task_by_id.return_value = _task_lookup_payload("project1", "hash-xyz", asset_manifest)
 
         payload = MeshyWebhookPayload(**webhook_payload_failed)
         result = webhook_handler.handle_webhook(payload)
@@ -234,7 +243,7 @@ class TestWebhookHandler:
                 )
             ],
         )
-        mock_repository.find_task_by_id.return_value = ("project1", "hash-abc123", asset_manifest)
+        mock_repository.find_task_by_id.return_value = _task_lookup_payload("project1", "hash-abc123", asset_manifest)
         mock_repository.record_task_update.return_value = None
 
         def mock_download(url, output_path):

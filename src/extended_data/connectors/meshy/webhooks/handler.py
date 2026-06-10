@@ -92,12 +92,14 @@ class WebhookHandler:
                 "task_id": payload.id,
             })
 
-        found_project, found_spec_hash, asset_manifest = task_lookup
+        found_project = str(task_lookup["project"])
+        found_spec_hash = str(task_lookup["spec_hash"])
+        asset_manifest = task_lookup["asset"]
 
         service_name = None
-        for task_entry in asset_manifest.task_graph:
-            if task_entry.task_id == payload.id:
-                service_name = task_entry.service
+        for task_entry in asset_manifest.get("task_graph", []):
+            if task_entry["task_id"] == payload.id:
+                service_name = str(task_entry["service"])
                 break
 
         if not service_name:

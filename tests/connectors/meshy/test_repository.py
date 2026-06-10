@@ -12,9 +12,11 @@ from extended_data.connectors.meshy.persistence.repository import TaskRepository
 from extended_data.connectors.meshy.persistence.schemas import (
     ArtifactRecord,
     AssetManifest,
+    ProjectManifest,
     TaskStatus,
     TaskSubmission,
 )
+from extended_data.containers import ExtendedDict, ExtendedList, ExtendedString
 
 
 class TestTaskRepositoryInit:
@@ -40,9 +42,11 @@ class TestProjectManifest:
         """Test loading non-existent project creates new manifest."""
         manifest = task_repository.load_project_manifest("project1")
 
-        assert manifest.project == "project1"
-        assert manifest.asset_specs == {}
-        assert manifest.version == "1.0"
+        assert isinstance(manifest, ExtendedDict)
+        assert manifest["project"] == "project1"
+        assert manifest["asset_specs"] == {}
+        assert manifest["version"] == "1.0"
+        assert isinstance(manifest["last_updated"], ExtendedString)
 
     def test_load_existing_manifest(self, task_repository, temp_dir):
         """Test loading existing manifest."""
@@ -62,11 +66,12 @@ class TestProjectManifest:
             json.dump(manifest_data, f)
 
         manifest = task_repository.load_project_manifest("project2")
-        assert manifest.project == "project2"
+        assert isinstance(manifest, ExtendedDict)
+        assert manifest["project"] == "project2"
 
     def test_save_and_load_manifest(self, task_repository):
         """Test saving and reloading manifest."""
-        manifest = task_repository.load_project_manifest("project1")
+        manifest = ProjectManifest(project="project1")
 
         # Add an asset record
         asset = AssetManifest(
@@ -81,8 +86,9 @@ class TestProjectManifest:
 
         # Reload and verify
         reloaded = task_repository.load_project_manifest("project1")
-        assert "hash-123" in reloaded.asset_specs
-        assert reloaded.asset_specs["hash-123"].project == "project1"
+        assert isinstance(reloaded, ExtendedDict)
+        assert "hash-123" in reloaded["asset_specs"]
+        assert reloaded["asset_specs"]["hash-123"]["project"] == "project1"
 
 
 class TestAssetRecordOperations:
@@ -107,8 +113,10 @@ class TestAssetRecordOperations:
 
         retrieved = task_repository.get_asset_record("project1", "hash-abc")
         assert retrieved is not None
-        assert retrieved.asset_spec_hash == "hash-abc"
-        assert retrieved.prompts["text3d"] == "An project1 character"
+        assert isinstance(retrieved, ExtendedDict)
+        assert retrieved["asset_spec_hash"] == "hash-abc"
+        assert retrieved["prompts"]["text3d"] == "An project1 character"
+        assert isinstance(retrieved["prompts"]["text3d"], ExtendedString)
 
     def test_upsert_updates_existing(self, task_repository):
         """Test that upsert updates existing record."""
@@ -125,7 +133,8 @@ class TestAssetRecordOperations:
         task_repository.upsert_asset_record("project1", asset)
 
         retrieved = task_repository.get_asset_record("project1", "hash-abc")
-        assert retrieved.prompts["text3d"] == "Updated prompt"
+        assert retrieved is not None
+        assert retrieved["prompts"]["text3d"] == "Updated prompt"
 
 
 class TestTaskSubmission:
@@ -147,9 +156,9 @@ class TestTaskSubmission:
         # Verify it was saved
         asset = task_repository.get_asset_record("project1", "hash-abc")
         assert asset is not None
-        assert len(asset.task_graph) == 1
-        assert asset.task_graph[0].task_id == "task-12345"
-        assert asset.task_graph[0].service == "text3d"
+        assert len(asset["task_graph"]) == 1
+        assert asset["task_graph"][0]["task_id"] == "task-12345"
+        assert asset["task_graph"][0]["service"] == "text3d"
 
     def test_record_duplicate_submission_idempotent(self, task_repository):
         """Test that duplicate submissions are idempotent."""
@@ -166,7 +175,8 @@ class TestTaskSubmission:
         task_repository.record_task_submission(submission)  # Duplicate
 
         asset = task_repository.get_asset_record("project1", "hash-abc")
-        assert len(asset.task_graph) == 1  # Still just one task
+        assert asset is not None
+        assert len(asset["task_graph"]) == 1  # Still just one task
 
     def test_record_submission_validates_fields(self, task_repository):
         """Test that submission validation works."""
@@ -210,9 +220,10 @@ class TestTaskUpdate:
         )
 
         asset = repo_with_task.get_asset_record("project1", "hash-abc")
-        task = asset.task_graph[0]
-        assert task.status == "SUCCEEDED"
-        assert task.result_paths["glb"] == "https://example.com/model.glb"
+        assert asset is not None
+        task = asset["task_graph"][0]
+        assert task["status"] == "SUCCEEDED"
+        assert task["result_paths"]["glb"] == "https://example.com/model.glb"
 
     def test_record_task_update_with_error(self, repo_with_task):
         """Test updating task with error."""
@@ -225,9 +236,10 @@ class TestTaskUpdate:
         )
 
         asset = repo_with_task.get_asset_record("project1", "hash-abc")
-        task = asset.task_graph[0]
-        assert task.status == "FAILED"
-        assert task.error == "Generation failed"
+        assert asset is not None
+        task = asset["task_graph"][0]
+        assert task["status"] == "FAILED"
+        assert task["error"] == "Generation failed"
 
     def test_record_task_update_adds_history(self, repo_with_task):
         """Test that updates add history entries."""
@@ -240,17 +252,18 @@ class TestTaskUpdate:
         )
 
         asset = repo_with_task.get_asset_record("project1", "hash-abc")
-        assert len(asset.history) >= 1
+        assert asset is not None
+        assert len(asset["history"]) >= 1
 
         # Find the update entry
         update_entry = None
-        for entry in asset.history:
-            if entry.new_status == "SUCCEEDED":
+        for entry in asset["history"]:
+            if entry["new_status"] == "SUCCEEDED":
                 update_entry = entry
                 break
 
         assert update_entry is not None
-        assert update_entry.source == "webhook"
+        assert update_entry["source"] == "webhook"
 
     def test_record_task_update_not_found_raises(self, task_repository):
         """Test that updating non-existent asset raises."""
@@ -281,8 +294,9 @@ class TestTaskUpdate:
         )
 
         asset = repo_with_task.get_asset_record("project1", "hash-abc")
-        assert len(asset.artifacts) == 1
-        assert asset.artifacts[0].relative_path == "hash-abc_text3d.glb"
+        assert asset is not None
+        assert len(asset["artifacts"]) == 1
+        assert asset["artifacts"][0]["relative_path"] == "hash-abc_text3d.glb"
 
 
 class TestTaskLookup:
@@ -308,17 +322,18 @@ class TestTaskLookup:
         result = repo_with_tasks.find_task_by_id("task-project1-123", project="project1")
 
         assert result is not None
-        project, spec_hash, _asset = result
-        assert project == "project1"
-        assert spec_hash == "hash-project1"
+        assert isinstance(result, ExtendedDict)
+        assert result["project"] == "project1"
+        assert result["spec_hash"] == "hash-project1"
+        assert result["asset"]["asset_spec_hash"] == "hash-project1"
 
     def test_find_task_by_id_without_project(self, repo_with_tasks):
         """Test finding task by scanning all project."""
         result = repo_with_tasks.find_task_by_id("task-project2-123")
 
         assert result is not None
-        project, _spec_hash, _asset = result
-        assert project == "project2"
+        assert isinstance(result, ExtendedDict)
+        assert result["project"] == "project2"
 
     def test_find_task_not_found(self, repo_with_tasks):
         """Test finding non-existent task."""
@@ -343,8 +358,9 @@ class TestPendingAssets:
         task_repository.record_task_submission(submission)
 
         pending = task_repository.list_pending_assets("project1")
+        assert isinstance(pending, ExtendedList)
         assert len(pending) == 1
-        assert pending[0].asset_spec_hash == "hash-pending"
+        assert pending[0]["asset_spec_hash"] == "hash-pending"
 
     def test_list_pending_excludes_completed(self, task_repository):
         """Test that completed assets are not listed."""
