@@ -9,6 +9,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 from extended_data import unhump_map
+from extended_data.containers import to_builtin
 
 
 class GoogleBillingMixin:
@@ -24,6 +25,8 @@ class GoogleBillingMixin:
         service_account_info: dict[str, Any]
 
         def get_billing_service(self) -> Any: ...
+
+        def extend_result(self, value: Any) -> Any: ...
 
     def list_billing_accounts(
         self,
@@ -64,7 +67,7 @@ class GoogleBillingMixin:
         if unhump_accounts:
             accounts = [unhump_map(a) for a in accounts]
 
-        return accounts
+        return self.extend_result(accounts)
 
     def get_billing_account(self, billing_account_id: str) -> dict[str, Any] | None:
         """Get a specific billing account.
@@ -83,7 +86,7 @@ class GoogleBillingMixin:
             name = f"billingAccounts/{billing_account_id}"
 
         try:
-            return service.billingAccounts().get(name=name).execute()
+            return self.extend_result(service.billingAccounts().get(name=name).execute())
         except HttpError as e:
             if e.resp.status == 404:
                 self.logger.warning(f"Billing account not found: {billing_account_id}")
@@ -104,7 +107,7 @@ class GoogleBillingMixin:
         service = self.get_billing_service()
 
         try:
-            return service.projects().getBillingInfo(name=f"projects/{project_id}").execute()
+            return self.extend_result(service.projects().getBillingInfo(name=f"projects/{project_id}").execute())
         except HttpError as e:
             if e.resp.status == 404:
                 self.logger.warning(f"Project billing info not found: {project_id}")
@@ -141,7 +144,7 @@ class GoogleBillingMixin:
         )
 
         self.logger.info(f"Linked project {project_id} to billing account")
-        return result
+        return self.extend_result(result)
 
     def disable_project_billing(self, project_id: str) -> dict[str, Any]:
         """Disable billing for a project.
@@ -165,7 +168,7 @@ class GoogleBillingMixin:
         )
 
         self.logger.info(f"Disabled billing for project {project_id}")
-        return result
+        return self.extend_result(result)
 
     def list_billing_account_projects(
         self,
@@ -208,7 +211,7 @@ class GoogleBillingMixin:
         if unhump_projects:
             projects = [unhump_map(p) for p in projects]
 
-        return projects
+        return self.extend_result(projects)
 
     def get_billing_account_iam_policy(
         self,
@@ -228,7 +231,7 @@ class GoogleBillingMixin:
         if not name.startswith("billingAccounts/"):
             name = f"billingAccounts/{billing_account_id}"
 
-        return service.billingAccounts().getIamPolicy(resource=name).execute()
+        return self.extend_result(service.billingAccounts().getIamPolicy(resource=name).execute())
 
     def set_billing_account_iam_policy(
         self,
@@ -251,11 +254,11 @@ class GoogleBillingMixin:
         if not name.startswith("billingAccounts/"):
             name = f"billingAccounts/{billing_account_id}"
 
-        return (
+        return self.extend_result(
             service.billingAccounts()
             .setIamPolicy(
                 resource=name,
-                body={"policy": policy},
+                body={"policy": to_builtin(policy)},
             )
             .execute()
         )
@@ -300,13 +303,15 @@ class GoogleBillingMixin:
                 t for t in tables if "gcp_billing_export" in t.get("tableReference", {}).get("tableId", "")
             ]
 
-            return {
-                "dataset": dataset,
-                "tables": tables,
-                "billing_tables": billing_tables,
-                "location": dataset.get("location"),
-                "description": dataset.get("description"),
-            }
+            return self.extend_result(
+                {
+                    "dataset": dataset,
+                    "tables": tables,
+                    "billing_tables": billing_tables,
+                    "location": dataset.get("location"),
+                    "description": dataset.get("description"),
+                }
+            )
 
         except HttpError as e:
             if e.resp.status == 404:
@@ -374,10 +379,12 @@ class GoogleBillingMixin:
             dataset = service.datasets().insert(projectId=project_id, body=dataset_body).execute()
             self.logger.info(f"Created billing export dataset: {dataset_id}")
 
-        return {
-            "billing_account_id": billing_account_id,
-            "project_id": project_id,
-            "dataset_id": dataset_id,
-            "location": dataset.get("location"),
-            "full_dataset_id": f"{project_id}.{dataset_id}",
-        }
+        return self.extend_result(
+            {
+                "billing_account_id": billing_account_id,
+                "project_id": project_id,
+                "dataset_id": dataset_id,
+                "location": dataset.get("location"),
+                "full_dataset_id": f"{project_id}.{dataset_id}",
+            }
+        )

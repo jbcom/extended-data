@@ -12,6 +12,7 @@ import pytest
 pytest.importorskip("google.oauth2.service_account")
 pytest.importorskip("googleapiclient")
 
+from extended_data.containers import ExtendedDict, ExtendedList, ExtendedString, extend_data
 from extended_data.connectors.google.billing import GoogleBillingMixin
 
 
@@ -92,6 +93,9 @@ class _TestGoogleBilling(GoogleBillingMixin):
     def get_billing_service(self):
         return self._service
 
+    def extend_result(self, value: Any) -> Any:
+        return extend_data(value)
+
 
 def test_list_billing_accounts_paginates_and_unhumps():
     service = _StubBillingService(
@@ -114,6 +118,9 @@ def test_list_billing_accounts_paginates_and_unhumps():
 
     accounts = connector.list_billing_accounts(filter_query="parent:organizations/1", unhump_accounts=True)
 
+    assert isinstance(accounts, ExtendedList)
+    assert isinstance(accounts[0], ExtendedDict)
+    assert isinstance(accounts[0]["display_name"], ExtendedString)
     assert [acct["name"] for acct in accounts] == ["billingAccounts/ABC", "billingAccounts/DEF"]
     # Ensure snake_case conversion applied
     assert accounts[0]["display_name"] == "Primary"
@@ -129,6 +136,8 @@ def test_update_project_billing_info_prefixes_account_name():
 
     response = connector.update_project_billing_info("demo-project", "1234-ABCD")
 
+    assert isinstance(response, ExtendedDict)
+    assert isinstance(response["billingAccountName"], ExtendedString)
     assert response["billingAccountName"] == "billingAccounts/1234-ABCD"
     assert service.projects().update_calls == [
         {
@@ -144,6 +153,8 @@ def test_disable_project_billing_sets_empty_account():
 
     response = connector.disable_project_billing("demo-project")
 
+    assert isinstance(response, ExtendedDict)
+    assert isinstance(response["billingAccountName"], ExtendedString)
     assert response["billingAccountName"] == ""
     assert service.projects().update_calls[-1] == {
         "name": "projects/demo-project",
@@ -168,6 +179,9 @@ def test_list_billing_account_projects_handles_prefixing():
 
     projects = connector.list_billing_account_projects("123456-AAAA", unhump_projects=True)
 
+    assert isinstance(projects, ExtendedList)
+    assert isinstance(projects[0], ExtendedDict)
+    assert isinstance(projects[0]["project_id"], ExtendedString)
     assert [proj["project_id"] for proj in projects] == ["alpha", "beta"]
     assert service.billingAccounts().projects().list_calls == [
         {"name": "billingAccounts/123456-AAAA"},
