@@ -259,10 +259,14 @@ class InputProvider:
         Returns:
             Any: The decoded input, potentially converted or defaulted.
         """
+        source_present = k in self.inputs
         conf = self.get_input(k, default=default, required=required)
 
-        if conf is None or conf == default:
+        if not source_present or (is_nothing(self.inputs.get(k)) and conf == default):
             return conf
+
+        if conf is None:
+            return default if not allow_none else None
 
         conf = self._coerce_text(conf)
 

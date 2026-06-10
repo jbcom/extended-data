@@ -258,6 +258,20 @@ def test_decode_input_json_can_return_extended_containers():
     assert decoded["name"].upper_first() == "Test"
 
 
+def test_decode_input_decodes_present_value_that_equals_default():
+    """Defaults should not mask present input values that happen to be equal."""
+    raw_config = '{"name": "test"}'
+    dic = InputProvider(inputs={"json_key": raw_config}, from_environment=False)
+    missing = InputProvider(from_environment=False)
+
+    decoded = dic.decode_input("json_key", default=raw_config, decode_from_json=True, as_extended=True)
+
+    assert isinstance(decoded, ExtendedDict)
+    assert isinstance(decoded["name"], ExtendedString)
+    assert decoded["name"].upper_first() == "Test"
+    assert missing.decode_input("json_key", default=raw_config, decode_from_json=True) == raw_config
+
+
 def test_decode_input_errors_do_not_echo_values():
     """Decode diagnostics identify the input key without exposing raw values."""
     dic = InputProvider(
