@@ -344,8 +344,8 @@ class CursorConnector(VendorConnectorBase):
         base_url: str | None = None,
         timeout: float = DEFAULT_TIMEOUT,
         logger: Logging | None = None,
-        **kwargs,
-    ):
+        **kwargs: Any,
+    ) -> None:
         super().__init__(api_key=api_key, base_url=base_url, logger=logger, timeout=timeout, **kwargs)
 
         # Validate API key

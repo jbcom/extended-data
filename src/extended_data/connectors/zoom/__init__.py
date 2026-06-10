@@ -25,8 +25,8 @@ class ZoomConnector(VendorConnectorBase):
         client_secret: str | None = None,
         account_id: str | None = None,
         logger: Logging | None = None,
-        **kwargs,
-    ):
+        **kwargs: Any,
+    ) -> None:
         super().__init__(logger=logger, **kwargs)
         self.errors: list[str] = []  # Track errors for programmatic access
 

@@ -28,6 +28,7 @@ Usage:
 from __future__ import annotations
 
 import builtins
+import sys
 import threading
 import time
 
@@ -47,8 +48,14 @@ from extended_data.inputs import InputProvider
 from extended_data.logging import Logging
 
 
+if sys.version_info >= (3, 11):
+    from typing import Self
+else:
+    from typing_extensions import Self
+
 if TYPE_CHECKING:
     from collections.abc import Callable
+    from types import TracebackType
 
     from langchain_core.tools import StructuredTool
     from pydantic import BaseModel
@@ -110,8 +117,8 @@ class VendorConnectorBase(InputProvider, ABC):
         base_url: str | None = None,
         timeout: float | None = None,
         logger: Logging | None = None,
-        **kwargs,
-    ):
+        **kwargs: Any,
+    ) -> None:
         """Initialize the connector.
 
         Args:
@@ -143,7 +150,7 @@ class VendorConnectorBase(InputProvider, ABC):
 
         # Tool registry for LangChain/MCP
         self._tools: list[StructuredTool] = []
-        self._tool_functions: dict[str, Callable] = {}
+        self._tool_functions: dict[str, Callable[..., Any]] = {}
         self._tool_schemas: dict[str, builtins.type[BaseModel]] = {}
 
     @property
@@ -167,11 +174,16 @@ class VendorConnectorBase(InputProvider, ABC):
             self._client.close()
             self._client = None
 
-    def __enter__(self):
+    def __enter__(self) -> Self:
         """Context manager entry."""
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(
+        self,
+        exc_type: builtins.type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
+    ) -> None:
         """Context manager exit - close client."""
         self.close()
 
@@ -228,7 +240,7 @@ class VendorConnectorBase(InputProvider, ABC):
         endpoint: str,
         *,
         headers: dict[str, str] | None = None,
-        **kwargs,
+        **kwargs: Any,
     ) -> httpx.Response:
         """Make HTTP request with retries and rate limiting.
 
@@ -276,23 +288,23 @@ class VendorConnectorBase(InputProvider, ABC):
 
         return response
 
-    def get(self, endpoint: str, **kwargs) -> httpx.Response:
+    def get(self, endpoint: str, **kwargs: Any) -> httpx.Response:
         """HTTP GET request."""
         return self.request("GET", endpoint, **kwargs)
 
-    def post(self, endpoint: str, **kwargs) -> httpx.Response:
+    def post(self, endpoint: str, **kwargs: Any) -> httpx.Response:
         """HTTP POST request."""
         return self.request("POST", endpoint, **kwargs)
 
-    def put(self, endpoint: str, **kwargs) -> httpx.Response:
+    def put(self, endpoint: str, **kwargs: Any) -> httpx.Response:
         """HTTP PUT request."""
         return self.request("PUT", endpoint, **kwargs)
 
-    def delete(self, endpoint: str, **kwargs) -> httpx.Response:
+    def delete(self, endpoint: str, **kwargs: Any) -> httpx.Response:
         """HTTP DELETE request."""
         return self.request("DELETE", endpoint, **kwargs)
 
-    def patch(self, endpoint: str, **kwargs) -> httpx.Response:
+    def patch(self, endpoint: str, **kwargs: Any) -> httpx.Response:
         """HTTP PATCH request."""
         return self.request("PATCH", endpoint, **kwargs)
 
@@ -331,7 +343,7 @@ class VendorConnectorBase(InputProvider, ABC):
 
     def register_tool(
         self,
-        func: Callable,
+        func: Callable[..., Any],
         name: str | None = None,
         description: str | None = None,
         schema: builtins.type[BaseModel] | None = None,

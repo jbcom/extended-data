@@ -66,26 +66,26 @@ class ConnectorFabric(InputProvider):
     def __init__(
         self,
         logger: Logging | None = None,
-        **kwargs,
-    ):
+        **kwargs: Any,
+    ) -> None:
         super().__init__(**kwargs)
         self.logging = logger or Logging(logger_name=get_unique_signature(self))
         self.logger = self.logging.logger
 
         # Client cache - nested dict for different client types and their params
-        self._client_cache: dict[str, dict[Any, Any]] = get_default_dict(levels=2)
+        self._client_cache: dict[str, dict[frozenset[tuple[str, Any]], Any]] = get_default_dict(levels=2)
 
-    def _get_cache_key(self, **kwargs) -> frozenset:
+    def _get_cache_key(self, **kwargs: Any) -> frozenset[tuple[str, Any]]:
         """Generate a hashable cache key from kwargs."""
         hashable_kwargs = {k: make_hashable(v) for k, v in kwargs.items()}
         return frozenset(hashable_kwargs.items())
 
-    def _get_cached_client(self, client_type: str, **kwargs) -> Any | None:
+    def _get_cached_client(self, client_type: str, **kwargs: Any) -> Any | None:
         """Retrieve a client from cache."""
         cache_key = self._get_cache_key(**kwargs)
         return self._client_cache[client_type].get(cache_key)
 
-    def _set_cached_client(self, client_type: str, client: Any, **kwargs) -> None:
+    def _set_cached_client(self, client_type: str, client: Any, **kwargs: Any) -> None:
         """Store a client in cache."""
         cache_key = self._get_cache_key(**kwargs)
         self._client_cache[client_type][cache_key] = client
@@ -162,7 +162,7 @@ class ConnectorFabric(InputProvider):
         execution_role_arn: str | None = None,
         role_session_name: str | None = None,
         config: Config | None = None,
-        **client_args,
+        **client_args: Any,
     ) -> boto3.client:
         """Get a cached boto3 client."""
         execution_role_arn = execution_role_arn or self.get_input("EXECUTION_ROLE_ARN", required=False)
@@ -200,7 +200,7 @@ class ConnectorFabric(InputProvider):
         execution_role_arn: str | None = None,
         role_session_name: str | None = None,
         config: Config | None = None,
-        **resource_args,
+        **resource_args: Any,
     ) -> ServiceResource:
         """Get a cached boto3 resource."""
         execution_role_arn = execution_role_arn or self.get_input("EXECUTION_ROLE_ARN", required=False)

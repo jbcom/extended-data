@@ -37,6 +37,7 @@ import subprocess
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
+from typing import Any
 
 from extended_data.connectors.base import VendorConnectorBase
 from extended_data.logging import Logging
@@ -100,7 +101,7 @@ class SyncResult:
     diff_output: str = ""
 
     @classmethod
-    def from_native(cls, native_result) -> SyncResult:
+    def from_native(cls, native_result: Any) -> SyncResult:
         """Create from native gopy result."""
         return cls(
             success=native_result.Success,
@@ -117,7 +118,7 @@ class SyncResult:
         )
 
     @classmethod
-    def from_cli_output(cls, output: dict) -> SyncResult:
+    def from_cli_output(cls, output: dict[str, Any]) -> SyncResult:
         """Create from CLI JSON output."""
         return cls(
             success=output.get("success", False),
@@ -149,7 +150,7 @@ class ConfigInfo:
     aws_region: str = ""
 
     @classmethod
-    def from_native(cls, native_info) -> ConfigInfo:
+    def from_native(cls, native_info: Any) -> ConfigInfo:
         """Create from native gopy result."""
         return cls(
             valid=native_info.Valid,
@@ -188,8 +189,8 @@ class SecretsConnector(VendorConnectorBase):
         cli_path: str | None = None,
         prefer_native: bool = True,
         logger: Logging | None = None,
-        **kwargs,
-    ):
+        **kwargs: Any,
+    ) -> None:
         """Initialize the secrets connector.
 
         Args:

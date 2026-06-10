@@ -1200,6 +1200,7 @@ dependencies = [
     { name = "sortedcontainers" },
     { name = "tenacity" },
     { name = "tomlkit" },
+    { name = "typing-extensions" },
     { name = "validators" },
     { name = "wrapt" },
 ]
@@ -1404,6 +1405,7 @@ requires-dist = [
     { name = "tomlkit", specifier = ">=0.13.2" },
     { name = "types-pyyaml", marker = "extra == 'typing'", specifier = ">=6.0.12.20240724" },
     { name = "types-requests", marker = "extra == 'typing'", specifier = ">=2.33.0.20260408" },
+    { name = "typing-extensions", specifier = ">=4.12.2" },
     { name = "uv", marker = "extra == 'ai'", specifier = ">=0.11.7" },
     { name = "uv", marker = "extra == 'all'", specifier = ">=0.11.7" },
     { name = "uv", marker = "extra == 'crewai'", specifier = ">=0.11.7" },

@@ -32,6 +32,8 @@ from datetime import datetime
 from enum import Enum
 from typing import TYPE_CHECKING, Any
 
+import httpx
+
 from pydantic import BaseModel, ConfigDict, Field
 
 from extended_data.connectors.base import VendorConnectorBase
@@ -225,8 +227,8 @@ class AnthropicConnector(VendorConnectorBase):
         api_version: str = DEFAULT_API_VERSION,
         timeout: float = DEFAULT_TIMEOUT,
         logger: Logging | None = None,
-        **kwargs,
-    ):
+        **kwargs: Any,
+    ) -> None:
         super().__init__(api_key=api_key, logger=logger, timeout=timeout, **kwargs)
 
         # Validate API key
@@ -266,7 +268,7 @@ class AnthropicConnector(VendorConnectorBase):
         """
         return CLAUDE_MODELS.copy()
 
-    def _handle_error(self, response) -> None:
+    def _handle_error(self, response: httpx.Response) -> None:
         """Handle API error responses.
 
         Args:

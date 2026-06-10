@@ -46,9 +46,12 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from typing_extensions import Self
+
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
+    from types import TracebackType
 
 # Vector extension is optional
 _HAS_VECTOR = False
@@ -522,10 +525,15 @@ class VectorStore:
             self._conn.close()
             self._conn = None
 
-    def __enter__(self):
+    def __enter__(self) -> Self:
         return self
 
-    def __exit__(self, *args):
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
+    ) -> None:
         self.close()
 
 

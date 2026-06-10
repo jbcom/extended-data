@@ -31,9 +31,9 @@ class AssetManifest:
     task_id: str = ""
     polycount_target: int | None = None
     polycount_estimate: int | None = None
-    metadata: dict[str, Any] = None
+    metadata: dict[str, Any] | None = None
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.metadata is None:
             self.metadata = {}
 

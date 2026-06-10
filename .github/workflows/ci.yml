@@ -27,7 +27,24 @@ jobs:
           enable-cache: true
       - run: uv sync --python 3.13 --extra tests --extra typing
       - run: uvx ruff check src tests
-      - run: uv run mypy src/extended_data/primitives src/extended_data/containers src/extended_data/io src/extended_data/inputs src/extended_data/logging
+      - run: >
+          uv run mypy
+          src/extended_data/primitives
+          src/extended_data/containers
+          src/extended_data/io
+          src/extended_data/inputs
+          src/extended_data/logging
+          src/extended_data/connectors/_optional.py
+          src/extended_data/connectors/base.py
+          src/extended_data/connectors/registry.py
+          src/extended_data/connectors/cli.py
+          src/extended_data/connectors/connectors.py
+          src/extended_data/connectors/secrets/__init__.py
+          src/extended_data/connectors/meshy/jobs.py
+          src/extended_data/connectors/meshy/persistence/vector_store.py
+          src/extended_data/connectors/zoom/__init__.py
+          src/extended_data/connectors/cursor/__init__.py
+          src/extended_data/connectors/anthropic/__init__.py
       - run: uv run pytest tests/core tests/logging tests/inputs
       - run: uv run pytest tests/connectors/test_cloud_params.py tests/connectors/test_connectors.py tests/connectors/test_secrets.py tests/connectors/test_cli.py tests/connectors/test_mcp.py tests/connectors/meshy/test_models.py
       - run: uv build

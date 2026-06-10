@@ -52,6 +52,7 @@ dependencies = [
     "sortedcontainers>=2.4.0",
     "tenacity>=8.4.1,<9.0.0",
     "tomlkit>=0.13.2",
+    "typing-extensions>=4.12.2",
     "validators>=0.22.0",
     "wrapt>=1.16.0",
 ]
