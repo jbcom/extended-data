@@ -9,6 +9,8 @@ from unittest.mock import MagicMock
 import httpx
 import pytest
 
+from pydantic import BaseModel, Field
+
 from extended_data.connectors.base import VendorConnectorBase
 from extended_data.containers import ExtendedDict, ExtendedList, ExtendedString
 from extended_data.logging import Logging
@@ -138,6 +140,28 @@ def test_handle_ai_tool_call_promotes_result_payloads() -> None:
     assert isinstance(result, ExtendedDict)
     assert isinstance(result["items"], ExtendedList)
     assert result["status"].upper_first() == "Ok"
+
+
+def test_get_ai_tool_definitions_promotes_definition_payloads() -> None:
+    """AI tool definition export should expose extended containers."""
+
+    class StatusArgs(BaseModel):
+        verbose: bool = Field(..., description="Include detailed status.")
+
+    def status(verbose: bool) -> dict[str, str]:
+        """Read service status."""
+        return {"status": "ok" if verbose else "quiet"}
+
+    connector = _connector()
+    connector.register_tool(status, name="status", schema=StatusArgs)
+
+    definitions = connector.get_ai_tool_definitions()
+
+    assert isinstance(definitions, ExtendedList)
+    assert isinstance(definitions[0], ExtendedDict)
+    assert definitions[0]["name"] == "status"
+    assert isinstance(definitions[0]["inputSchema"], ExtendedDict)
+    assert isinstance(definitions[0]["inputSchema"]["properties"]["verbose"]["description"], ExtendedString)
 
 
 def test_request_uses_connector_max_retries(mocker) -> None:

@@ -60,6 +60,8 @@ if TYPE_CHECKING:
     from langchain_core.tools import StructuredTool
     from pydantic import BaseModel
 
+    from extended_data.containers import ExtendedDict, ExtendedList
+
 
 class RateLimitError(Exception):
     """Raised when API rate limit is hit - triggers retry."""
@@ -499,21 +501,22 @@ class VendorConnectorBase(InputProvider, ABC):
     # AI Tool Definition Helpers
     # -------------------------------------------------------------------------
 
-    def get_ai_tool_definitions(self) -> list[dict[str, Any]]:
+    def get_ai_tool_definitions(self) -> ExtendedList[ExtendedDict]:
         """Get tool definitions in Vercel AI SDK-compatible format.
 
         Returns:
-            List of AI tool definition dicts
+            Extended list of AI tool definition payloads.
         """
         import inspect
 
         from extended_data.connectors.ai_tools import get_pydantic_schema
+        from extended_data.containers import to_builtin
 
         definitions = []
         for name, func in self._tool_functions.items():
             # Use Pydantic schema if available
             if name in self._tool_schemas:
-                input_schema = get_pydantic_schema(self._tool_schemas[name])
+                input_schema = to_builtin(get_pydantic_schema(self._tool_schemas[name]))
             else:
                 # Fallback to inspect-based schema generation
                 sig = inspect.signature(func)
@@ -550,7 +553,7 @@ class VendorConnectorBase(InputProvider, ABC):
                 }
             )
 
-        return definitions
+        return self.extend_result(definitions)
 
     def handle_ai_tool_call(self, name: str, arguments: dict[str, Any]) -> Any:
         """Handle an AI tool call.

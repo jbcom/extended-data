@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from pydantic import BaseModel, Field
 
+from extended_data.containers import ExtendedDict, ExtendedList, ExtendedString
+
 
 class TestGetPydanticSchema:
     """Tests for get_pydantic_schema function."""
@@ -20,6 +22,10 @@ class TestGetPydanticSchema:
 
         schema = get_pydantic_schema(MyTool)
 
+        assert isinstance(schema, ExtendedDict)
+        assert isinstance(schema["properties"], ExtendedDict)
+        assert isinstance(schema["required"], ExtendedList)
+        assert isinstance(schema["type"], ExtendedString)
         assert schema == {
             "type": "object",
             "properties": {
@@ -41,6 +47,7 @@ class TestGetPydanticSchema:
 
         schema = get_pydantic_schema(MyTool)
 
+        assert isinstance(schema, ExtendedDict)
         assert schema == {
             "type": "object",
             "properties": {
@@ -70,6 +77,7 @@ class TestGetPydanticSchema:
 
         schema = get_pydantic_schema(MyTool)
 
+        assert isinstance(schema, ExtendedDict)
         assert schema == {
             "type": "object",
             "properties": {

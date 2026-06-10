@@ -8,12 +8,14 @@ from __future__ import annotations
 
 import builtins
 
-from typing import Any
+from typing import cast
 
 from pydantic import BaseModel
 
+from extended_data.containers import ExtendedDict, extend_data
 
-def get_pydantic_schema(model: builtins.type[BaseModel]) -> dict[str, Any]:
+
+def get_pydantic_schema(model: builtins.type[BaseModel]) -> ExtendedDict:
     """Generate a Vercel AI SDK-compatible JSON schema from a Pydantic model.
 
     This function removes the top-level 'title' and 'description' fields,
@@ -25,7 +27,7 @@ def get_pydantic_schema(model: builtins.type[BaseModel]) -> dict[str, Any]:
         model: The Pydantic model class.
 
     Returns:
-        A JSON schema dictionary.
+        An extended JSON schema dictionary.
     """
     schema = model.model_json_schema()
 
@@ -33,4 +35,4 @@ def get_pydantic_schema(model: builtins.type[BaseModel]) -> dict[str, Any]:
     schema.pop("title", None)
     schema.pop("description", None)
 
-    return schema
+    return cast(ExtendedDict, extend_data(schema))
