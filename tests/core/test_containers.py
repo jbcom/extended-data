@@ -5,6 +5,8 @@ from __future__ import annotations
 import datetime
 import json
 
+from collections import UserDict, UserList, UserString
+from collections.abc import MutableSet
 from pathlib import Path
 from typing import Any
 
@@ -19,6 +21,20 @@ from extended_data.containers import (
     extend_data,
     to_builtin,
 )
+
+
+def test_tier2_containers_inherit_expected_python_bases() -> None:
+    """Tier 2 classes should be real extended primitives, not detached facades."""
+    assert issubclass(ExtendedString, UserString)
+    assert issubclass(ExtendedDict, UserDict)
+    assert issubclass(ExtendedList, UserList)
+    assert issubclass(ExtendedTuple, tuple)
+    assert issubclass(ExtendedSet, MutableSet)
+    assert isinstance(ExtendedString("api"), UserString)
+    assert isinstance(ExtendedDict({"service": "api"}), UserDict)
+    assert isinstance(ExtendedList(["api"]), UserList)
+    assert isinstance(ExtendedTuple(("api",)), tuple)
+    assert isinstance(ExtendedSet({"api"}), MutableSet)
 
 
 def test_extended_string_chains_primitive_transforms() -> None:
