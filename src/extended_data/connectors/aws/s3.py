@@ -10,6 +10,7 @@ import json
 from typing import TYPE_CHECKING, Any
 
 from extended_data import unhump_map
+from extended_data.containers import to_builtin
 
 
 if TYPE_CHECKING:
@@ -56,6 +57,8 @@ class AWSS3Mixin:
             **resource_args: Any,
         ) -> ServiceResource: ...
 
+        def extend_result(self, value: Any) -> Any: ...
+
     def list_s3_buckets(
         self,
         unhump_buckets: bool = True,
@@ -89,7 +92,7 @@ class AWSS3Mixin:
             buckets = {k: unhump_map(v) for k, v in buckets.items()}
 
         self.logger.info(f"Retrieved {len(buckets)} buckets")
-        return buckets
+        return self.extend_result(buckets)
 
     def get_bucket_location(
         self,
@@ -114,7 +117,7 @@ class AWSS3Mixin:
         )
 
         response = s3.get_bucket_location(Bucket=bucket_name)
-        return response.get("LocationConstraint") or "us-east-1"
+        return self.extend_result(response.get("LocationConstraint") or "us-east-1")
 
     def get_object(
         self,
@@ -147,7 +150,7 @@ class AWSS3Mixin:
             body = response["Body"].read()
 
             if decode:
-                return body.decode("utf-8")
+                return self.extend_result(body.decode("utf-8"))
             return body
         except ClientError as e:
             if e.response.get("Error", {}).get("Code") == "NoSuchKey":
@@ -181,7 +184,7 @@ class AWSS3Mixin:
         if content is None:
             return None
 
-        return json.loads(content)
+        return self.extend_result(json.loads(content))
 
     def put_object(
         self,
@@ -234,7 +237,7 @@ class AWSS3Mixin:
 
         response = s3.put_object(**put_args)
         self.logger.debug(f"Put object to s3://{bucket}/{key}")
-        return response
+        return self.extend_result(response)
 
     def put_json_object(
         self,
@@ -258,7 +261,7 @@ class AWSS3Mixin:
         Returns:
             The S3 put_object response.
         """
-        body = json.dumps(data, indent=indent, default=str)
+        body = json.dumps(to_builtin(data), indent=indent, default=str)
         return self.put_object(
             bucket=bucket,
             key=key,
@@ -294,7 +297,7 @@ class AWSS3Mixin:
 
         response = s3.delete_object(Bucket=bucket, Key=key)
         self.logger.debug(f"Deleted object s3://{bucket}/{key}")
-        return response
+        return self.extend_result(response)
 
     def list_objects(
         self,
@@ -349,7 +352,7 @@ class AWSS3Mixin:
             objects = [unhump_map(o) for o in objects]
 
         self.logger.debug(f"Found {len(objects)} objects")
-        return objects
+        return self.extend_result(objects)
 
     def copy_object(
         self,
@@ -385,7 +388,7 @@ class AWSS3Mixin:
             CopySource={"Bucket": source_bucket, "Key": source_key},
         )
         self.logger.debug(f"Copied object to s3://{dest_bucket}/{dest_key}")
-        return response
+        return self.extend_result(response)
 
     # =========================================================================
     # Bucket Features and Configuration
@@ -418,7 +421,7 @@ class AWSS3Mixin:
         # Check if bucket exists
         if not bucket.creation_date:
             self.logger.warning(f"Bucket does not exist: {bucket_name}")
-            return {}
+            return self.extend_result({})
 
         features: dict[str, Any] = {}
 
@@ -454,7 +457,7 @@ class AWSS3Mixin:
             self.logger.debug("No policy for bucket")
             features["policy"] = None
 
-        return features
+        return self.extend_result(features)
 
     def find_buckets_by_name(
         self,
@@ -498,7 +501,7 @@ class AWSS3Mixin:
                     }
 
         self.logger.info(f"Found {len(buckets)} matching buckets")
-        return buckets
+        return self.extend_result(buckets)
 
     def create_bucket(
         self,
@@ -561,7 +564,7 @@ class AWSS3Mixin:
             )
             self.logger.info(f"Applied {len(tags)} tags to bucket: {bucket_name}")
 
-        return result
+        return self.extend_result(result)
 
     def delete_bucket(
         self,
@@ -628,10 +631,10 @@ class AWSS3Mixin:
 
         try:
             response = s3.get_bucket_tagging(Bucket=bucket_name)
-            return {tag["Key"]: tag["Value"] for tag in response.get("TagSet", [])}
+            return self.extend_result({tag["Key"]: tag["Value"] for tag in response.get("TagSet", [])})
         except ClientError as e:
             if e.response.get("Error", {}).get("Code") == "NoSuchTagSet":
-                return {}
+                return self.extend_result({})
             raise
 
     def set_bucket_tags(
@@ -747,4 +750,4 @@ class AWSS3Mixin:
             }
 
         self.logger.info(f"Retrieved sizes for {len(bucket_sizes)} buckets")
-        return bucket_sizes
+        return self.extend_result(bucket_sizes)

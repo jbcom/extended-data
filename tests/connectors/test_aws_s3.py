@@ -15,6 +15,7 @@ pytest.importorskip("botocore")
 
 from botocore.exceptions import ClientError
 
+from extended_data.containers import ExtendedDict, ExtendedList, ExtendedString, extend_data
 from extended_data.connectors.aws import AWSConnectorFull
 
 
@@ -43,6 +44,8 @@ class TestS3BucketOperations:
 
         result = aws_connector.list_s3_buckets(unhump_buckets=False)
 
+        assert isinstance(result, ExtendedDict)
+        assert isinstance(result["bucket1"], ExtendedDict)
         assert len(result) == 2
         assert "bucket1" in result
         assert "bucket2" in result
@@ -70,6 +73,7 @@ class TestS3BucketOperations:
 
         result = aws_connector.get_bucket_location("my-bucket")
 
+        assert isinstance(result, ExtendedString)
         assert result == "us-west-2"
         mock_s3.get_bucket_location.assert_called_once_with(Bucket="my-bucket")
 
@@ -81,6 +85,7 @@ class TestS3BucketOperations:
 
         result = aws_connector.get_bucket_location("my-bucket")
 
+        assert isinstance(result, ExtendedString)
         assert result == "us-east-1"
 
     def test_get_bucket_tags(self, aws_connector):
@@ -96,6 +101,8 @@ class TestS3BucketOperations:
 
         result = aws_connector.get_bucket_tags("my-bucket")
 
+        assert isinstance(result, ExtendedDict)
+        assert isinstance(result["Environment"], ExtendedString)
         assert result == {"Environment": "dev", "Owner": "team"}
 
     def test_get_bucket_tags_no_tags(self, aws_connector):
@@ -107,6 +114,7 @@ class TestS3BucketOperations:
 
         result = aws_connector.get_bucket_tags("my-bucket")
 
+        assert isinstance(result, ExtendedDict)
         assert result == {}
 
     def test_get_bucket_tags_other_error(self, aws_connector):
@@ -148,6 +156,7 @@ class TestS3ObjectOperations:
 
         result = aws_connector.get_object("bucket", "key.txt", decode=True)
 
+        assert isinstance(result, ExtendedString)
         assert result == "test content"
         mock_s3.get_object.assert_called_once_with(Bucket="bucket", Key="key.txt")
 
@@ -195,6 +204,8 @@ class TestS3ObjectOperations:
 
         result = aws_connector.get_json_object("bucket", "data.json")
 
+        assert isinstance(result, ExtendedDict)
+        assert isinstance(result["key"], ExtendedString)
         assert result == test_data
 
     def test_get_json_object_not_found(self, aws_connector):
@@ -216,6 +227,8 @@ class TestS3ObjectOperations:
 
         result = aws_connector.put_object("bucket", "key.txt", "test content")
 
+        assert isinstance(result, ExtendedDict)
+        assert isinstance(result["ETag"], ExtendedString)
         assert result["ETag"] == "abc123"
         call_args = mock_s3.put_object.call_args[1]
         assert call_args["Bucket"] == "bucket"
@@ -280,9 +293,11 @@ class TestS3ObjectOperations:
         mock_s3.put_object.return_value = {"ETag": "abc123"}
         aws_connector.get_aws_client = MagicMock(return_value=mock_s3)
 
-        data = {"key": "value", "number": 123}
+        data = extend_data({"key": "value", "number": 123})
         result = aws_connector.put_json_object("bucket", "data.json", data)
 
+        assert isinstance(result, ExtendedDict)
+        assert isinstance(result["ETag"], ExtendedString)
         assert result["ETag"] == "abc123"
         call_args = mock_s3.put_object.call_args[1]
         assert call_args["ContentType"] == "application/json"
@@ -298,6 +313,7 @@ class TestS3ObjectOperations:
 
         result = aws_connector.delete_object("bucket", "key.txt")
 
+        assert isinstance(result, ExtendedDict)
         assert result["DeleteMarker"] is True
         mock_s3.delete_object.assert_called_once_with(Bucket="bucket", Key="key.txt")
 
@@ -319,6 +335,9 @@ class TestS3ObjectOperations:
 
         result = aws_connector.list_objects("bucket", unhump_objects=False)
 
+        assert isinstance(result, ExtendedList)
+        assert isinstance(result[0], ExtendedDict)
+        assert isinstance(result[0]["Key"], ExtendedString)
         assert len(result) == 3
         assert result[0]["Key"] == "file1.txt"
         assert result[2]["Key"] == "file3.txt"
@@ -357,6 +376,7 @@ class TestS3ObjectOperations:
 
         result = aws_connector.copy_object("src-bucket", "src.txt", "dst-bucket", "dst.txt")
 
+        assert isinstance(result, ExtendedDict)
         assert "CopyObjectResult" in result
         mock_s3.copy_object.assert_called_once_with(
             Bucket="dst-bucket",
@@ -399,6 +419,9 @@ class TestS3BucketFeatures:
 
         result = aws_connector.get_bucket_features("my-bucket")
 
+        assert isinstance(result, ExtendedDict)
+        assert isinstance(result["logging"], ExtendedDict)
+        assert isinstance(result["lifecycle_rules"], ExtendedList)
         assert result["logging"] == {"TargetBucket": "logs"}
         assert result["versioning"] == "Enabled"
         assert result["lifecycle_rules"] == [{"Id": "rule1"}]
@@ -415,6 +438,7 @@ class TestS3BucketFeatures:
 
         result = aws_connector.get_bucket_features("missing-bucket")
 
+        assert isinstance(result, ExtendedDict)
         assert result == {}
 
     def test_get_bucket_features_errors(self, aws_connector):
@@ -460,6 +484,8 @@ class TestS3BucketFeatures:
 
         result = aws_connector.find_buckets_by_name("app")
 
+        assert isinstance(result, ExtendedDict)
+        assert isinstance(result["prod-app-bucket"], ExtendedDict)
         assert len(result) == 2
         assert "prod-app-bucket" in result
         assert "dev-app-bucket" in result
@@ -473,6 +499,8 @@ class TestS3BucketFeatures:
 
         result = aws_connector.create_bucket("my-bucket")
 
+        assert isinstance(result, ExtendedDict)
+        assert isinstance(result["Location"], ExtendedString)
         assert result["Location"] == "/my-bucket"
         call_args = mock_s3.create_bucket.call_args[1]
         assert call_args["Bucket"] == "my-bucket"
@@ -579,6 +607,8 @@ class TestS3BucketFeatures:
 
         result = aws_connector.get_bucket_sizes(bucket_names=["test-bucket"])
 
+        assert isinstance(result, ExtendedDict)
+        assert isinstance(result["test-bucket"], ExtendedDict)
         assert "test-bucket" in result
         assert result["test-bucket"]["size_bytes"] == 1073741824
         assert result["test-bucket"]["size_gb"] == 1.0
