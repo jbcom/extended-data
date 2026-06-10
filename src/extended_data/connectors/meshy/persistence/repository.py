@@ -19,6 +19,7 @@ from extended_data.connectors.meshy.persistence.schemas import (
     TaskSubmission,
 )
 from extended_data.connectors.meshy.persistence.utils import compute_spec_hash as util_compute_spec_hash
+from extended_data.connectors.redaction import redact_sensitive_text
 from extended_data.containers import ExtendedDict, ExtendedList, extend_data
 
 
@@ -156,6 +157,8 @@ class TaskRepository:
             msg = f"Asset {spec_hash} not found for project {project}"
             raise ValueError(msg)
 
+        safe_error = redact_sensitive_text(error) if error else None
+
         # Find existing task entry or create new
         task_entry = None
         for entry in asset_record.task_graph:
@@ -172,8 +175,8 @@ class TaskRepository:
             if result_paths:
                 task_entry.result_paths.update(result_paths)
 
-            if error:
-                task_entry.error = error
+            if safe_error:
+                task_entry.error = safe_error
 
             # Record status transition
             asset_record.history.append(
@@ -196,7 +199,7 @@ class TaskRepository:
                 updated_at=_utc_now(),
                 payload=payload or {},
                 result_paths=result_paths or {},
-                error=error,
+                error=safe_error,
             )
             asset_record.task_graph.append(task_entry)
 

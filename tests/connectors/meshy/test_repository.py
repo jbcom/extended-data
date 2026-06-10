@@ -241,6 +241,23 @@ class TestTaskUpdate:
         assert task["status"] == "FAILED"
         assert task["error"] == "Generation failed"
 
+    def test_record_task_update_redacts_error(self, repo_with_task):
+        """Persisted task errors should be redacted at the repository boundary."""
+        repo_with_task.record_task_update(
+            project="project1",
+            spec_hash="hash-abc",
+            task_id="task-12345",
+            status="FAILED",
+            error="Generation failed password=hunter2 Authorization: Bearer raw_token",
+        )
+
+        asset = repo_with_task.get_asset_record("project1", "hash-abc")
+        assert asset is not None
+        task = asset["task_graph"][0]
+        assert "hunter2" not in task["error"]
+        assert "raw_token" not in task["error"]
+        assert "[REDACTED]" in task["error"]
+
     def test_record_task_update_adds_history(self, repo_with_task):
         """Test that updates add history entries."""
         repo_with_task.record_task_update(
