@@ -399,7 +399,7 @@ class VaultConnector(VendorConnectorBase):
             return False
 
     # ---------------------------------------------------------------------
-    # Vault AWS IAM helpers (migrated from terraform-modules)
+    # Vault AWS IAM helpers
     # ---------------------------------------------------------------------
 
     def list_aws_iam_roles(

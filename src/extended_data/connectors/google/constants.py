@@ -1,4 +1,4 @@
-"""Google connector constants for terraform-modules settings.
+"""Google connector constants for cloud and Workspace workflows.
 
 These constants provide default configurations for Google Cloud and Workspace
 operations. Override these values with environment-specific configuration.
@@ -12,7 +12,7 @@ import os
 # Default domain - MUST be overridden via environment variable
 DEFAULT_DOMAIN = os.getenv("GOOGLE_WORKSPACE_DOMAIN", "example.com")
 
-# Full OAuth scopes matching terraform-modules for maximum compatibility
+# Broad OAuth scopes for mixed Workspace, Cloud, billing, and service discovery workflows.
 DEFAULT_SCOPES = [
     "https://mail.google.com/",
     "https://www.googleapis.com/auth/apps.alerts",
@@ -56,7 +56,7 @@ GCP_SECURITY_PROJECT = {
     },
 }
 
-# KMS configuration for terraform secrets
+# KMS configuration defaults for infrastructure secret material.
 GCP_KMS = {
     "keyring_name": "terraform-secrets",
     "key_name": "terraform-key",

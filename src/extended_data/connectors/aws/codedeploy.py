@@ -1,8 +1,7 @@
 """AWS CodeDeploy helpers for extended-data.
 
-This module centralizes the CodeDeploy helper functions that previously
-lived inside terraform-modules so Terraform stacks and standalone Python
-workloads can rely on the same implementation.
+This module centralizes CodeDeploy helper functions so infrastructure stacks
+and standalone Python workloads can rely on the same implementation.
 """
 
 from __future__ import annotations

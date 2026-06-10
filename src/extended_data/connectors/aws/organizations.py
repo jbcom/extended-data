@@ -553,7 +553,7 @@ class AWSOrganizationsMixin:
         return self.extend_result(account_map)
 
     # --------------------------------------------------------------------- #
-    # Terraform-migrated helpers                                           #
+    # Account labeling and organization preprocessing helpers               #
     # --------------------------------------------------------------------- #
 
     def label_aws_accounts(
@@ -564,8 +564,6 @@ class AWSOrganizationsMixin:
         execution_role_arn: str | None = None,
     ) -> ExtendedDict:
         """Return normalized metadata for every AWS account.
-
-        This mirrors the historical ``label_aws_account`` helper from terraform-modules.
 
         Args:
             domains: Mapping of environment -> root domain.
@@ -658,7 +656,7 @@ class AWSOrganizationsMixin:
         caller_account_id: str | None = None,
         execution_role_arn: str | None = None,
     ) -> ExtendedDict:
-        """Group accounts by classification, matching terraform-modules output."""
+        """Group accounts by classification for infrastructure data consumers."""
         if labeled_accounts is None:
             if not domains:
                 msg = "domains mapping required when labeled_accounts is not provided"
@@ -744,9 +742,9 @@ class AWSOrganizationsMixin:
         include_classification: bool = True,
         execution_role_arn: str | None = None,
     ) -> ExtendedDict:
-        """Preprocess AWS Organization data for terraform consumption.
+        """Preprocess AWS Organization data for infrastructure workflows.
 
-        Returns a structured dict suitable for terraform data sources.
+        Returns a structured dictionary suitable for downstream data sources.
 
         Args:
             include_tags: Include account tags. Defaults to True.

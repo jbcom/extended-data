@@ -1,4 +1,4 @@
-"""ConnectorFabric - Public API with caching like TerraformDataSource."""
+"""ConnectorFabric - cached vendor connector access for Extended Data."""
 
 from __future__ import annotations
 
@@ -47,8 +47,8 @@ if TYPE_CHECKING:
 class ConnectorFabric(InputProvider):
     """Public API for extended data connectors with client caching.
 
-    This class provides cached access to all extended data connectors, similar to
-    how TerraformDataSource works in terraform-modules libraries.
+    This class provides cached access to registered vendor connectors while
+    sharing input snapshots, lifecycle logging, and data normalization.
 
     Usage:
         vc = ConnectorFabric()
