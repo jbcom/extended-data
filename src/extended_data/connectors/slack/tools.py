@@ -330,7 +330,7 @@ def get_crewai_tools() -> list[Any]:
     try:
         from crewai.tools import tool as crewai_tool
     except ImportError as e:
-        msg = "crewai is required for CrewAI tools.\nInstall with: pip install extended-data[crewai]"
+        msg = "crewai is required for CrewAI tools. Install CrewAI separately; extended-data does not install it."
         raise ImportError(msg) from e
 
     tools = []

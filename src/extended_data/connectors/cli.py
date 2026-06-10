@@ -167,9 +167,8 @@ def cmd_methods(args: argparse.Namespace) -> int:
         if not callable(attr) or isinstance(attr, type):
             continue
 
-        # Get first line of docstring
-        if attr.__doc__:
-            attr.__doc__.split("\n")[0].strip()[:50]
+        doc = attr.__doc__.split("\n")[0].strip()[:50] if attr.__doc__ else "No description"
+        _write_stdout(f"  {name:<30} {doc}")
 
     return 0
 

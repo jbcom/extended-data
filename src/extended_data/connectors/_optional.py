@@ -39,7 +39,6 @@ PACKAGE_TO_EXTRA: dict[str, str] = {
     # AI frameworks
     "langchain_core": "langchain",
     "langchain": "langchain",
-    "crewai": "crewai",
     "strands": "strands",
     "mcp": "mcp",
     # Features
@@ -51,6 +50,13 @@ PACKAGE_TO_EXTRA: dict[str, str] = {
 
 # Cache for import checks
 _import_cache: dict[str, bool] = {}
+
+PACKAGE_INSTALL_HINTS: dict[str, str] = {
+    "crewai": (
+        "Install CrewAI separately after reviewing its dependency tree; extended-data does not publish a "
+        "CrewAI extra while current CrewAI releases pull vulnerable chromadb versions."
+    ),
+}
 
 
 def is_available(package: str) -> bool:
@@ -102,6 +108,8 @@ def require_extra(package: str, extra: str | None = None) -> Any:
     try:
         return importlib.import_module(package)
     except ImportError as e:
+        if package in PACKAGE_INSTALL_HINTS:
+            raise ImportError(f"Package '{package}' is required but not installed.\n{PACKAGE_INSTALL_HINTS[package]}") from e
         extra_name = extra or get_extra_for_package(package) or package
         raise ImportError(
             f"Package '{package}' is required but not installed.\n"

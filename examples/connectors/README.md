@@ -16,7 +16,10 @@ pip install "extended-data[aws,google,meshy]"
 
 # For AI framework integration
 pip install "extended-data[langchain]"
-pip install "extended-data[crewai]"
+
+# CrewAI adapters require a user-managed CrewAI install. extended-data does not
+# currently publish a CrewAI extra because current CrewAI releases pull
+# vulnerable chromadb versions transitively.
 
 # For the Meshy MCP server
 pip install "extended-data[meshy,mcp]"

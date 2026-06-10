@@ -90,19 +90,13 @@ langchain = [
     "langchain-core>=1.3.0",
     "langsmith>=0.7.33",
 ]
-crewai = [
-    "crewai[tools]>=1.14.2rc1",
-    "uv>=0.11.7",
-]
 strands = ["strands-agents>=1.36.0"]
 mcp = ["mcp>=1.26.0,<1.27.dev0"]
 ai = [
-    "crewai[tools]>=1.14.2rc1",
     "langchain-core>=1.3.0",
     "langsmith>=0.7.33",
     "mcp>=1.26.0,<1.27.dev0",
     "strands-agents>=1.36.0",
-    "uv>=0.11.7",
 ]
 webhooks = [
     "fastapi>=0.136.0",
@@ -136,7 +130,6 @@ dev = [
 all = [
     "anthropic>=0.96.0",
     "boto3>=1.42.92",
-    "crewai[tools]>=1.14.2rc1",
     "fastapi>=0.136.0",
     "filelock>=3.29.0",
     "google-api-python-client>=2.194.0",
@@ -154,7 +147,6 @@ all = [
     "slack-sdk>=3.41.0",
     "sqlite-vec>=0.1.9",
     "strands-agents>=1.36.0",
-    "uv>=0.11.7",
     "uvicorn>=0.45.0",
 ]
 

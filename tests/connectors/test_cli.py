@@ -8,7 +8,7 @@ from unittest.mock import patch
 
 import pytest
 
-from extended_data.connectors.cli import cmd_info, cmd_list, main
+from extended_data.connectors.cli import cmd_info, cmd_list, cmd_methods, main
 
 
 def test_cli_list():
@@ -46,6 +46,18 @@ def test_cli_info():
     output = "".join(call.args[0] for call in mock_write.call_args_list if call.args)
     assert "name: github" in output
     assert "install: pip install extended-data[github]" in output
+
+
+def test_cli_methods_lists_public_methods():
+    """Methods command prints public callable methods with descriptions."""
+    args = argparse.Namespace(connector="meshy")
+    with patch("sys.stdout.write") as mock_write:
+        exit_code = cmd_methods(args)
+
+    assert exit_code == 0
+    output = "".join(call.args[0] for call in mock_write.call_args_list if call.args)
+    assert "request_data" in output
+    assert "Decode an HTTP response body" in output
 
 
 def test_cli_main_help():

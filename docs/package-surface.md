@@ -115,9 +115,13 @@ Install only the vendor or AI layers you need:
 ```bash
 pip install "extended-data[aws,github,vault]"
 pip install "extended-data[google,slack,zoom]"
-pip install "extended-data[ai]"
+pip install "extended-data[ai]"        # LangChain, MCP, and Strands
 pip install "extended-data[meshy,mcp]"
 ```
+
+CrewAI tool adapters are still importable when users install `crewai` directly,
+but `extended-data` does not expose a CrewAI extra while current CrewAI
+dependency trees pull vulnerable `chromadb` releases.
 
 Optional dependency checks live in `extended_data.connectors._optional`; there
 are no old package compatibility shims in the public API. When a known built-in

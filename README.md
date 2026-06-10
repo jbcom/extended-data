@@ -18,10 +18,14 @@ Optional integrations are installed by feature:
 ```bash
 pip install "extended-data[aws,github,vault]"
 pip install "extended-data[google,slack,zoom]"
-pip install "extended-data[ai]"
+pip install "extended-data[ai]"        # LangChain, MCP, and Strands
 pip install "extended-data[meshy,mcp]"
 pip install "extended-data[secrets]"
 ```
+
+CrewAI adapters remain available when `crewai` is installed independently, but
+`extended-data` intentionally does not publish a CrewAI extra while current
+CrewAI releases pull vulnerable `chromadb` versions transitively.
 
 ## Usage
 
