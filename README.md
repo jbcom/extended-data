@@ -112,39 +112,7 @@ uv run mypy \
   src/extended_data/io \
   src/extended_data/inputs \
   src/extended_data/logging \
-  src/extended_data/connectors/_optional.py \
-  src/extended_data/connectors/base.py \
-  src/extended_data/connectors/registry.py \
-  src/extended_data/connectors/cli.py \
-  src/extended_data/connectors/connectors.py \
-  src/extended_data/connectors/secrets/__init__.py \
-  src/extended_data/connectors/meshy/jobs.py \
-  src/extended_data/connectors/meshy/persistence/vector_store.py \
-  src/extended_data/connectors/meshy/base.py \
-  src/extended_data/connectors/meshy/tools.py \
-  src/extended_data/connectors/meshy/mcp.py \
-  src/extended_data/connectors/mcp.py \
-  src/extended_data/connectors/meshy/connector.py \
-  src/extended_data/connectors/zoom/__init__.py \
-  src/extended_data/connectors/cursor/__init__.py \
-  src/extended_data/connectors/anthropic/__init__.py \
-  src/extended_data/connectors/slack/__init__.py \
-  src/extended_data/connectors/slack/tools.py \
-  src/extended_data/connectors/vault/__init__.py \
-  src/extended_data/connectors/github/__init__.py \
-  src/extended_data/connectors/github/tools.py \
-  src/extended_data/connectors/aws/__init__.py \
-  src/extended_data/connectors/aws/tools.py \
-  src/extended_data/connectors/aws/s3.py \
-  src/extended_data/connectors/aws/sso.py \
-  src/extended_data/connectors/aws/organizations.py \
-  src/extended_data/connectors/google/__init__.py \
-  src/extended_data/connectors/google/services.py \
-  src/extended_data/connectors/google/workspace.py \
-  src/extended_data/connectors/google/cloud.py \
-  src/extended_data/connectors/google/billing.py \
-  src/extended_data/connectors/google/tools.py \
-  src/extended_data/connectors/google/jules.py
+  src/extended_data/connectors
 uv build
 ```
 
