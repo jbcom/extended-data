@@ -70,6 +70,8 @@ assert payload["service"]["name"].upper_first() == "Api"
 
 Use `extend_data(value)` to promote existing plain data and `to_builtin(value)`
 to lower extended containers back to standard Python data.
+Format encoders lower Tier 2 containers the same way before serializing JSON,
+YAML, TOML, and HCL output.
 
 `DataWorkflow` is the Tier 3 composition surface for higher-order data
 processing. It reads or decodes structured data through the file and format

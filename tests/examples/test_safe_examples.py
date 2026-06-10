@@ -5,6 +5,7 @@ from __future__ import annotations
 import importlib.util
 import os
 import py_compile
+import re
 import subprocess
 import sys
 
@@ -38,6 +39,14 @@ CONNECTOR_EXAMPLES = [
 ALL_EXAMPLES = SAFE_EXAMPLES + CONNECTOR_EXAMPLES
 
 
+def _readme_usage_snippet() -> str:
+    readme = (REPO_ROOT / "README.md").read_text(encoding="utf-8")
+    usage_section = readme.split("## Usage", 1)[1].split("## Package Shape", 1)[0]
+    match = re.search(r"```python\n(?P<code>.*?)\n```", usage_section, re.DOTALL)
+    assert match is not None
+    return match.group("code")
+
+
 @pytest.mark.parametrize("example_path", SAFE_EXAMPLES)
 def test_safe_example_runs(example_path: str, tmp_path: Path) -> None:
     """Keep runnable examples aligned with the installed package surface."""
@@ -55,6 +64,24 @@ def test_safe_example_runs(example_path: str, tmp_path: Path) -> None:
     )
 
     assert result.returncode == 0, f"{example_path} failed\nSTDOUT:\n{result.stdout}\nSTDERR:\n{result.stderr}"
+
+
+def test_readme_usage_snippet_runs(tmp_path: Path) -> None:
+    """Keep the primary README example executable as a public contract."""
+    env = os.environ.copy()
+    env.pop("OVERRIDE_STDIN", None)
+
+    result = subprocess.run(
+        [sys.executable, "-c", _readme_usage_snippet()],
+        cwd=tmp_path,
+        env=env,
+        capture_output=True,
+        text=True,
+        timeout=15,
+        check=False,
+    )
+
+    assert result.returncode == 0, f"README usage snippet failed\nSTDOUT:\n{result.stdout}\nSTDERR:\n{result.stderr}"
 
 
 @pytest.mark.parametrize("example_path", ALL_EXAMPLES)

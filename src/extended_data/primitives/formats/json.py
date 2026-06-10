@@ -10,6 +10,7 @@ from typing import Any
 
 import orjson
 
+from extended_data.primitives.formats._normalization import lower_extended_data
 from extended_data.primitives.formats.errors import DataDecodeError
 
 
@@ -96,4 +97,4 @@ def encode_json(
         option |= orjson.OPT_APPEND_NEWLINE
 
     # Use orjson.dumps to encode the object with the calculated options
-    return orjson.dumps(raw_data, default=default, option=option).decode("utf-8")
+    return orjson.dumps(lower_extended_data(raw_data), default=default, option=option).decode("utf-8")

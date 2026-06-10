@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import pytest
 
+from extended_data.containers import ExtendedDict
 from extended_data.primitives.formats import hcl as hcl2_utils
 from extended_data.primitives.formats.errors import DataDecodeError
 from extended_data.primitives.formats.hcl import decode_hcl2, encode_hcl2
@@ -295,3 +296,15 @@ def test_encode_hcl2_rejects_non_mapping_root() -> None:
     """Reject document roots that are not HCL bodies."""
     with pytest.raises(TypeError, match="mapping at the document root"):
         encode_hcl2(["not", "a", "mapping"])
+
+
+@pytest.mark.parametrize("use_data_attribute", [False, True])
+def test_encode_hcl2_lowers_extended_containers(use_data_attribute: bool) -> None:
+    """Encode Tier 2 containers before validating and rendering HCL."""
+    payload = ExtendedDict({"locals": [{"service_name": "api", "ports": [80, 443]}]})
+    raw_data = payload.data if use_data_attribute else payload
+
+    encoded = encode_hcl2(raw_data)
+
+    assert 'service_name = "api"' in encoded
+    assert decode_hcl2(encoded) == {"locals": [{"service_name": "api", "ports": [80, 443]}]}

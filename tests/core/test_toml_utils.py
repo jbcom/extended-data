@@ -17,6 +17,7 @@ from pathlib import Path
 import pytest
 import tomlkit
 
+from extended_data.containers import ExtendedDict
 from extended_data.primitives.formats.errors import DataDecodeError
 from extended_data.primitives.formats.toml import decode_toml, encode_toml
 
@@ -70,3 +71,16 @@ def test_encode_toml_converts_tuple_like_composites() -> None:
     parsed = tomlkit.parse(result)
     assert parsed["items"] == ["alpha", "beta"]
     assert sorted(parsed["values"]) == [1, 2]
+
+
+@pytest.mark.parametrize("use_data_attribute", [False, True])
+def test_encode_toml_lowers_extended_containers(use_data_attribute: bool) -> None:
+    """Encode Tier 2 containers through TOML's existing primitive normalization."""
+    payload = ExtendedDict({"service": {"name": "api"}, "ports": [80, 443]})
+    raw_data = payload.data if use_data_attribute else payload
+
+    result = encode_toml(raw_data)
+
+    parsed = tomlkit.parse(result)
+    assert parsed["service"]["name"] == "api"
+    assert parsed["ports"] == [80, 443]

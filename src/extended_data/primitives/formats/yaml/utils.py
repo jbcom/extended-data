@@ -10,6 +10,7 @@ from typing import Any
 
 import yaml
 
+from extended_data.primitives.formats._normalization import lower_extended_data
 from extended_data.primitives.formats.errors import DataDecodeError, invalid_utf8_error
 from extended_data.primitives.formats.yaml.dumpers import PureDumper
 from extended_data.primitives.formats.yaml.loaders import PureLoader
@@ -45,7 +46,7 @@ def encode_yaml(raw_data: Any) -> str:
     Returns:
         str: The encoded YAML string.
     """
-    return yaml.dump(raw_data, Dumper=PureDumper, allow_unicode=True, sort_keys=False)
+    return yaml.dump(lower_extended_data(raw_data), Dumper=PureDumper, allow_unicode=True, sort_keys=False)
 
 
 def is_yaml_data(data: Any) -> bool:

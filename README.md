@@ -40,7 +40,7 @@ payload = ExtendedDict(data).deep_merge({"source": "example"})
 decoded_file = decode_file('{"service": {"name": "api"}}', suffix="json", as_extended=True)
 workflow = DataWorkflow.from_value(payload).then(("normalize", lambda data: data.unhump())).result()
 
-print(encode_yaml(payload.data))
+print(encode_yaml(payload))
 print(decoded_file["service"]["name"].upper_first())
 print(number_to_words(42))
 print(workflow.as_builtin())

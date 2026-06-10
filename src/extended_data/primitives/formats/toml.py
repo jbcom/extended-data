@@ -9,6 +9,7 @@ from typing import Any
 
 import tomlkit
 
+from extended_data.primitives.formats._normalization import lower_extended_data
 from extended_data.primitives.formats.errors import DataDecodeError, invalid_utf8_error
 from extended_data.primitives.strings import bytestostr
 from extended_data.primitives.types import convert_special_types
@@ -43,5 +44,5 @@ def encode_toml(raw_data: Any) -> str:
         str: The encoded TOML string.
     """
     # Convert unsupported types to simpler forms before encoding
-    converted_data = convert_special_types(raw_data)
+    converted_data = convert_special_types(lower_extended_data(raw_data))
     return tomlkit.dumps(converted_data)

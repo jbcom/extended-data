@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import pytest
 
+from extended_data.containers import ExtendedDict
 from extended_data.primitives.formats.errors import DataDecodeError
 from extended_data.primitives.formats.json import decode_json, encode_json
 
@@ -111,3 +112,14 @@ def test_encode_json_bytes_output(simple_dict: dict) -> None:
     """
     result = encode_json(simple_dict)
     assert isinstance(result, str)
+
+
+@pytest.mark.parametrize("use_data_attribute", [False, True])
+def test_encode_json_lowers_extended_containers(use_data_attribute: bool) -> None:
+    """Encode Tier 2 containers as their plain JSON-compatible contents."""
+    payload = ExtendedDict({"status": "ok", "items": ["one"]})
+    raw_data = payload.data if use_data_attribute else payload
+
+    result = encode_json(raw_data, sort_keys=True)
+
+    assert decode_json(result) == {"items": ["one"], "status": "ok"}

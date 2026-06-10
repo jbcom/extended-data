@@ -13,6 +13,7 @@ import hcl2
 
 from lark.exceptions import LarkError
 
+from extended_data.primitives.formats._normalization import lower_extended_data
 from extended_data.primitives.formats.errors import DataDecodeError, invalid_utf8_error
 from extended_data.primitives.strings import bytestostr
 from extended_data.primitives.types import convert_special_types
@@ -254,9 +255,10 @@ def encode_hcl2(data: Any) -> str:
     Returns:
         str: The encoded HCL2 string.
     """
-    if not isinstance(data, Mapping):
+    normalized_data = lower_extended_data(data)
+    if not isinstance(normalized_data, Mapping):
         message = "HCL encoding requires a mapping at the document root."
         raise TypeError(message)
 
-    serialized = _serialize_hcl_body(convert_special_types(data), indent_level=0)
+    serialized = _serialize_hcl_body(convert_special_types(normalized_data), indent_level=0)
     return serialized.rstrip()

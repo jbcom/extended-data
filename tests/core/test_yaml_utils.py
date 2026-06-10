@@ -22,6 +22,7 @@ import pytest
 
 from yaml import MappingNode, ScalarNode, SequenceNode
 
+from extended_data.containers import ExtendedDict
 from extended_data.primitives.formats.errors import DataDecodeError
 from extended_data.primitives.formats.yaml import (
     LiteralScalarString,
@@ -90,6 +91,17 @@ def test_encode_yaml(simple_yaml_fixture: str) -> None:
     expected_data = decode_yaml(simple_yaml_fixture)
     result_data = decode_yaml(result)
     assert result_data == expected_data
+
+
+@pytest.mark.parametrize("use_data_attribute", [False, True])
+def test_encode_yaml_lowers_extended_containers(use_data_attribute: bool) -> None:
+    """Encode Tier 2 containers while preserving YAML-compatible built-ins."""
+    payload = ExtendedDict({"status": "ok", "items": ["one"]})
+    raw_data = payload.data if use_data_attribute else payload
+
+    result = encode_yaml(raw_data)
+
+    assert decode_yaml(result) == {"status": "ok", "items": ["one"]}
 
 
 def test_yaml_construct_undefined() -> None:
