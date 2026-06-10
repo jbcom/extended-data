@@ -195,6 +195,76 @@ def test_cli_run_pipeline_rejects_legacy_raw_diff_json(mock_run: MagicMock, conn
 
 
 @patch("subprocess.run")
+def test_cli_run_pipeline_parses_failure_result_envelope(mock_run: MagicMock, connector: SecretsConnector) -> None:
+    mock_run.return_value = MagicMock(
+        returncode=1,
+        stdout=json.dumps(
+            {
+                "success": False,
+                "target_count": 1,
+                "secrets_processed": 2,
+                "error_message": "pipeline completed with errors",
+                "results": [{"target": "prod", "phase": "sync", "success": False, "error": "denied"}],
+            }
+        ),
+        stderr="Error: pipeline completed with errors\n",
+    )
+
+    result = connector.run_pipeline("config.yaml")
+
+    assert result.success is False
+    assert result.target_count == 1
+    assert result.secrets_processed == 2
+    assert result.error_message == "pipeline completed with errors"
+    assert json.loads(result.results_json)[0]["error"] == "denied"
+
+
+@patch("subprocess.run")
+def test_cli_run_pipeline_failure_envelope_uses_stderr_when_error_message_missing(
+    mock_run: MagicMock,
+    connector: SecretsConnector,
+) -> None:
+    mock_run.return_value = MagicMock(
+        returncode=1,
+        stdout=json.dumps({"success": False, "results": []}),
+        stderr="Error: boom\n",
+    )
+
+    result = connector.run_pipeline("config.yaml")
+
+    assert result.success is False
+    assert result.error_message == "Error: boom\n"
+
+
+@patch("subprocess.run")
+def test_cli_run_pipeline_success_without_json_is_error(mock_run: MagicMock, connector: SecretsConnector) -> None:
+    mock_run.return_value = MagicMock(
+        returncode=0,
+        stdout="",
+        stderr="",
+    )
+
+    result = connector.run_pipeline("config.yaml")
+
+    assert result.success is False
+    assert "produced no JSON output" in result.error_message
+
+
+@patch("subprocess.run")
+def test_cli_run_pipeline_non_json_failure_uses_cli_output(mock_run: MagicMock, connector: SecretsConnector) -> None:
+    mock_run.return_value = MagicMock(
+        returncode=1,
+        stdout="not json",
+        stderr="",
+    )
+
+    result = connector.run_pipeline("config.yaml")
+
+    assert result.success is False
+    assert result.error_message == "not json"
+
+
+@patch("subprocess.run")
 def test_cli_run_pipeline_only_emits_supported_cli_flags(mock_run: MagicMock, connector: SecretsConnector) -> None:
     mock_run.return_value = MagicMock(
         returncode=0,

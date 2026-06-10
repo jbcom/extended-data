@@ -400,22 +400,40 @@ class SecretsConnector(VendorConnectorBase):
                 check=False,
             )
 
+            stdout = result.stdout.strip()
+            if stdout:
+                try:
+                    output = json.loads(stdout)
+                except json.JSONDecodeError as e:
+                    if result.returncode == 0:
+                        return SyncResult(
+                            success=False,
+                            error_message=f"Failed to parse output: {e}",
+                        )
+                else:
+                    if not isinstance(output, dict) or "success" not in output:
+                        return SyncResult(
+                            success=False,
+                            error_message=(
+                                "Unsupported secretsync JSON output: expected pipeline result envelope. "
+                                "Upgrade secretsync or use native bindings."
+                            ),
+                        )
+                    parsed = SyncResult.from_cli_output(output)
+                    if result.returncode != 0 and not parsed.error_message:
+                        parsed.error_message = result.stderr or f"secretsync exited with status {result.returncode}"
+                    return parsed
+
             if result.returncode == 0:
-                output = json.loads(result.stdout)
-                if not isinstance(output, dict) or "success" not in output:
-                    return SyncResult(
-                        success=False,
-                        error_message=(
-                            "Unsupported secretsync JSON output: expected pipeline result envelope. "
-                            "Upgrade secretsync or use native bindings."
-                        ),
-                    )
-                return SyncResult.from_cli_output(output)
-            else:
                 return SyncResult(
                     success=False,
-                    error_message=result.stderr or result.stdout,
+                    error_message="secretsync produced no JSON output",
                 )
+
+            return SyncResult(
+                success=False,
+                error_message=result.stderr or result.stdout,
+            )
         except subprocess.TimeoutExpired:
             return SyncResult(
                 success=False,
