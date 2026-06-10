@@ -25,9 +25,12 @@ Usage:
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from typing import Any
 
 from pydantic import BaseModel, Field
+
+from extended_data.containers import extend_data
 
 
 # =============================================================================
@@ -114,7 +117,7 @@ def list_projects(
             }
         )
 
-    return result
+    return extend_data(result)
 
 
 def list_folders(
@@ -147,7 +150,7 @@ def list_folders(
             }
         )
 
-    return result
+    return extend_data(result)
 
 
 def list_enabled_services(
@@ -179,7 +182,7 @@ def list_enabled_services(
             }
         )
 
-    return result
+    return extend_data(result)
 
 
 def list_billing_accounts(
@@ -210,7 +213,7 @@ def list_billing_accounts(
             }
         )
 
-    return result
+    return extend_data(result)
 
 
 def list_workspace_users(
@@ -234,24 +237,25 @@ def list_workspace_users(
         flatten_names=True,
         key_by_email=False,
     )
-    users = list(users_raw.values()) if isinstance(users_raw, dict) else users_raw
+    users = list(users_raw.values()) if isinstance(users_raw, Mapping) else users_raw
 
     # Limit results and extract key fields
     result: list[dict[str, Any]] = []
     for user in users[:max_results]:
-        if not isinstance(user, dict):
+        if not isinstance(user, Mapping):
             continue
+        name = user.get("name", {})
         result.append(
             {
                 "email": user.get("primaryEmail", ""),
-                "name": user.get("name", {}).get("fullName", "") if isinstance(user.get("name"), dict) else "",
+                "name": name.get("fullName", "") if isinstance(name, Mapping) else "",
                 "full_name": user.get("full_name", ""),
                 "suspended": user.get("suspended", False),
                 "org_unit_path": user.get("orgUnitPath", ""),
             }
         )
 
-    return result
+    return extend_data(result)
 
 
 def list_workspace_groups(
@@ -274,12 +278,12 @@ def list_workspace_groups(
         domain=domain or None,
         key_by_email=False,
     )
-    groups = list(groups_raw.values()) if isinstance(groups_raw, dict) else groups_raw
+    groups = list(groups_raw.values()) if isinstance(groups_raw, Mapping) else groups_raw
 
     # Limit results and extract key fields
     result: list[dict[str, Any]] = []
     for group in groups[:max_results]:
-        if not isinstance(group, dict):
+        if not isinstance(group, Mapping):
             continue
         result.append(
             {
@@ -290,7 +294,7 @@ def list_workspace_groups(
             }
         )
 
-    return result
+    return extend_data(result)
 
 
 # =============================================================================

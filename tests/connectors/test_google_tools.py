@@ -8,6 +8,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from extended_data.containers import ExtendedDict, ExtendedList, ExtendedString, extend_data
+
 
 # Patch target for GoogleConnectorFull - must patch where it's imported
 GOOGLE_CONNECTOR_PATCH = "extended_data.connectors.google.GoogleConnectorFull"
@@ -66,24 +68,29 @@ class TestListProjects:
         from extended_data.connectors.google.tools import list_projects
 
         mock_connector = MagicMock()
-        mock_connector.list_projects.return_value = [
-            {
-                "projectId": "my-project-123",
-                "displayName": "My Project",
-                "state": "ACTIVE",
-                "parent": "organizations/123456",
-            },
-            {
-                "projectId": "another-project-456",
-                "name": "projects/another-project-456",
-                "state": "ACTIVE",
-                "parent": "folders/789",
-            },
-        ]
+        mock_connector.list_projects.return_value = extend_data(
+            [
+                {
+                    "projectId": "my-project-123",
+                    "displayName": "My Project",
+                    "state": "ACTIVE",
+                    "parent": "organizations/123456",
+                },
+                {
+                    "projectId": "another-project-456",
+                    "name": "projects/another-project-456",
+                    "state": "ACTIVE",
+                    "parent": "folders/789",
+                },
+            ]
+        )
         mock_connector_class.return_value = mock_connector
 
         result = list_projects()
 
+        assert isinstance(result, ExtendedList)
+        assert isinstance(result[0], ExtendedDict)
+        assert isinstance(result[0]["project_id"], ExtendedString)
         assert len(result) == 2
         assert result[0]["project_id"] == "my-project-123"
         assert result[0]["name"] == "My Project"
@@ -120,6 +127,36 @@ class TestListProjects:
         assert len(result) == 50
 
 
+class TestListFolders:
+    """Tests for list_folders tool."""
+
+    @patch(GOOGLE_CONNECTOR_PATCH)
+    def test_list_folders_basic(self, mock_connector_class):
+        """Test basic list_folders functionality."""
+        from extended_data.connectors.google.tools import list_folders
+
+        mock_connector = MagicMock()
+        mock_connector.list_folders.return_value = extend_data(
+            [
+                {
+                    "name": "folders/123",
+                    "displayName": "Engineering",
+                    "state": "ACTIVE",
+                    "parent": "organizations/456",
+                }
+            ]
+        )
+        mock_connector_class.return_value = mock_connector
+
+        result = list_folders(parent="organizations/456")
+
+        assert isinstance(result, ExtendedList)
+        assert isinstance(result[0], ExtendedDict)
+        assert isinstance(result[0]["display_name"], ExtendedString)
+        assert result[0]["name"] == "folders/123"
+        assert result[0]["display_name"] == "Engineering"
+
+
 class TestListEnabledServices:
     """Tests for list_enabled_services tool."""
 
@@ -129,22 +166,27 @@ class TestListEnabledServices:
         from extended_data.connectors.google.tools import list_enabled_services
 
         mock_connector = MagicMock()
-        mock_connector.list_enabled_services.return_value = [
-            {
-                "name": "projects/123/services/compute.googleapis.com",
-                "config": {"title": "Compute Engine API"},
-                "state": "ENABLED",
-            },
-            {
-                "name": "projects/123/services/storage.googleapis.com",
-                "config": {"title": "Cloud Storage API"},
-                "state": "ENABLED",
-            },
-        ]
+        mock_connector.list_enabled_services.return_value = extend_data(
+            [
+                {
+                    "name": "projects/123/services/compute.googleapis.com",
+                    "config": {"title": "Compute Engine API"},
+                    "state": "ENABLED",
+                },
+                {
+                    "name": "projects/123/services/storage.googleapis.com",
+                    "config": {"title": "Cloud Storage API"},
+                    "state": "ENABLED",
+                },
+            ]
+        )
         mock_connector_class.return_value = mock_connector
 
         result = list_enabled_services(project_id="my-project")
 
+        assert isinstance(result, ExtendedList)
+        assert isinstance(result[0], ExtendedDict)
+        assert isinstance(result[0]["title"], ExtendedString)
         assert len(result) == 2
         assert result[0]["name"] == "projects/123/services/compute.googleapis.com"
         assert result[0]["title"] == "Compute Engine API"
@@ -173,24 +215,29 @@ class TestListBillingAccounts:
         from extended_data.connectors.google.tools import list_billing_accounts
 
         mock_connector = MagicMock()
-        mock_connector.list_billing_accounts.return_value = [
-            {
-                "name": "billingAccounts/012345-6789AB-CDEF01",
-                "displayName": "My Billing Account",
-                "open": True,
-                "masterBillingAccount": "",
-            },
-            {
-                "name": "billingAccounts/ABCDEF-123456-789012",
-                "displayName": "Another Billing",
-                "open": False,
-                "masterBillingAccount": "billingAccounts/012345-6789AB-CDEF01",
-            },
-        ]
+        mock_connector.list_billing_accounts.return_value = extend_data(
+            [
+                {
+                    "name": "billingAccounts/012345-6789AB-CDEF01",
+                    "displayName": "My Billing Account",
+                    "open": True,
+                    "masterBillingAccount": "",
+                },
+                {
+                    "name": "billingAccounts/ABCDEF-123456-789012",
+                    "displayName": "Another Billing",
+                    "open": False,
+                    "masterBillingAccount": "billingAccounts/012345-6789AB-CDEF01",
+                },
+            ]
+        )
         mock_connector_class.return_value = mock_connector
 
         result = list_billing_accounts()
 
+        assert isinstance(result, ExtendedList)
+        assert isinstance(result[0], ExtendedDict)
+        assert isinstance(result[0]["display_name"], ExtendedString)
         assert len(result) == 2
         assert "billingAccounts/" in result[0]["name"]
         assert result[0]["display_name"] == "My Billing Account"
@@ -220,26 +267,31 @@ class TestListWorkspaceUsers:
         from extended_data.connectors.google.tools import list_workspace_users
 
         mock_connector = MagicMock()
-        mock_connector.list_users.return_value = [
+        mock_connector.list_users.return_value = extend_data(
             {
-                "primaryEmail": "john.doe@example.com",
-                "name": {"fullName": "John Doe"},
-                "full_name": "John Doe",
-                "suspended": False,
-                "orgUnitPath": "/",
-            },
-            {
-                "primaryEmail": "jane.smith@example.com",
-                "name": {"fullName": "Jane Smith"},
-                "full_name": "Jane Smith",
-                "suspended": False,
-                "orgUnitPath": "/Engineering",
-            },
-        ]
+                "john.doe@example.com": {
+                    "primaryEmail": "john.doe@example.com",
+                    "name": {"fullName": "John Doe"},
+                    "full_name": "John Doe",
+                    "suspended": False,
+                    "orgUnitPath": "/",
+                },
+                "jane.smith@example.com": {
+                    "primaryEmail": "jane.smith@example.com",
+                    "name": {"fullName": "Jane Smith"},
+                    "full_name": "Jane Smith",
+                    "suspended": False,
+                    "orgUnitPath": "/Engineering",
+                },
+            }
+        )
         mock_connector_class.return_value = mock_connector
 
         result = list_workspace_users()
 
+        assert isinstance(result, ExtendedList)
+        assert isinstance(result[0], ExtendedDict)
+        assert isinstance(result[0]["email"], ExtendedString)
         assert len(result) == 2
         assert result[0]["email"] == "john.doe@example.com"
         assert result[0]["full_name"] == "John Doe"
@@ -283,6 +335,8 @@ class TestListWorkspaceUsers:
 
         result = list_workspace_users()
 
+        assert isinstance(result, ExtendedList)
+        assert isinstance(result[0], ExtendedDict)
         assert len(result) == 1
         assert result[0]["suspended"] is True
 
@@ -296,24 +350,29 @@ class TestListWorkspaceGroups:
         from extended_data.connectors.google.tools import list_workspace_groups
 
         mock_connector = MagicMock()
-        mock_connector.list_groups.return_value = [
+        mock_connector.list_groups.return_value = extend_data(
             {
-                "email": "admins@example.com",
-                "name": "Admins",
-                "description": "Administrator group",
-                "directMembersCount": 5,
-            },
-            {
-                "email": "developers@example.com",
-                "name": "Developers",
-                "description": "Development team",
-                "directMembersCount": 25,
-            },
-        ]
+                "admins@example.com": {
+                    "email": "admins@example.com",
+                    "name": "Admins",
+                    "description": "Administrator group",
+                    "directMembersCount": 5,
+                },
+                "developers@example.com": {
+                    "email": "developers@example.com",
+                    "name": "Developers",
+                    "description": "Development team",
+                    "directMembersCount": 25,
+                },
+            }
+        )
         mock_connector_class.return_value = mock_connector
 
         result = list_workspace_groups()
 
+        assert isinstance(result, ExtendedList)
+        assert isinstance(result[0], ExtendedDict)
+        assert isinstance(result[0]["email"], ExtendedString)
         assert len(result) == 2
         assert result[0]["email"] == "admins@example.com"
         assert result[0]["name"] == "Admins"
@@ -355,6 +414,8 @@ class TestListWorkspaceGroups:
 
         result = list_workspace_groups()
 
+        assert isinstance(result, ExtendedList)
+        assert isinstance(result[0], ExtendedDict)
         assert len(result) == 1
         assert result[0]["description"] == ""
         assert result[0]["direct_members_count"] == 0
