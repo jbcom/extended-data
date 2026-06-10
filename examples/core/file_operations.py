@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""File operation examples for Extended Data core library.
+"""File operation examples for the Extended Data core package.
 
 This module demonstrates file path utilities, encoding detection,
-and file read/write operations provided by the library.
+and file read/write operations provided by the package.
 """
 
 from __future__ import annotations

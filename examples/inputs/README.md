@@ -24,7 +24,8 @@ uv run python examples/inputs/encoding_decoding.py
 Demonstrates the `InputProvider` API:
 - Loading inputs from environment variables
 - Environment variable prefix filtering
-- Direct `ExtendedDict`/`ExtendedString` input snapshot access
+- Direct `ExtendedDict`/`ExtendedString` input snapshot access with `snapshot_inputs()`
+- Active input replacement with `replace_inputs()`
 - Type conversion (boolean, integer, float)
 - Default values
 - Input freezing and thawing

@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """End-to-end workflow examples for Extended Data core.
 
-This script demonstrates how the library's smaller helpers compose into more
-complete configuration and payload pipelines.
+This script demonstrates how package primitives, containers, and processors
+compose into complete configuration and payload pipelines.
 """
 
 from __future__ import annotations

@@ -1,9 +1,9 @@
-"""Module to handle directed inputs for the InputProvider library.
+"""Tier 3 directed input processing for the extended-data package.
 
-This module provides functionality for managing inputs from various sources
-(environment, stdin) and allows for dynamic merging, freezing, and thawing
-of inputs. It includes methods to decode inputs from JSON, YAML, and Base64
-formats, as well as handling boolean and integer conversions.
+This module manages inputs from environment variables, stdin, and explicit
+mappings. It can merge, replace, snapshot, freeze, and thaw input state while
+keeping public snapshots in Tier 2 containers. It also decodes inputs from JSON,
+YAML, and Base64 and coerces scalar values through Tier 1 type primitives.
 """
 
 from __future__ import annotations
@@ -33,9 +33,7 @@ if TYPE_CHECKING:
 
 
 class InputProvider:
-    """A class to manage and process directed inputs from environment variables.
-
-    stdin, or provided dictionaries.
+    """Manage directed inputs from environment variables, stdin, or mappings.
 
     Attributes:
         inputs (ExtendedDict): Dictionary to store inputs.

@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""String transformation examples for Extended Data core library.
+"""String transformation examples for the Extended Data core package.
 
 This module demonstrates case conversion, humanization, pluralization,
-and other string manipulation utilities provided by the library.
+and other string manipulation utilities provided by the package.
 """
 
 from __future__ import annotations

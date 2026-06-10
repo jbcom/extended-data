@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Serialization examples for Extended Data core library.
+"""Serialization examples for the Extended Data core package.
 
 This module demonstrates YAML, JSON, TOML, HCL, and Base64 encoding/decoding
-utilities provided by the library.
+utilities provided by the package.
 """
 
 from __future__ import annotations

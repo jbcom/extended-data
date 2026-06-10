@@ -1,7 +1,7 @@
 """Base class for all extended data connectors.
 
 This module provides VendorConnectorBase - the foundation for ALL connectors
-in this library. It extends InputProvider and provides:
+in the package connector fabric. It extends InputProvider and provides:
 
 1. Credential loading from env vars, stdin, or direct inputs
 2. HTTP client with retries and rate limiting
