@@ -387,10 +387,6 @@ class SecretsConnector(VendorConnectorBase):
             cmd.append("--diff")
         if options.targets:
             cmd.extend(["--targets", ",".join(options.targets)])
-        if options.continue_on_error:
-            cmd.append("--continue-on-error")
-        if options.parallelism:
-            cmd.extend(["--parallelism", str(options.parallelism)])
 
         try:
             result = subprocess.run(

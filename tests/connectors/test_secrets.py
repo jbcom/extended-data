@@ -131,6 +131,30 @@ def test_cli_run_pipeline_default_output_is_json(mock_run: MagicMock, connector:
     args = mock_run.call_args[0][0]
     assert args.count("--output") == 1
     assert args[args.index("--output") + 1] == "json"
+    assert "--parallelism" not in args
+    assert "--continue-on-error" not in args
+
+
+@patch("subprocess.run")
+def test_cli_run_pipeline_only_emits_supported_cli_flags(mock_run: MagicMock, connector: SecretsConnector) -> None:
+    mock_run.return_value = MagicMock(
+        returncode=0,
+        stdout=json.dumps({"success": True}),
+        stderr="",
+    )
+
+    options = SyncOptions(
+        targets=["prod", "staging"],
+        continue_on_error=True,
+        parallelism=12,
+    )
+    connector.run_pipeline("config.yaml", options)
+
+    args = mock_run.call_args[0][0]
+    assert "--targets" in args
+    assert args[args.index("--targets") + 1] == "prod,staging"
+    assert "--parallelism" not in args
+    assert "--continue-on-error" not in args
 
 
 @patch("subprocess.run")
