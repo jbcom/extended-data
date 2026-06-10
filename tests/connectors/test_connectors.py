@@ -8,6 +8,7 @@ import pytest
 
 from extended_data.connectors import registry
 from extended_data.connectors.connectors import ConnectorFabric
+from extended_data.containers import ExtendedDict, ExtendedList, ExtendedString
 
 
 # Helper to check if optional dependencies are available
@@ -138,9 +139,14 @@ class TestConnectorFabric:
         info = vc.list_connector_info()
         names = {connector["name"] for connector in info}
 
+        assert isinstance(info, ExtendedList)
+        assert isinstance(info[0], ExtendedDict)
+        assert isinstance(info[0]["name"], ExtendedString)
         assert "cursor" in names
         assert "github" in names
-        assert vc.get_connector_info(" github ")["name"] == "github"
+        github_info = vc.get_connector_info(" github ")
+        assert isinstance(github_info, ExtendedDict)
+        assert github_info["name"] == "github"
         assert isinstance(vc.list_connectors(), dict)
 
     @requires_boto3
@@ -350,6 +356,8 @@ class TestConnectorFabric:
 
         info = registry.get_connector_info(" github ")
 
+        assert isinstance(info, ExtendedDict)
+        assert isinstance(info["name"], ExtendedString)
         assert info["name"] == "github"
         assert info["available"] is False
         assert info["extra"] == "github"
@@ -371,6 +379,7 @@ class TestConnectorFabric:
 
         info = registry.get_connector_info(" github ")
 
+        assert isinstance(info, ExtendedDict)
         assert info["name"] == "github"
         assert info["available"] is False
         assert info["extra"] == "github"
@@ -383,6 +392,8 @@ class TestConnectorFabric:
         if not _has_module("boto3"):
             info = registry.get_connector_info("aws")
 
+            assert isinstance(info, ExtendedDict)
+            assert isinstance(info["missing"], ExtendedList)
             assert info["available"] is False
             assert info["missing"] == ["boto3"]
 
@@ -395,4 +406,5 @@ class TestConnectorFabric:
 
         info = registry.list_connector_info(include_unavailable=False)
 
+        assert isinstance(info, ExtendedList)
         assert all(connector["available"] for connector in info)

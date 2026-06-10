@@ -9,6 +9,7 @@ import pytest
 import tomlkit
 
 from extended_data.connectors import _optional, registry
+from extended_data.containers import ExtendedDict, ExtendedList, ExtendedString
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -91,3 +92,30 @@ def test_get_crewai_tool_decorator_rejects_incompatible_crewai(monkeypatch) -> N
 
     with pytest.raises(ImportError, match="does not expose it"):
         _optional.get_crewai_tool_decorator()
+
+
+def test_framework_detection_returns_extended_metadata(monkeypatch) -> None:
+    """AI framework availability helpers return first-class extended values."""
+    available = {"langchain_core": True, "crewai": False, "strands": True, "mcp": False}
+    monkeypatch.setattr(_optional, "is_available", lambda package: available[package])
+
+    detected = _optional.detect_ai_frameworks()
+    frameworks = _optional.get_available_ai_frameworks()
+
+    assert isinstance(detected, ExtendedDict)
+    assert detected == {"langchain": True, "crewai": False, "strands": True, "mcp": False}
+    assert isinstance(frameworks, ExtendedList)
+    assert frameworks == ["langchain", "strands"]
+    assert isinstance(frameworks[0], ExtendedString)
+
+
+def test_available_connectors_returns_extended_names(monkeypatch) -> None:
+    """Connector availability helper returns first-class extended names."""
+    monkeypatch.setattr(_optional, "is_connector_available", lambda connector: connector in {"cursor", "meshy"})
+
+    connectors = _optional.get_available_connectors()
+
+    assert isinstance(connectors, ExtendedList)
+    assert "cursor" in connectors
+    assert "meshy" in connectors
+    assert isinstance(connectors[0], ExtendedString)

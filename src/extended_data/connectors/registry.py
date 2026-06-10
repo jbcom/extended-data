@@ -41,6 +41,7 @@ from extended_data.connectors._optional import (
     get_extra_for_connector,
     get_missing_connector_requirements,
 )
+from extended_data.containers import ExtendedDict, ExtendedList, extend_data
 
 
 if TYPE_CHECKING:
@@ -73,9 +74,9 @@ class ConnectorInfo:
     description: str | None
     error: str | None
 
-    def as_dict(self) -> dict[str, Any]:
-        """Return JSON-friendly connector metadata."""
-        return {
+    def as_dict(self) -> ExtendedDict:
+        """Return extended JSON-friendly connector metadata."""
+        return extend_data({
             "name": self.name,
             "available": self.available,
             "source": self.source,
@@ -88,7 +89,7 @@ class ConnectorInfo:
             "base_url": self.base_url,
             "description": self.description,
             "error": self.error,
-        }
+        })
 
 
 BUILTIN_CONNECTORS: dict[str, BuiltinConnectorSpec] = {
@@ -316,7 +317,7 @@ def _missing_builtin_connector_info(name: str, error: ImportError | None) -> Con
 # =============================================================================
 
 
-def get_connector_info(name: str, *, include_unavailable: bool = True) -> dict[str, Any]:
+def get_connector_info(name: str, *, include_unavailable: bool = True) -> ExtendedDict:
     """Get registry metadata about a connector."""
     connector_name = _normalize_connector_name(name)
     connectors = _discover_connectors()
@@ -336,7 +337,7 @@ def get_connector_info(name: str, *, include_unavailable: bool = True) -> dict[s
     raise ValueError(f"Unknown connector: {name}. Available: {available}")
 
 
-def list_connector_info(*, include_unavailable: bool = True) -> list[dict[str, Any]]:
+def list_connector_info(*, include_unavailable: bool = True) -> ExtendedList[ExtendedDict]:
     """Get registry metadata for known connectors."""
     connectors = _discover_connectors()
     names = set(connectors)
@@ -345,5 +346,5 @@ def list_connector_info(*, include_unavailable: bool = True) -> list[dict[str, A
         names.update(_missing_builtin_connectors)
     info = [get_connector_info(name, include_unavailable=include_unavailable) for name in sorted(names)]
     if not include_unavailable:
-        return [connector for connector in info if connector["available"]]
-    return info
+        return extend_data([connector for connector in info if connector["available"]])
+    return extend_data(info)

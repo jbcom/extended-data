@@ -20,6 +20,8 @@ import importlib
 
 from typing import Any
 
+from extended_data.containers import ExtendedDict, ExtendedList, ExtendedString, extend_data
+
 
 # Mapping of package names to their extras
 PACKAGE_TO_EXTRA: dict[str, str] = {
@@ -162,27 +164,27 @@ def require_any(*packages: str, extra: str) -> Any:
 # === Framework Detection ===
 
 
-def detect_ai_frameworks() -> dict[str, bool]:
+def detect_ai_frameworks() -> ExtendedDict:
     """Detect which AI frameworks are available.
 
     Returns:
-        Dict mapping framework name to availability
+        Extended dict mapping framework name to availability.
     """
-    return {
+    return extend_data({
         "langchain": is_available("langchain_core"),
         "crewai": is_available("crewai"),
         "strands": is_available("strands"),
         "mcp": is_available("mcp"),
-    }
+    })
 
 
-def get_available_ai_frameworks() -> list[str]:
+def get_available_ai_frameworks() -> ExtendedList[ExtendedString]:
     """Get list of available AI frameworks.
 
     Returns:
-        List of framework names that are installed
+        Extended list of framework names that are installed.
     """
-    return [name for name, available in detect_ai_frameworks().items() if available]
+    return extend_data([name for name, available in detect_ai_frameworks().items() if available])
 
 
 # === Connector Availability ===
@@ -264,13 +266,13 @@ def is_connector_available(connector: str) -> bool:
     return not get_missing_connector_requirements(connector)
 
 
-def get_available_connectors() -> list[str]:
+def get_available_connectors() -> ExtendedList[ExtendedString]:
     """Get list of connectors with available dependencies.
 
     Returns:
-        List of connector names that can be used
+        Extended list of connector names that can be used.
     """
-    return [name for name in CONNECTOR_REQUIREMENTS if is_connector_available(name)]
+    return extend_data([name for name in CONNECTOR_REQUIREMENTS if is_connector_available(name)])
 
 
 def require_connector(connector: str) -> None:

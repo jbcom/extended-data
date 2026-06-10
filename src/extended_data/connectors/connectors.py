@@ -22,6 +22,7 @@ from extended_data.connectors.registry import (
     list_connectors as list_registered_connectors,
 )
 from extended_data.connectors.zoom import ZoomConnector
+from extended_data.containers import ExtendedDict, ExtendedList
 from extended_data.inputs import InputProvider
 from extended_data.logging import Logging
 
@@ -94,11 +95,11 @@ class ConnectorFabric(InputProvider):
         """List connector classes available in the current environment."""
         return list_registered_connectors()
 
-    def list_connector_info(self, *, include_unavailable: bool = True) -> list[dict[str, Any]]:
+    def list_connector_info(self, *, include_unavailable: bool = True) -> ExtendedList[ExtendedDict]:
         """List connector catalog metadata."""
         return list_registered_connector_info(include_unavailable=include_unavailable)
 
-    def get_connector_info(self, name: str, *, include_unavailable: bool = True) -> dict[str, Any]:
+    def get_connector_info(self, name: str, *, include_unavailable: bool = True) -> ExtendedDict:
         """Get catalog metadata for one connector."""
         return get_registered_connector_info(name, include_unavailable=include_unavailable)
 

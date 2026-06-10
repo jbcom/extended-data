@@ -29,6 +29,7 @@ from extended_data.connectors.registry import (
     get_connector_info,
     list_connector_info,
 )
+from extended_data.containers import ExtendedList
 from extended_data.containers.factory import to_builtin
 
 
@@ -71,11 +72,11 @@ def _parse_arg_value(value: str) -> Any:
     return value
 
 
-def _format_list(values: list[str] | tuple[str, ...] | None) -> str:
+def _format_list(values: list[Any] | tuple[Any, ...] | ExtendedList[Any] | None) -> str:
     """Format a list-like metadata field for CLI output."""
     if not values:
         return "-"
-    return ", ".join(values)
+    return ", ".join(str(value) for value in values)
 
 
 def _write_stdout(message: str) -> None:
@@ -104,10 +105,11 @@ def cmd_list(args: argparse.Namespace) -> int:
     _write_stdout(f"{'name':<18} {'status':<11} {'extra':<10} {'class':<28} install")
     for c in info:
         status = "available" if c["available"] else "missing"
-        extra = c.get("extra") or "-"
-        class_name = c.get("class") or "-"
-        install = c.get("install") or "-"
-        _write_stdout(f"{c['name']:<18} {status:<11} {extra:<10} {class_name:<28} {install}")
+        name = str(c["name"])
+        extra = str(c.get("extra") or "-")
+        class_name = str(c.get("class") or "-")
+        install = str(c.get("install") or "-")
+        _write_stdout(f"{name:<18} {status:<11} {extra:<10} {class_name:<28} {install}")
 
     return 0
 
@@ -214,7 +216,7 @@ def cmd_info(args: argparse.Namespace) -> int:
             "error",
         ):
             value = info.get(key)
-            if isinstance(value, list):
+            if isinstance(value, list | tuple | ExtendedList):
                 value = _format_list(value)
             _write_stdout(f"{key}: {value if value is not None else '-'}")
         return 0
