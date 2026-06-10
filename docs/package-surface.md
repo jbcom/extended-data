@@ -63,6 +63,7 @@ the public error message does not echo the raw payload.
 
 ```python
 name = ExtendedString("API Response Value").to_snake_case()
+matched = ExtendedString("api-gateway").is_partial_match("gateway")
 payload = ExtendedDict({"outer": {"inner": 1}}).flatten()
 items = ExtendedList([1, [2, [3]]]).flatten()
 services = ExtendedList(["api", "worker", "db"]).filter_values(allowlist=["api", "worker"])
@@ -93,7 +94,9 @@ String tokenization and partitioning paths are covered too:
 `ExtendedString.split()`, `rsplit()`, and `splitlines()` return `ExtendedList`
 values containing `ExtendedString` parts, while `partition()` and
 `rpartition()` return `ExtendedTuple` values. String formatting paths
-`format()` and `format_map()` return `ExtendedString`.
+`format()` and `format_map()` return `ExtendedString`. String matching paths
+`is_partial_match()` and `is_non_empty_match()` expose the Tier 1 matching
+helpers through `ExtendedString`.
 
 Container methods that return derived collections stay in Tier 2 as well:
 `ExtendedDict.filter()` returns an `ExtendedTuple` of accepted and rejected

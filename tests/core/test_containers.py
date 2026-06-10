@@ -38,6 +38,10 @@ def test_extended_string_chains_primitive_transforms() -> None:
     assert value.to_kebab_case() == "api-response-value"
     assert ExtendedString("1").ordinalize() == "1st"
     assert ExtendedString("yes").to_bool() is True
+    assert ExtendedString("api-gateway").is_partial_match("gateway") is True
+    assert ExtendedString("api").is_partial_match("gateway", check_prefix_only=True) is False
+    assert ExtendedString("API").is_non_empty_match("api") is True
+    assert ExtendedString("").is_non_empty_match("api") is False
     assert isinstance(partitioned, ExtendedTuple)
     assert isinstance(partitioned[0], ExtendedString)
     assert partitioned == ("api", ".", "gateway.worker")

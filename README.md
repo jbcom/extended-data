@@ -177,7 +177,9 @@ Generic type routing can still ask for plain data roles with
 underlying `str`, `list`, `dict`, and `set` roles.
 String tokenization stays inside the same surface: `ExtendedString.split()`
 returns an `ExtendedList` of `ExtendedString` values, and partition operations
-return `ExtendedTuple` values.
+return `ExtendedTuple` values. `ExtendedString.is_partial_match()` and
+`ExtendedString.is_non_empty_match()` expose the Tier 1 matching primitives
+without requiring callers to drop back to function-only utility code.
 Format encoders lower extended containers, including extended mapping keys, at
 the serialization boundary.
 `read_data_file()` is the direct file boundary for one-step read plus decode

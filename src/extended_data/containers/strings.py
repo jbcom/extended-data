@@ -6,6 +6,8 @@ from collections import UserString
 from collections.abc import Iterable, Mapping
 from typing import TYPE_CHECKING
 
+import extended_data.primitives.matching as primitive_matching
+
 from extended_data.primitives.string_transforms import (
     humanize,
     ordinalize,
@@ -147,6 +149,14 @@ class ExtendedString(UserString):
     def join(self, seq: Iterable[str | UserString]) -> ExtendedString:  # type: ignore[override]
         """Join string-like values into an extended string."""
         return ExtendedString(self.data.join(_coerce_string_argument(item) for item in seq))
+
+    def is_partial_match(self, other: str | None, *, check_prefix_only: bool = False) -> bool:
+        """Return whether this string partially matches another string."""
+        return primitive_matching.is_partial_match(self.data, other, check_prefix_only=check_prefix_only)
+
+    def is_non_empty_match(self, other: object) -> bool:
+        """Return whether this string matches another non-empty string value."""
+        return primitive_matching.is_non_empty_match(self.data, other)
 
     def is_url(self) -> bool:
         """Return whether the string is a URL."""
