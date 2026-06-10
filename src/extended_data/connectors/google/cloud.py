@@ -9,6 +9,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 from extended_data import unhump_map
+from extended_data.containers import to_builtin
 
 
 class GoogleCloudMixin:
@@ -26,6 +27,8 @@ class GoogleCloudMixin:
         def get_cloud_resource_manager_service(self) -> Any: ...
 
         def get_iam_service(self) -> Any: ...
+
+        def extend_result(self, value: Any) -> Any: ...
 
     def get_organization_id(self) -> str:
         """Get the Google Cloud organization ID.
@@ -49,7 +52,7 @@ class GoogleCloudMixin:
         org_name = organizations[0]["name"]
         org_id = org_name.split("/")[-1]
         self.logger.info(f"Organization ID: {org_id}")
-        return org_id
+        return self.extend_result(org_id)
 
     def get_organization(self) -> dict[str, Any]:
         """Get the Google Cloud organization details.
@@ -70,7 +73,7 @@ class GoogleCloudMixin:
             msg = "No organizations found"
             raise RuntimeError(msg)
 
-        return organizations[0]
+        return self.extend_result(organizations[0])
 
     def list_projects(
         self,
@@ -115,7 +118,7 @@ class GoogleCloudMixin:
         if unhump_projects:
             projects = [unhump_map(p) for p in projects]
 
-        return projects
+        return self.extend_result(projects)
 
     def get_project(self, project_id: str) -> dict[str, Any] | None:
         """Get a specific Google Cloud project.
@@ -131,7 +134,7 @@ class GoogleCloudMixin:
         service = self.get_cloud_resource_manager_service()
 
         try:
-            return service.projects().get(name=f"projects/{project_id}").execute()
+            return self.extend_result(service.projects().get(name=f"projects/{project_id}").execute())
         except HttpError as e:
             if e.resp.status == 404:
                 self.logger.warning(f"Project not found: {project_id}")
@@ -167,11 +170,11 @@ class GoogleCloudMixin:
         if parent:
             project_body["parent"] = parent
         if labels:
-            project_body["labels"] = labels
+            project_body["labels"] = to_builtin(labels)
 
         result = service.projects().create(body=project_body).execute()
         self.logger.info(f"Created project: {project_id}")
-        return result
+        return self.extend_result(result)
 
     def delete_project(self, project_id: str) -> dict[str, Any]:
         """Delete a Google Cloud project.
@@ -187,7 +190,7 @@ class GoogleCloudMixin:
 
         result = service.projects().delete(name=f"projects/{project_id}").execute()
         self.logger.info(f"Deleted project: {project_id}")
-        return result
+        return self.extend_result(result)
 
     def move_project(
         self,
@@ -215,7 +218,7 @@ class GoogleCloudMixin:
             .execute()
         )
         self.logger.info(f"Moved project {project_id}")
-        return result
+        return self.extend_result(result)
 
     def list_folders(
         self,
@@ -254,7 +257,7 @@ class GoogleCloudMixin:
         if unhump_folders:
             folders = [unhump_map(f) for f in folders]
 
-        return folders
+        return self.extend_result(folders)
 
     def get_org_policy(
         self,
@@ -275,7 +278,7 @@ class GoogleCloudMixin:
         service = self.get_cloud_resource_manager_service()
 
         try:
-            return (
+            return self.extend_result(
                 service.organizations()
                 .getOrgPolicy(
                     resource=resource,
@@ -305,11 +308,11 @@ class GoogleCloudMixin:
         self.logger.info(f"Setting org policy on {resource}")
         service = self.get_cloud_resource_manager_service()
 
-        return (
+        return self.extend_result(
             service.organizations()
             .setOrgPolicy(
                 resource=resource,
-                body={"policy": policy},
+                body={"policy": to_builtin(policy)},
             )
             .execute()
         )
@@ -358,7 +361,7 @@ class GoogleCloudMixin:
                 .execute()
             )
 
-        return result
+        return self.extend_result(result)
 
     def set_iam_policy(
         self,
@@ -379,7 +382,7 @@ class GoogleCloudMixin:
         self.logger.info(f"Setting IAM policy on {resource_type}/{resource}")
         service = self.get_cloud_resource_manager_service()
 
-        body = {"policy": policy}
+        body = {"policy": to_builtin(policy)}
 
         if resource_type == "projects":
             result = (
@@ -410,7 +413,7 @@ class GoogleCloudMixin:
             )
 
         self.logger.info(f"Set IAM policy on {resource_type}/{resource}")
-        return result
+        return self.extend_result(result)
 
     def add_iam_binding(
         self,
@@ -488,7 +491,7 @@ class GoogleCloudMixin:
         if unhump_accounts:
             accounts = [unhump_map(a) for a in accounts]
 
-        return accounts
+        return self.extend_result(accounts)
 
     def create_service_account(
         self,
@@ -528,4 +531,4 @@ class GoogleCloudMixin:
         )
 
         self.logger.info(f"Created service account: {result.get('email')}")
-        return result
+        return self.extend_result(result)

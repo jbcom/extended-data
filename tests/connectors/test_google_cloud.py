@@ -10,6 +10,7 @@ import pytest
 pytest.importorskip("google.oauth2.service_account")
 pytest.importorskip("googleapiclient")
 
+from extended_data.containers import ExtendedDict, ExtendedList, ExtendedString, extend_data
 from extended_data.connectors.google import GoogleConnectorFull
 
 
@@ -43,6 +44,7 @@ class TestOrganization:
 
         result = google_connector.get_organization_id()
 
+        assert isinstance(result, ExtendedString)
         assert result == "123456789"
 
     def test_get_organization_id_no_org(self, google_connector):
@@ -72,6 +74,8 @@ class TestOrganization:
 
         result = google_connector.get_organization()
 
+        assert isinstance(result, ExtendedDict)
+        assert isinstance(result["displayName"], ExtendedString)
         assert result["displayName"] == "Test Org"
         assert result["lifecycleState"] == "ACTIVE"
 
@@ -103,6 +107,9 @@ class TestProjects:
 
         result = google_connector.list_projects()
 
+        assert isinstance(result, ExtendedList)
+        assert isinstance(result[0], ExtendedDict)
+        assert isinstance(result[0]["projectId"], ExtendedString)
         assert len(result) == 2
         assert result[0]["projectId"] == "project-1"
 
@@ -165,6 +172,8 @@ class TestProjects:
 
         result = google_connector.get_project("test-project")
 
+        assert isinstance(result, ExtendedDict)
+        assert isinstance(result["projectId"], ExtendedString)
         assert result["projectId"] == "test-project"
         assert result["lifecycleState"] == "ACTIVE"
 
@@ -180,6 +189,8 @@ class TestProjects:
 
         result = google_connector.create_project("new-project", "New Project")
 
+        assert isinstance(result, ExtendedDict)
+        assert isinstance(result["projectId"], ExtendedString)
         assert result["projectId"] == "new-project"
 
     def test_delete_project(self, google_connector):
@@ -211,6 +222,9 @@ class TestFolders:
 
         result = google_connector.list_folders(parent="organizations/123456")
 
+        assert isinstance(result, ExtendedList)
+        assert isinstance(result[0], ExtendedDict)
+        assert isinstance(result[0]["displayName"], ExtendedString)
         assert len(result) == 2
         assert result[0]["displayName"] == "Folder One"
 
@@ -235,6 +249,8 @@ class TestIAM:
 
         result = google_connector.get_iam_policy("test-project")
 
+        assert isinstance(result, ExtendedDict)
+        assert isinstance(result["bindings"], ExtendedList)
         assert len(result["bindings"]) == 1
         assert result["bindings"][0]["role"] == "roles/owner"
 
@@ -252,17 +268,23 @@ class TestIAM:
         }
         google_connector.get_cloud_resource_manager_service = MagicMock(return_value=mock_service)
 
-        policy = {
-            "bindings": [
-                {
-                    "role": "roles/viewer",
-                    "members": ["user:viewer@example.com"],
-                }
-            ]
-        }
+        policy = extend_data(
+            {
+                "bindings": [
+                    {
+                        "role": "roles/viewer",
+                        "members": ["user:viewer@example.com"],
+                    }
+                ]
+            }
+        )
         result = google_connector.set_iam_policy("test-project", policy)
 
+        assert isinstance(result, ExtendedDict)
+        assert isinstance(result["bindings"], ExtendedList)
         assert result["bindings"][0]["role"] == "roles/viewer"
+        call_body = mock_projects.setIamPolicy.call_args.kwargs["body"]
+        assert isinstance(call_body["policy"], dict)
 
     def test_list_service_accounts(self, google_connector):
         """Test listing service accounts."""
@@ -284,6 +306,9 @@ class TestIAM:
 
         result = google_connector.list_service_accounts("test-project")
 
+        assert isinstance(result, ExtendedList)
+        assert isinstance(result[0], ExtendedDict)
+        assert isinstance(result[0]["displayName"], ExtendedString)
         assert len(result) == 2
         assert result[0]["displayName"] == "Service Account 1"
 
@@ -303,4 +328,6 @@ class TestIAM:
             "New Service Account",
         )
 
+        assert isinstance(result, ExtendedDict)
+        assert isinstance(result["displayName"], ExtendedString)
         assert result["displayName"] == "New Service Account"
