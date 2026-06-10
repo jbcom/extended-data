@@ -57,6 +57,7 @@ FUNCTION_FIRST_BASIC_USAGE_HELPERS = (
 )
 ROOT_DISALLOWED_TIER1_IMPORTS = tuple(sorted(primitives.__all__))
 PYTHON_MARKDOWN_BLOCK_RE = re.compile(r"```python\n(?P<code>.*?)\n```", re.DOTALL)
+SENSITIVE_IDENTIFIER_RE = re.compile(r"(api_?key|secret|token|password|authorization)", re.IGNORECASE)
 
 
 def _readme_usage_snippet() -> str:
@@ -190,6 +191,35 @@ def test_secrets_example_does_not_print_raw_sync_results() -> None:
     for field in raw_result_fields:
         assert f'print(result["{field}"])' not in text
         assert f"print(result['{field}'])" not in text
+
+
+def _is_sensitive_identifier(node: ast.AST) -> bool:
+    if isinstance(node, ast.Name):
+        return bool(SENSITIVE_IDENTIFIER_RE.search(node.id))
+    if isinstance(node, ast.Attribute):
+        return bool(SENSITIVE_IDENTIFIER_RE.search(node.attr))
+    return False
+
+
+def _expression_contains_sensitive_identifier(node: ast.AST) -> bool:
+    return any(_is_sensitive_identifier(child) for child in ast.walk(node))
+
+
+def test_examples_do_not_echo_partial_sensitive_values() -> None:
+    """Examples should not teach printing, slicing, or returning credential fragments."""
+    offenders: list[str] = []
+
+    for example_path in ALL_EXAMPLES:
+        tree = ast.parse((REPO_ROOT / example_path).read_text(encoding="utf-8"))
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Subscript) and _is_sensitive_identifier(node.value):
+                offenders.append(f"{example_path}:{node.lineno}: slices or indexes a sensitive value")
+            if isinstance(node, ast.FormattedValue) and _expression_contains_sensitive_identifier(node.value):
+                offenders.append(f"{example_path}:{node.lineno}: interpolates a sensitive value")
+            if isinstance(node, ast.Return) and node.value is not None and _is_sensitive_identifier(node.value):
+                offenders.append(f"{example_path}:{node.lineno}: returns a sensitive value directly")
+
+    assert offenders == []
 
 
 @pytest.mark.parametrize("example_path", ALL_EXAMPLES)

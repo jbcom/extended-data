@@ -42,7 +42,7 @@ class UserService:
         The api_key is required and sourced from API_KEY input.
         The endpoint parameter uses its default if not in inputs.
         """
-        return f"Calling {endpoint} with key {api_key[:4]}..."
+        return f"Calling {endpoint} with configured API key"
 
     @input_config("config", source_name="CONFIG", decode_from_json=True)
     def parse_config(self, config: dict[str, str] | None = None) -> dict[str, str]:
