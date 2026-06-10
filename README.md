@@ -174,7 +174,9 @@ filtering primitive as a chainable container operation.
 type-name keyed `ExtendedDict` results.
 `ExtendedDict.first_non_empty_value()` returns the first matching non-empty
 value as promoted Tier 2 data, so selected nested maps and lists remain
-chainable.
+chainable. Use `ExtendedDict.first_non_empty_entry()` and
+`ExtendedDict.non_empty_entries()` when callers need selected key/value entries
+instead of just the selected value.
 Generic type routing can still ask for plain data roles with
 `typeof(value, primitive_only=True)`, which treats Extended containers as their
 underlying `str`, `list`, `dict`, and `set` roles.

@@ -75,6 +75,8 @@ def test_extended_dict_composes_mapping_primitives() -> None:
     split = typed.split_by_type(primitive_only=True)
     first_scalar = typed.first_non_empty_value("missing", "service")
     first_nested = value.first_non_empty_value("missing", "outer")
+    first_entry = typed.first_non_empty_entry("missing", "service", "ports")
+    entries = typed.non_empty_entries("missing", "service", "ports")
 
     assert isinstance(filtered, ExtendedTuple)
     assert isinstance(accepted, ExtendedDict)
@@ -85,6 +87,9 @@ def test_extended_dict_composes_mapping_primitives() -> None:
     assert isinstance(split["list"], ExtendedDict)
     assert isinstance(first_scalar, ExtendedString)
     assert isinstance(first_nested, ExtendedDict)
+    assert isinstance(first_entry, ExtendedDict)
+    assert isinstance(entries, ExtendedList)
+    assert all(isinstance(entry, ExtendedDict) for entry in entries)
     assert merged["outer"] == {"inner": 1, "other": 2}
     assert value["outer"] == {"inner": 1}
     assert value.flatten() == {"outer.inner": 1, "items.0": 1, "items.1": 1, "items.2": 2, "empty": ""}
@@ -100,6 +105,9 @@ def test_extended_dict_composes_mapping_primitives() -> None:
     assert split["list"] == {"ports": [80, 443]}
     assert first_scalar.upper_first() == "Api"
     assert first_nested["inner"] == 1
+    assert first_entry["service"].upper_first() == "Api"
+    assert entries == [{"service": "api"}, {"ports": [80, 443]}]
+    assert isinstance(entries[1]["ports"], ExtendedList)
 
 
 def test_extended_dict_promotes_nested_values_on_mutation() -> None:

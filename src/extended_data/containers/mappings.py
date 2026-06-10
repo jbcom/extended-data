@@ -24,7 +24,7 @@ from extended_data.primitives.mappings import (
     unhump_map,
 )
 from extended_data.primitives.splitting import split_dict_by_type
-from extended_data.primitives.state import all_non_empty_in_dict
+from extended_data.primitives.state import all_non_empty_in_dict, any_non_empty, yield_non_empty
 
 
 class ExtendedDict(UserDict[str, Any]):
@@ -143,3 +143,15 @@ class ExtendedDict(UserDict[str, Any]):
         from extended_data.containers.factory import extend_data, to_builtin
 
         return extend_data(first_non_empty_value_from_map(to_builtin(self.data), *keys))
+
+    def first_non_empty_entry(self, *keys: str) -> ExtendedDict:
+        """Return the first non-empty keyed entry for the provided keys."""
+        from extended_data.containers.factory import extend_data, to_builtin
+
+        return extend_data(any_non_empty(to_builtin(self.data), *keys))
+
+    def non_empty_entries(self, *keys: str) -> ExtendedList[ExtendedDict]:
+        """Return all non-empty keyed entries for the provided keys."""
+        from extended_data.containers.factory import extend_data, to_builtin
+
+        return extend_data(list(yield_non_empty(to_builtin(self.data), *keys)))
