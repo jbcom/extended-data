@@ -15,6 +15,7 @@ from extended_data.connectors.google.services import GoogleServicesMixin
 from extended_data.connectors.google.workspace import GoogleWorkspaceMixin
 from extended_data.containers import ExtendedDict, ExtendedList
 from extended_data.logging import Logging
+from extended_data.primitives.redaction import redact_sensitive_text
 
 
 if TYPE_CHECKING:
@@ -100,7 +101,11 @@ class GoogleConnector(
             try:
                 service_account_info = json.loads(service_account_info)
             except json.JSONDecodeError as e:
-                self.logger.exception(f"Failed to parse GOOGLE_SERVICE_ACCOUNT JSON: {e}")
+                safe_payload = redact_sensitive_text(service_account_info, values=[service_account_info])
+                self.logger.exception(
+                    "Failed to parse GOOGLE_SERVICE_ACCOUNT JSON: "
+                    f"{redact_sensitive_text(e)}. Payload: {safe_payload}"
+                )
                 raise
 
         if not isinstance(service_account_info, dict):

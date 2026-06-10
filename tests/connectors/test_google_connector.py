@@ -6,12 +6,18 @@ from __future__ import annotations
 from unittest.mock import MagicMock, patch
 
 import pytest
+import json
 
 pytest.importorskip("google.oauth2.service_account")
 pytest.importorskip("googleapiclient")
 
 from extended_data.containers import ExtendedDict, ExtendedString
 from extended_data.connectors.google import GoogleConnector
+
+
+def _logged_text(logger: MagicMock) -> str:
+    """Return concatenated mock logger messages."""
+    return "\n".join(str(arg) for call in logger.method_calls for arg in call.args)
 
 
 def _service_account():
@@ -84,6 +90,18 @@ class TestGoogleConnector:
 
         assert connector.service_account_info == service_account
         assert connector._credentials is None
+
+    def test_init_redacts_invalid_service_account_json_logs(self, base_connector_kwargs):
+        """Invalid service-account JSON diagnostics should not expose key material."""
+        invalid_service_account = '{"private_key": "-----BEGIN RSA PRIVATE KEY-----\\nMIIE...test"'
+
+        with pytest.raises(json.JSONDecodeError):
+            GoogleConnector(service_account_info=invalid_service_account, **base_connector_kwargs)
+
+        logs = _logged_text(base_connector_kwargs["logger"].logger)
+        assert "MIIE...test" not in logs
+        assert "BEGIN RSA PRIVATE KEY" not in logs
+        assert "[REDACTED]" in logs
 
     @patch("extended_data.connectors.google.service_account.Credentials.from_service_account_info")
     def test_credentials_property(self, mock_from_sa, base_connector_kwargs):
