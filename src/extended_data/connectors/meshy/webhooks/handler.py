@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import base64
 import hashlib
+import hmac
 
 from datetime import datetime, timezone
 from typing import Any
@@ -30,15 +32,43 @@ class WebhookHandler:
         self,
         repository: TaskRepository,
         download_artifacts: bool = True,
-    ):
+        webhook_secret: str | bytes | None = None,
+    ) -> None:
         """Initialize webhook handler.
 
         Args:
             repository: TaskRepository for updating state
             download_artifacts: Whether to download GLB files on SUCCEEDED
+            webhook_secret: Shared secret used to verify HMAC-SHA256 signatures
         """
         self.repository = repository
         self.download_artifacts = download_artifacts
+        self.webhook_secret = webhook_secret
+
+    def handle_signed_webhook(
+        self,
+        payload: bytes,
+        signature: str,
+        project: str | None = None,
+        spec_hash: str | None = None,
+    ) -> dict[str, Any]:
+        """Verify a raw webhook payload before parsing and processing it."""
+        if not self.verify_signature(payload, signature):
+            return {
+                "status": "error",
+                "message": "Invalid webhook signature",
+            }
+
+        try:
+            parsed_payload = MeshyWebhookPayload.model_validate_json(payload)
+        except ValueError as exc:
+            return {
+                "status": "error",
+                "message": "Invalid webhook payload",
+                "error": str(exc),
+            }
+
+        return self.handle_webhook(parsed_payload, project=project, spec_hash=spec_hash)
 
     def handle_webhook(
         self, payload: MeshyWebhookPayload, project: str | None = None, spec_hash: str | None = None
@@ -140,6 +170,33 @@ class WebhookHandler:
         except Exception:
             return None
 
-    def verify_signature(self, payload: bytes, signature: str) -> bool:
-        """Verify webhook signature (stubbed for testing)."""
-        return True  # Stub for testing
+    def verify_signature(
+        self,
+        payload: bytes,
+        signature: str,
+        *,
+        secret: str | bytes | None = None,
+    ) -> bool:
+        """Verify an HMAC-SHA256 webhook signature for a raw payload."""
+        secret_value = self.webhook_secret if secret is None else secret
+        if secret_value is None or not signature.strip():
+            return False
+
+        secret_bytes = secret_value.encode("utf-8") if isinstance(secret_value, str) else secret_value
+        if not secret_bytes:
+            return False
+
+        digest = hmac.new(secret_bytes, payload, hashlib.sha256).digest()
+        expected_hex = digest.hex()
+        expected_base64 = base64.b64encode(digest).decode("ascii")
+        expected_urlsafe_base64 = base64.urlsafe_b64encode(digest).decode("ascii")
+
+        signature_value = signature.strip()
+        if signature_value.casefold().startswith("sha256="):
+            signature_value = signature_value.split("=", 1)[1].strip()
+
+        return (
+            hmac.compare_digest(signature_value.casefold(), expected_hex)
+            or hmac.compare_digest(signature_value, expected_base64)
+            or hmac.compare_digest(signature_value, expected_urlsafe_base64)
+        )

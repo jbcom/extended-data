@@ -78,6 +78,24 @@ generator = AssetGenerator()
 manifest = generator.generate_model(spec, wait=True)
 ```
 
+### Webhooks
+
+`WebhookHandler` can verify raw request bodies before parsing or mutating task
+state. Configure a shared secret and pass the raw body plus the signature header
+value to `handle_signed_webhook()`:
+
+```python
+from extended_data.connectors.meshy.webhooks import WebhookHandler
+
+handler = WebhookHandler(repository=repo, webhook_secret="shared-secret")
+result = handler.handle_signed_webhook(raw_body, request.headers["X-Webhook-Signature"])
+```
+
+Signatures are HMAC-SHA256 over the raw payload bytes. Hex, Base64, URL-safe
+Base64, and `sha256=`-prefixed values are accepted. If you do not configure a
+secret, `verify_signature()` returns `False` instead of accepting unsigned
+payloads.
+
 ### Preset Specs
 
 Pre-configured specs for common assets:

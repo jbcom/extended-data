@@ -2,6 +2,11 @@
 
 from __future__ import annotations
 
+import base64
+import hashlib
+import hmac
+import json
+
 from datetime import datetime, timezone
 from unittest.mock import MagicMock, patch
 
@@ -260,9 +265,66 @@ class TestWebhookHandler:
             assert result["artifacts_downloaded"] == 0
             mock_base.download.assert_not_called()
 
-    def test_verify_signature_stub(self, webhook_handler):
-        """Test that signature verification stub returns True."""
-        assert webhook_handler.verify_signature(b"payload", "signature") is True
+    def test_verify_signature_requires_secret(self, webhook_handler):
+        """Unsigned handlers reject signatures instead of accepting placeholders."""
+        payload = b'{"id":"task-12345-abcde"}'
+        signature = hmac.new(b"secret", payload, hashlib.sha256).hexdigest()
+
+        assert webhook_handler.verify_signature(payload, signature) is False
+
+    def test_verify_signature_accepts_hmac_sha256_hex(self, mock_repository):
+        """Verify raw payloads with HMAC-SHA256 hex signatures."""
+        payload = b'{"id":"task-12345-abcde"}'
+        signature = hmac.new(b"secret", payload, hashlib.sha256).hexdigest()
+        handler = WebhookHandler(repository=mock_repository, webhook_secret="secret")
+
+        assert handler.verify_signature(payload, signature) is True
+        assert handler.verify_signature(payload, f"sha256={signature.upper()}") is True
+        assert handler.verify_signature(b'{"id":"tampered"}', signature) is False
+        assert handler.verify_signature(payload, "not-a-signature") is False
+
+    def test_verify_signature_accepts_hmac_sha256_base64(self, mock_repository):
+        """Verify raw payloads with HMAC-SHA256 base64 signatures."""
+        payload = b'{"id":"task-12345-abcde"}'
+        digest = hmac.new(b"secret", payload, hashlib.sha256).digest()
+        signature = base64.b64encode(digest).decode("ascii")
+        handler = WebhookHandler(repository=mock_repository, webhook_secret=b"secret")
+
+        assert handler.verify_signature(payload, signature) is True
+
+    def test_handle_signed_webhook_rejects_invalid_signature(
+        self, mock_repository, webhook_payload_succeeded
+    ):
+        """Invalid signatures fail before payload parsing or repository mutation."""
+        payload = json.dumps(webhook_payload_succeeded, separators=(",", ":")).encode("utf-8")
+        handler = WebhookHandler(repository=mock_repository, webhook_secret="secret")
+
+        result = handler.handle_signed_webhook(payload, "invalid")
+
+        assert result == {
+            "status": "error",
+            "message": "Invalid webhook signature",
+        }
+        mock_repository.find_task_by_id.assert_not_called()
+        mock_repository.record_task_update.assert_not_called()
+
+    def test_handle_signed_webhook_processes_valid_signature(
+        self, mock_repository, webhook_payload_succeeded
+    ):
+        """Valid signed raw payloads are parsed and processed."""
+        payload = json.dumps(webhook_payload_succeeded, separators=(",", ":")).encode("utf-8")
+        signature = hmac.new(b"secret", payload, hashlib.sha256).hexdigest()
+        handler = WebhookHandler(
+            repository=mock_repository,
+            download_artifacts=False,
+            webhook_secret="secret",
+        )
+
+        result = handler.handle_signed_webhook(payload, signature)
+
+        assert result["status"] == "success"
+        assert result["task_id"] == "task-12345-abcde"
+        mock_repository.record_task_update.assert_called_once()
 
 
 class TestWebhookHandlerArtifactDownload:
