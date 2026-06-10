@@ -174,6 +174,8 @@ filtering primitive as a chainable container operation.
 type-name keyed `ExtendedDict` results.
 `ExtendedList.first_non_empty()` and `ExtendedTuple.first_non_empty()` expose
 ordered non-empty selection while preserving promoted nested values.
+`ExtendedList.zipmap()` and `ExtendedTuple.zipmap()` compose ordered key
+containers with value iterables and return promoted `ExtendedDict` mappings.
 `ExtendedDict.first_non_empty_value()` returns the first matching non-empty
 value as promoted Tier 2 data, so selected nested maps and lists remain
 chainable. Use `ExtendedDict.first_non_empty_entry()` and

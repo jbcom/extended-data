@@ -106,7 +106,9 @@ Container methods that return derived collections stay in Tier 2 as well:
 Tier 1 split helpers as type-name keyed `ExtendedDict` results; tuple inputs
 keep tuple-shaped grouped values. `ExtendedList.first_non_empty()` and
 `ExtendedTuple.first_non_empty()` return the first ordered non-empty value
-without lowering promoted nested data. `ExtendedDict.first_non_empty_value()`
+without lowering promoted nested data. `ExtendedList.zipmap()` and
+`ExtendedTuple.zipmap()` return promoted `ExtendedDict` mappings from ordered
+key containers and value iterables. `ExtendedDict.first_non_empty_value()`
 returns promoted Tier 2 values when it selects nested maps, lists, tuples, sets,
 or strings. `ExtendedDict.first_non_empty_entry()` and
 `ExtendedDict.non_empty_entries()` return promoted keyed entries for workflows

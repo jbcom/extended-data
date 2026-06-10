@@ -155,12 +155,16 @@ def test_extended_list_composes_sequence_primitives() -> None:
     value = ExtendedList([1, [2, [3]], "", 2])
     typed = ExtendedList(["api", 2, True, ["nested"]])
     first_nested = ExtendedList([None, "", {"service": "api"}]).first_non_empty()
+    mapped = ExtendedList(["service", "region", "ignored"]).zipmap(["api", "us-east-1"])
 
     assert value.flatten() == [1, 2, 3, "", 2]
     assert value.compact() == [1, [2, [3]], 2]
     assert value.unique() == [1, [2, [3]], "", 2]
     assert isinstance(first_nested, ExtendedDict)
     assert first_nested["service"].upper_first() == "Api"
+    assert isinstance(mapped, ExtendedDict)
+    assert mapped == {"service": "api", "region": "us-east-1"}
+    assert mapped["service"].upper_first() == "Api"
     assert value.filter(lambda item: isinstance(item, int)) == [1, 2]
     assert ExtendedList([1, 2]).map(lambda item: item * 2) == [2, 4]
     assert ExtendedList(["api", "worker", "db"]).filter_values(
@@ -251,6 +255,7 @@ def test_extended_tuple_preserves_immutable_sequence_shape() -> None:
     value = ExtendedTuple((1, (2, [3]), "", 2))
     typed = ExtendedTuple(("api", 2, True, ["nested"]))
     first_nested = ExtendedTuple((None, "", {"service": "api"})).first_non_empty()
+    mapped = ExtendedTuple(("service", "region", "ignored")).zipmap(("api", "us-east-1"))
     split = typed.split_by_type(primitive_only=True)
 
     assert value.flatten() == (1, 2, 3, "", 2)
@@ -258,6 +263,9 @@ def test_extended_tuple_preserves_immutable_sequence_shape() -> None:
     assert value.unique() == (1, (2, [3]), "", 2)
     assert isinstance(first_nested, ExtendedDict)
     assert first_nested["service"].upper_first() == "Api"
+    assert isinstance(mapped, ExtendedDict)
+    assert mapped == {"service": "api", "region": "us-east-1"}
+    assert mapped["service"].upper_first() == "Api"
     assert value.filter(lambda item: isinstance(item, int)) == (1, 2)
     assert value.map(lambda item: item * 2 if isinstance(item, int) else item) == (2, (2, [3]), "", 4)
     assert isinstance(split, ExtendedDict)
