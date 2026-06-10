@@ -158,3 +158,26 @@ def test_handle_response_raises_jules_error() -> None:
 
     assert exc_info.value.code == 403
     assert exc_info.value.details == [{"reason": "forbidden"}]
+
+
+def test_handle_response_redacts_sensitive_jules_error_details() -> None:
+    """Jules API errors should not expose raw secret-bearing fields."""
+    connector = JulesConnector(api_key="test-key")
+    response = _response(
+        {
+            "error": {
+                "message": "denied password=hunter2 Bearer raw_token",
+                "code": 403,
+                "details": [{"api_key": "key_123"}],
+            }
+        },
+        403,
+    )
+
+    with pytest.raises(JulesError) as exc_info:
+        connector._handle_response(response)
+
+    message = str(exc_info.value)
+    assert "hunter2" not in message
+    assert "raw_token" not in message
+    assert exc_info.value.details == [{"api_key": "[REDACTED]"}]

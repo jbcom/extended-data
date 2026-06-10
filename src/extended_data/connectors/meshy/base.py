@@ -20,6 +20,7 @@ import httpx
 
 from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
 
+from extended_data.connectors.redaction import redact_sensitive_text
 from extended_data.inputs import InputProvider
 
 
@@ -160,7 +161,7 @@ def request(
 
     # Raise on 4xx
     if response.status_code >= 400:
-        msg = f"API error: {response.text}"
+        msg = f"API error: {redact_sensitive_text(response.text)}"
         raise MeshyAPIError(
             msg,
             status_code=response.status_code,

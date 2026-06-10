@@ -279,11 +279,12 @@ their payload returns as `ExtendedDict` or `ExtendedList[ExtendedDict]`.
 The generic CLI `call` command and MCP bridge expose only connector methods
 that advertise Extended Data payload returns, so raw SDK client factories and
 low-level HTTP helpers do not leak into serialized tool catalogs.
-Those serialized boundaries apply redaction after Tier 2 containers are lowered
-to JSON-compatible data. Common secret-bearing keys such as `password`,
-`api_key`, `access_token`, `authorization`, and `client_secret`, plus token-like
-strings in error text, are replaced with `[REDACTED]` before CLI stdout/stderr
-or MCP tool responses are emitted.
+Serialized CLI/MCP boundaries apply redaction after Tier 2 containers are
+lowered to JSON-compatible data, and connector API error messages use the same
+redaction policy before exceptions are raised. Common secret-bearing keys such
+as `password`, `api_key`, `access_token`, `authorization`, and `client_secret`,
+plus token-like strings in error text, are replaced with `[REDACTED]` before
+CLI stdout/stderr, MCP tool responses, or raised transport errors expose them.
 LangChain, CrewAI, Strands, and auto-detection factory functions still return
 plain framework tool object lists.
 

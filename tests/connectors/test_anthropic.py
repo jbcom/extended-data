@@ -10,6 +10,7 @@ import pytest
 
 from extended_data.connectors.anthropic import (
     CLAUDE_MODELS,
+    AnthropicAuthError,
     AnthropicConnector,
     AnthropicError,
     ContentBlock,
@@ -254,6 +255,26 @@ class TestAnthropicConnector:
             assert isinstance(model, ExtendedDict)
             assert isinstance(model["display_name"], ExtendedString)
             assert model["display_name"] == "Claude Sonnet 4"
+
+    def test_handle_error_redacts_sensitive_vendor_message(self):
+        """Anthropic errors should preserve status metadata without leaking secrets."""
+        import httpx
+
+        connector = AnthropicConnector(api_key="test-key")
+        response = httpx.Response(
+            401,
+            json={"error": {"type": "auth_error", "message": "denied password=hunter2 Bearer raw_token"}},
+        )
+
+        with pytest.raises(AnthropicAuthError) as exc_info:
+            connector._handle_error(response)
+
+        message = str(exc_info.value)
+        assert exc_info.value.status_code == 401
+        assert exc_info.value.error_type == "auth_error"
+        assert "hunter2" not in message
+        assert "raw_token" not in message
+        assert "[REDACTED]" in message
 
 
 class TestClaudeModels:

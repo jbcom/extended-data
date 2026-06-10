@@ -34,6 +34,7 @@ import httpx
 from pydantic import BaseModel, Field
 
 from extended_data.connectors.base import VendorConnectorBase
+from extended_data.connectors.redaction import redact_sensitive_data, redact_sensitive_text
 from extended_data.containers import ExtendedDict, ExtendedList
 
 
@@ -165,12 +166,12 @@ class JulesConnector(VendorConnectorBase):
             try:
                 error = response.json().get("error", {})
                 raise JulesError(
-                    error.get("message", response.text),
+                    redact_sensitive_text(error.get("message", response.text)),
                     error.get("code", response.status_code),
-                    error.get("details"),
+                    redact_sensitive_data(error.get("details")),
                 )
             except (ValueError, KeyError) as exc:
-                raise JulesError(response.text, response.status_code) from exc
+                raise JulesError(redact_sensitive_text(response.text), response.status_code) from exc
         return response.json()
 
     # =========================================================================

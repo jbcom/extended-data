@@ -9,6 +9,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from extended_data.connectors.slack import (
+    SlackAPIError,
     SlackConnector,
     get_divider,
     get_field_context_message_blocks,
@@ -47,6 +48,16 @@ def test_slack_block_helpers_return_extended_payloads():
     assert isinstance(key_value[0]["text"], ExtendedDict)
     assert isinstance(rich, ExtendedList)
     assert isinstance(rich[0]["elements"], ExtendedList)
+
+
+def test_slack_api_error_redacts_sensitive_response_text() -> None:
+    """Slack API errors should not expose raw secret-bearing response values."""
+    error = SlackAPIError({"ok": False, "password": "hunter2", "authorization": "Bearer raw_token"})
+
+    message = str(error)
+    assert "hunter2" not in message
+    assert "raw_token" not in message
+    assert "[REDACTED]" in message
 
 
 class TestSlackConnector:
@@ -136,7 +147,9 @@ class TestSlackConnector:
 
         mock_bot_client = MagicMock()
         mock_bot_client.users_conversations.return_value = {"channels": [{"name": "general", "id": "C12345"}]}
-        mock_bot_client.chat_postMessage.side_effect = FakeSlackApiError({"ok": False, "error": "channel_not_found"})
+        mock_bot_client.chat_postMessage.side_effect = FakeSlackApiError(
+            {"ok": False, "error": "channel_not_found", "password": "hunter2"}
+        )
 
         mock_user_client = MagicMock()
         mock_webclient_class.side_effect = [mock_user_client, mock_bot_client]
@@ -154,6 +167,7 @@ class TestSlackConnector:
         assert isinstance(result, ExtendedDict)
         assert isinstance(result["error"], ExtendedString)
         assert result["error"] == "channel_not_found"
+        assert result["password"] == "[REDACTED]"
 
     @patch("extended_data.connectors.slack.SlackConnector._call_api")
     @patch("extended_data.connectors.slack.WebClient")

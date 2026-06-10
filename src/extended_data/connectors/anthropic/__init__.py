@@ -38,6 +38,7 @@ import httpx
 from pydantic import BaseModel, ConfigDict, Field
 
 from extended_data.connectors.base import VendorConnectorBase
+from extended_data.connectors.redaction import redact_sensitive_text
 from extended_data.containers import ExtendedDict, ExtendedList, extend_data, to_builtin
 from extended_data.logging import Logging
 
@@ -287,6 +288,7 @@ class AnthropicConnector(VendorConnectorBase):
         except Exception:
             error_type = "unknown"
             message = response.text
+        message = redact_sensitive_text(message)
 
         if status_code == 401:
             raise AnthropicAuthError(message, status_code=status_code, error_type=error_type)

@@ -17,6 +17,7 @@ from extended_data.connectors.cursor import (
     CursorError,
     CursorValidationError,
     Repository,
+    sanitize_error,
     validate_agent_id,
     validate_prompt_text,
     validate_repository,
@@ -113,6 +114,15 @@ class TestValidators:
         # IPv6 link-local (fe80::/10)
         with pytest.raises(CursorValidationError, match="internal"):
             validate_webhook_url("https://[fe80::1]/webhook")
+
+    def test_sanitize_error_uses_shared_secret_redaction(self):
+        """Cursor error sanitization should cover common connector secret patterns."""
+        redacted = sanitize_error("failed password=hunter2 token=tok_123 Authorization: Bearer raw_token")
+
+        assert "hunter2" not in redacted
+        assert "tok_123" not in redacted
+        assert "raw_token" not in redacted
+        assert "[REDACTED]" in redacted
 
 
 class TestModels:

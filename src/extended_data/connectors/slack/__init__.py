@@ -25,6 +25,7 @@ else:
 
 from extended_data.connectors._optional import require_extra
 from extended_data.connectors.base import VendorConnectorBase
+from extended_data.connectors.redaction import redact_sensitive_data, redact_sensitive_text
 from extended_data.containers import ExtendedDict, ExtendedList, ExtendedString, extend_data, to_builtin
 from extended_data.io import wrap_raw_data_for_export
 from extended_data.logging import Logging
@@ -66,17 +67,17 @@ class SlackAPIError(RuntimeError):
     def __init__(self, response: Any) -> None:
         self.response = response
         self.status_code = response.status_code if hasattr(response, "status_code") else None
-        super().__init__(f"Slack API error: {response}")
+        super().__init__(f"Slack API error: {redact_sensitive_text(response)}")
 
 
 def _slack_response_payload(response: Any) -> dict[str, Any]:
     """Normalize Slack SDK response objects into a serializable payload."""
     if isinstance(response, Mapping):
-        return dict(response)
+        return redact_sensitive_data(dict(response))
 
     data = getattr(response, "data", None)
     if isinstance(data, Mapping):
-        return dict(data)
+        return redact_sensitive_data(dict(data))
 
     payload: dict[str, Any] = {}
     response_get = getattr(response, "get", None)
@@ -90,7 +91,7 @@ def _slack_response_payload(response: Any) -> dict[str, Any]:
     if status_code is not None:
         payload["status_code"] = status_code
 
-    return payload or {"response": str(response)}
+    return redact_sensitive_data(payload or {"response": str(response)})
 
 
 def get_divider() -> ExtendedDict:

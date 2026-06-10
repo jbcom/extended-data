@@ -34,6 +34,7 @@ import httpx
 from pydantic import BaseModel, ConfigDict, Field
 
 from extended_data.connectors.base import VendorConnectorBase
+from extended_data.connectors.redaction import redact_sensitive_text
 from extended_data.containers import ExtendedDict, ExtendedList, ExtendedString, to_builtin
 from extended_data.logging import Logging
 
@@ -303,12 +304,7 @@ def sanitize_error(error: Any) -> str:
         Sanitized error message string.
     """
     message = str(error) if not isinstance(error, str) else error
-    # Remove potential API keys, tokens, or sensitive patterns
-    message = re.sub(r"Bearer\s+[a-zA-Z0-9._-]+", "Bearer [REDACTED]", message, flags=re.IGNORECASE)
-    message = re.sub(
-        r"api[_-]?key[=:]\s*[\"']?[a-zA-Z0-9._-]+[\"']?", "api_key=[REDACTED]", message, flags=re.IGNORECASE
-    )
-    return re.sub(r"token[=:]\s*[\"']?[a-zA-Z0-9._-]+[\"']?", "token=[REDACTED]", message, flags=re.IGNORECASE)
+    return redact_sensitive_text(message)
 
 
 # =============================================================================

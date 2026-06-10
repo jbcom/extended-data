@@ -11,7 +11,7 @@ import pytest
 
 from pydantic import BaseModel, Field
 
-from extended_data.connectors.base import VendorConnectorBase
+from extended_data.connectors.base import ConnectorAPIError, RateLimitError, VendorConnectorBase
 from extended_data.containers import ExtendedDict, ExtendedList, ExtendedString
 from extended_data.logging import Logging
 
@@ -199,6 +199,45 @@ def test_request_rejects_invalid_max_retries() -> None:
         connector.request("GET", "/status")
 
     mock_client.request.assert_not_called()
+
+
+def test_request_once_redacts_sensitive_client_error_body() -> None:
+    """Programmatic connector API errors should not expose raw secret-bearing bodies."""
+    connector = _connector()
+    mock_client = MagicMock()
+    mock_client.request.return_value = httpx.Response(
+        401,
+        content=b'{"password":"hunter2","message":"Authorization: Bearer raw_token"}',
+    )
+    connector._client = mock_client
+
+    with pytest.raises(ConnectorAPIError) as exc_info:
+        connector._request_once("GET", "/status")
+
+    message = str(exc_info.value)
+    assert exc_info.value.status_code == 401
+    assert "hunter2" not in message
+    assert "raw_token" not in message
+    assert "[REDACTED]" in message
+
+
+def test_request_once_redacts_sensitive_server_error_body() -> None:
+    """Retry-triggering server errors should not carry raw response secrets."""
+    connector = _connector()
+    mock_client = MagicMock()
+    mock_client.request.return_value = httpx.Response(
+        500,
+        content=b'{"api_key":"key_123","message":"Bearer raw_token"}',
+    )
+    connector._client = mock_client
+
+    with pytest.raises(RateLimitError) as exc_info:
+        connector._request_once("GET", "/status")
+
+    message = str(exc_info.value)
+    assert "key_123" not in message
+    assert "raw_token" not in message
+    assert "[REDACTED]" in message
 
 
 def test_get_tools_requires_langchain_extra(monkeypatch) -> None:

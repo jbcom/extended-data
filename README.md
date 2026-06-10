@@ -143,10 +143,10 @@ payload contract; framework factory functions still return framework tool
 objects.
 The generic CLI `call` command and MCP bridge expose only methods that
 advertise Extended Data payload returns.
-Both serialized boundaries redact common secret-bearing keys and token-shaped
-strings before writing terminal or MCP output, so connector data methods can
-return structured vendor payloads without making stdout or tool responses a
-secret leak by default.
+Serialized CLI/MCP boundaries and connector API error messages redact common
+secret-bearing keys and token-shaped strings, so connector data methods can
+return structured vendor payloads without making stdout, tool responses, or
+raised transport errors a secret leak by default.
 Raw SDK/client objects and raw transport responses remain available from the
 methods that explicitly return them.
 

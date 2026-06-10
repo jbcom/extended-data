@@ -44,6 +44,7 @@ from tenacity import (
     wait_exponential,
 )
 
+from extended_data.connectors.redaction import redact_sensitive_text
 from extended_data.inputs import InputProvider
 from extended_data.logging import Logging
 
@@ -268,12 +269,12 @@ class VendorConnectorBase(InputProvider, ABC):
 
         # Retry on 5xx server errors
         if response.status_code >= 500:
-            msg = f"Server error {response.status_code}: {response.text}"
+            msg = f"Server error {response.status_code}: {redact_sensitive_text(response.text)}"
             raise RateLimitError(msg)
 
         # Raise on 4xx client errors (don't retry)
         if response.status_code >= 400:
-            msg = f"API error {response.status_code}: {response.text}"
+            msg = f"API error {response.status_code}: {redact_sensitive_text(response.text)}"
             raise ConnectorAPIError(msg, status_code=response.status_code)
 
         return response
