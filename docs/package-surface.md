@@ -41,8 +41,9 @@ from extended_data import (
   formats.
 - Tier 2 `extended_data.containers` classes wrap Python container primitives as
   `ExtendedString`, `ExtendedDict`, `ExtendedList`, `ExtendedTuple`, and
-  `ExtendedSet` with
-  ergonomic methods over Tier 1 primitives.
+  `ExtendedSet` with ergonomic methods over Tier 1 primitives. They use
+  `UserString`, `UserDict`, `UserList`, immutable `tuple`, or
+  `MutableSet`-compatible bases depending on the underlying data shape.
 - Tier 3 processors use the first two tiers to handle files, imports, exports,
   inputs, API data, vendor integrations, and workflows.
 
@@ -173,6 +174,11 @@ messages.
 
 `ConnectorFabric` caches and coordinates vendor connectors while sharing input
 loading, logging, data normalization, retry behavior, and serialization.
+`AWSConnector` and `GoogleConnector` are unified connector classes in this
+major version: common S3, Organizations, SSO, Workspace, Cloud Resource
+Manager, Billing, and service-discovery operations live directly on those
+connectors. The old split between base connector classes and separate `*Full`
+connector classes is intentionally not preserved.
 
 ## Connector Fabric
 

@@ -79,6 +79,8 @@ def test_clean_major_version_public_names() -> None:
     assert connectors.ConnectorFabric is ConnectorFabric
     assert not hasattr(inputs, "DirectedInputsClass")
     assert not hasattr(connectors, "VendorConnectors")
+    assert not hasattr(connectors, "AWSConnectorFull")
+    assert not hasattr(connectors, "GoogleConnectorFull")
     assert not hasattr(primitives, "removeprefix")
     assert not hasattr(primitives, "removesuffix")
     assert not hasattr(primitives, "bytestostr")
@@ -154,11 +156,14 @@ def test_package_root_exports_builtin_connector_classes() -> None:
         assert root_value is connector_value
 
 
-def test_aws_full_connector_keeps_operation_mixins_without_aws_extra() -> None:
-    """AWSConnectorFull should expose real operation mixins even before boto3 is installed."""
-    assert callable(connectors.AWSConnectorFull.list_s3_buckets)
-    assert callable(connectors.AWSConnectorFull.get_organization_accounts)
-    assert callable(connectors.AWSConnectorFull.list_sso_users)
+def test_first_class_connectors_keep_operation_mixins_without_optional_extras() -> None:
+    """Unified connector classes should expose real operation mixins before SDK extras are installed."""
+    assert callable(connectors.AWSConnector.list_s3_buckets)
+    assert callable(connectors.AWSConnector.get_organization_accounts)
+    assert callable(connectors.AWSConnector.list_sso_users)
+    assert callable(connectors.GoogleConnector.list_projects)
+    assert callable(connectors.GoogleConnector.list_users)
+    assert callable(connectors.GoogleConnector.list_billing_accounts)
 
 
 def test_clean_major_version_does_not_preserve_duplicate_tool_modules() -> None:

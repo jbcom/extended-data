@@ -90,9 +90,9 @@ def get_caller_account_id() -> ExtendedDict:
     Returns:
         Dict with account_id field.
     """
-    from extended_data.connectors.aws import AWSConnectorFull
+    from extended_data.connectors.aws import AWSConnector
 
-    connector = AWSConnectorFull()
+    connector = AWSConnector()
     account_id = connector.get_caller_account_id()
     return extend_data({"account_id": account_id})
 
@@ -103,9 +103,9 @@ def list_s3_buckets() -> ExtendedList[ExtendedDict]:
     Returns:
         List of bucket info (name, creation_date, region).
     """
-    from extended_data.connectors.aws import AWSConnectorFull
+    from extended_data.connectors.aws import AWSConnector
 
-    connector = AWSConnectorFull()
+    connector = AWSConnector()
     buckets = connector.list_s3_buckets()
     return extend_data(
         [
@@ -128,9 +128,9 @@ def list_s3_objects(bucket: str) -> ExtendedList[ExtendedDict]:
     Returns:
         List of object info (key, size, last_modified).
     """
-    from extended_data.connectors.aws import AWSConnectorFull
+    from extended_data.connectors.aws import AWSConnector
 
-    connector = AWSConnectorFull()
+    connector = AWSConnector()
     objects_raw: Any = connector.list_objects(bucket)
     if isinstance(objects_raw, Mapping):
         objects = [{"key": key, **data} for key, data in objects_raw.items()]
@@ -157,9 +157,9 @@ def list_accounts() -> ExtendedList[ExtendedDict]:
     Returns:
         List of account info (id, name, email, status).
     """
-    from extended_data.connectors.aws import AWSConnectorFull
+    from extended_data.connectors.aws import AWSConnector
 
-    connector = AWSConnectorFull()
+    connector = AWSConnector()
     accounts = connector.get_accounts()
     return extend_data(
         [
@@ -180,9 +180,9 @@ def list_sso_users() -> ExtendedList[ExtendedDict]:
     Returns:
         List of user info (user_id, user_name, display_name, email).
     """
-    from extended_data.connectors.aws import AWSConnectorFull
+    from extended_data.connectors.aws import AWSConnector
 
-    connector = AWSConnectorFull()
+    connector = AWSConnector()
     users = connector.list_sso_users()
     return extend_data(
         [
@@ -203,9 +203,9 @@ def list_sso_groups() -> ExtendedList[ExtendedDict]:
     Returns:
         List of group info (group_id, display_name, member_count).
     """
-    from extended_data.connectors.aws import AWSConnectorFull
+    from extended_data.connectors.aws import AWSConnector
 
-    connector = AWSConnectorFull()
+    connector = AWSConnector()
     groups = connector.list_sso_groups()
     return extend_data(
         [
@@ -232,9 +232,9 @@ def list_secrets(
     Returns:
         List of secret info (name, arn, value).
     """
-    from extended_data.connectors.aws import AWSConnectorFull
+    from extended_data.connectors.aws import AWSConnector
 
-    connector = AWSConnectorFull()
+    connector = AWSConnector()
     # Align with tests: only pass arguments that match test expectations
     kwargs: dict[str, Any] = {}
     if prefix:
@@ -264,9 +264,9 @@ def get_secret(secret_id: str) -> ExtendedDict:
     Returns:
         Dict with secret_name, secret_value, and status.
     """
-    from extended_data.connectors.aws import AWSConnectorFull
+    from extended_data.connectors.aws import AWSConnector
 
-    connector = AWSConnectorFull()
+    connector = AWSConnector()
     value = connector.get_secret(secret_id)
     return extend_data(
         {

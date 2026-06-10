@@ -12,13 +12,9 @@ This package provides modular connectors for various cloud providers and service
 - Zoom: User and meeting management
 
 Usage:
-    # Basic connector (session management + secrets)
+    # AWS connector with session management, secrets, Organizations, SSO, and S3
     from extended_data.connectors import AWSConnector
     connector = AWSConnector()
-
-    # Full connector with all operations
-    from extended_data.connectors.aws import AWSConnectorFull
-    connector = AWSConnectorFull()
     accounts = connector.get_accounts()
 
     # Cursor AI agents
@@ -31,10 +27,10 @@ Usage:
     anthropic = AnthropicConnector()
     response = anthropic.create_message(...)
 
-    # Mixin approach for custom connectors
-    from extended_data.connectors.aws import AWSConnector, AWSOrganizationsMixin
+    # Custom connector behavior can subclass the unified connector
+    from extended_data.connectors.aws import AWSConnector
 
-    class MyConnector(AWSConnector, AWSOrganizationsMixin):
+    class MyConnector(AWSConnector):
         pass
 
     # Meshy AI 3D generation (functional interface)
@@ -58,7 +54,6 @@ from extended_data.connectors import meshy
 from extended_data.connectors.anthropic import AnthropicConnector
 from extended_data.connectors.aws import (
     AWSConnector,
-    AWSConnectorFull,
     AWSOrganizationsMixin,
     AWSS3Mixin,
     AWSSSOmixin,
@@ -80,7 +75,6 @@ from extended_data.connectors.google import (
     GoogleCloudConnector,
     GoogleCloudMixin,
     GoogleConnector,
-    GoogleConnectorFull,
     GoogleServicesMixin,
     GoogleWorkspaceConnector,
     GoogleWorkspaceMixin,
@@ -95,7 +89,6 @@ from extended_data.connectors.zoom import ZoomConnector
 
 __all__ = [
     "AWSConnector",
-    "AWSConnectorFull",
     "AWSOrganizationsMixin",
     "AWSS3Mixin",
     "AWSSSOmixin",
@@ -109,7 +102,6 @@ __all__ = [
     "GoogleCloudConnector",
     "GoogleCloudMixin",
     "GoogleConnector",
-    "GoogleConnectorFull",
     "GoogleServicesMixin",
     "GoogleWorkspaceConnector",
     "GoogleWorkspaceMixin",

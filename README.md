@@ -107,6 +107,10 @@ Vendor connectors are first-class adapters in the data fabric. `ConnectorFabric`
 uses the registry to resolve connectors by name, injects shared input/logging
 context, caches connector instances, and lets specialized helpers coexist with
 generic vendor lookup.
+`AWSConnector` and `GoogleConnector` are unified first-class classes: S3,
+Organizations, SSO, Workspace, Cloud Resource Manager, Billing, and services
+operations live on those connectors directly rather than on separate
+`*Full` classes.
 Connector data payloads are promoted into Tier 2 containers at the boundary, so
 decoded files, HTTP response data, GraphQL responses, and SDK-shaped maps can
 use `ExtendedDict`, `ExtendedList`, and `ExtendedString` methods immediately.
@@ -134,8 +138,9 @@ result = SecretsConnector(prefer_native=False).run_pipeline(
 The package is intentionally tiered:
 
 - Tier 1 functions stay stateless and composable.
-- Tier 2 containers inherit Python's user container types and expose ergonomic
-  methods over Tier 1 functions.
+- Tier 2 containers inherit `UserString`, `UserDict`, `UserList`, immutable
+  `tuple`, or `MutableSet`-compatible primitives and expose ergonomic methods
+  over Tier 1 functions.
 - Tier 3 processors use the first two tiers to handle files, inputs, API data,
   vendor integrations, and workflows.
 

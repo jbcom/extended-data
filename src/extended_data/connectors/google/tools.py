@@ -100,9 +100,9 @@ def list_projects(
     Returns:
         List of project info (project_id, name, state, parent).
     """
-    from extended_data.connectors.google import GoogleConnectorFull
+    from extended_data.connectors.google import GoogleConnector
 
-    connector = GoogleConnectorFull()
+    connector = GoogleConnector()
     projects = connector.list_projects(parent=parent or None)
 
     # Limit results and extract key fields
@@ -133,9 +133,9 @@ def list_folders(
     Returns:
         List of folder info (name, display_name, state, parent).
     """
-    from extended_data.connectors.google import GoogleConnectorFull
+    from extended_data.connectors.google import GoogleConnector
 
-    connector = GoogleConnectorFull()
+    connector = GoogleConnector()
     folders = connector.list_folders(parent=parent)
 
     # Limit results and extract key fields
@@ -166,9 +166,9 @@ def list_enabled_services(
     Returns:
         List of service info (name, title, state).
     """
-    from extended_data.connectors.google import GoogleConnectorFull
+    from extended_data.connectors.google import GoogleConnector
 
-    connector = GoogleConnectorFull()
+    connector = GoogleConnector()
     services = connector.list_enabled_services(project_id=project_id)
 
     # Limit results and extract key fields
@@ -196,9 +196,9 @@ def list_billing_accounts(
     Returns:
         List of billing account info (name, display_name, open, master_billing_account).
     """
-    from extended_data.connectors.google import GoogleConnectorFull
+    from extended_data.connectors.google import GoogleConnector
 
-    connector = GoogleConnectorFull()
+    connector = GoogleConnector()
     accounts = connector.list_billing_accounts()
 
     # Limit results and extract key fields
@@ -229,9 +229,9 @@ def list_workspace_users(
     Returns:
         List of user info (email, name, full_name, suspended, org_unit_path).
     """
-    from extended_data.connectors.google import GoogleConnectorFull
+    from extended_data.connectors.google import GoogleConnector
 
-    connector = GoogleConnectorFull()
+    connector = GoogleConnector()
     users_raw: Any = connector.list_users(
         domain=domain or None,
         flatten_names=True,
@@ -271,9 +271,9 @@ def list_workspace_groups(
     Returns:
         List of group info (email, name, description, direct_members_count).
     """
-    from extended_data.connectors.google import GoogleConnectorFull
+    from extended_data.connectors.google import GoogleConnector
 
-    connector = GoogleConnectorFull()
+    connector = GoogleConnector()
     groups_raw: Any = connector.list_groups(
         domain=domain or None,
         key_by_email=False,

@@ -11,8 +11,8 @@ import pytest
 from extended_data.containers import ExtendedDict, ExtendedList, ExtendedString, extend_data
 
 
-# Patch target for AWSConnectorFull - must patch where it's imported
-AWS_CONNECTOR_PATCH = "extended_data.connectors.aws.AWSConnectorFull"
+# Patch where the tool functions instantiate the first-class connector.
+AWS_CONNECTOR_PATCH = "extended_data.connectors.aws.AWSConnector"
 
 
 def test_aws_connector_requires_boto3_when_constructed_without_extra() -> None:

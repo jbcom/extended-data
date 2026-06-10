@@ -4,7 +4,7 @@ This package provides AWS operations organized into submodules:
 - organizations: AWS Organizations and Control Tower account management
 - sso: IAM Identity Center (SSO) operations
 - s3: S3 bucket and object operations
-- secrets: Secrets Manager operations (in base connector)
+- secrets: Secrets Manager operations
 - ecs: ECS cluster and service operations
 
 Usage:
@@ -21,6 +21,9 @@ from typing import TYPE_CHECKING, Any
 
 from extended_data import is_nothing
 from extended_data.connectors._optional import require_extra
+from extended_data.connectors.aws.organizations import AWSOrganizationsMixin
+from extended_data.connectors.aws.s3 import AWSS3Mixin
+from extended_data.connectors.aws.sso import AWSSSOmixin
 from extended_data.connectors.base import VendorConnectorBase
 from extended_data.containers import ExtendedDict, ExtendedList, ExtendedString, extend_data, to_builtin
 from extended_data.logging import Logging
@@ -56,15 +59,14 @@ def _load_aws_sdk() -> Any:
     return boto3
 
 
-class AWSConnector(VendorConnectorBase):
-    """AWS connector for boto3 client and resource management.
+class AWSConnector(AWSOrganizationsMixin, AWSSSOmixin, AWSS3Mixin, VendorConnectorBase):
+    """AWS connector for boto3 client, resource, and vendor data operations.
 
-    This is the base connector class providing:
+    This first-class connector provides:
     - Session management and role assumption
     - Client/resource creation with retry configuration
     - Secrets Manager operations
-
-    Higher-level operations are provided via mixin classes from submodules.
+    - Organizations, IAM Identity Center, and S3 operations
     """
 
     def __init__(
@@ -604,20 +606,6 @@ class AWSConnector(VendorConnectorBase):
 
 
 from extended_data.connectors.aws.codedeploy import create_codedeploy_deployment, get_aws_codedeploy_deployments
-from extended_data.connectors.aws.organizations import AWSOrganizationsMixin
-from extended_data.connectors.aws.s3 import AWSS3Mixin
-from extended_data.connectors.aws.sso import AWSSSOmixin
-
-
-class AWSConnectorFull(AWSConnector, AWSOrganizationsMixin, AWSSSOmixin, AWSS3Mixin):
-    """Full AWS connector with all operations.
-
-    This class combines the base AWSConnector with all operation mixins.
-    Use this for full functionality, or use AWSConnector directly and
-    import specific mixins as needed.
-    """
-
-
 from extended_data.connectors.aws.tools import (
     get_crewai_tools,
     get_langchain_tools,
@@ -629,7 +617,6 @@ from extended_data.connectors.aws.tools import (
 __all__ = [
     # Core connector classes
     "AWSConnector",
-    "AWSConnectorFull",
     "AWSOrganizationsMixin",
     "AWSS3Mixin",
     "AWSSSOmixin",

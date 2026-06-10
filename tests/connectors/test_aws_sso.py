@@ -13,14 +13,14 @@ pytest.importorskip("botocore")
 from botocore.exceptions import ClientError
 
 from extended_data.containers import ExtendedDict, ExtendedList, ExtendedString
-from extended_data.connectors.aws import AWSConnectorFull
+from extended_data.connectors.aws import AWSConnector
 
 
 @pytest.fixture
 def aws_connector():
     """Create AWS connector with mocked clients."""
     with patch("extended_data.connectors.aws.boto3"):
-        connector = AWSConnectorFull()
+        connector = AWSConnector()
         connector.logger = MagicMock()
         return connector
 

@@ -11,8 +11,8 @@ import pytest
 from extended_data.containers import ExtendedDict, ExtendedList, ExtendedString, extend_data
 
 
-# Patch target for GoogleConnectorFull - must patch where it's imported
-GOOGLE_CONNECTOR_PATCH = "extended_data.connectors.google.GoogleConnectorFull"
+# Patch where the tool functions instantiate the first-class connector.
+GOOGLE_CONNECTOR_PATCH = "extended_data.connectors.google.GoogleConnector"
 
 
 def test_google_connector_requires_google_sdk_when_constructed_without_extra() -> None:

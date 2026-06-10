@@ -11,7 +11,7 @@ pytest.importorskip("google.oauth2.service_account")
 pytest.importorskip("googleapiclient")
 
 from extended_data.containers import ExtendedDict, ExtendedList, ExtendedString, extend_data
-from extended_data.connectors.google import GoogleConnectorFull
+from extended_data.connectors.google import GoogleConnector
 
 
 @pytest.fixture
@@ -25,7 +25,7 @@ def google_connector():
         "project_id": "test-project",
     }
     with patch("googleapiclient.discovery.build"):
-        connector = GoogleConnectorFull(service_account_info=service_account)
+        connector = GoogleConnector(service_account_info=service_account)
         connector.logger = MagicMock()
         return connector
 

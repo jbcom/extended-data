@@ -15,7 +15,6 @@ from extended_data.connectors.google import (
     GoogleBillingConnector,
     GoogleCloudConnector,
     GoogleConnector,
-    GoogleConnectorFull,
     GoogleWorkspaceConnector,
 )
 
@@ -248,12 +247,12 @@ class TestGoogleConnector:
         cloud = GoogleCloudConnector(service_account_info=service_account, **base_connector_kwargs)
         workspace = GoogleWorkspaceConnector(service_account_info=service_account, **base_connector_kwargs)
         billing = GoogleBillingConnector(service_account_info=service_account, **base_connector_kwargs)
-        full = GoogleConnectorFull(service_account_info=service_account, **base_connector_kwargs)
+        connector = GoogleConnector(service_account_info=service_account, **base_connector_kwargs)
 
         assert hasattr(cloud, "list_projects")
         assert hasattr(workspace, "list_users")
         assert hasattr(billing, "list_billing_accounts")
 
-        assert hasattr(full, "list_projects")
-        assert hasattr(full, "list_users")
-        assert hasattr(full, "list_billing_accounts")
+        assert hasattr(connector, "list_projects")
+        assert hasattr(connector, "list_users")
+        assert hasattr(connector, "list_billing_accounts")

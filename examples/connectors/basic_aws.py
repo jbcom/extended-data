@@ -27,25 +27,19 @@ def main() -> int:
         return 1
 
     try:
-        from extended_data.connectors import AWSConnector, AWSConnectorFull
+        from extended_data.connectors import AWSConnector
     except ImportError:
         print("Error: Could not import extended_data.connectors. Install with: pip install extended-data[aws]")
         return 1
 
-    # Basic connector - just session management
-    print("Creating basic AWS connector...")
-    AWSConnector()
-    print("Basic connector created successfully.")
-
-    # Full connector with all operations
-    print("\nCreating full AWS connector...")
-    full_connector = AWSConnectorFull()
-    print("Full connector created successfully.")
+    print("Creating AWS connector...")
+    connector = AWSConnector()
+    print("AWS connector created successfully.")
 
     # List S3 buckets
     print("\n--- S3 Buckets ---")
     try:
-        buckets = full_connector.list_s3_buckets()
+        buckets = connector.list_s3_buckets()
         for bucket_name, bucket in list(buckets.items())[:5]:  # Show first 5
             created = bucket.get("creation_date") or bucket.get("CreationDate")
             print(f"  Bucket: {bucket_name} ({created})")
@@ -57,7 +51,7 @@ def main() -> int:
     # List organization accounts (if using Organizations)
     print("\n--- Organization Accounts ---")
     try:
-        accounts = full_connector.get_accounts()
+        accounts = connector.get_accounts()
         for account_id, account in list(accounts.items())[:5]:
             name = account.get("name") or account.get("Name") or account_id
             print(f"  Account: {account_id} ({name})")

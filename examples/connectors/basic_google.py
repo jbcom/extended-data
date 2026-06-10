@@ -26,25 +26,19 @@ def main() -> int:
         return 1
 
     try:
-        from extended_data.connectors import GoogleConnector, GoogleConnectorFull
+        from extended_data.connectors import GoogleConnector
     except ImportError:
         print("Error: Could not import extended_data.connectors. Install with: pip install extended-data[google]")
         return 1
 
-    # Basic connector
-    print("Creating basic Google connector...")
-    GoogleConnector()
-    print("Basic connector created successfully.")
-
-    # Full connector with all operations
-    print("\nCreating full Google connector...")
-    full_connector = GoogleConnectorFull()
-    print("Full connector created successfully.")
+    print("Creating Google connector...")
+    connector = GoogleConnector()
+    print("Google connector created successfully.")
 
     # List projects
     print("\n--- Google Cloud Projects ---")
     try:
-        projects = full_connector.list_projects()
+        projects = connector.list_projects()
         for project in projects[:5]:
             print(f"  Project: {project}")
         if len(projects) > 5:
@@ -56,7 +50,7 @@ def main() -> int:
     if os.getenv("GOOGLE_DOMAIN"):
         print("\n--- Workspace Users ---")
         try:
-            users = full_connector.list_users()
+            users = connector.list_users()
             for user in users[:5]:
                 email = user.get("primaryEmail", "Unknown")
                 print(f"  User: {email}")

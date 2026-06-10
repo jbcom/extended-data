@@ -9,6 +9,10 @@ from typing import TYPE_CHECKING, Any, cast
 
 from extended_data.connectors._optional import require_extra
 from extended_data.connectors.base import VendorConnectorBase
+from extended_data.connectors.google.billing import GoogleBillingMixin
+from extended_data.connectors.google.cloud import GoogleCloudMixin
+from extended_data.connectors.google.services import GoogleServicesMixin
+from extended_data.connectors.google.workspace import GoogleWorkspaceMixin
 from extended_data.containers import ExtendedDict, ExtendedList
 from extended_data.logging import Logging
 
@@ -47,15 +51,20 @@ DEFAULT_SCOPES = [
 ]
 
 
-class GoogleConnector(VendorConnectorBase):
-    """Google Cloud and Workspace base connector.
+class GoogleConnector(
+    GoogleWorkspaceMixin,
+    GoogleCloudMixin,
+    GoogleBillingMixin,
+    GoogleServicesMixin,
+    VendorConnectorBase,
+):
+    """Google Cloud and Workspace connector.
 
-    This is the base connector class providing:
+    This first-class connector provides:
     - Authentication via service account
     - Service client creation and caching
     - Subject impersonation for domain-wide delegation
-
-    Higher-level operations are provided via mixin classes from submodules.
+    - Workspace, Cloud Resource Manager, Billing, and service discovery operations
     """
 
     def __init__(
@@ -553,9 +562,6 @@ class GoogleConnector(VendorConnectorBase):
         return self.extend_result(filtered_groups)
 
 
-# Import submodule operations
-from extended_data.connectors.google.billing import GoogleBillingMixin
-from extended_data.connectors.google.cloud import GoogleCloudMixin
 from extended_data.connectors.google.constants import (
     DEFAULT_DOMAIN,
     DEFAULT_USER_OUS,
@@ -572,37 +578,24 @@ from extended_data.connectors.google.jules import (
     SessionState,
     Source,
 )
-from extended_data.connectors.google.services import GoogleServicesMixin
 from extended_data.connectors.google.tools import (
     get_crewai_tools,
     get_langchain_tools,
     get_strands_tools,
     get_tools,
 )
-from extended_data.connectors.google.workspace import GoogleWorkspaceMixin
 
 
-class GoogleConnectorFull(
-    GoogleConnector, GoogleWorkspaceMixin, GoogleCloudMixin, GoogleBillingMixin, GoogleServicesMixin
-):
-    """Full Google connector with all operations.
-
-    This class combines the base GoogleConnector with all operation mixins.
-    Use this for full functionality, or use GoogleConnector directly and
-    import specific mixins as needed.
-    """
+class GoogleCloudConnector(GoogleConnector):
+    """Google connector entry point for Cloud Resource Manager and IAM workflows."""
 
 
-class GoogleCloudConnector(GoogleConnector, GoogleCloudMixin):
-    """Google connector focused on Cloud Resource Manager and IAM operations."""
+class GoogleWorkspaceConnector(GoogleConnector):
+    """Google connector entry point for Admin Directory user and group workflows."""
 
 
-class GoogleWorkspaceConnector(GoogleConnector, GoogleWorkspaceMixin):
-    """Google connector focused on Admin Directory user and group operations."""
-
-
-class GoogleBillingConnector(GoogleConnector, GoogleBillingMixin):
-    """Google connector focused on Cloud Billing account and project billing operations."""
+class GoogleBillingConnector(GoogleConnector):
+    """Google connector entry point for Cloud Billing account and project billing workflows."""
 
 
 __all__ = [
@@ -619,7 +612,6 @@ __all__ = [
     "GoogleCloudConnector",
     "GoogleCloudMixin",
     "GoogleConnector",
-    "GoogleConnectorFull",
     "GoogleServicesMixin",
     "GoogleWorkspaceConnector",
     "GoogleWorkspaceMixin",
