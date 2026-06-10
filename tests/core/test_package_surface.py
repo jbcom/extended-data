@@ -5,6 +5,7 @@ from __future__ import annotations
 from importlib import util
 from importlib.metadata import version
 from types import ModuleType
+from typing import get_type_hints
 
 import extended_data
 import extended_data.logging as lifecycle_logging
@@ -148,6 +149,8 @@ def test_root_exports_first_class_integrated_primitives() -> None:
     connector_names = extended_data.list_connectors()
     assert isinstance(connector_names, ExtendedList)
     assert isinstance(connector_names[0], ExtendedString)
+    assert get_type_hints(connectors.list_connectors)["return"] == ExtendedList[ExtendedString]
+    assert get_type_hints(ConnectorFabric.list_connectors)["return"] == ExtendedList[ExtendedString]
     assert "github" in connector_names
 
 

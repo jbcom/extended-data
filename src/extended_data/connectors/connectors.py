@@ -22,7 +22,7 @@ from extended_data.connectors.registry import (
     list_connectors as list_registered_connectors,
 )
 from extended_data.connectors.zoom import ZoomConnector
-from extended_data.containers import ExtendedDict, ExtendedList
+from extended_data.containers import ExtendedDict, ExtendedList, ExtendedString
 from extended_data.inputs import InputProvider
 from extended_data.logging import Logging
 
@@ -91,7 +91,7 @@ class ConnectorFabric(InputProvider):
         cache_key = self._get_cache_key(**kwargs)
         self._client_cache[client_type][cache_key] = client
 
-    def list_connectors(self) -> ExtendedList[Any]:
+    def list_connectors(self) -> ExtendedList[ExtendedString]:
         """List connector names available in the current environment."""
         return list_registered_connectors()
 

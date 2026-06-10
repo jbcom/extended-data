@@ -41,7 +41,7 @@ from extended_data.connectors._optional import (
     get_extra_for_connector,
     get_missing_connector_requirements,
 )
-from extended_data.containers import ExtendedDict, ExtendedList, extend_data
+from extended_data.containers import ExtendedDict, ExtendedList, ExtendedString, extend_data
 
 
 if TYPE_CHECKING:
@@ -185,7 +185,7 @@ def _list_connector_classes() -> dict[str, builtins.type[VendorConnectorBase]]:
     return _discover_connectors().copy()
 
 
-def list_connectors() -> ExtendedList[Any]:
+def list_connectors() -> ExtendedList[ExtendedString]:
     """List available connector names.
 
     Returns:
