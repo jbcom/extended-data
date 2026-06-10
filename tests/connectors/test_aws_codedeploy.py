@@ -11,6 +11,7 @@ pytest.importorskip("botocore")
 
 from botocore.exceptions import ClientError, WaiterError
 
+from extended_data.containers import ExtendedDict, ExtendedList, ExtendedString
 from extended_data.connectors.aws.codedeploy import (
     create_codedeploy_deployment,
     get_aws_codedeploy_deployments,
@@ -46,6 +47,10 @@ class TestGetAwsCodeDeployDeployments:
             codedeploy_client=codedeploy_client,
         )
 
+        assert isinstance(result, ExtendedDict)
+        assert isinstance(result["deployment_ids"], ExtendedList)
+        assert isinstance(result["deployment_ids"][0], ExtendedString)
+        assert isinstance(result["deployments"][0], ExtendedDict)
         assert result["deployment_ids"] == ["dep-1", "dep-2", "dep-3"]
         assert [item["deploymentId"] for item in result["deployments"]] == ["dep-1", "dep-2", "dep-3"]
 
@@ -82,6 +87,9 @@ class TestCreateCodeDeployDeployment:
             codedeploy_client=codedeploy_client,
         )
 
+        assert isinstance(result, ExtendedDict)
+        assert isinstance(result["deployment_id"], ExtendedString)
+        assert isinstance(result["deployment_info"], ExtendedDict)
         assert result["deployment_id"] == "dep-123"
         assert result["status"] == "Succeeded"
         waiter.wait.assert_called_once_with(

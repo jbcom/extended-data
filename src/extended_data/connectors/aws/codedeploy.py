@@ -12,6 +12,7 @@ from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any
 
 from extended_data.connectors.aws import AWSConnector
+from extended_data.containers import extend_data
 from extended_data.logging import Logging
 
 
@@ -252,12 +253,14 @@ def get_aws_codedeploy_deployments(
     )
 
     _ = connector  # appease linters when we instantiate a connector internally
-    return {
-        "deployment_ids": deployment_ids,
-        "deployments": deployment_infos,
-        "next_token": final_token,
-        "pages": pages,
-    }
+    return extend_data(
+        {
+            "deployment_ids": deployment_ids,
+            "deployments": deployment_infos,
+            "next_token": final_token,
+            "pages": pages,
+        }
+    )
 
 
 def create_codedeploy_deployment(
@@ -356,8 +359,10 @@ def create_codedeploy_deployment(
         deployment_info = _safe_get_deployment(client, deployment_id, logger)
 
     _ = connector
-    return {
-        "deployment_id": deployment_id,
-        "status": deployment_info.get("status") if deployment_info else None,
-        "deployment_info": deployment_info,
-    }
+    return extend_data(
+        {
+            "deployment_id": deployment_id,
+            "status": deployment_info.get("status") if deployment_info else None,
+            "deployment_info": deployment_info,
+        }
+    )
