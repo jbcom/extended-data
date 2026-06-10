@@ -26,8 +26,7 @@ jobs:
           version: "0.11.19"
           enable-cache: true
       - run: uv sync --python 3.13 --extra tests --extra typing
-      - run: uvx ruff check src tests
+      - run: uvx ruff check src tests examples README.md docs/package-surface.md
       - run: uv run mypy src/extended_data
-      - run: uv run pytest tests/core tests/logging tests/inputs
-      - run: uv run pytest tests/connectors/test_cloud_params.py tests/connectors/test_connectors.py tests/connectors/test_secrets.py tests/connectors/test_cli.py tests/connectors/test_mcp.py tests/connectors/meshy/test_models.py
+      - run: uv run pytest tests
       - run: uv build

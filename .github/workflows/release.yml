@@ -44,5 +44,9 @@ jobs:
         with:
           version: "0.11.19"
           enable-cache: true
+      - run: uv sync --python 3.13 --extra tests --extra typing
+      - run: uvx ruff check src tests examples README.md docs/package-surface.md
+      - run: uv run mypy src/extended_data
+      - run: uv run pytest tests
       - run: uv build
       - run: uv publish --trusted-publishing always
