@@ -4,11 +4,11 @@ from __future__ import annotations
 
 import argparse
 
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
-from extended_data.connectors.cli import cmd_info, cmd_list, cmd_methods, main
+from extended_data.connectors.cli import cmd_call, cmd_info, cmd_list, cmd_methods, main
 
 
 def test_cli_list():
@@ -59,6 +59,70 @@ def test_cli_methods_lists_public_methods():
     output = "".join(call.args[0] for call in mock_write.call_args_list if call.args)
     assert "request_data" in output
     assert "Decode an HTTP response body" in output
+
+
+def test_cli_call_parses_dynamic_keyword_arguments() -> None:
+    """Call command accepts documented --arg value pairs after the method."""
+    connector = MagicMock()
+    connector.fetch.return_value = {"ok": True}
+
+    with (
+        patch("sys.argv", ["extended-data", "call", "example", "fetch", "--enabled", "true", "--count", "3"]),
+        patch("extended_data.connectors.cli.get_connector", return_value=connector),
+        patch("sys.stdout.write") as mock_write,
+    ):
+        exit_code = main()
+
+    assert exit_code == 0
+    connector.fetch.assert_called_once_with(enabled=True, count=3)
+    output = "".join(call.args[0] for call in mock_write.call_args_list if call.args)
+    assert '"ok": true' in output
+
+
+def test_cli_call_accepts_json_flag_after_method() -> None:
+    """Call command treats trailing --json as a CLI flag, not a method kwarg."""
+    connector = MagicMock()
+    connector.fetch.return_value = {"ok": True}
+    args = argparse.Namespace(connector="example", method="fetch", extra=["--json"], json=False)
+
+    with (
+        patch("extended_data.connectors.cli.get_connector", return_value=connector),
+        patch("sys.stdout.write") as mock_write,
+    ):
+        exit_code = cmd_call(args)
+
+    assert exit_code == 0
+    connector.fetch.assert_called_once_with()
+    assert '"ok": true' in mock_write.call_args.args[0]
+
+
+def test_cli_call_reports_missing_method() -> None:
+    """Call command reports missing methods instead of failing silently."""
+    args = argparse.Namespace(connector="example", method="missing", extra=[], json=False)
+    connector = object()
+
+    with (
+        patch("extended_data.connectors.cli.get_connector", return_value=connector),
+        patch("sys.stderr.write") as mock_write,
+    ):
+        exit_code = cmd_call(args)
+
+    assert exit_code == 1
+    assert "has no callable method" in mock_write.call_args.args[0]
+
+
+def test_cli_call_reports_connector_errors() -> None:
+    """Call command writes connector errors to stderr."""
+    args = argparse.Namespace(connector="example", method="fetch", extra=[], json=False)
+
+    with (
+        patch("extended_data.connectors.cli.get_connector", side_effect=RuntimeError("boom")),
+        patch("sys.stderr.write") as mock_write,
+    ):
+        exit_code = cmd_call(args)
+
+    assert exit_code == 1
+    assert "boom" in mock_write.call_args.args[0]
 
 
 def test_cli_main_help():

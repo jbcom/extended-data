@@ -121,10 +121,15 @@ def cmd_call(args: argparse.Namespace) -> int:
 
     # Parse extra arguments
     kwargs = {}
+    json_output = bool(getattr(args, "json", False))
     extra = args.extra or []
     i = 0
     while i < len(extra):
         arg = extra[i]
+        if arg == "--json":
+            json_output = True
+            i += 1
+            continue
         if arg.startswith("--"):
             key = arg[2:].replace("-", "_")
             if i + 1 < len(extra) and not extra[i + 1].startswith("--"):
@@ -140,13 +145,22 @@ def cmd_call(args: argparse.Namespace) -> int:
         connector = get_connector(connector_name)
         method = getattr(connector, method_name, None)
 
-        if method is None:
+        if method is None or not callable(method):
+            _write_stderr(f"Connector {connector_name!r} has no callable method {method_name!r}")
             return 1
 
-        method(**kwargs)
+        result = method(**kwargs)
+        if result is not None:
+            if json_output:
+                _write_stdout(_json_output(result))
+            elif isinstance(result, str):
+                _write_stdout(result)
+            else:
+                _write_stdout(_json_output(result))
         return 0
 
-    except Exception:
+    except Exception as e:
+        _write_stderr(str(e))
         return 1
 
 
@@ -252,9 +266,10 @@ Examples:
 
     # Call command
     call_parser = subparsers.add_parser("call", help="Call a connector method")
+    call_parser.add_argument("--json", action="store_true", help="JSON output")
     call_parser.add_argument("connector", help="Connector name")
     call_parser.add_argument("method", help="Method name")
-    call_parser.add_argument("extra", nargs="*", help="Method arguments (--arg value)")
+    call_parser.add_argument("extra", nargs=argparse.REMAINDER, help="Method arguments (--arg value)")
     call_parser.set_defaults(func=cmd_call)
 
     # MCP command
