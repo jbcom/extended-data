@@ -276,7 +276,7 @@ def create_server() -> Any:
     tool_list = [tool for tool, _ in mcp_tools]
 
     # Register tools
-    @server.list_tools()  # type: ignore[untyped-decorator]
+    @server.list_tools()  # type: ignore[no-untyped-call,untyped-decorator]
     async def list_tools() -> list[Any]:
         return tool_list
 

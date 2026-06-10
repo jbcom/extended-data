@@ -568,7 +568,7 @@ class GoogleWorkspaceMixin:
         from google.oauth2 import service_account
         from googleapiclient.discovery import build
 
-        credentials = service_account.Credentials.from_service_account_info(
+        credentials = service_account.Credentials.from_service_account_info(  # type: ignore[no-untyped-call]
             self.service_account_info,
             scopes=["https://www.googleapis.com/auth/apps.licensing"],
         )

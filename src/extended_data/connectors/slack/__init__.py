@@ -6,7 +6,7 @@ import sys
 
 from collections.abc import Iterable, Iterator, Mapping, Sequence
 from time import sleep
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 
 # batched was added in Python 3.12
@@ -29,24 +29,24 @@ from extended_data.containers import ExtendedDict, ExtendedList, extend_data, to
 from extended_data.logging import Logging
 
 
-if TYPE_CHECKING:
-    from slack_sdk.errors import SlackApiError
-    from slack_sdk.web import WebClient
-else:
-    WebClient = None
+class SlackFallbackError(Exception):
+    """Fallback exception used until slack-sdk is imported."""
 
-    class SlackApiError(Exception):
-        """Fallback exception used until slack-sdk is imported."""
+
+SlackApiError: Any = SlackFallbackError
+WebClient: Any = None
 
 
 def _load_slack_sdk() -> None:
     """Load slack-sdk lazily so tool metadata can import without the slack extra."""
     global SlackApiError, WebClient
 
-    if WebClient is None:
+    if WebClient is None or SlackApiError is SlackFallbackError:
         try:
-            SlackApiError = require_extra("slack_sdk.errors", "slack").SlackApiError
-            WebClient = require_extra("slack_sdk.web", "slack").WebClient
+            if SlackApiError is SlackFallbackError:
+                SlackApiError = require_extra("slack_sdk.errors", "slack").SlackApiError
+            if WebClient is None:
+                WebClient = require_extra("slack_sdk.web", "slack").WebClient
         except ImportError as exc:
             msg = "slack-sdk is required for SlackConnector. Install with: pip install extended-data[slack]"
             raise ImportError(msg) from exc

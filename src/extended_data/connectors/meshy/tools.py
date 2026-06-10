@@ -546,21 +546,9 @@ def get_langchain_tools() -> list[Any]:
     Raises:
         ImportError: If langchain-core is not installed.
     """
-    try:
-        from langchain_core.tools import StructuredTool
-    except ImportError as e:
-        msg = "langchain-core is required for LangChain tools.\nInstall with: pip install extended-data[langchain]"
-        raise ImportError(msg) from e
+    from extended_data.connectors.ai_tools import build_langchain_tools
 
-    return [
-        StructuredTool.from_function(
-            func=defn["func"],
-            name=defn["name"],
-            description=defn["description"],
-            args_schema=defn.get("schema") or defn.get("args_schema"),
-        )
-        for defn in TOOL_DEFINITIONS
-    ]
+    return build_langchain_tools(TOOL_DEFINITIONS)
 
 
 def get_crewai_tools() -> list[Any]:

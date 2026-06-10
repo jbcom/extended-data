@@ -116,7 +116,7 @@ class GoogleConnector(VendorConnectorBase):
             Authenticated service account credentials.
         """
         if self._credentials is None:
-            self._credentials = service_account.Credentials.from_service_account_info(
+            self._credentials = service_account.Credentials.from_service_account_info(  # type: ignore[no-untyped-call]
                 self.service_account_info,
                 scopes=self.scopes,
             )
@@ -134,7 +134,7 @@ class GoogleConnector(VendorConnectorBase):
         Returns:
             Credentials with the specified subject.
         """
-        return service_account.Credentials.from_service_account_info(
+        return service_account.Credentials.from_service_account_info(  # type: ignore[no-untyped-call]
             self.service_account_info,
             scopes=self.scopes,
         ).with_subject(subject)

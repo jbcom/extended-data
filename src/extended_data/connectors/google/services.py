@@ -32,10 +32,13 @@ def _has_http_status(exc: BaseException, status: int) -> bool:
 
 def _parse_project_activity_time(value: Any) -> dt.datetime | None:
     """Parse a Google-style timestamp into an aware UTC datetime."""
-    if not isinstance(value, str) or not value.strip():
+    if value is None:
         return None
 
-    normalized = value.strip()
+    normalized = str(value).strip()
+    if not normalized:
+        return None
+
     if normalized.endswith("Z"):
         normalized = f"{normalized[:-1]}+00:00"
 

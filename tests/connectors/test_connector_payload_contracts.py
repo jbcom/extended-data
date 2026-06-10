@@ -183,6 +183,7 @@ PAYLOAD_METHODS = (
 )
 
 RAW_CONNECTOR_BOUNDARIES = {
+    ("src/extended_data/connectors/ai_tools.py", "build_langchain_tools"),
     ("src/extended_data/connectors/base.py", "VendorConnectorBase.get_tools"),
     ("src/extended_data/connectors/connectors.py", "ConnectorFabric.list_connectors"),
     ("src/extended_data/connectors/registry.py", "list_connectors"),

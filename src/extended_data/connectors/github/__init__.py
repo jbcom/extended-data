@@ -7,7 +7,7 @@ import os
 
 from collections.abc import Mapping, Sequence
 from copy import deepcopy
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from ruamel.yaml import YAML
 
@@ -23,46 +23,58 @@ from extended_data.containers import ExtendedDict
 from extended_data.logging import Logging
 
 
-if TYPE_CHECKING:
-    from github import Auth, Github
-    from github.GithubException import GithubException, UnknownObjectException
-    from python_graphql_client import GraphqlClient
-else:
-    Auth = None
-    Github = None
-    GraphqlClient = None
+Auth: Any = None
+Github: Any = None
+GraphqlClient: Any = None
 
-    class GitHubFallbackError(Exception):
-        """Fallback exception used until PyGithub is imported."""
 
-    GithubException = GitHubFallbackError
-    UnknownObjectException = GitHubFallbackError
+class GitHubFallbackError(Exception):
+    """Fallback exception used until PyGithub is imported."""
+
+
+GithubException: Any = GitHubFallbackError
+UnknownObjectException: Any = GitHubFallbackError
 
 
 FilePath = str | os.PathLike[str]
+
+
+def _require_loaded(module: Any | None, module_name: str) -> Any:
+    if module is None:  # pragma: no cover - defensive guard for loader invariants
+        raise RuntimeError(f"Failed to load optional GitHub dependency module: {module_name}")
+    return module
 
 
 def _load_github_sdk() -> None:
     """Load GitHub SDK dependencies lazily so tool metadata remains importable."""
     global Auth, Github, GithubException, GraphqlClient, UnknownObjectException
 
-    if Github is None:
+    needs_github_module = Auth is None or Github is None
+    needs_exceptions = GithubException is GitHubFallbackError or UnknownObjectException is GitHubFallbackError
+    needs_graphql = GraphqlClient is None
+
+    if needs_github_module or needs_exceptions or needs_graphql:
         try:
-            github_module = require_extra("github", "github")
-            github_exceptions = require_extra("github.GithubException", "github")
-            graphql_module = require_extra("python_graphql_client", "github")
+            github_module = require_extra("github", "github") if needs_github_module else None
+            github_exceptions = require_extra("github.GithubException", "github") if needs_exceptions else None
+            graphql_module = require_extra("python_graphql_client", "github") if needs_graphql else None
         except ImportError as exc:
             msg = "PyGithub is required for GitHubConnector. Install with: pip install extended-data[github]"
             raise ImportError(msg) from exc
 
-        Auth = github_module.Auth
-        Github = github_module.Github
-        GithubException = github_exceptions.GithubException
-        UnknownObjectException = github_exceptions.UnknownObjectException
-        GraphqlClient = graphql_module.GraphqlClient
+        if Auth is None:
+            Auth = _require_loaded(github_module, "github").Auth
+        if Github is None:
+            Github = _require_loaded(github_module, "github").Github
+        if GithubException is GitHubFallbackError:
+            GithubException = _require_loaded(github_exceptions, "github.GithubException").GithubException
+        if UnknownObjectException is GitHubFallbackError:
+            UnknownObjectException = _require_loaded(github_exceptions, "github.GithubException").UnknownObjectException
+        if GraphqlClient is None:
+            GraphqlClient = _require_loaded(graphql_module, "python_graphql_client").GraphqlClient
 
 
-def get_github_api_error(exc: GithubException) -> str | None:
+def get_github_api_error(exc: BaseException) -> str | None:
     """Extract error message from a GitHub exception."""
     data = getattr(exc, "data", {})
     return data.get("message", None)
@@ -104,7 +116,7 @@ class GitHubConnector(VendorConnectorBase):
                 self.logger.warning(f"Repository {self.GITHUB_OWNER}/{self.GITHUB_REPO} does not exist")
 
         if github_branch is None and self.repo:
-            self.GITHUB_BRANCH = self.repo.default_branch
+            self.GITHUB_BRANCH: str | None = self.repo.default_branch
         else:
             self.GITHUB_BRANCH = github_branch
 

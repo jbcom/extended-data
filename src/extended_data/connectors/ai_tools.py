@@ -8,7 +8,8 @@ from __future__ import annotations
 
 import builtins
 
-from typing import cast
+from collections.abc import Callable, Iterable, Mapping
+from typing import Any, cast
 
 from pydantic import BaseModel
 
@@ -36,3 +37,25 @@ def get_pydantic_schema(model: builtins.type[BaseModel]) -> ExtendedDict:
     schema.pop("description", None)
 
     return cast(ExtendedDict, extend_data(schema))
+
+
+def build_langchain_tools(tool_definitions: Iterable[Mapping[str, Any]]) -> list[Any]:
+    """Build LangChain StructuredTools from connector tool definition mappings."""
+    try:
+        from langchain_core.tools import StructuredTool
+    except ImportError as e:
+        msg = "langchain-core is required for LangChain tools.\nInstall with: pip install extended-data[langchain]"
+        raise ImportError(msg) from e
+
+    tools: list[Any] = []
+    for definition in tool_definitions:
+        args_schema = definition.get("schema") or definition.get("args_schema")
+        tools.append(
+            StructuredTool.from_function(
+                func=cast(Callable[..., Any], definition["func"]),
+                name=cast(str, definition["name"]),
+                description=cast(str, definition["description"]),
+                args_schema=cast(Any, args_schema),
+            )
+        )
+    return tools

@@ -148,7 +148,7 @@ def create_server() -> Any:
                 "parameters": schema,
             }
 
-    @server.list_tools()  # type: ignore[untyped-decorator]
+    @server.list_tools()  # type: ignore[no-untyped-call,untyped-decorator]
     async def list_tools() -> list[Tool]:
         """Return all available tools."""
         return [
