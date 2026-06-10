@@ -85,6 +85,9 @@ Container methods that return derived collections stay in Tier 2 as well:
 `ExtendedDict.filter()` returns an `ExtendedTuple` of accepted and rejected
 `ExtendedDict` values, and `ExtendedDict.all_values()` returns an
 `ExtendedList`.
+Generic type routing can still ask for plain data roles:
+`typeof(value, primitive_only=True)` reports Extended strings, lists, tuples,
+mappings, and sets as `str`, `list`, `list`, `dict`, and `set`.
 
 Tier 3 file and decode surfaces promote decoded values into Tier 2 containers
 by default:

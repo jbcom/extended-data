@@ -14,7 +14,7 @@ from typing import Any
 
 import pytest
 
-from extended_data.containers import ExtendedDict, ExtendedList, ExtendedSet, ExtendedString
+from extended_data.containers import ExtendedDict, ExtendedList, ExtendedSet, ExtendedString, ExtendedTuple
 from extended_data.primitives.formats.yaml import YamlPairs, YamlTagged
 from extended_data.primitives.types import (
     ConversionError,
@@ -453,6 +453,11 @@ def test_get_default_value_for_type(input_type: type, expected: Any) -> None:
         ((1, 2, 3), list),
         ({"key": "value"}, dict),
         ({1, 2}, set),
+        (ExtendedString("hello"), str),
+        (ExtendedList([1, 2, 3]), list),
+        (ExtendedTuple((1, 2, 3)), list),
+        (ExtendedDict({"key": "value"}), dict),
+        (ExtendedSet({1, 2}), set),
         (None, type(None)),
         (object(), object),
     ],
@@ -472,6 +477,12 @@ def test_get_primitive_type_for_instance_type(value: Any, expected_type: type) -
         ([1, 2, 3], True, list),
         ({"key": "value"}, False, dict),
         ({"key": "value"}, True, dict),
+        (ExtendedString("hello"), False, ExtendedString),
+        (ExtendedString("hello"), True, str),
+        (ExtendedList([1, 2, 3]), False, ExtendedList),
+        (ExtendedList([1, 2, 3]), True, list),
+        (ExtendedDict({"key": "value"}), False, ExtendedDict),
+        (ExtendedDict({"key": "value"}), True, dict),
     ],
 )
 def test_typeof(item: Any, primitive_only: bool, expected_type: type) -> None:

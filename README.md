@@ -134,6 +134,9 @@ Tier 3 decoders return Tier 2 containers by default, so
 data files, Base64 payloads, and directed inputs can immediately use
 `ExtendedDict`, `ExtendedList`, `ExtendedTuple`, `ExtendedSet`, and
 `ExtendedString` methods.
+Generic type routing can still ask for plain data roles with
+`typeof(value, primitive_only=True)`, which treats Extended containers as their
+underlying `str`, `list`, `dict`, and `set` roles.
 String tokenization stays inside the same surface: `ExtendedString.split()`
 returns an `ExtendedList` of `ExtendedString` values, and partition operations
 return `ExtendedTuple` values.

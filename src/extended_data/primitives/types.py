@@ -338,11 +338,13 @@ def get_primitive_type_for_instance_type(value: Any) -> builtins.type[Any]:
     """Gets the primitive type for a given value."""
     if isinstance(value, (bool, int, float, str, bytes, bytearray)):
         return type(value)
-    if isinstance(value, (list, tuple)):
+    if isinstance(value, UserString):
+        return str
+    if isinstance(value, (list, tuple, UserList)):
         return list
-    if isinstance(value, dict):
+    if isinstance(value, Mapping):
         return dict
-    if isinstance(value, (set, frozenset)):
+    if isinstance(value, (set, frozenset, AbstractSet)):
         return set
     return type(None) if value is None else object
 
