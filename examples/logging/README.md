@@ -3,6 +3,10 @@
 This directory contains working examples for structured lifecycle logging in
 `extended_data.logging`.
 
+`Logging` does not write log files by default. Pass `enable_file=True` with an
+optional `log_file_name`, or set `OVERRIDE_TO_FILE=True`, when a workflow should
+create file output.
+
 ## Examples
 
 ### basic_logging.py

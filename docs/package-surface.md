@@ -102,8 +102,9 @@ container bridge as file and Base64 decoding. Requested input coercions are
 strict, and diagnostics identify the input key and failed operation without
 echoing raw values from environment variables, stdin, JSON, YAML, or Base64
 payloads. `Logging` provides structured lifecycle logging for applications and
-connector workflows. `ConnectorFabric` caches and coordinates vendor connectors
-while sharing input loading, logging, data normalization, retry behavior, and
+connector workflows without creating log files unless file output is explicitly
+enabled. `ConnectorFabric` caches and coordinates vendor connectors while
+sharing input loading, logging, data normalization, retry behavior, and
 serialization.
 
 ## Connector Fabric
