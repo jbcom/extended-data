@@ -94,6 +94,25 @@ class TestConnectorFabric:
         mock_get_connector_class.assert_called_once_with("dummy")
 
     @patch("extended_data.connectors.connectors.get_connector_class")
+    def test_get_connector_preserves_explicit_context_overrides(self, mock_get_connector_class):
+        """Generic connector lookup lets callers override injected fabric context."""
+
+        class DummyConnector:
+            def __init__(self, *, logger, inputs):
+                self.logger = logger
+                self.inputs = inputs
+
+        custom_logger = MagicMock()
+        custom_inputs = {"TOKEN": "custom"}
+        vc = ConnectorFabric(inputs={"TOKEN": "fabric"}, from_environment=False)
+        mock_get_connector_class.return_value = DummyConnector
+
+        connector = vc.get_connector("dummy", logger=custom_logger, inputs=custom_inputs)
+
+        assert connector.logger is custom_logger
+        assert connector.inputs is custom_inputs
+
+    @patch("extended_data.connectors.connectors.get_connector_class")
     def test_get_connector_caches_by_name_and_kwargs(self, mock_get_connector_class):
         """Generic connectors are cached independently by name and constructor args."""
 

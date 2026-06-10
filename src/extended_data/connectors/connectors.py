@@ -94,11 +94,9 @@ class ConnectorFabric(InputProvider):
             return cached
 
         connector_cls = get_connector_class(connector_name)
-        connector_kwargs = {
-            "logger": self.logging,
-            "inputs": self.inputs,
-            **kwargs,
-        }
+        connector_kwargs = dict(kwargs)
+        connector_kwargs.setdefault("logger", self.logging)
+        connector_kwargs.setdefault("inputs", self.inputs)
         connector = connector_cls(**connector_kwargs)
         self._set_cached_client("connector", connector, **cache_kwargs)
         return connector
