@@ -21,8 +21,8 @@ import httpx
 
 from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
 
-from extended_data.connectors.redaction import redact_sensitive_text
 from extended_data.inputs import InputProvider
+from extended_data.primitives.redaction import redact_sensitive_text
 
 
 class RateLimitError(Exception):

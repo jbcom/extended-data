@@ -34,8 +34,8 @@ import json
 from collections.abc import Callable, Iterable, Mapping
 from typing import Any, cast
 
-from extended_data.connectors.redaction import redact_sensitive_data, redact_sensitive_text
 from extended_data.containers import to_builtin
+from extended_data.primitives.redaction import redact_sensitive_data, redact_sensitive_text
 
 
 MCP_INSTALL_MESSAGE = "MCP SDK not installed. Install with: pip install extended-data[meshy,mcp]"

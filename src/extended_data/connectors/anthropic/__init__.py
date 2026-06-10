@@ -38,9 +38,9 @@ import httpx
 from pydantic import BaseModel, ConfigDict, Field
 
 from extended_data.connectors.base import VendorConnectorBase
-from extended_data.connectors.redaction import redact_sensitive_text
 from extended_data.containers import ExtendedDict, ExtendedList, extend_data, to_builtin
 from extended_data.logging import Logging
+from extended_data.primitives.redaction import redact_sensitive_text
 
 
 if TYPE_CHECKING:

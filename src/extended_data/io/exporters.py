@@ -19,6 +19,7 @@ from extended_data.primitives.formats.yaml import (
     encode_yaml,
     is_yaml_data,
 )
+from extended_data.primitives.redaction import redact_sensitive_text
 from extended_data.primitives.serialization import normalize_data_encoding
 from extended_data.primitives.types import convert_special_types, string_to_bool
 
@@ -64,7 +65,7 @@ def wrap_raw_data_for_export(
             allow_encoding_bool = string_to_bool(allow_encoding, raise_on_error=True)
             allow_encoding = allow_encoding_bool if isinstance(allow_encoding_bool, bool) else allow_encoding
         except ValueError as e:
-            raise ValueError(f"Invalid allow_encoding value: {allow_encoding}") from e
+            raise ValueError(f"Invalid allow_encoding value: {redact_sensitive_text(allow_encoding)}") from e
 
     # Determine the encoding based on boolean allow_encoding and YAML data check
     if allow_encoding:

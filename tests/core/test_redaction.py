@@ -1,8 +1,8 @@
-"""Tests for connector output redaction helpers."""
+"""Tests for Tier 1 redaction helpers."""
 
 from __future__ import annotations
 
-from extended_data.connectors.redaction import redact_sensitive_data, redact_sensitive_text
+from extended_data.primitives.redaction import redact_sensitive_data, redact_sensitive_text
 
 
 def test_redact_sensitive_text_preserves_json_shape() -> None:
@@ -20,7 +20,7 @@ def test_redact_sensitive_text_preserves_json_shape() -> None:
 
 
 def test_redact_sensitive_data_recurses_through_json_like_payloads() -> None:
-    """Structured redaction should handle nested connector data."""
+    """Structured redaction should handle nested JSON-like data."""
     payload = {
         "password": "hunter2",
         "nested": [{"api_key": "key_123", "value": "ok"}],

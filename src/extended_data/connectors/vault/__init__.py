@@ -8,10 +8,10 @@ from typing import TYPE_CHECKING, Any
 
 from extended_data.connectors._optional import require_extra
 from extended_data.connectors.base import VendorConnectorBase
-from extended_data.connectors.redaction import redact_sensitive_text
 from extended_data.containers import ExtendedDict, ExtendedList, ExtendedString
 from extended_data.logging import Logging
 from extended_data.primitives import is_nothing
+from extended_data.primitives.redaction import redact_sensitive_text
 
 
 if TYPE_CHECKING:

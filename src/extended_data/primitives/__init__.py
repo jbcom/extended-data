@@ -39,6 +39,7 @@ from extended_data.primitives.numbers import (
     number_to_words,
     to_roman,
 )
+from extended_data.primitives.redaction import redact_sensitive_data, redact_sensitive_text
 from extended_data.primitives.sequences import filter_list, flatten_list
 from extended_data.primitives.serialization import normalize_data_encoding
 from extended_data.primitives.splitting import split_dict_by_type, split_list_by_type
@@ -141,6 +142,8 @@ __all__ = [
     "pluralize",
     "reconstruct_special_type",
     "reconstruct_special_types",
+    "redact_sensitive_data",
+    "redact_sensitive_text",
     "sanitize_key",
     "singularize",
     "split_dict_by_type",

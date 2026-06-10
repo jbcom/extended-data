@@ -34,8 +34,8 @@ import httpx
 from pydantic import BaseModel, Field
 
 from extended_data.connectors.base import VendorConnectorBase
-from extended_data.connectors.redaction import redact_sensitive_data, redact_sensitive_text
 from extended_data.containers import ExtendedDict, ExtendedList
+from extended_data.primitives.redaction import redact_sensitive_data, redact_sensitive_text
 
 
 __all__ = [

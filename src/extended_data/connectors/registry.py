@@ -41,8 +41,8 @@ from extended_data.connectors._optional import (
     get_extra_for_connector,
     get_missing_connector_requirements,
 )
-from extended_data.connectors.redaction import redact_sensitive_text
 from extended_data.containers import ExtendedDict, ExtendedList, ExtendedString, extend_data
+from extended_data.primitives.redaction import redact_sensitive_text
 
 
 if TYPE_CHECKING:

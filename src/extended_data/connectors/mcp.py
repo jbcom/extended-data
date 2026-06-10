@@ -28,10 +28,10 @@ import sys
 from collections.abc import Callable, Iterable, Mapping
 from typing import Any, cast
 
-from extended_data.connectors.redaction import redact_sensitive_data, redact_sensitive_text
 from extended_data.connectors.registry import _list_connector_classes, get_connector
 from extended_data.connectors.surface import connector_data_methods
 from extended_data.containers import to_builtin
+from extended_data.primitives.redaction import redact_sensitive_data, redact_sensitive_text
 
 
 def _check_mcp_installed() -> bool:

@@ -23,7 +23,6 @@ import sys
 from collections.abc import Mapping
 from typing import Any
 
-from extended_data.connectors.redaction import redact_sensitive_text
 from extended_data.connectors.registry import (
     get_connector,
     get_connector_class,
@@ -33,6 +32,7 @@ from extended_data.connectors.registry import (
 from extended_data.connectors.surface import connector_data_methods, is_connector_data_method
 from extended_data.containers import ExtendedList
 from extended_data.containers.factory import to_builtin
+from extended_data.primitives.redaction import redact_sensitive_text
 
 
 def _json_output(data: Any) -> str:

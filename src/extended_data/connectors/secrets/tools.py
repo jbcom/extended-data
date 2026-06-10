@@ -12,8 +12,8 @@ from typing import Any, cast
 from pydantic import BaseModel, Field
 
 from extended_data.connectors.ai_tools import raise_unknown_tool_framework
-from extended_data.connectors.redaction import redact_sensitive_data
 from extended_data.containers import ExtendedDict, extend_data
+from extended_data.primitives.redaction import redact_sensitive_data
 
 
 # =============================================================================

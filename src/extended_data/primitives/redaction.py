@@ -1,4 +1,4 @@
-"""Redaction helpers for connector output boundaries."""
+"""Tier 1 redaction helpers for diagnostics and JSON-like data."""
 
 from __future__ import annotations
 
@@ -48,7 +48,7 @@ def redact_sensitive_text(message: Any) -> str:
 
 
 def redact_sensitive_data(value: Any) -> Any:
-    """Recursively redact common secret fields in JSON-like connector data."""
+    """Recursively redact common secret fields in JSON-like data."""
     if isinstance(value, Mapping):
         redacted: dict[Any, Any] = {}
         for key, item in value.items():

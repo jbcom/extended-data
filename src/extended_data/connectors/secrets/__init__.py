@@ -40,9 +40,9 @@ from pathlib import Path
 from typing import Any
 
 from extended_data.connectors.base import VendorConnectorBase
-from extended_data.connectors.redaction import redact_sensitive_data, redact_sensitive_text
 from extended_data.containers import ExtendedDict, extend_data
 from extended_data.logging import Logging
+from extended_data.primitives.redaction import redact_sensitive_data, redact_sensitive_text
 
 
 class SyncOperation(str, Enum):

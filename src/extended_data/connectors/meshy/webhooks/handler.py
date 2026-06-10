@@ -10,8 +10,8 @@ from datetime import datetime, timezone
 
 from extended_data.connectors.meshy import base
 from extended_data.connectors.meshy.webhooks.schemas import MeshyWebhookPayload
-from extended_data.connectors.redaction import redact_sensitive_text
 from extended_data.containers import ExtendedDict, extend_data, to_builtin
+from extended_data.primitives.redaction import redact_sensitive_text
 
 from ..persistence.repository import TaskRepository
 from ..persistence.schemas import ArtifactRecord

@@ -38,7 +38,7 @@ CrewAI releases pull vulnerable `chromadb` versions transitively.
 
 ```python
 from extended_data import ConnectorFabric, DataWorkflow, ExtendedDict, InputProvider, Logging, decode_file
-from extended_data.primitives import decode_json, encode_yaml, number_to_words
+from extended_data.primitives import decode_json, encode_yaml, number_to_words, redact_sensitive_text
 
 logger = Logging(logger_name="example")
 inputs = InputProvider(inputs={"GITHUB_OWNER": "jbcom"}, from_environment=False)
@@ -51,6 +51,7 @@ workflow = DataWorkflow.from_value(payload).then(("normalize", lambda data: data
 print(encode_yaml(payload))
 print(decoded_file["service"]["name"].upper_first())
 print(number_to_words(42))
+print(redact_sensitive_text("Authorization: Bearer raw_token"))
 print(workflow.as_builtin())
 ```
 
@@ -114,9 +115,11 @@ Tier 1 primitive names are explicit in this major version and live under
 `bytes_to_string()` for bytes-like coercion and `string_to_bool()`,
 `string_to_int()`, `string_to_float()`, `string_to_path()`,
 `string_to_date()`, `string_to_datetime()`, and `string_to_time()` for scalar
-string conversion. The old `bytestostr` and `strto*` helper names are not
-preserved. Old package import namespaces are not shimmed; missing imports are
-intentional so remaining migration work fails fast.
+string conversion. Use `redact_sensitive_text()` and
+`redact_sensitive_data()` for diagnostic and JSON-like payload redaction. The
+old `bytestostr` and `strto*` helper names are not preserved. Old package
+import namespaces are not shimmed; missing imports are intentional so remaining
+migration work fails fast.
 Tier 1 public exports stay function-oriented; use `get_default_dict()` for
 nested or sorted default mappings instead of importing the internal helper class.
 
@@ -143,10 +146,10 @@ payload contract; framework factory functions still return framework tool
 objects.
 The generic CLI `call` command and MCP bridge expose only methods that
 advertise Extended Data payload returns.
-Serialized CLI/MCP boundaries and connector API error messages redact common
-secret-bearing keys and token-shaped strings, so connector data methods can
-return structured vendor payloads without making stdout, tool responses, or
-raised transport errors a secret leak by default.
+Serialized CLI/MCP boundaries and connector API error messages reuse the Tier 1
+redaction primitives for common secret-bearing keys and token-shaped strings,
+so connector data methods can return structured vendor payloads without making
+stdout, tool responses, or raised transport errors a secret leak by default.
 Raw SDK/client objects and raw transport responses remain available from the
 methods that explicitly return them.
 

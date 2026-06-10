@@ -13,8 +13,8 @@ from typing import Any, NoReturn, cast
 
 from pydantic import BaseModel
 
-from extended_data.connectors.redaction import redact_sensitive_text
 from extended_data.containers import ExtendedDict, extend_data
+from extended_data.primitives.redaction import redact_sensitive_text
 
 
 def get_pydantic_schema(model: builtins.type[BaseModel]) -> ExtendedDict:

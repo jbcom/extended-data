@@ -19,8 +19,8 @@ from extended_data.connectors.meshy.persistence.schemas import (
     TaskSubmission,
 )
 from extended_data.connectors.meshy.persistence.utils import compute_spec_hash as util_compute_spec_hash
-from extended_data.connectors.redaction import redact_sensitive_text
 from extended_data.containers import ExtendedDict, ExtendedList, extend_data
+from extended_data.primitives.redaction import redact_sensitive_text
 
 
 def _utc_now() -> datetime:

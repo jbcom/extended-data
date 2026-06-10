@@ -28,14 +28,20 @@ from extended_data import (
     extend_data,
     to_builtin,
 )
-from extended_data.primitives import decode_json, encode_yaml, normalize_data_encoding, number_to_words
+from extended_data.primitives import (
+    decode_json,
+    encode_yaml,
+    normalize_data_encoding,
+    number_to_words,
+    redact_sensitive_text,
+)
 ```
 
 ## Tiers
 
 - Tier 1 `extended_data.primitives` modules are pure functions and codecs for
-  strings, numbers, maps, lists, matching, state, type coercion, and structured
-  formats.
+  strings, numbers, maps, lists, matching, state, redaction, type coercion, and
+  structured formats.
 - Tier 2 `extended_data.containers` classes wrap Python container primitives as
   `ExtendedString`, `ExtendedDict`, `ExtendedList`, `ExtendedTuple`, and
   `ExtendedSet` with ergonomic methods over Tier 1 primitives. They use
@@ -55,6 +61,9 @@ from the package root.
 Tier 1 public exports stay function-oriented; use `get_default_dict()` when a
 workflow needs nested or sorted default mappings rather than importing the
 internal sorted-default mapping helper class.
+Use `redact_sensitive_text()` and `redact_sensitive_data()` when diagnostics or
+JSON-like payloads need common secret-bearing keys and token-shaped strings
+removed before display.
 
 Direct JSON, YAML, TOML, and HCL primitive decode failures raise
 `DataDecodeError` with format and position context while preserving the parser
@@ -279,12 +288,13 @@ their payload returns as `ExtendedDict` or `ExtendedList[ExtendedDict]`.
 The generic CLI `call` command and MCP bridge expose only connector methods
 that advertise Extended Data payload returns, so raw SDK client factories and
 low-level HTTP helpers do not leak into serialized tool catalogs.
-Serialized CLI/MCP boundaries apply redaction after Tier 2 containers are
-lowered to JSON-compatible data, and connector API error messages use the same
-redaction policy before exceptions are raised. Common secret-bearing keys such
-as `password`, `api_key`, `access_token`, `authorization`, and `client_secret`,
-plus token-like strings in error text, are replaced with `[REDACTED]` before
-CLI stdout/stderr, MCP tool responses, or raised transport errors expose them.
+Serialized CLI/MCP boundaries apply Tier 1 redaction after Tier 2 containers
+are lowered to JSON-compatible data, and connector API error messages use the
+same redaction policy before exceptions are raised. Common secret-bearing keys
+such as `password`, `api_key`, `access_token`, `authorization`, and
+`client_secret`, plus token-like strings in error text, are replaced with
+`[REDACTED]` before CLI stdout/stderr, MCP tool responses, or raised transport
+errors expose them.
 LangChain, CrewAI, Strands, and auto-detection factory functions still return
 plain framework tool object lists.
 

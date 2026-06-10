@@ -44,9 +44,9 @@ from tenacity import (
     wait_exponential,
 )
 
-from extended_data.connectors.redaction import redact_sensitive_text
 from extended_data.inputs import InputProvider
 from extended_data.logging import Logging
+from extended_data.primitives.redaction import redact_sensitive_text
 
 
 if sys.version_info >= (3, 11):
