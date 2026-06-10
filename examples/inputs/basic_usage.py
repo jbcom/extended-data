@@ -1,0 +1,52 @@
+#!/usr/bin/env python3
+"""Basic usage example for DirectedInputsClass.
+
+This example demonstrates the fundamental features of the legacy DirectedInputsClass API:
+- Loading inputs from environment variables
+- Providing default values
+- Type conversion (boolean, integer, float)
+- Input freezing and thawing
+
+Run with:
+    python -m examples.basic_usage
+"""
+
+from __future__ import annotations
+
+import os
+
+from extended_data.inputs import DirectedInputsClass
+
+
+def main() -> None:
+    """Demonstrate basic DirectedInputsClass usage."""
+    # Set up some environment variables for demonstration
+    os.environ["APP_DEBUG"] = "true"
+    os.environ["APP_PORT"] = "8080"
+    os.environ["APP_TIMEOUT"] = "30.5"
+    os.environ["APP_NAME"] = "MyApplication"
+
+    # Initialize with environment variables filtered by prefix
+    inputs = DirectedInputsClass(
+        from_environment=True,
+        env_prefix="APP_",
+        strip_env_prefix=True,
+    )
+
+    # Retrieve inputs with type conversion
+    inputs.get_input("DEBUG", is_bool=True)
+    inputs.get_input("PORT", is_integer=True)
+    inputs.get_input("TIMEOUT", is_float=True)
+    inputs.get_input("NAME")
+
+    # Demonstrate default values
+    inputs.get_input("LOG_LEVEL", default="INFO")
+
+    # Demonstrate freeze/thaw functionality
+    inputs.freeze_inputs()
+
+    inputs.thaw_inputs()
+
+
+if __name__ == "__main__":
+    main()

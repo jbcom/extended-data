@@ -1,0 +1,270 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "extended-data"
+version = "7.0.0"
+description = "Comprehensive Python data utilities for serialization, inputs, logging, vendor data, and workflows"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+readme = "README.md"
+keywords = [
+    "data",
+    "serialization",
+    "configuration",
+    "logging",
+    "connectors",
+    "aws",
+    "github",
+    "vault",
+    "mcp",
+]
+authors = [{ name = "Jon Bogaty", email = "jon@jonbogaty.com" }]
+maintainers = [{ name = "Jon Bogaty", email = "jon@jonbogaty.com" }]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Typing :: Typed",
+]
+dependencies = [
+    "case-insensitive-dictionary>=0.2.1",
+    "deepmerge>=2.0",
+    "gitpython>=3.1.0",
+    "httpx>=0.28.1",
+    "inflection>=0.5.1",
+    "more-itertools>=11.0.2",
+    "num2words>=0.5.14",
+    "orjson>=3.10.7",
+    "pydantic>=2.11.10,<2.12.dev0",
+    "python-hcl2>=4.3.4",
+    "pyyaml>=6.0.1",
+    "requests>=2.33.1",
+    "rich>=13.7.1",
+    "ruamel.yaml>=0.18.0",
+    "sortedcontainers>=2.4.0",
+    "tenacity>=8.4.1,<9.0.0",
+    "tomlkit>=0.13.2",
+    "validators>=0.22.0",
+    "wrapt>=1.16.0",
+]
+
+[project.urls]
+Documentation = "https://github.com/jbcom/extended-data#readme"
+Issues = "https://github.com/jbcom/extended-data/issues"
+Source = "https://github.com/jbcom/extended-data"
+Changelog = "https://github.com/jbcom/extended-data/blob/main/CHANGELOG.md"
+
+[project.optional-dependencies]
+aws = ["boto3>=1.42.92"]
+google = [
+    "google-api-python-client>=2.194.0",
+    "google-cloud-billing>=1.19.0",
+    "google-cloud-resource-manager>=1.17.0",
+]
+github = [
+    "PyGithub>=2.9.1",
+    "python-graphql-client>=0.4.3",
+]
+slack = ["slack-sdk>=3.41.0"]
+vault = ["hvac>=2.4.0"]
+zoom = []
+anthropic = ["anthropic>=0.96.0"]
+cursor = []
+meshy = [
+    "filelock>=3.29.0",
+    "numpy>=2.2.6",
+    "rich>=13.7.0,<15.0.0",
+    "validators>=0.35.0",
+]
+secrets = ["pyyaml>=6.0.3"]
+langchain = [
+    "langchain-core>=1.3.0",
+    "langsmith>=0.7.33",
+]
+crewai = [
+    "crewai[tools]>=1.14.2rc1",
+    "uv>=0.11.7",
+]
+strands = ["strands-agents>=1.36.0"]
+mcp = ["mcp>=1.26.0,<1.27.dev0"]
+ai = [
+    "crewai[tools]>=1.14.2rc1",
+    "langchain-core>=1.3.0",
+    "langsmith>=0.7.33",
+    "mcp>=1.26.0,<1.27.dev0",
+    "strands-agents>=1.36.0",
+    "uv>=0.11.7",
+]
+webhooks = [
+    "fastapi>=0.136.0",
+    "pyngrok>=8.0.0",
+    "uvicorn>=0.45.0",
+]
+vector = [
+    "sentence-transformers>=5.4.1",
+    "sqlite-vec>=0.1.9",
+]
+tests = [
+    "coverage[toml]>=7.6.0",
+    "hypothesis>=6.100.2",
+    "pytest>=9.0.3",
+    "pytest-asyncio>=1.3.0",
+    "pytest-cov>=7.1.0",
+    "pytest-mock>=3.15.1",
+    "pytest-timeout>=2.4.0",
+    "pytest-xdist>=3.6.1",
+]
+typing = [
+    "mypy>=1.20.1",
+    "sortedcontainers-stubs>=2.4.2",
+    "types-PyYAML>=6.0.12.20240724",
+    "types-requests>=2.33.0.20260408",
+]
+dev = [
+    "extended-data[tests,typing]",
+    "ruff>=0.8.0",
+]
+all = [
+    "anthropic>=0.96.0",
+    "boto3>=1.42.92",
+    "crewai[tools]>=1.14.2rc1",
+    "fastapi>=0.136.0",
+    "filelock>=3.29.0",
+    "google-api-python-client>=2.194.0",
+    "google-cloud-billing>=1.19.0",
+    "google-cloud-resource-manager>=1.17.0",
+    "hvac>=2.4.0",
+    "langchain-core>=1.3.0",
+    "langsmith>=0.7.33",
+    "mcp>=1.26.0,<1.27.dev0",
+    "numpy>=2.2.6",
+    "PyGithub>=2.9.1",
+    "pyngrok>=8.0.0",
+    "python-graphql-client>=0.4.3",
+    "sentence-transformers>=5.4.1",
+    "slack-sdk>=3.41.0",
+    "sqlite-vec>=0.1.9",
+    "strands-agents>=1.36.0",
+    "uv>=0.11.7",
+    "uvicorn>=0.45.0",
+]
+
+[project.scripts]
+extended-data = "extended_data.connectors.cli:main"
+extended-data-mcp = "extended_data.connectors.mcp:main"
+meshy-mcp = "extended_data.connectors.meshy.mcp:main"
+
+[project.entry-points."extended_data.connectors"]
+jules = "extended_data.connectors.google.jules:JulesConnector"
+google = "extended_data.connectors.google:GoogleConnector"
+google_cloud = "extended_data.connectors.google:GoogleCloudConnector"
+google_workspace = "extended_data.connectors.google:GoogleWorkspaceConnector"
+google_billing = "extended_data.connectors.google:GoogleBillingConnector"
+cursor = "extended_data.connectors.cursor:CursorConnector"
+github = "extended_data.connectors.github:GitHubConnector"
+meshy = "extended_data.connectors.meshy:MeshyConnector"
+anthropic = "extended_data.connectors.anthropic:AnthropicConnector"
+aws = "extended_data.connectors.aws:AWSConnector"
+slack = "extended_data.connectors.slack:SlackConnector"
+zoom = "extended_data.connectors.zoom:ZoomConnector"
+vault = "extended_data.connectors.vault:VaultConnector"
+secrets = "extended_data.connectors.secrets:SecretsConnector"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/extended_data"]
+
+[tool.pytest.ini_options]
+addopts = ["-ra", "--strict-markers", "--strict-config"]
+testpaths = ["tests"]
+xfail_strict = true
+asyncio_mode = "auto"
+timeout = 30
+timeout_method = "thread"
+
+[tool.coverage.run]
+branch = true
+parallel = true
+source = ["extended_data"]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true
+
+[tool.ruff]
+target-version = "py310"
+line-length = 120
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["ALL"]
+ignore = [
+    "ANN",
+    "ARG",
+    "BLE001",
+    "C901",
+    "COM",
+    "D105",
+    "D205",
+    "D415",
+    "D417",
+    "DTZ007",
+    "E402",
+    "E501",
+    "EM",
+    "ERA001",
+    "FBT",
+    "FIX",
+    "G",
+    "PERF",
+    "PLC0415",
+    "PLR0124",
+    "PLR0911",
+    "PLR0912",
+    "PLR0913",
+    "PLR0915",
+    "PLR2004",
+    "PLW0603",
+    "PTH",
+    "RET505",
+    "RUF012",
+    "S105",
+    "S110",
+    "S310",
+    "S603",
+    "SLF001",
+    "TCH",
+    "TD",
+    "TID252",
+    "TRY003",
+    "TRY300",
+    "TRY301",
+    "TRY401",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["B018", "BLE", "D", "DTZ", "INP001", "LOG001", "N802", "N803", "PLC0415", "PT", "S", "SIM117", "TRY"]
+"examples/**" = ["D", "EXE001", "INP001", "S110", "SIM105", "T201"]
+"src/extended_data/connectors/**" = ["D101", "D102", "D107"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint.isort]
+lines-between-types = 1
+lines-after-imports = 2
+
+[tool.mypy]
+strict = true
+pretty = true
+show_error_codes = true
+enable_error_code = ["ignore-without-code"]
+ignore_missing_imports = true
+warn_return_any = false

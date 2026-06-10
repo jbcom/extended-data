@@ -1,0 +1,29 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  test:
+    name: Python
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+      - uses: astral-sh/setup-uv@v8
+        with:
+          enable-cache: true
+      - run: uv sync --python 3.13 --extra tests --extra typing
+      - run: uvx ruff check src tests
+      - run: uv run pytest tests/core tests/logging tests/inputs
+      - run: uv run pytest tests/connectors/test_cloud_params.py tests/connectors/test_connectors.py tests/connectors/test_secrets.py tests/connectors/test_cli.py tests/connectors/test_mcp.py tests/connectors/meshy/test_models.py
+      - run: uv build
