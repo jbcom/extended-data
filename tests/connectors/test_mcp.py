@@ -53,6 +53,16 @@ def test_jsonable_tool_result_lowers_extended_sequence_payloads() -> None:
     assert _jsonable_tool_result(payload) == [{"service": "api"}]
 
 
+def test_jsonable_tool_result_redacts_sensitive_sequence_payloads() -> None:
+    """MCP result serialization should redact secrets inside array payloads."""
+    payload = ExtendedList([{"name": "api", "access_token": "tok_123"}, {"message": "client_secret=raw"}])
+
+    assert _jsonable_tool_result(payload) == [
+        {"name": "api", "access_token": "[REDACTED]"},
+        {"message": "client_secret=[REDACTED]"},
+    ]
+
+
 def test_jsonable_tool_result_lowers_extended_set_payloads() -> None:
     """MCP result serialization turns Tier 2 sets into JSON arrays."""
     payload = ExtendedSet({"api", "worker"})
