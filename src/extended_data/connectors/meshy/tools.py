@@ -551,11 +551,9 @@ def get_crewai_tools() -> list[Any]:
     Raises:
         ImportError: If crewai is not installed.
     """
-    try:
-        from crewai.tools import tool as crewai_tool
-    except ImportError as e:
-        msg = "crewai is required for CrewAI tools. Install CrewAI separately; extended-data does not install it."
-        raise ImportError(msg) from e
+    from extended_data.connectors._optional import get_crewai_tool_decorator
+
+    crewai_tool = get_crewai_tool_decorator()
 
     tools = []
     for defn in TOOL_DEFINITIONS:

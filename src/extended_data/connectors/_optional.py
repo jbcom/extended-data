@@ -58,6 +58,8 @@ PACKAGE_INSTALL_HINTS: dict[str, str] = {
     ),
 }
 
+CREWAI_TOOLS_IMPORT_ERROR = f"crewai is required for CrewAI tools.\n{PACKAGE_INSTALL_HINTS['crewai']}"
+
 
 def is_available(package: str) -> bool:
     """Check if a package is available for import.
@@ -115,6 +117,20 @@ def require_extra(package: str, extra: str | None = None) -> Any:
             f"Package '{package}' is required but not installed.\n"
             f"Install with: pip install extended-data[{extra_name}]"
         ) from e
+
+
+def get_crewai_tool_decorator() -> Any:
+    """Import the CrewAI tool decorator with extended-data's install guidance."""
+    try:
+        module = importlib.import_module("crewai.tools")
+    except ImportError as e:
+        raise ImportError(CREWAI_TOOLS_IMPORT_ERROR) from e
+
+    try:
+        return module.tool
+    except AttributeError as e:
+        msg = "crewai.tools.tool is required for CrewAI tools, but the installed CrewAI package does not expose it."
+        raise ImportError(msg) from e
 
 
 def require_any(*packages: str, extra: str) -> Any:

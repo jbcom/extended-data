@@ -125,6 +125,9 @@ pip install "extended-data[meshy,mcp]"
 CrewAI tool adapters are still importable when users install `crewai` directly,
 but `extended-data` does not expose a CrewAI extra while current CrewAI
 dependency trees pull vulnerable `chromadb` releases.
+All built-in CrewAI tool adapters use
+`extended_data.connectors._optional.get_crewai_tool_decorator()` so missing or
+incompatible CrewAI installs fail with the same user-managed install guidance.
 
 Optional dependency checks live in `extended_data.connectors._optional`; there
 are no old package compatibility shims in the public API. When a known built-in

@@ -346,11 +346,9 @@ def get_langchain_tools() -> list[Any]:
 
 def get_crewai_tools() -> list[Any]:
     """Get all AWS tools as CrewAI tools."""
-    try:
-        from crewai.tools import tool as crewai_tool
-    except ImportError as e:
-        msg = "crewai is required for CrewAI tools. Install CrewAI separately; extended-data does not install it."
-        raise ImportError(msg) from e
+    from extended_data.connectors._optional import get_crewai_tool_decorator
+
+    crewai_tool = get_crewai_tool_decorator()
 
     tools = []
     for defn in TOOL_DEFINITIONS:
