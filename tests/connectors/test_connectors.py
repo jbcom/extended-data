@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 import pytest
 
+from extended_data.connectors import registry
 from extended_data.connectors.connectors import ConnectorFabric
 from extended_data.connectors.registry import _register_builtins
 
@@ -71,6 +73,65 @@ class TestConnectorFabric:
         # Different params should return None
         cached = vc._get_cached_client("test_type", param="different")
         assert cached is None
+
+    @patch("extended_data.connectors.connectors.get_connector_class")
+    def test_get_connector_uses_registry_with_shared_context(self, mock_get_connector_class):
+        """Generic connector lookup injects shared fabric inputs and logging."""
+
+        class DummyConnector:
+            def __init__(self, *, logger, inputs, token):
+                self.logger = logger
+                self.inputs = inputs
+                self.token = token
+
+        vc = ConnectorFabric(inputs={"TOKEN": "from-inputs"}, from_environment=False)
+        mock_get_connector_class.return_value = DummyConnector
+
+        connector = vc.get_connector(" dummy ", token="direct-token")
+
+        assert isinstance(connector, DummyConnector)
+        assert connector.logger is vc.logging
+        assert connector.inputs is vc.inputs
+        assert connector.token == "direct-token"
+        mock_get_connector_class.assert_called_once_with("dummy")
+
+    @patch("extended_data.connectors.connectors.get_connector_class")
+    def test_get_connector_preserves_explicit_context_overrides(self, mock_get_connector_class):
+        """Generic connector lookup lets callers override injected fabric context."""
+
+        class DummyConnector:
+            def __init__(self, *, logger, inputs):
+                self.logger = logger
+                self.inputs = inputs
+
+        custom_logger = MagicMock()
+        custom_inputs = {"TOKEN": "custom"}
+        vc = ConnectorFabric(inputs={"TOKEN": "fabric"}, from_environment=False)
+        mock_get_connector_class.return_value = DummyConnector
+
+        connector = vc.get_connector("dummy", logger=custom_logger, inputs=custom_inputs)
+
+        assert connector.logger is custom_logger
+        assert connector.inputs is custom_inputs
+
+    @patch("extended_data.connectors.connectors.get_connector_class")
+    def test_get_connector_caches_by_name_and_kwargs(self, mock_get_connector_class):
+        """Generic connectors are cached independently by name and constructor args."""
+
+        class DummyConnector:
+            def __init__(self, **kwargs):
+                self.kwargs = kwargs
+
+        vc = ConnectorFabric(from_environment=False)
+        mock_get_connector_class.return_value = DummyConnector
+
+        first = vc.get_connector("dummy", token="one")
+        second = vc.get_connector(" DUMMY ", token="one")
+        third = vc.get_connector("dummy", token="two")
+
+        assert first is second
+        assert third is not first
+        assert mock_get_connector_class.call_count == 2
 
     @requires_boto3
     @patch("extended_data.connectors.aws.AWSConnector")
@@ -255,6 +316,33 @@ class TestConnectorFabric:
         if not _has_module("github"):
             with pytest.raises(ImportError, match="PyGithub"):
                 vc.get_github_client()
+
+    def test_get_connector_class_known_missing_builtin_has_install_hint(self, monkeypatch):
+        """Registry raises install guidance when a known built-in extra is missing."""
+        monkeypatch.setattr(registry, "_connector_cache", {})
+        monkeypatch.setitem(
+            registry._missing_builtin_connectors,
+            "github",
+            ImportError("No module named 'github'"),
+        )
+
+        with pytest.raises(ImportError, match=r"extended-data\[github\]"):
+            registry.get_connector_class(" github ")
+
+    def test_register_builtins_tracks_missing_optional_dependency(self, monkeypatch):
+        """Built-in discovery remembers optional dependency import failures."""
+        monkeypatch.setattr(registry, "_missing_builtin_connectors", {})
+
+        def fake_import_module(module_path):
+            if module_path == "extended_data.connectors.github":
+                raise ImportError("No module named 'github'")
+            return SimpleNamespace()
+
+        monkeypatch.setattr("importlib.import_module", fake_import_module)
+
+        _register_builtins({})
+
+        assert "github" in registry._missing_builtin_connectors
 
     def test_register_builtins_includes_specialized_google_connectors(self):
         """Registry builtins expose the advertised specialized Google connectors."""
