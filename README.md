@@ -192,6 +192,9 @@ without requiring callers to drop back to function-only utility code.
 `ExtendedString.to_bool()`, `to_int()`, `to_float()`, `to_path()`,
 `to_date()`, `to_datetime()`, and `to_time()` expose the Tier 1 scalar
 conversion family as direct string-container methods.
+`ExtendedString.reconstruct_special_type()` and the container
+`reconstruct_special_types()` methods restore booleans, numbers, dates, times,
+paths, and structured JSON/YAML values while staying in promoted Tier 2 data.
 Format encoders lower extended containers, including extended mapping keys, at
 the serialization boundary.
 `read_data_file()` is the direct file boundary for one-step read plus decode

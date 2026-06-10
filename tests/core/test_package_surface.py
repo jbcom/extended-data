@@ -162,6 +162,7 @@ def test_tier2_container_methods_expose_integrated_primitives() -> None:
     mapped = ExtendedTuple(("service", "region")).zipmap(("api", "us-east-1"))
     first_entry = ExtendedDict({"empty": "", "service": "api"}).first_non_empty_entry("empty", "service")
     selected = ExtendedList([None, "", {"service": "api"}]).first_non_empty()
+    reconstructed = ExtendedDict({"enabled": "true", "retries": "5"}).reconstruct_special_types()
 
     assert matched is True
     assert parsed_int == 42
@@ -173,6 +174,8 @@ def test_tier2_container_methods_expose_integrated_primitives() -> None:
     assert first_entry["service"].upper_first() == "Api"
     assert isinstance(selected, ExtendedDict)
     assert selected["service"].upper_first() == "Api"
+    assert isinstance(reconstructed, ExtendedDict)
+    assert reconstructed == {"enabled": True, "retries": 5}
 
 
 def test_connectors_root_exports_builtin_connector_classes() -> None:

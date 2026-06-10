@@ -13,7 +13,7 @@ from extended_data.primitives.sequences import filter_list, flatten_list
 from extended_data.primitives.splitting import split_list_by_type
 from extended_data.primitives.state import first_non_empty as primitive_first_non_empty
 from extended_data.primitives.state import is_nothing
-from extended_data.primitives.types import make_hashable
+from extended_data.primitives.types import make_hashable, reconstruct_special_types
 
 
 T = TypeVar("T")
@@ -116,6 +116,12 @@ class ExtendedList(UserList[T]):
         keys = [str(item) for item in to_builtin(self.data)]
         mapped_values = [str(item) for item in to_builtin(list(values))]
         return extend_data(primitive_zipmap(keys, mapped_values))
+
+    def reconstruct_special_types(self, *, fail_silently: bool = False) -> ExtendedList[Any]:
+        """Return a copy with string-like special values reconstructed."""
+        from extended_data.containers.factory import extend_data, to_builtin
+
+        return extend_data(reconstruct_special_types(to_builtin(self.data), fail_silently=fail_silently))
 
     def unique(self) -> ExtendedList[T]:
         """Return a copy with duplicate values removed while preserving order."""
@@ -241,6 +247,12 @@ class ExtendedTuple(tuple[T, ...]):
         mapped_values = [str(item) for item in to_builtin(list(values))]
         return extend_data(primitive_zipmap(keys, mapped_values))
 
+    def reconstruct_special_types(self, *, fail_silently: bool = False) -> ExtendedTuple[Any]:
+        """Return a copy with string-like special values reconstructed."""
+        from extended_data.containers.factory import extend_data, to_builtin
+
+        return extend_data(reconstruct_special_types(to_builtin(tuple(self)), fail_silently=fail_silently))
+
     def to_tuple(self) -> tuple[T, ...]:
         """Return a plain tuple copy."""
         return tuple(self)
@@ -299,6 +311,12 @@ class ExtendedSet(MutableSet[T]):
     def compact(self) -> ExtendedSet[T]:
         """Return a copy without values considered empty."""
         return ExtendedSet(item for item in self._data if not is_nothing(item))
+
+    def reconstruct_special_types(self, *, fail_silently: bool = False) -> ExtendedSet[Any]:
+        """Return a copy with string-like special values reconstructed."""
+        from extended_data.containers.factory import extend_data, to_builtin
+
+        return extend_data(reconstruct_special_types(to_builtin(self._data), fail_silently=fail_silently))
 
     def union(self, *others: Iterable[T]) -> ExtendedSet[T]:
         """Return a union with other iterables."""

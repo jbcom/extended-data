@@ -31,6 +31,7 @@ from extended_data.primitives.strings import (
     upper_first_char,
 )
 from extended_data.primitives.types import (
+    reconstruct_special_type,
     string_to_bool,
     string_to_date,
     string_to_datetime,
@@ -200,3 +201,9 @@ class ExtendedString(UserString):
     def to_time(self, *, raise_on_error: bool = False) -> datetime.time | None:
         """Return a time parsed from the string."""
         return string_to_time(self.data, raise_on_error=raise_on_error)
+
+    def reconstruct_special_type(self, *, fail_silently: bool = False) -> object:
+        """Return the string reconstructed as a known scalar or structured value."""
+        from extended_data.containers.factory import extend_data
+
+        return extend_data(reconstruct_special_type(self.data, fail_silently=fail_silently))

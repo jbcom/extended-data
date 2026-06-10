@@ -25,6 +25,7 @@ from extended_data.primitives.mappings import (
 )
 from extended_data.primitives.splitting import split_dict_by_type
 from extended_data.primitives.state import all_non_empty_in_dict, any_non_empty, yield_non_empty
+from extended_data.primitives.types import reconstruct_special_types
 
 
 class ExtendedDict(UserDict[str, Any]):
@@ -155,3 +156,9 @@ class ExtendedDict(UserDict[str, Any]):
         from extended_data.containers.factory import extend_data, to_builtin
 
         return extend_data(list(yield_non_empty(to_builtin(self.data), *keys)))
+
+    def reconstruct_special_types(self, *, fail_silently: bool = False) -> ExtendedDict:
+        """Return a copy with string-like special values reconstructed."""
+        from extended_data.containers.factory import extend_data, to_builtin
+
+        return extend_data(reconstruct_special_types(to_builtin(self.data), fail_silently=fail_silently))

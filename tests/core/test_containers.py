@@ -45,6 +45,10 @@ def test_extended_string_chains_primitive_transforms() -> None:
     assert ExtendedString("3.14").to_float() == 3.14
     assert ExtendedString("/tmp/service.yaml").to_path() == Path("/tmp/service.yaml")
     assert ExtendedString("2026-06-10").to_date() == datetime.date(2026, 6, 10)
+    assert ExtendedString("2026-06-10").reconstruct_special_type() == datetime.date(2026, 6, 10)
+    reconstructed_json = ExtendedString('{"service": "api"}').reconstruct_special_type()
+    assert isinstance(reconstructed_json, ExtendedDict)
+    assert reconstructed_json["service"].upper_first() == "Api"
     assert ExtendedString("2026-06-10T12:30:00").to_datetime() == datetime.datetime(
         2026,
         6,
@@ -84,6 +88,9 @@ def test_extended_dict_composes_mapping_primitives() -> None:
     """ExtendedDict composes Tier 1 mapping primitives."""
     value = ExtendedDict({"outer": {"inner": 1}, "items": [1, 1, 2], "empty": ""})
     typed = ExtendedDict({"service": "api", "retries": 2, "enabled": True, "ports": [80, 443]})
+    reconstructed = ExtendedDict(
+        {"enabled": "true", "retries": "5", "service": {"launched": "2026-06-10"}, "ports": ["80"]}
+    ).reconstruct_special_types()
 
     merged = value.deep_merge({"outer": {"other": 2}})
     filtered = merged.filter(allowlist=["outer"])
@@ -107,6 +114,9 @@ def test_extended_dict_composes_mapping_primitives() -> None:
     assert isinstance(first_entry, ExtendedDict)
     assert isinstance(entries, ExtendedList)
     assert all(isinstance(entry, ExtendedDict) for entry in entries)
+    assert isinstance(reconstructed, ExtendedDict)
+    assert isinstance(reconstructed["service"], ExtendedDict)
+    assert isinstance(reconstructed["ports"], ExtendedList)
     assert merged["outer"] == {"inner": 1, "other": 2}
     assert value["outer"] == {"inner": 1}
     assert value.flatten() == {"outer.inner": 1, "items.0": 1, "items.1": 1, "items.2": 2, "empty": ""}
@@ -125,6 +135,10 @@ def test_extended_dict_composes_mapping_primitives() -> None:
     assert first_entry["service"].upper_first() == "Api"
     assert entries == [{"service": "api"}, {"ports": [80, 443]}]
     assert isinstance(entries[1]["ports"], ExtendedList)
+    assert reconstructed["enabled"] is True
+    assert reconstructed["retries"] == 5
+    assert reconstructed["service"]["launched"] == datetime.date(2026, 6, 10)
+    assert reconstructed["ports"] == [80]
 
 
 def test_extended_dict_promotes_nested_values_on_mutation() -> None:
@@ -173,6 +187,7 @@ def test_extended_list_composes_sequence_primitives() -> None:
     typed = ExtendedList(["api", 2, True, ["nested"]])
     first_nested = ExtendedList([None, "", {"service": "api"}]).first_non_empty()
     mapped = ExtendedList(["service", "region", "ignored"]).zipmap(["api", "us-east-1"])
+    reconstructed = ExtendedList(["true", "5", {"launched": "2026-06-10"}]).reconstruct_special_types()
 
     assert value.flatten() == [1, 2, 3, "", 2]
     assert value.compact() == [1, [2, [3]], 2]
@@ -182,6 +197,9 @@ def test_extended_list_composes_sequence_primitives() -> None:
     assert isinstance(mapped, ExtendedDict)
     assert mapped == {"service": "api", "region": "us-east-1"}
     assert mapped["service"].upper_first() == "Api"
+    assert isinstance(reconstructed, ExtendedList)
+    assert isinstance(reconstructed[2], ExtendedDict)
+    assert reconstructed == [True, 5, {"launched": datetime.date(2026, 6, 10)}]
     assert value.filter(lambda item: isinstance(item, int)) == [1, 2]
     assert ExtendedList([1, 2]).map(lambda item: item * 2) == [2, 4]
     assert ExtendedList(["api", "worker", "db"]).filter_values(
@@ -229,10 +247,13 @@ def test_extended_list_promotes_nested_values_on_mutation() -> None:
 def test_extended_set_composes_set_operations() -> None:
     """ExtendedSet provides chainable set operations."""
     value = ExtendedSet({1, 2, 3, None})
+    reconstructed = ExtendedSet({"true", "2026-06-10"}).reconstruct_special_types()
 
     compact_repr = repr(value.compact())
     assert compact_repr.startswith("ExtendedSet(")
     assert "object at" not in compact_repr
+    assert isinstance(reconstructed, ExtendedSet)
+    assert reconstructed.to_set() == {True, datetime.date(2026, 6, 10)}
     assert value.compact().to_set() == {1, 2, 3}
     assert value.union({4}).to_set() == {1, 2, 3, 4, None}
     assert value.intersection({2, 3, 5}).to_set() == {2, 3}
@@ -273,6 +294,7 @@ def test_extended_tuple_preserves_immutable_sequence_shape() -> None:
     typed = ExtendedTuple(("api", 2, True, ["nested"]))
     first_nested = ExtendedTuple((None, "", {"service": "api"})).first_non_empty()
     mapped = ExtendedTuple(("service", "region", "ignored")).zipmap(("api", "us-east-1"))
+    reconstructed = ExtendedTuple(("true", "5", {"launched": "2026-06-10"})).reconstruct_special_types()
     split = typed.split_by_type(primitive_only=True)
 
     assert value.flatten() == (1, 2, 3, "", 2)
@@ -283,6 +305,9 @@ def test_extended_tuple_preserves_immutable_sequence_shape() -> None:
     assert isinstance(mapped, ExtendedDict)
     assert mapped == {"service": "api", "region": "us-east-1"}
     assert mapped["service"].upper_first() == "Api"
+    assert isinstance(reconstructed, ExtendedTuple)
+    assert isinstance(reconstructed[2], ExtendedDict)
+    assert reconstructed == (True, 5, {"launched": datetime.date(2026, 6, 10)})
     assert value.filter(lambda item: isinstance(item, int)) == (1, 2)
     assert value.map(lambda item: item * 2 if isinstance(item, int) else item) == (2, (2, [3]), "", 4)
     assert isinstance(split, ExtendedDict)

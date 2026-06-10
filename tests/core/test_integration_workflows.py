@@ -33,12 +33,13 @@ def test_integration_workflow_serialization_transformation_export():
 
         # 3. Transform: Convert types and transform strings
         transformed = {
-            "name": edt.to_pascal_case(loaded_data["project_name"]),
-            "config": edt.reconstruct_special_types(loaded_data["settings"]),
-            "item_list": [edt.humanize(i) for i in loaded_data["items"]],
+            "name": loaded_data["project_name"].to_pascal_case(),
+            "config": loaded_data["settings"].reconstruct_special_types(),
+            "item_list": [item.humanize() for item in loaded_data["items"]],
         }
 
         assert transformed["name"] == "MyGreatProject"
+        assert isinstance(transformed["config"], edt.ExtendedDict)
         assert transformed["config"]["enable_feature"] is True
         assert transformed["config"]["max_retries"] == 5
         assert transformed["item_list"] == ["Item one", "Item two"]

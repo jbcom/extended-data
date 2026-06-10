@@ -99,7 +99,10 @@ values containing `ExtendedString` parts, while `partition()` and
 helpers through `ExtendedString`. Scalar conversion paths `to_bool()`,
 `to_int()`, `to_float()`, `to_path()`, `to_date()`, `to_datetime()`, and
 `to_time()` expose the Tier 1 `string_to_*()` family directly on
-`ExtendedString`.
+`ExtendedString`. `ExtendedString.reconstruct_special_type()` and container
+`reconstruct_special_types()` methods restore booleans, numbers, paths, dates,
+times, and structured JSON/YAML values while keeping reconstructed collections
+inside Tier 2 containers.
 
 Container methods that return derived collections stay in Tier 2 as well:
 `ExtendedDict.filter()` returns an `ExtendedTuple` of accepted and rejected
