@@ -26,6 +26,7 @@ jobs:
           version: "0.11.19"
           enable-cache: true
       - run: uv sync --python 3.13 --extra tests --extra typing
+      - run: uv run --with pip-audit==2.10.0 pip-audit --skip-editable
       - run: uvx ruff check src tests examples README.md docs/package-surface.md
       - run: uv run mypy src/extended_data
       - run: uv run pytest tests

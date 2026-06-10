@@ -158,6 +158,7 @@ More detail lives in [`docs/package-surface.md`](docs/package-surface.md).
 
 ```bash
 uv sync --extra tests --extra typing
+uv run --with pip-audit==2.10.0 pip-audit --skip-editable
 uv run pytest
 uv run ruff check src tests
 uv run mypy src/extended_data
