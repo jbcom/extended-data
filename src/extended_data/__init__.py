@@ -62,7 +62,15 @@ from extended_data.primitives.mappings import (
     zipmap,
 )
 from extended_data.primitives.matching import is_non_empty_match, is_partial_match
+from extended_data.primitives.numbers import (
+    from_roman,
+    number_to_currency,
+    number_to_ordinal,
+    number_to_words,
+    to_roman,
+)
 from extended_data.primitives.sequences import filter_list, flatten_list
+from extended_data.primitives.serialization import normalize_data_encoding
 from extended_data.primitives.splitting import split_dict_by_type, split_list_by_type
 from extended_data.primitives.state import (
     all_non_empty,
@@ -225,6 +233,7 @@ __all__ = [
     "first_non_empty_value_from_map",
     "flatten_list",
     "flatten_map",
+    "from_roman",
     "get_available_methods",
     "get_caller",
     "get_connector",
@@ -252,6 +261,10 @@ __all__ = [
     "make_hashable",
     "make_raw_data_export_safe",
     "match_file_extensions",
+    "normalize_data_encoding",
+    "number_to_currency",
+    "number_to_ordinal",
+    "number_to_words",
     "ordinalize",
     "pluralize",
     "read_file",
@@ -277,6 +290,7 @@ __all__ = [
     "to_camel_case",
     "to_kebab_case",
     "to_pascal_case",
+    "to_roman",
     "to_snake_case",
     "truncate",
     "typeof",

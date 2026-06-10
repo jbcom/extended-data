@@ -20,6 +20,8 @@ from extended_data import (
     extend_data,
     encode_yaml,
     flatten_map,
+    normalize_data_encoding,
+    number_to_words,
     to_builtin,
 )
 ```
@@ -44,6 +46,8 @@ name = ExtendedString("API Response Value").to_snake_case()
 payload = ExtendedDict({"outer": {"inner": 1}}).flatten()
 items = ExtendedList([1, [2, [3]]]).flatten()
 tags = ExtendedSet({"prod", "prod", ""}).compact()
+words = number_to_words(42)
+encoding = normalize_data_encoding("YML")
 ```
 
 `ExtendedDict`, `ExtendedList`, and `ExtendedSet` recursively promote nested

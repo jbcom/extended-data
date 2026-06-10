@@ -3,16 +3,41 @@
 from __future__ import annotations
 
 from importlib.metadata import version
+from types import ModuleType
 
 import extended_data
 import extended_data.logging as lifecycle_logging
 import extended_data.secrets.tools as secrets_tools
 
-from extended_data import connectors, inputs, secrets
+from extended_data import connectors, containers, inputs, io, primitives, secrets, workflows
 from extended_data.connectors.connectors import ConnectorFabric
 from extended_data.connectors.registry import BUILTIN_CONNECTORS
 from extended_data.inputs import InputProvider
 from extended_data.logging import Logging
+
+
+PUBLIC_MODULES = (
+    extended_data,
+    primitives,
+    containers,
+    io,
+    inputs,
+    lifecycle_logging,
+    connectors,
+    secrets,
+    workflows,
+)
+
+
+def _assert_public_exports_resolve(module: ModuleType) -> None:
+    exports = module.__all__
+
+    assert len(exports) == len(set(exports)), f"{module.__name__}.__all__ contains duplicates"
+
+    for name in exports:
+        value = getattr(module, name)
+
+        assert value is not None, f"{module.__name__}.{name} exported None"
 
 
 def test_package_version_is_distribution_version() -> None:
@@ -24,6 +49,22 @@ def test_package_version_is_distribution_version() -> None:
     assert inputs.__version__ == expected
     assert lifecycle_logging.__version__ == expected
     assert secrets.__version__ == expected
+
+
+def test_public_all_exports_resolve_to_real_values() -> None:
+    """Public package modules should not advertise missing or sentinel exports."""
+    for module in PUBLIC_MODULES:
+        _assert_public_exports_resolve(module)
+
+
+def test_public_all_exports_are_import_star_visible() -> None:
+    """Star imports should expose exactly the advertised public names."""
+    for module in PUBLIC_MODULES:
+        namespace: dict[str, object] = {}
+        exec(f"from {module.__name__} import *", {}, namespace)
+        namespace.pop("__builtins__", None)
+
+        assert set(namespace) == set(module.__all__)
 
 
 def test_clean_major_version_public_names() -> None:
@@ -50,6 +91,9 @@ def test_root_exports_first_class_integrated_primitives() -> None:
     assert extended_data.SyncOperation is secrets.SyncOperation
     assert extended_data.OutputFormat is secrets.OutputFormat
     assert callable(extended_data.directed_inputs)
+    assert extended_data.number_to_words(42) == "forty-two"
+    assert extended_data.to_roman(42) == "XLII"
+    assert extended_data.normalize_data_encoding("YML") == "yaml"
     assert callable(extended_data.get_connector)
     assert callable(extended_data.list_connector_info)
 
