@@ -10,6 +10,8 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
+from extended_data.containers import extend_data
+
 
 class CreateMessageSchema(BaseModel):
     """Pydantic schema for the anthropic_create_message tool."""
@@ -51,15 +53,17 @@ def anthropic_create_message(
         system=system,
     )
 
-    return {
-        "id": response.id,
-        "text": response.text,
-        "model": response.model,
-        "usage": {
-            "input_tokens": response.usage.input_tokens,
-            "output_tokens": response.usage.output_tokens,
-        },
-    }
+    return extend_data(
+        {
+            "id": response.id,
+            "text": response.text,
+            "model": response.model,
+            "usage": {
+                "input_tokens": response.usage.input_tokens,
+                "output_tokens": response.usage.output_tokens,
+            },
+        }
+    )
 
 
 def anthropic_list_models() -> list[dict[str, Any]]:
@@ -73,7 +77,7 @@ def anthropic_list_models() -> list[dict[str, Any]]:
     connector = AnthropicConnector()
     models = connector.list_models()
 
-    return [{"id": m.id, "display_name": m.display_name} for m in models]
+    return extend_data([{"id": m.id, "display_name": m.display_name} for m in models])
 
 
 TOOL_DEFINITIONS = [

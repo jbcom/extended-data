@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock, patch
 
+from extended_data.containers import ExtendedDict, ExtendedList, ExtendedString
+
 
 def test_anthropic_list_models():
     """Test list_models tool."""
@@ -18,6 +20,9 @@ def test_anthropic_list_models():
         mock_connector_class.return_value = mock_connector
 
         result = anthropic_list_models()
+        assert isinstance(result, ExtendedList)
+        assert isinstance(result[0], ExtendedDict)
+        assert isinstance(result[0]["id"], ExtendedString)
         assert len(result) == 1
         assert result[0]["id"] == "claude-3-opus"
 
@@ -38,5 +43,8 @@ def test_anthropic_create_message():
         mock_connector_class.return_value = mock_connector
 
         result = anthropic_create_message(model="claude-3-opus", prompt="Hi")
+        assert isinstance(result, ExtendedDict)
+        assert isinstance(result["text"], ExtendedString)
+        assert isinstance(result["usage"], ExtendedDict)
         assert result["id"] == "msg_123"
         assert result["text"] == "Hello!"
