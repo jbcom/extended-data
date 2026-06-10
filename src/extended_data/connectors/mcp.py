@@ -1,7 +1,7 @@
 """Unified MCP Server for Extended Data Connectors.
 
 This module provides a single MCP (Model Context Protocol) server that
-exposes ALL extended data connectors as tools via the registry.
+exposes registered connector data methods as tools via the registry.
 
 Usage:
     # Command line
@@ -12,10 +12,10 @@ Usage:
     server = create_server()
 
 The server automatically discovers all registered connectors and exposes
-their public methods as MCP tools.
+methods that advertise Extended Data payload returns as MCP tools.
 
 This provides a standard MCP bridge between Python connectors and any MCP-aware
-client with zero custom glue code - just standard MCP over stdio.
+client without leaking raw SDK client factories or low-level HTTP helpers.
 """
 
 from __future__ import annotations
@@ -26,10 +26,13 @@ import json
 import sys
 
 from collections.abc import Callable, Iterable, Mapping
-from typing import Any, cast
+from typing import Any, cast, get_args, get_origin, get_type_hints
 
 from extended_data.connectors.registry import get_connector, list_connectors
-from extended_data.containers import to_builtin
+from extended_data.containers import ExtendedDict, ExtendedList, ExtendedSet, ExtendedString, ExtendedTuple, to_builtin
+
+
+_EXTENDED_PAYLOAD_TYPES = (ExtendedDict, ExtendedList, ExtendedSet, ExtendedString, ExtendedTuple)
 
 
 def _check_mcp_installed() -> bool:
@@ -92,15 +95,53 @@ def _get_method_schema(method: Callable[..., Any]) -> dict[str, Any]:
 
 
 def _get_public_methods(connector_class: builtins.type[Any]) -> list[tuple[str, Callable[..., Any]]]:
-    """Get public methods from a connector class (excluding dunder and private)."""
+    """Get public data methods from a connector class for MCP exposure."""
     methods = []
     for name in dir(connector_class):
         if name.startswith("_"):
             continue
         attr = getattr(connector_class, name, None)
-        if callable(attr) and not isinstance(attr, builtins.type):
-            methods.append((name, attr))
+        if _is_mcp_data_method(attr):
+            methods.append((name, cast(Callable[..., Any], attr)))
     return methods
+
+
+def _is_mcp_data_method(method: Any) -> bool:
+    """Return True when a public callable advertises an Extended Data payload."""
+    if not callable(method) or isinstance(method, builtins.type):
+        return False
+
+    qualname = getattr(method, "__qualname__", "")
+    if qualname.startswith(("VendorConnectorBase.", "InputProvider.")):
+        return False
+
+    return _annotation_includes_extended_payload(_return_annotation(method))
+
+
+def _return_annotation(method: Callable[..., Any]) -> Any:
+    """Resolve a method return annotation without failing on optional imports."""
+    try:
+        return get_type_hints(method).get("return")
+    except Exception:
+        return getattr(method, "__annotations__", {}).get("return")
+
+
+def _annotation_includes_extended_payload(annotation: Any) -> bool:
+    """Return True when an annotation includes a Tier 2 container type."""
+    if annotation is None:
+        return False
+
+    if isinstance(annotation, str):
+        return any(payload_type.__name__ in annotation for payload_type in _EXTENDED_PAYLOAD_TYPES)
+
+    if annotation in _EXTENDED_PAYLOAD_TYPES:
+        return True
+
+    origin = get_origin(annotation)
+    if origin in _EXTENDED_PAYLOAD_TYPES:
+        return True
+
+    return any(_annotation_includes_extended_payload(arg) for arg in get_args(annotation))
 
 
 def _jsonable_tool_result(result: Any) -> Any:

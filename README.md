@@ -106,6 +106,8 @@ use `ExtendedDict`, `ExtendedList`, and `ExtendedString` methods immediately.
 Data-returning AI tool wrappers expose the same `ExtendedDict`/`ExtendedList`
 payload contract; framework factory functions still return framework tool
 objects.
+The generic MCP bridge exposes only methods that advertise Extended Data
+payload returns.
 Raw SDK/client objects and raw transport responses remain available from the
 methods that explicitly return them.
 
