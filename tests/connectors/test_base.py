@@ -105,6 +105,43 @@ def test_request_data_decodes_response_body() -> None:
     assert mock_client.request.call_args.args[1] == "https://api.example.com/status"
 
 
+def test_request_uses_connector_max_retries(mocker) -> None:
+    """Connector subclasses control the retry attempt count."""
+
+    class TwoAttemptConnector(ExampleConnector):
+        MAX_RETRIES = 2
+
+    connector = TwoAttemptConnector(from_environment=False)
+    mocker.patch("extended_data.connectors.base.time.sleep")
+    mock_client = MagicMock()
+    mock_client.request.side_effect = [
+        httpx.Response(500, content=b"temporary failure"),
+        httpx.Response(200, content=b"ok"),
+    ]
+    connector._client = mock_client
+
+    response = connector.request("GET", "/status")
+
+    assert response.status_code == 200
+    assert mock_client.request.call_count == 2
+
+
+def test_request_rejects_invalid_max_retries() -> None:
+    """Invalid retry configuration fails before issuing a request."""
+
+    class InvalidRetryConnector(ExampleConnector):
+        MAX_RETRIES = 0
+
+    connector = InvalidRetryConnector(from_environment=False)
+    mock_client = MagicMock()
+    connector._client = mock_client
+
+    with pytest.raises(ValueError, match="MAX_RETRIES must be at least 1"):
+        connector.request("GET", "/status")
+
+    mock_client.request.assert_not_called()
+
+
 def test_get_tools_requires_langchain_extra(monkeypatch) -> None:
     """Base LangChain tool export should fail visibly when langchain-core is missing."""
     connector = _connector()

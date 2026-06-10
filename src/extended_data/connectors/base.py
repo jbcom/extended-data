@@ -38,7 +38,7 @@ from typing import TYPE_CHECKING, Any, ClassVar
 import httpx
 
 from tenacity import (
-    retry,
+    Retrying,
     retry_if_exception_type,
     stop_after_attempt,
     wait_exponential,
@@ -229,12 +229,14 @@ class VendorConnectorBase(InputProvider, ABC):
         endpoint = endpoint.lstrip("/")
         return f"{base}/{endpoint}"
 
-    @retry(
-        retry=retry_if_exception_type((RateLimitError, httpx.TimeoutException)),
-        stop=stop_after_attempt(5),
-        wait=wait_exponential(multiplier=1, min=2, max=30),
-    )
-    def request(
+    def _max_retry_attempts(self) -> int:
+        """Return the validated retry attempt count for this connector."""
+        if self.MAX_RETRIES < 1:
+            msg = f"{type(self).__name__}.MAX_RETRIES must be at least 1"
+            raise ValueError(msg)
+        return self.MAX_RETRIES
+
+    def _request_once(
         self,
         method: str,
         endpoint: str,
@@ -242,21 +244,7 @@ class VendorConnectorBase(InputProvider, ABC):
         headers: dict[str, str] | None = None,
         **kwargs: Any,
     ) -> httpx.Response:
-        """Make HTTP request with retries and rate limiting.
-
-        Args:
-            method: HTTP method (GET, POST, PUT, DELETE, etc.)
-            endpoint: API endpoint (relative to BASE_URL)
-            headers: Additional headers (merged with defaults)
-            **kwargs: Passed to httpx.request (json, params, data, etc.)
-
-        Returns:
-            httpx.Response
-
-        Raises:
-            RateLimitError: On 429 (will retry automatically)
-            ConnectorAPIError: On other API errors
-        """
+        """Make one HTTP request attempt with rate limiting and response handling."""
         self._rate_limit()
 
         url = self._build_url(endpoint)
@@ -287,6 +275,44 @@ class VendorConnectorBase(InputProvider, ABC):
             raise ConnectorAPIError(msg, status_code=response.status_code)
 
         return response
+
+    def request(
+        self,
+        method: str,
+        endpoint: str,
+        *,
+        headers: dict[str, str] | None = None,
+        **kwargs: Any,
+    ) -> httpx.Response:
+        """Make HTTP request with retries and rate limiting.
+
+        Args:
+            method: HTTP method (GET, POST, PUT, DELETE, etc.)
+            endpoint: API endpoint (relative to BASE_URL)
+            headers: Additional headers (merged with defaults)
+            **kwargs: Passed to httpx.request (json, params, data, etc.)
+
+        Returns:
+            httpx.Response
+
+        Raises:
+            RateLimitError: On 429 or 5xx responses after retries are exhausted.
+            ConnectorAPIError: On other API errors.
+        """
+        retryer = Retrying(
+            retry=retry_if_exception_type((RateLimitError, httpx.TimeoutException)),
+            stop=stop_after_attempt(self._max_retry_attempts()),
+            wait=wait_exponential(multiplier=1, min=2, max=30),
+            sleep=time.sleep,
+            reraise=True,
+        )
+
+        for attempt in retryer:
+            with attempt:
+                return self._request_once(method, endpoint, headers=headers, **kwargs)
+
+        message = "Retry loop exited without returning or raising."
+        raise RuntimeError(message)
 
     @staticmethod
     def _suffix_from_content_type(content_type: str | None) -> str | None:
