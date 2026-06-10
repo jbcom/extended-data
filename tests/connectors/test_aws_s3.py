@@ -63,7 +63,7 @@ class TestS3BucketOperations:
         assert "bucket1" in result
         # unhump_map transforms CamelCase keys to snake_case
         # If unhump was applied, we should have snake_case keys
-        # The actual transformation happens in extended_data.unhump_map
+        # The actual transformation happens in extended_data.primitives.unhump_map
 
     def test_get_bucket_location(self, aws_connector):
         """Test getting bucket location."""

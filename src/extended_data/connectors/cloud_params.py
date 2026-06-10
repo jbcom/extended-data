@@ -16,8 +16,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from extended_data import is_nothing, lower_first_char, upper_first_char
 from extended_data.containers import ExtendedDict, extend_data
+from extended_data.primitives import is_nothing, lower_first_char, upper_first_char
 
 
 def get_cloud_call_params(

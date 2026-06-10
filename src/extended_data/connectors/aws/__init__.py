@@ -19,7 +19,6 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 from typing import TYPE_CHECKING, Any
 
-from extended_data import is_nothing
 from extended_data.connectors._optional import require_extra
 from extended_data.connectors.aws.organizations import AWSOrganizationsMixin
 from extended_data.connectors.aws.s3 import AWSS3Mixin
@@ -27,6 +26,7 @@ from extended_data.connectors.aws.sso import AWSSSOmixin
 from extended_data.connectors.base import VendorConnectorBase
 from extended_data.containers import ExtendedDict, ExtendedList, ExtendedString, to_builtin
 from extended_data.logging import Logging
+from extended_data.primitives import is_nothing
 
 
 AWSSecretValue = str | ExtendedString | Mapping[str, Any] | None

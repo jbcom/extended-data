@@ -7,7 +7,7 @@ and other string manipulation utilities provided by the package.
 
 from __future__ import annotations
 
-from extended_data import (
+from extended_data.primitives import (
     humanize,
     ordinalize,
     pluralize,

@@ -75,15 +75,15 @@ def test_integration_workflow_data_transformation_pipeline():
     dict1 = {"a": {"b": 1}, "c": 3}
     dict2 = {"a": {"d": 4}, "e": 5}
 
-    # 1. Merge maps
-    merged = edt.deep_merge(dict1, dict2)
+    # 1. Merge maps through the Tier 2 container surface
+    merged = edt.ExtendedDict(dict1).deep_merge(dict2)
     assert merged["a"] == {"b": 1, "d": 4}
 
     # 2. Flatten map
-    flattened = edt.flatten_map(merged)
+    flattened = merged.flatten()
     assert flattened["a.b"] == 1
     assert flattened["a.d"] == 4
 
     # 3. Transform keys
-    unhumped = edt.unhump_map(merged)
+    unhumped = merged.unhump()
     assert "a" in unhumped

@@ -12,8 +12,8 @@ from typing import TYPE_CHECKING, Any
 
 from deepmerge import always_merger
 
-from extended_data import is_nothing, unhump_map
 from extended_data.containers import ExtendedDict, ExtendedList, ExtendedString, to_builtin
+from extended_data.primitives import is_nothing, unhump_map
 
 
 if TYPE_CHECKING:

@@ -30,7 +30,8 @@ CrewAI releases pull vulnerable `chromadb` versions transitively.
 ## Usage
 
 ```python
-from extended_data import ConnectorFabric, DataWorkflow, ExtendedDict, InputProvider, Logging, decode_file, decode_json, encode_yaml, number_to_words
+from extended_data import ConnectorFabric, DataWorkflow, ExtendedDict, InputProvider, Logging, decode_file, decode_json, encode_yaml
+from extended_data.primitives import number_to_words
 
 logger = Logging(logger_name="example")
 inputs = InputProvider(inputs={"GITHUB_OWNER": "jbcom"}, from_environment=False)
@@ -101,7 +102,8 @@ extended_data/
   workflows/    Tier 3 higher-order workflow composition
 ```
 
-Tier 1 primitive names are explicit in this major version. Use
+Tier 1 primitive names are explicit in this major version and live under
+`extended_data.primitives`, not the package root. Use
 `bytes_to_string()` for bytes-like coercion and `string_to_bool()`,
 `string_to_int()`, `string_to_float()`, `string_to_path()`,
 `string_to_date()`, `string_to_datetime()`, and `string_to_time()` for scalar

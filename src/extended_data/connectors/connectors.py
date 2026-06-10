@@ -6,8 +6,6 @@ import hashlib
 
 from typing import TYPE_CHECKING, Any
 
-from extended_data import get_default_dict, get_unique_signature, make_hashable
-
 # Import zoom directly (no extra deps)
 from extended_data.connectors.registry import (
     get_connector_class,
@@ -25,6 +23,7 @@ from extended_data.connectors.zoom import ZoomConnector
 from extended_data.containers import ExtendedDict, ExtendedList, ExtendedString
 from extended_data.inputs import InputProvider
 from extended_data.logging import Logging
+from extended_data.primitives import get_default_dict, get_unique_signature, make_hashable
 
 
 # Optional connectors - imported lazily when methods are called

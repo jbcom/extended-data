@@ -9,8 +9,8 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import TYPE_CHECKING, Any
 
-from extended_data import unhump_map
 from extended_data.containers import ExtendedDict, ExtendedList, ExtendedString, to_builtin
+from extended_data.primitives import unhump_map
 
 
 class GoogleCloudMixin:

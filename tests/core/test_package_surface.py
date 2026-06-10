@@ -70,9 +70,35 @@ def test_public_all_exports_are_import_star_visible() -> None:
 
 
 def test_root_exports_tiered_data_surfaces() -> None:
-    """The root package should expose the integrated primitive, container, IO, and workflow surfaces."""
-    for module in (primitives, containers, io, workflows):
+    """The root package should expose integrated container, IO, and workflow surfaces."""
+    for module in (containers, io, workflows):
         assert set(module.__all__) <= set(extended_data.__all__), module.__name__
+
+
+def test_tier1_utility_functions_are_not_root_exports() -> None:
+    """Pure utility functions should be imported from extended_data.primitives."""
+    tier1_utility_names = (
+        "all_non_empty",
+        "any_non_empty",
+        "deep_merge",
+        "filter_list",
+        "filter_map",
+        "flatten_list",
+        "flatten_map",
+        "is_nothing",
+        "normalize_data_encoding",
+        "number_to_words",
+        "sanitize_key",
+        "string_to_bool",
+        "to_roman",
+        "truncate",
+        "unhump_map",
+    )
+
+    for name in tier1_utility_names:
+        assert hasattr(primitives, name), name
+        assert not hasattr(extended_data, name), name
+        assert name not in extended_data.__all__
 
 
 def test_clean_major_version_public_names() -> None:
@@ -140,9 +166,6 @@ def test_root_exports_first_class_integrated_primitives() -> None:
     assert extended_data.SyncOperation is secrets.SyncOperation
     assert extended_data.OutputFormat is secrets.OutputFormat
     assert callable(extended_data.directed_inputs)
-    assert extended_data.number_to_words(42) == "forty-two"
-    assert extended_data.to_roman(42) == "XLII"
-    assert extended_data.normalize_data_encoding("YML") == "yaml"
     assert callable(extended_data.read_data_file)
     assert callable(extended_data.get_connector)
     assert callable(extended_data.list_connector_info)

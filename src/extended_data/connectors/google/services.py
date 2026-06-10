@@ -11,8 +11,8 @@ import datetime as dt
 from collections.abc import Mapping, MutableMapping
 from typing import TYPE_CHECKING, Any
 
-from extended_data import unhump_map
 from extended_data.containers import ExtendedDict, ExtendedList
+from extended_data.primitives import unhump_map
 
 
 _PROJECT_ACTIVITY_TIME_FIELDS = (

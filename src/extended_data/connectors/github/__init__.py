@@ -11,16 +11,16 @@ from typing import Any
 
 from ruamel.yaml import YAML
 
-from extended_data import (
-    decode_file,
-    get_encoding_for_file_path,
-    is_nothing,
-    wrap_raw_data_for_export,
-)
 from extended_data.connectors._optional import require_extra
 from extended_data.connectors.base import VendorConnectorBase
 from extended_data.containers import ExtendedDict, ExtendedList, ExtendedString, ExtendedTuple
+from extended_data.io import (
+    decode_file,
+    get_encoding_for_file_path,
+    wrap_raw_data_for_export,
+)
 from extended_data.logging import Logging
+from extended_data.primitives import is_nothing
 
 
 Auth: Any = None

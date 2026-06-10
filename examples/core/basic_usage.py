@@ -7,6 +7,8 @@ from extended_data import (
     ExtendedDict,
     ExtendedList,
     ExtendedString,
+)
+from extended_data.primitives import (
     all_non_empty,
     any_non_empty,
     first_non_empty,

@@ -29,17 +29,8 @@ from typing import (
 
 import orjson
 
-from extended_data import (
-    get_unique_signature,
-    is_nothing,
-    string_to_bool,
-    to_camel_case,
-    to_kebab_case,
-    to_pascal_case,
-    to_snake_case,
-    wrap_raw_data_for_export,
-)
 from extended_data.containers import ExtendedDict, ExtendedSet, to_builtin
+from extended_data.io import wrap_raw_data_for_export
 from extended_data.logging.const import VERBOSITY
 from extended_data.logging.handlers import add_console_handler, add_file_handler
 from extended_data.logging.log_types import LogLevel
@@ -48,6 +39,15 @@ from extended_data.logging.utils import (
     clear_existing_handlers,
     find_logger,
     get_log_level,
+)
+from extended_data.primitives import (
+    get_unique_signature,
+    is_nothing,
+    string_to_bool,
+    to_camel_case,
+    to_kebab_case,
+    to_pascal_case,
+    to_snake_case,
 )
 
 

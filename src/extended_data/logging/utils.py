@@ -8,7 +8,7 @@ from collections.abc import Mapping, Sequence
 from copy import copy, deepcopy
 from typing import Any
 
-from extended_data import make_raw_data_export_safe, wrap_raw_data_for_export
+from extended_data.io import make_raw_data_export_safe, wrap_raw_data_for_export
 from extended_data.logging.const import DEFAULT_LOG_LEVEL
 
 

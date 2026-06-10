@@ -8,8 +8,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, cast
 
-from extended_data import unhump_map
 from extended_data.containers import ExtendedDict, ExtendedList, to_builtin
+from extended_data.primitives import unhump_map
 
 
 class GoogleWorkspaceMixin:

@@ -10,8 +10,8 @@ import json
 from collections.abc import Mapping, Sequence
 from typing import TYPE_CHECKING, Any
 
-from extended_data import unhump_map
 from extended_data.containers import ExtendedDict, ExtendedList, ExtendedString, to_builtin
+from extended_data.primitives import unhump_map
 
 
 if TYPE_CHECKING:

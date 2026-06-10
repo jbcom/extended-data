@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import ast
 import importlib.util
 import os
 import py_compile
@@ -12,6 +13,8 @@ import sys
 from pathlib import Path
 
 import pytest
+
+from extended_data import primitives
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -51,6 +54,18 @@ FUNCTION_FIRST_BASIC_USAGE_HELPERS = (
     "sanitize_key",
     "truncate",
 )
+ROOT_ALLOWED_PRIMITIVE_IMPORTS = (
+    "decode_hcl2",
+    "decode_json",
+    "decode_toml",
+    "decode_yaml",
+    "encode_hcl2",
+    "encode_json",
+    "encode_toml",
+    "encode_yaml",
+    "is_yaml_data",
+)
+ROOT_DISALLOWED_TIER1_IMPORTS = tuple(sorted(set(primitives.__all__) - set(ROOT_ALLOWED_PRIMITIVE_IMPORTS)))
 
 
 def _readme_usage_snippet() -> str:
@@ -117,6 +132,25 @@ def test_basic_core_example_uses_container_first_operations() -> None:
     import_block = text.split("from extended_data import (", maxsplit=1)[1].split(")", maxsplit=1)[0]
 
     offenders = [name for name in FUNCTION_FIRST_BASIC_USAGE_HELPERS if name in import_block]
+
+    assert offenders == []
+
+
+def test_examples_do_not_import_tier1_utilities_from_root() -> None:
+    """Examples should import pure Tier 1 utilities from extended_data.primitives."""
+    offenders: list[str] = []
+
+    for example_path in ALL_EXAMPLES:
+        text = (REPO_ROOT / example_path).read_text(encoding="utf-8")
+        tree = ast.parse(text)
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.ImportFrom) or node.module != "extended_data":
+                continue
+
+            imported_names = {alias.name for alias in node.names}
+            disallowed = sorted(imported_names.intersection(ROOT_DISALLOWED_TIER1_IMPORTS))
+            if disallowed:
+                offenders.append(f"{example_path}: {', '.join(disallowed)}")
 
     assert offenders == []
 
