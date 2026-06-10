@@ -1,4 +1,4 @@
-"""Pytest fixtures for mesh-toolkit tests."""
+"""Pytest fixtures for Meshy connector tests."""
 
 from __future__ import annotations
 

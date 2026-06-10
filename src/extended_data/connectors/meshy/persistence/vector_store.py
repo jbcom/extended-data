@@ -27,7 +27,7 @@ Usage:
     existing = store.get_by_spec_hash("abc123")
 
 Requirements:
-    pip install mesh-toolkit[vector]
+    pip install "extended-data[meshy,vector]"
 
     The vector extra includes:
     - sqlite-vec (vector similarity extension)

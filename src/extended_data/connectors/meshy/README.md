@@ -1,84 +1,73 @@
-# Meshy SDK
+# Meshy Connector
 
-Modular Python package for generating game assets via Meshy API.
+Meshy support is part of `extended-data` and lives under
+`extended_data.connectors.meshy`. It provides functional API helpers, a
+`MeshyConnector` fabric adapter, job orchestration, webhook handling, AI tool
+adapters, and an MCP server.
 
-## Features
-
-- **All Endpoints**: Text-to-3D, Text-to-Texture, Image-to-3D
-- **Rate Limiting**: Automatic 429 handling with exponential backoff
-- **Type Safety**: Pydantic models for all API types
-- **Job Orchestration**: High-level `AssetGenerator` for game asset workflows
-- **Auto-Download**: Fetches GLB models, PBR textures, thumbnails
-- **Metadata**: JSON manifests for ECS integration
-
-## Quick Start
-
-```python
-from tools.meshy import AssetGenerator, otter_player_spec
-
-# Generate player character
-generator = AssetGenerator(output_root="client/public")
-manifest = generator.generate_model(otter_player_spec(), wait=True)
-
-print(f"Model: {manifest.model_path}")
-print(f"Textures: {manifest.texture_paths}")
-```
-
-## CLI Usage
+## Install
 
 ```bash
-python3 scripts/generate_assets.py
+pip install "extended-data[meshy]"
 ```
 
-Generates 6 core assets:
-- Player otter
-- 2 NPC otters
-- Bass fish
-- Cattail reeds
-- Wooden dock
+Use the `vector` extra only when you need local vector search over generated
+asset metadata:
 
-Assets output to `client/public/models/` with manifests.
-
-## API
-
-### Client
-
-```python
-from tools.meshy import MeshyClient, Text3DRequest, ArtStyle
-
-client = MeshyClient()  # Uses MESHY_API_KEY env var
-
-# Create task
-task_id = client.create_text_to_3d(Text3DRequest(
-    prompt="anthropomorphic otter character",
-    art_style=ArtStyle.REALISTIC,
-    target_polycount=15000,
-    enable_pbr=True
-))
-
-# Poll until complete
-result = client.poll_until_complete(task_id, task_type="text-to-3d")
-client.download_file(result.model_urls.glb, "output.glb")
+```bash
+pip install "extended-data[meshy,vector]"
 ```
 
-### Asset Generator
+## Functional API
 
 ```python
-from tools.meshy import AssetGenerator, GameAssetSpec, AssetIntent, ArtStyle
+from extended_data.connectors.meshy import text3d
+from extended_data.connectors.meshy.models import ArtStyle, Text3DRequest
 
-spec = GameAssetSpec(
-    intent=AssetIntent.CREATURE_PREY,
-    description="realistic marsh frog, green skin, sitting pose",
-    art_style=ArtStyle.REALISTIC,
-    target_polycount=5000,
-    output_path="models/creatures"
+task_id = text3d.create(
+    Text3DRequest(
+        mode="preview",
+        prompt="game-ready low-poly wooden crate with metal bands",
+        art_style=ArtStyle.REALISTIC,
+        target_polycount=5000,
+        enable_pbr=True,
+    )
 )
 
-generator = AssetGenerator()
-manifest = generator.generate_model(spec, wait=True)
+result = text3d.poll(task_id)
+print(result.status)
 ```
 
-### Webhooks
+The package also exposes `image3d`, `rigging`, `animate`, and `retexture`
+modules from `extended_data.connectors.meshy`.
+
+## Connector Fabric
+
+```python
+from extended_data import ConnectorFabric
+
+fabric = ConnectorFabric(inputs={"MESHY_API_KEY": "..."}, from_environment=False)
+meshy = fabric.get_connector("meshy")
+```
+
+## Job Orchestration
+
+```python
+from extended_data.connectors.meshy.jobs import AssetGenerator, example_character_spec
+
+generator = AssetGenerator(output_root="client/public")
+manifest = generator.generate_model(example_character_spec(), wait=True)
+
+print(manifest.model_path)
+```
+
+Built-in example specs are available as:
+
+- `example_character_spec()`
+- `example_prop_spec()`
+- `example_environment_spec()`
+
+## Webhooks
 
 `WebhookHandler` can verify raw request bodies before parsing or mutating task
 state. Configure a shared secret and pass the raw body plus the signature header
@@ -96,19 +85,18 @@ Base64, and `sha256=`-prefixed values are accepted. If you do not configure a
 secret, `verify_signature()` returns `False` instead of accepting unsigned
 payloads.
 
-### Preset Specs
+## Tools And MCP
 
-Pre-configured specs for common assets:
+```python
+from extended_data.connectors.meshy.tools import get_langchain_tools, get_strands_tools, get_tools
 
-- `otter_player_spec()` - Player character
-- `otter_npc_male_spec()` - Male NPC
-- `otter_npc_female_spec()` - Female NPC
-- `fish_bass_spec()` - Bass fish
-- `cattail_reeds_spec()` - Marsh vegetation
-- `wooden_dock_spec()` - Dock structure
+tool_definitions = get_tools()
+langchain_tools = get_langchain_tools()
+strands_tools = get_strands_tools()
+```
 
-## Dependencies
+Run the Meshy MCP server with:
 
-- `httpx` - HTTP client
-- `tenacity` - Retry logic
-- `pydantic` - Type validation
+```bash
+meshy-mcp
+```
