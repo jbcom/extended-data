@@ -13,7 +13,15 @@ from extended_data.connectors.cli import cmd_call, cmd_info, cmd_list, cmd_metho
 from extended_data.containers import ExtendedDict
 
 
-def test_cli_list():
+class ExampleConnector:
+    """Tiny connector shell for CLI call-surface tests."""
+
+    def fetch(self, enabled: bool = False, count: int = 0) -> ExtendedDict:
+        """Fetch example data."""
+        return ExtendedDict({"enabled": enabled, "count": count})
+
+
+def test_cli_list() -> None:
     """Test the list command."""
     args = argparse.Namespace(json=False, available_only=False)
     with patch("sys.stdout.write") as mock_write:
@@ -26,7 +34,7 @@ def test_cli_list():
         assert "google" in output
 
 
-def test_cli_list_json():
+def test_cli_list_json() -> None:
     """List command can emit machine-readable connector metadata."""
     args = argparse.Namespace(json=True, available_only=False)
     with patch("sys.stdout.write") as mock_write:
@@ -39,7 +47,7 @@ def test_cli_list_json():
     assert "api_key_env" not in output
 
 
-def test_cli_info():
+def test_cli_info() -> None:
     """Info command prints connector metadata."""
     args = argparse.Namespace(connector=" github ", json=False)
     with patch("sys.stdout.write") as mock_write:
@@ -51,28 +59,30 @@ def test_cli_info():
     assert "install: pip install extended-data[github]" in output
 
 
-def test_cli_methods_lists_public_methods():
-    """Methods command prints public callable methods with descriptions."""
+def test_cli_methods_lists_public_methods() -> None:
+    """Methods command prints public data methods with descriptions."""
     args = argparse.Namespace(connector="meshy")
     with patch("sys.stdout.write") as mock_write:
         exit_code = cmd_methods(args)
 
     assert exit_code == 0
     output = "".join(call.args[0] for call in mock_write.call_args_list if call.args)
-    assert "request_data" in output
-    assert "Decode an HTTP response body" in output
+    assert "text3d_generate" in output
+    assert "request_data" not in output
+    assert "decode_response" not in output
 
 
 def test_cli_methods_json_lists_public_methods() -> None:
-    """Methods command can emit machine-readable method metadata."""
+    """Methods command can emit machine-readable data-method metadata."""
     args = argparse.Namespace(connector="meshy", json=True)
     with patch("sys.stdout.write") as mock_write:
         exit_code = cmd_methods(args)
 
     assert exit_code == 0
     methods = json.loads(mock_write.call_args.args[0])
-    decode_response = next(method for method in methods if method["name"] == "decode_response")
-    assert decode_response["description"].startswith("Decode an HTTP response body")
+    method_names = {method["name"] for method in methods}
+    assert "text3d_generate" in method_names
+    assert "request_data" not in method_names
 
 
 def test_cli_call_parses_dynamic_keyword_arguments() -> None:
@@ -82,6 +92,7 @@ def test_cli_call_parses_dynamic_keyword_arguments() -> None:
 
     with (
         patch("sys.argv", ["extended-data", "call", "example", "fetch", "--enabled", "true", "--count", "3"]),
+        patch("extended_data.connectors.cli.get_connector_class", return_value=ExampleConnector),
         patch("extended_data.connectors.cli.get_connector", return_value=connector),
         patch("sys.stdout.write") as mock_write,
     ):
@@ -100,6 +111,7 @@ def test_cli_call_accepts_json_flag_after_method() -> None:
     args = argparse.Namespace(connector="example", method="fetch", extra=["--json"], json=False)
 
     with (
+        patch("extended_data.connectors.cli.get_connector_class", return_value=ExampleConnector),
         patch("extended_data.connectors.cli.get_connector", return_value=connector),
         patch("sys.stdout.write") as mock_write,
     ):
@@ -117,6 +129,7 @@ def test_cli_call_serializes_extended_containers_as_data() -> None:
     args = argparse.Namespace(connector="example", method="fetch", extra=[], json=True)
 
     with (
+        patch("extended_data.connectors.cli.get_connector_class", return_value=ExampleConnector),
         patch("extended_data.connectors.cli.get_connector", return_value=connector),
         patch("sys.stdout.write") as mock_write,
     ):
@@ -132,13 +145,25 @@ def test_cli_call_reports_missing_method() -> None:
     connector = object()
 
     with (
+        patch("extended_data.connectors.cli.get_connector_class", return_value=ExampleConnector),
         patch("extended_data.connectors.cli.get_connector", return_value=connector),
         patch("sys.stderr.write") as mock_write,
     ):
         exit_code = cmd_call(args)
 
     assert exit_code == 1
-    assert "has no callable method" in mock_write.call_args.args[0]
+    assert "has no exposed data method" in mock_write.call_args.args[0]
+
+
+def test_cli_call_rejects_raw_connector_helpers() -> None:
+    """Call command should not expose raw/base helpers at the serialization boundary."""
+    args = argparse.Namespace(connector="meshy", method="request_data", extra=[], json=False)
+
+    with patch("sys.stderr.write") as mock_write:
+        exit_code = cmd_call(args)
+
+    assert exit_code == 1
+    assert "has no exposed data method" in mock_write.call_args.args[0]
 
 
 def test_cli_call_reports_connector_errors() -> None:
@@ -146,6 +171,7 @@ def test_cli_call_reports_connector_errors() -> None:
     args = argparse.Namespace(connector="example", method="fetch", extra=[], json=False)
 
     with (
+        patch("extended_data.connectors.cli.get_connector_class", return_value=ExampleConnector),
         patch("extended_data.connectors.cli.get_connector", side_effect=RuntimeError("boom")),
         patch("sys.stderr.write") as mock_write,
     ):
@@ -155,7 +181,7 @@ def test_cli_call_reports_connector_errors() -> None:
     assert "boom" in mock_write.call_args.args[0]
 
 
-def test_cli_main_help():
+def test_cli_main_help() -> None:
     """Test main CLI entry point with help."""
     with patch("sys.argv", ["extended-data", "--help"]):
         with pytest.raises(SystemExit) as exc:

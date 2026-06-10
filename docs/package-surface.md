@@ -211,9 +211,9 @@ first-class `ExtendedDict`, `ExtendedList`, `ExtendedTuple`, and
 handoff boundaries.
 Data-returning AI tool wrapper functions follow the same contract and annotate
 their payload returns as `ExtendedDict` or `ExtendedList[ExtendedDict]`.
-The generic MCP bridge exposes only connector methods that advertise Extended
-Data payload returns, so raw SDK client factories and low-level HTTP helpers do
-not leak into MCP tool catalogs.
+The generic CLI `call` command and MCP bridge expose only connector methods
+that advertise Extended Data payload returns, so raw SDK client factories and
+low-level HTTP helpers do not leak into serialized tool catalogs.
 LangChain, CrewAI, Strands, and auto-detection factory functions still return
 plain framework tool object lists.
 

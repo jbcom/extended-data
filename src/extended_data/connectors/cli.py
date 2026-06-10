@@ -7,7 +7,7 @@ Usage:
     # List available connectors
     extended-data list
 
-    # Call any connector method
+    # Call any connector data method
     extended-data call <connector> <method> [--arg value ...]
 
     # Start MCP server
@@ -29,6 +29,7 @@ from extended_data.connectors.registry import (
     get_connector_info,
     list_connector_info,
 )
+from extended_data.connectors.surface import connector_data_methods, is_connector_data_method
 from extended_data.containers import ExtendedList
 from extended_data.containers.factory import to_builtin
 
@@ -142,6 +143,12 @@ def cmd_call(args: argparse.Namespace) -> int:
             i += 1
 
     try:
+        cls = get_connector_class(connector_name)
+        class_method = getattr(cls, method_name, None)
+        if not is_connector_data_method(class_method):
+            _write_stderr(f"Connector {connector_name!r} has no exposed data method {method_name!r}")
+            return 1
+
         connector = get_connector(connector_name)
         method = getattr(connector, method_name, None)
 
@@ -175,13 +182,7 @@ def cmd_methods(args: argparse.Namespace) -> int:
         return 1
 
     methods: list[dict[str, str]] = []
-    for name in sorted(dir(cls)):
-        if name.startswith("_"):
-            continue
-        attr = getattr(cls, name, None)
-        if not callable(attr) or isinstance(attr, type):
-            continue
-
+    for name, attr in connector_data_methods(cls):
         doc = attr.__doc__.split("\n")[0].strip()[:50] if attr.__doc__ else "No description"
         methods.append({"name": name, "description": doc})
 

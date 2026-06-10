@@ -195,6 +195,7 @@ RAW_CONNECTOR_BOUNDARIES = {
     ("src/extended_data/connectors/base.py", "VendorConnectorBase.get_tools"),
     ("src/extended_data/connectors/connectors.py", "ConnectorFabric.list_connectors"),
     ("src/extended_data/connectors/registry.py", "list_connectors"),
+    ("src/extended_data/connectors/surface.py", "connector_data_methods"),
     ("src/extended_data/connectors/zoom/__init__.py", "ZoomConnector.get_headers"),
 }
 
