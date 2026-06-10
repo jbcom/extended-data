@@ -10,6 +10,8 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
+from extended_data.containers import extend_data
+
 
 # =============================================================================
 # Input Schemas
@@ -66,11 +68,11 @@ def validate_config(config_path: str) -> dict[str, Any]:
     connector = SecretsConnector()
     is_valid, message = connector.validate_config(config_path)
 
-    return {
+    return extend_data({
         "valid": is_valid,
         "message": message,
         "config_path": config_path,
-    }
+    })
 
 
 def run_pipeline(
@@ -126,7 +128,7 @@ def run_pipeline(
 
     result = connector.run_pipeline(config_path, options)
 
-    return {
+    return extend_data({
         "success": result.success,
         "target_count": result.target_count,
         "secrets_processed": result.secrets_processed,
@@ -137,7 +139,7 @@ def run_pipeline(
         "duration_ms": result.duration_ms,
         "error_message": result.error_message,
         "diff_output": result.diff_output if dry_run else "",
-    }
+    })
 
 
 def dry_run(config_path: str) -> dict[str, Any]:
@@ -154,7 +156,7 @@ def dry_run(config_path: str) -> dict[str, Any]:
     connector = SecretsConnector()
     result = connector.dry_run(config_path)
 
-    return {
+    return extend_data({
         "success": result.success,
         "target_count": result.target_count,
         "secrets_would_add": result.secrets_added,
@@ -163,7 +165,7 @@ def dry_run(config_path: str) -> dict[str, Any]:
         "secrets_unchanged": result.secrets_unchanged,
         "diff_output": result.diff_output,
         "error_message": result.error_message,
-    }
+    })
 
 
 def get_config_info(config_path: str) -> dict[str, Any]:
@@ -180,7 +182,7 @@ def get_config_info(config_path: str) -> dict[str, Any]:
     connector = SecretsConnector()
     info = connector.get_config_info(config_path)
 
-    return {
+    return extend_data({
         "valid": info.valid,
         "error_message": info.error_message,
         "source_count": info.source_count,
@@ -190,7 +192,7 @@ def get_config_info(config_path: str) -> dict[str, Any]:
         "has_merge_store": info.has_merge_store,
         "vault_address": info.vault_address,
         "aws_region": info.aws_region,
-    }
+    })
 
 
 def get_targets(config_path: str) -> dict[str, Any]:
@@ -207,11 +209,11 @@ def get_targets(config_path: str) -> dict[str, Any]:
     connector = SecretsConnector()
     targets, error = connector.get_targets(config_path)
 
-    return {
+    return extend_data({
         "targets": targets,
         "count": len(targets),
         "error_message": error,
-    }
+    })
 
 
 def get_sources(config_path: str) -> dict[str, Any]:
@@ -228,11 +230,11 @@ def get_sources(config_path: str) -> dict[str, Any]:
     connector = SecretsConnector()
     sources, error = connector.get_sources(config_path)
 
-    return {
+    return extend_data({
         "sources": sources,
         "count": len(sources),
         "error_message": error,
-    }
+    })
 
 
 # =============================================================================

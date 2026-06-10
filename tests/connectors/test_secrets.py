@@ -7,13 +7,23 @@ import pytest
 import yaml
 
 from extended_data.connectors.secrets import (
+    ConfigInfo,
     OutputFormat,
     SecretsConnector,
     SyncOperation,
     SyncOptions,
     SyncResult,
 )
-from extended_data.connectors.secrets.tools import RunPipelineSchema, run_pipeline
+from extended_data.connectors.secrets.tools import (
+    RunPipelineSchema,
+    dry_run,
+    get_config_info,
+    get_sources,
+    get_targets,
+    run_pipeline,
+    validate_config,
+)
+from extended_data.containers import ExtendedDict, ExtendedList, ExtendedString
 
 
 @pytest.fixture
@@ -313,6 +323,8 @@ def test_run_pipeline_tool_default_continue_on_error_matches_cli(mock_connector_
     options = mock_connector.run_pipeline.call_args.args[1]
     assert isinstance(options, SyncOptions)
     assert options.continue_on_error is True
+    assert isinstance(result, ExtendedDict)
+    assert isinstance(result["secrets_processed"], int)
     assert result["success"] is True
     assert result["secrets_processed"] == 3
 
@@ -333,3 +345,84 @@ def test_run_pipeline_schema_default_continue_on_error_matches_cli() -> None:
     schema = RunPipelineSchema(config_path="config.yaml")
 
     assert schema.continue_on_error is True
+
+
+@patch("extended_data.connectors.secrets.SecretsConnector")
+def test_validate_config_tool_returns_extended_payload(mock_connector_class: MagicMock) -> None:
+    mock_connector = mock_connector_class.return_value
+    mock_connector.validate_config.return_value = (True, "valid config")
+
+    result = validate_config("config.yaml")
+
+    assert isinstance(result, ExtendedDict)
+    assert isinstance(result["message"], ExtendedString)
+    assert result["valid"] is True
+    assert result["config_path"] == "config.yaml"
+
+
+@patch("extended_data.connectors.secrets.SecretsConnector")
+def test_dry_run_tool_returns_extended_payload(mock_connector_class: MagicMock) -> None:
+    mock_connector = mock_connector_class.return_value
+    mock_connector.dry_run.return_value = SyncResult(
+        success=True,
+        target_count=2,
+        secrets_added=1,
+        secrets_modified=2,
+        secrets_removed=0,
+        secrets_unchanged=3,
+        diff_output="diff",
+    )
+
+    result = dry_run("config.yaml")
+
+    assert isinstance(result, ExtendedDict)
+    assert isinstance(result["diff_output"], ExtendedString)
+    assert result["secrets_would_add"] == 1
+
+
+@patch("extended_data.connectors.secrets.SecretsConnector")
+def test_get_config_info_tool_returns_extended_payload(mock_connector_class: MagicMock) -> None:
+    mock_connector = mock_connector_class.return_value
+    mock_connector.get_config_info.return_value = ConfigInfo(
+        valid=True,
+        source_count=1,
+        target_count=1,
+        sources=["vault/prod"],
+        targets=["aws/prod"],
+        has_merge_store=True,
+        vault_address="https://vault.example.com",
+        aws_region="us-east-1",
+    )
+
+    result = get_config_info("config.yaml")
+
+    assert isinstance(result, ExtendedDict)
+    assert isinstance(result["sources"], ExtendedList)
+    assert isinstance(result["sources"][0], ExtendedString)
+    assert result["targets"] == ["aws/prod"]
+
+
+@patch("extended_data.connectors.secrets.SecretsConnector")
+def test_get_targets_tool_returns_extended_payload(mock_connector_class: MagicMock) -> None:
+    mock_connector = mock_connector_class.return_value
+    mock_connector.get_targets.return_value = (["prod", "dev"], "")
+
+    result = get_targets("config.yaml")
+
+    assert isinstance(result, ExtendedDict)
+    assert isinstance(result["targets"], ExtendedList)
+    assert isinstance(result["targets"][0], ExtendedString)
+    assert result["count"] == 2
+
+
+@patch("extended_data.connectors.secrets.SecretsConnector")
+def test_get_sources_tool_returns_extended_payload(mock_connector_class: MagicMock) -> None:
+    mock_connector = mock_connector_class.return_value
+    mock_connector.get_sources.return_value = (["vault/prod"], "")
+
+    result = get_sources("config.yaml")
+
+    assert isinstance(result, ExtendedDict)
+    assert isinstance(result["sources"], ExtendedList)
+    assert isinstance(result["sources"][0], ExtendedString)
+    assert result["count"] == 1
