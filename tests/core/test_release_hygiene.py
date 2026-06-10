@@ -12,8 +12,10 @@ import tomlkit
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 WORKFLOW_ROOT = REPO_ROOT / ".github" / "workflows"
-ACTION_REF_RE = re.compile(r"^\s*(?:-\s*)?uses:\s*([^#\s]+)")
+ACTION_REF_WITH_COMMENT_RE = re.compile(r"^\s*(?:-\s*)?uses:\s*([^#\s]+)(?:\s+#\s*(\S+))?")
 PINNED_SHA_RE = re.compile(r"^[0-9a-f]{40}$")
+ACTION_VERSION_COMMENT_RE = re.compile(r"^v\d+\.\d+\.\d+$")
+PIN_TABLE_RE = re.compile(r"^\|\s*`([^`]+)`\s*\|\s*`([^`]+)`\s*\|\s*`([0-9a-f]{40})`\s*\|$")
 PUBLIC_TEXT_ROOTS = (
     REPO_ROOT / "src",
     REPO_ROOT / "docs",
@@ -41,13 +43,13 @@ def _pyproject() -> tomlkit.TOMLDocument:
     return tomlkit.parse((REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8"))
 
 
-def test_workflow_actions_are_pinned_to_exact_shas() -> None:
-    """Remote workflow actions should use immutable action commit SHAs."""
+def _workflow_action_pins() -> dict[str, tuple[str, str]]:
+    pins: dict[str, tuple[str, str]] = {}
     offenders: list[str] = []
 
     for path in sorted(WORKFLOW_ROOT.glob("*.yml")) + sorted(WORKFLOW_ROOT.glob("*.yaml")):
         for line_number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
-            match = ACTION_REF_RE.match(line)
+            match = ACTION_REF_WITH_COMMENT_RE.match(line)
             if match is None:
                 continue
 
@@ -55,12 +57,49 @@ def test_workflow_actions_are_pinned_to_exact_shas() -> None:
             if uses.startswith(("./", "docker://")):
                 continue
 
-            _, separator, ref = uses.rpartition("@")
+            action, separator, ref = uses.rpartition("@")
+            version = match.group(2)
             if not separator or PINNED_SHA_RE.fullmatch(ref) is None:
                 relative_path = path.relative_to(REPO_ROOT)
                 offenders.append(f"{relative_path}:{line_number}: {uses}")
+                continue
+            if version is None or ACTION_VERSION_COMMENT_RE.fullmatch(version) is None:
+                relative_path = path.relative_to(REPO_ROOT)
+                offenders.append(f"{relative_path}:{line_number}: missing stable version comment for {uses}")
+                continue
+
+            existing = pins.setdefault(action, (version, ref))
+            if existing != (version, ref):
+                relative_path = path.relative_to(REPO_ROOT)
+                offenders.append(f"{relative_path}:{line_number}: conflicting pin for {action}")
 
     assert offenders == []
+    return pins
+
+
+def _publishing_checklist_pins() -> dict[str, tuple[str, str]]:
+    pins: dict[str, tuple[str, str]] = {}
+    checklist = (REPO_ROOT / "docs" / "PUBLISHING_CHECKLIST.md").read_text(encoding="utf-8")
+
+    for line in checklist.splitlines():
+        match = PIN_TABLE_RE.match(line.strip())
+        if match is None:
+            continue
+        action, version, ref = match.groups()
+        pins[action] = (version, ref)
+
+    assert pins, "docs/PUBLISHING_CHECKLIST.md must list current workflow action pins"
+    return pins
+
+
+def test_workflow_actions_are_pinned_to_exact_shas() -> None:
+    """Remote workflow actions should use immutable action commit SHAs."""
+    assert _workflow_action_pins()
+
+
+def test_publishing_checklist_matches_workflow_action_pins() -> None:
+    """The release checklist should document the exact workflow action pins."""
+    assert _publishing_checklist_pins() == _workflow_action_pins()
 
 
 def test_public_text_does_not_reference_old_project_origins() -> None:
