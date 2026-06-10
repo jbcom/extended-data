@@ -12,6 +12,7 @@ pytest.importorskip("botocore")
 
 from botocore.exceptions import ClientError
 
+from extended_data.containers import ExtendedDict, ExtendedList, ExtendedString, extend_data
 from extended_data.connectors.aws import AWSConnector
 
 
@@ -139,6 +140,8 @@ class TestAWSConnector:
         filters = [{"Key": "description", "Values": ["prod"]}]
         secrets = connector.list_secrets(filters=filters, name_prefix="/vendors/")
 
+        assert isinstance(secrets, ExtendedDict)
+        assert isinstance(secrets["/vendors/foo"], ExtendedString)
         assert secrets == {"/vendors/foo": "arn:foo", "/vendors/bar": "arn:bar"}
         connector.get_aws_client.assert_called_once_with(
             client_name="secretsmanager",
@@ -182,6 +185,8 @@ class TestAWSConnector:
                 role_session_name="session",
             )
 
+        assert isinstance(secrets, ExtendedDict)
+        assert isinstance(secrets["secret/a"], ExtendedString)
         assert secrets == {"secret/a": "value-a", "secret/c": "value-c"}
         connector.get_aws_client.assert_called_once_with(
             client_name="secretsmanager",
@@ -229,6 +234,18 @@ class TestAWSConnector:
         with pytest.raises(ValueError, match="invalid characters"):
             connector.list_secrets(name_prefix="secrets\x00admin")
 
+    def test_get_secret_returns_extended_string(self, base_connector_kwargs):
+        """Ensure get_secret promotes returned secret strings."""
+        connector = AWSConnector(**base_connector_kwargs)
+        mock_client = MagicMock()
+        mock_client.get_secret_value.return_value = {"SecretString": "secret-value"}
+        connector.get_aws_client = MagicMock(return_value=mock_client)
+
+        value = connector.get_secret("arn:secret:test")
+
+        assert isinstance(value, ExtendedString)
+        assert value == "secret-value"
+
     def test_create_secret_with_tags_and_description(self, base_connector_kwargs):
         """Ensure create_secret builds payload and sends to AWS."""
         connector = AWSConnector(**base_connector_kwargs)
@@ -244,6 +261,8 @@ class TestAWSConnector:
             execution_role_arn="arn:role:override",
         )
 
+        assert isinstance(response, ExtendedDict)
+        assert isinstance(response["ARN"], ExtendedString)
         assert response == {"ARN": "arn:secret:test"}
         connector.get_aws_client.assert_called_once_with(
             client_name="secretsmanager",
@@ -278,6 +297,8 @@ class TestAWSConnector:
             execution_role_arn="arn:role:override",
         )
 
+        assert isinstance(response, ExtendedDict)
+        assert isinstance(response["ARN"], ExtendedString)
         assert response == {"ARN": "arn:secret:test"}
         connector.get_aws_client.assert_called_once_with(
             client_name="secretsmanager",
@@ -298,6 +319,8 @@ class TestAWSConnector:
             execution_role_arn="arn:role:override",
         )
 
+        assert isinstance(response, ExtendedDict)
+        assert isinstance(response["ARN"], ExtendedString)
         assert response == {"ARN": "arn:secret:test"}
         mock_client.delete_secret.assert_called_once_with(SecretId="arn:secret:test", RecoveryWindowInDays=10)
 
@@ -335,6 +358,8 @@ class TestAWSConnector:
             execution_role_arn="arn:role:override",
         )
 
+        assert isinstance(to_delete, ExtendedList)
+        assert isinstance(to_delete[0], ExtendedString)
         assert to_delete == ["arn:a", "arn:b"]
         connector.delete_secret.assert_not_called()
         connector.list_secrets.assert_called_once_with(
@@ -357,6 +382,8 @@ class TestAWSConnector:
             execution_role_arn="arn:role:override",
         )
 
+        assert isinstance(deleted, ExtendedList)
+        assert isinstance(deleted[0], ExtendedString)
         assert deleted == ["arn:a", "arn:b"]
         connector.delete_secret.assert_has_calls(
             [
@@ -374,3 +401,44 @@ class TestAWSConnector:
                 ),
             ]
         )
+
+    def test_copy_secrets_to_s3_unwraps_extended_data(self, base_connector_kwargs):
+        """Ensure copy_secrets_to_s3 uploads JSON built from plain containers."""
+        connector = AWSConnector(**base_connector_kwargs)
+        mock_client = MagicMock()
+        connector.get_aws_client = MagicMock(return_value=mock_client)
+
+        uri = connector.copy_secrets_to_s3(
+            secrets=extend_data({"TOKEN": "secret-value"}),
+            bucket="target-bucket",
+            key="secrets.json",
+        )
+
+        assert isinstance(uri, ExtendedString)
+        assert uri == "s3://target-bucket/secrets.json"
+        mock_client.put_object.assert_called_once_with(
+            Bucket="target-bucket",
+            Key="secrets.json",
+            Body=b'{"TOKEN": "secret-value"}',
+            ContentType="application/json",
+        )
+
+    def test_load_vendors_from_asm_returns_extended_mapping(self):
+        """Ensure load_vendors_from_asm promotes loaded vendor secrets."""
+        mock_secretsmanager = MagicMock()
+        mock_paginator = MagicMock()
+        mock_paginator.paginate.return_value = [{"SecretList": [{"Name": "/vendors/github_token"}]}]
+        mock_secretsmanager.get_paginator.return_value = mock_paginator
+        mock_secretsmanager.get_secret_value.return_value = {"SecretString": "ghp_test"}
+
+        mock_session = MagicMock()
+        mock_session.client.return_value = mock_secretsmanager
+        mock_sdk = MagicMock()
+        mock_sdk.Session.return_value = mock_session
+
+        with patch("extended_data.connectors.aws._load_aws_sdk", return_value=mock_sdk):
+            vendors = AWSConnector.load_vendors_from_asm(prefix="/vendors/")
+
+        assert isinstance(vendors, ExtendedDict)
+        assert isinstance(vendors["GITHUB_TOKEN"], ExtendedString)
+        assert vendors == {"GITHUB_TOKEN": "ghp_test"}

@@ -16,11 +16,13 @@ Usage:
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from typing import TYPE_CHECKING, Any
 
 from extended_data import is_nothing
 from extended_data.connectors._optional import require_extra
 from extended_data.connectors.base import VendorConnectorBase
+from extended_data.containers import extend_data, to_builtin
 from extended_data.logging import Logging
 
 
@@ -272,9 +274,8 @@ class AWSConnector(VendorConnectorBase):
             raise ValueError(f"Failed to get secret for ID '{secret_id}'") from e
 
         if "SecretString" in response:
-            return response["SecretString"]
-        else:
-            return response["SecretBinary"].decode("utf-8")
+            return self.extend_result(response["SecretString"])
+        return self.extend_result(response["SecretBinary"].decode("utf-8"))
 
     def list_secrets(
         self,
@@ -355,7 +356,7 @@ class AWSConnector(VendorConnectorBase):
                     secrets[secret_name] = secret_arn
 
         self.logger.info(f"Retrieved {len(secrets)} secrets")
-        return secrets
+        return self.extend_result(secrets)
 
     def create_secret(
         self,
@@ -389,7 +390,7 @@ class AWSConnector(VendorConnectorBase):
         try:
             response = secretsmanager.create_secret(**create_kwargs)
             self.logger.info(f"Created AWS secret ARN: {response.get('ARN')}")
-            return response
+            return self.extend_result(response)
         except ClientError as exc:
             self.logger.error(f"Failed to create secret {name}", exc_info=True)
             raise RuntimeError(f"Failed to create secret '{name}'") from exc
@@ -419,7 +420,7 @@ class AWSConnector(VendorConnectorBase):
         try:
             response = secretsmanager.update_secret(SecretId=secret_id, SecretString=secret_value)
             self.logger.info(f"Updated AWS secret ARN: {response.get('ARN', secret_id)}")
-            return response
+            return self.extend_result(response)
         except ClientError as exc:
             self.logger.error(f"Failed to update secret {secret_id}", exc_info=True)
             raise RuntimeError(f"Failed to update secret '{secret_id}'") from exc
@@ -457,7 +458,7 @@ class AWSConnector(VendorConnectorBase):
         try:
             response = secretsmanager.delete_secret(**delete_kwargs)
             self.logger.info(f"Delete secret request submitted for: {response.get('ARN', secret_id)}")
-            return response
+            return self.extend_result(response)
         except ClientError as exc:
             self.logger.error(f"Failed to delete secret {secret_id}", exc_info=True)
             raise RuntimeError(f"Failed to delete secret '{secret_id}'") from exc
@@ -489,18 +490,18 @@ class AWSConnector(VendorConnectorBase):
         for secret_name, value in secrets.items():
             if isinstance(value, str):
                 secret_arns.append(value)
-            elif isinstance(value, dict) and "ARN" in value:
+            elif isinstance(value, Mapping) and "ARN" in value:
                 secret_arns.append(value["ARN"])
             else:
                 self.logger.debug(f"Skipping secret {secret_name} due to missing ARN data")
 
         if not secret_arns:
             self.logger.info(f"No secrets found for prefix: {prefix}")
-            return []
+            return self.extend_result([])
 
         if dry_run:
             self.logger.info(f"Dry run enabled; would delete {len(secret_arns)} secrets for prefix {prefix}")
-            return secret_arns
+            return self.extend_result(secret_arns)
 
         deleted_arns: list[str] = []
         for secret_arn in secret_arns:
@@ -513,7 +514,7 @@ class AWSConnector(VendorConnectorBase):
             deleted_arns.append(response.get("ARN", secret_arn))
 
         self.logger.info(f"Deleted {len(deleted_arns)} secrets for prefix {prefix}")
-        return deleted_arns
+        return self.extend_result(deleted_arns)
 
     def copy_secrets_to_s3(
         self,
@@ -545,7 +546,7 @@ class AWSConnector(VendorConnectorBase):
             role_session_name=role_session_name,
         )
 
-        body = json_module.dumps(secrets)
+        body = json_module.dumps(to_builtin(secrets))
         s3_client.put_object(
             Bucket=bucket,
             Key=key,
@@ -555,7 +556,7 @@ class AWSConnector(VendorConnectorBase):
 
         s3_uri = f"s3://{bucket}/{key}"
         self.logger.info(f"Uploaded secrets to {s3_uri}")
-        return s3_uri
+        return self.extend_result(s3_uri)
 
     @staticmethod
     def load_vendors_from_asm(prefix: str = "/vendors/") -> dict[str, str]:
@@ -599,7 +600,7 @@ class AWSConnector(VendorConnectorBase):
             # Return empty dict if we can't access Secrets Manager
             pass
 
-        return vendors
+        return extend_data(vendors)
 
 
 from extended_data.connectors.aws.codedeploy import create_codedeploy_deployment, get_aws_codedeploy_deployments
