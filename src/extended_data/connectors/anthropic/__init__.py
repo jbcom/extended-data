@@ -498,8 +498,8 @@ class AnthropicConnector(VendorConnectorBase):
         Note:
             This is a simplified synchronous implementation. For production
             agent workflows with tools and multi-turn conversations, consider
-            using LangChain/LangGraph which will be available in the
-            extended_data.connectors.ai sub-package.
+            using an external workflow runner such as LangChain or LangGraph
+            with the tool builders in extended_data.connectors.ai_tools.
         """
         import time
 
