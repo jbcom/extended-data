@@ -153,34 +153,8 @@ def _discover_connectors() -> dict[str, builtins.type[VendorConnectorBase]]:
 
             warnings.warn(f"Failed to load connector '{ep.name}': {e}", stacklevel=2)
 
-    # Also include built-in connectors not yet in entry points
-    # (for development/transition period)
-    _register_builtins(connectors)
-
     _connector_cache = connectors
     return connectors
-
-
-def _register_builtins(connectors: dict[str, builtins.type[VendorConnectorBase]]) -> None:
-    """Register built-in connectors that may not be in entry points yet."""
-    for name, spec in BUILTIN_CONNECTORS.items():
-        if name in connectors:
-            _missing_builtin_connectors.pop(name, None)
-            continue  # Entry point takes precedence
-        try:
-            import importlib
-
-            module = importlib.import_module(spec.module_path)
-            cls = getattr(module, spec.class_name, None)
-            if cls is not None:
-                connectors[name] = cls
-                _missing_builtin_connectors.pop(name, None)
-            else:
-                _missing_builtin_connectors[name] = ImportError(
-                    f"Could not find {spec.class_name} in {spec.module_path}"
-                )
-        except ImportError as e:
-            _missing_builtin_connectors[name] = e  # Optional dependency not installed
 
 
 def _raise_missing_builtin_connector(name: str, error: ImportError) -> NoReturn:
@@ -196,6 +170,16 @@ def _raise_missing_builtin_connector(name: str, error: ImportError) -> NoReturn:
     if str(error):
         msg = f"{msg}\nOriginal import error: {error}"
     raise ImportError(msg) from error
+
+
+def _raise_unregistered_builtin_connector(name: str) -> NoReturn:
+    """Raise a packaging error when a declared built-in connector has no entry point."""
+    spec = BUILTIN_CONNECTORS[name]
+    raise RuntimeError(
+        f"The built-in '{name}' connector is declared but is not registered in the "
+        "extended_data.connectors entry point group. "
+        f'Expected: {name} = "{spec.module_path}:{spec.class_name}"'
+    )
 
 
 def list_connectors() -> dict[str, builtins.type[VendorConnectorBase]]:
@@ -225,6 +209,8 @@ def get_connector_class(name: str) -> builtins.type[VendorConnectorBase]:
     if name_lower not in connectors:
         if name_lower in _missing_builtin_connectors:
             _raise_missing_builtin_connector(name_lower, _missing_builtin_connectors[name_lower])
+        if name_lower in BUILTIN_CONNECTORS:
+            _raise_unregistered_builtin_connector(name_lower)
         available = ", ".join(sorted(connectors.keys()))
         raise ValueError(f"Unknown connector: {name}. Available: {available}")
 
@@ -303,6 +289,11 @@ def _available_connector_info(name: str, cls: builtins.type[VendorConnectorBase]
 def _missing_builtin_connector_info(name: str, error: ImportError | None) -> ConnectorInfo:
     """Build metadata for a known built-in connector that cannot be loaded."""
     spec = BUILTIN_CONNECTORS[name]
+    error_message = (
+        str(error)
+        if error
+        else "Built-in connector is declared but is not registered in the extended_data.connectors entry point group."
+    )
 
     return ConnectorInfo(
         name=name,
@@ -316,7 +307,7 @@ def _missing_builtin_connector_info(name: str, error: ImportError | None) -> Con
         module=spec.module_path,
         base_url=None,
         description=None,
-        error=str(error) if error else "Connector class could not be loaded.",
+        error=error_message,
     )
 
 

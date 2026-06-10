@@ -2,14 +2,12 @@
 
 from __future__ import annotations
 
-from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 import pytest
 
 from extended_data.connectors import registry
 from extended_data.connectors.connectors import ConnectorFabric
-from extended_data.connectors.registry import _register_builtins
 
 
 # Helper to check if optional dependencies are available
@@ -358,6 +356,26 @@ class TestConnectorFabric:
         assert info["install"] == "pip install extended-data[github]"
         assert info["class"] == "GitHubConnector"
 
+    def test_get_connector_class_rejects_unregistered_builtin_entry_point(self, monkeypatch):
+        """Declared built-ins must be registered through entry points."""
+        monkeypatch.setattr(registry, "_connector_cache", {})
+        monkeypatch.setattr(registry, "_missing_builtin_connectors", {})
+
+        with pytest.raises(RuntimeError, match="not registered"):
+            registry.get_connector_class(" github ")
+
+    def test_get_connector_info_reports_unregistered_builtin_entry_point(self, monkeypatch):
+        """Registry metadata exposes missing built-in entry-point registration."""
+        monkeypatch.setattr(registry, "_connector_cache", {})
+        monkeypatch.setattr(registry, "_missing_builtin_connectors", {})
+
+        info = registry.get_connector_info(" github ")
+
+        assert info["name"] == "github"
+        assert info["available"] is False
+        assert info["extra"] == "github"
+        assert "not registered" in info["error"]
+
     def test_lazy_builtin_with_missing_requirements_is_unavailable(self):
         """Lazy-loadable built-ins still report unavailable when extras are missing."""
         registry.clear_cache()
@@ -378,39 +396,3 @@ class TestConnectorFabric:
         info = registry.list_connector_info(include_unavailable=False)
 
         assert all(connector["available"] for connector in info)
-
-    def test_register_builtins_tracks_missing_optional_dependency(self, monkeypatch):
-        """Built-in discovery remembers optional dependency import failures."""
-        monkeypatch.setattr(registry, "_missing_builtin_connectors", {})
-
-        def fake_import_module(module_path):
-            if module_path == "extended_data.connectors.github":
-                raise ImportError("No module named 'github'")
-            return SimpleNamespace()
-
-        monkeypatch.setattr("importlib.import_module", fake_import_module)
-
-        _register_builtins({})
-
-        assert "github" in registry._missing_builtin_connectors
-
-    def test_register_builtins_includes_specialized_google_connectors(self):
-        """Registry builtins expose the advertised specialized Google connectors."""
-        pytest.importorskip("googleapiclient")
-        connectors = {}
-
-        _register_builtins(connectors)
-
-        assert connectors["google"].__name__ == "GoogleConnector"
-        assert connectors["google_cloud"].__name__ == "GoogleCloudConnector"
-        assert connectors["google_workspace"].__name__ == "GoogleWorkspaceConnector"
-        assert connectors["google_billing"].__name__ == "GoogleBillingConnector"
-
-    def test_register_builtins_loads_github_entrypoint_name(self):
-        """Registry builtins keep the GitHub connector spelling compatible with entry points."""
-        pytest.importorskip("github")
-        connectors = {}
-
-        _register_builtins(connectors)
-
-        assert connectors["github"].__name__ == "GitHubConnector"
