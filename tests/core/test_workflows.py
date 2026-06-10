@@ -9,6 +9,7 @@ import pytest
 from extended_data import (
     DataWorkflow,
     ExtendedDict,
+    ExtendedList,
     ExtendedTuple,
     WorkflowResult,
     WorkflowStep,
@@ -61,18 +62,23 @@ def test_data_workflow_runs_named_value_transforms() -> None:
     """DataWorkflow can normalize in-memory API payloads through named steps."""
     raw_payload = {
         "HTTPResponseCode": 200,
-        "SelectedServices": filter_list(["api", "worker", "db"], denylist=["db"]),
+        "SelectedServices": ["api", "worker", "db"],
         "Tags": ["api", "api", "docs"],
     }
 
+    def select_services(data: ExtendedDict) -> ExtendedDict:
+        return data | {"SelectedServices": data["SelectedServices"].filter_values(denylist=["db"])}
+
     workflow = DataWorkflow.from_value(raw_payload).run(
+        ("select-services", select_services),
         ("deduplicate", lambda data: data.deduplicate()),
         ("unhump", lambda data: data.unhump()),
     )
     result = workflow.result()
 
-    assert workflow.steps == ("value", "deduplicate", "unhump")
+    assert workflow.steps == ("value", "select-services", "deduplicate", "unhump")
     assert isinstance(workflow.value, ExtendedDict)
+    assert isinstance(workflow.value["selected_services"], ExtendedList)
     assert result.as_builtin() == {
         "http_response_code": 200,
         "selected_services": ["api", "worker"],
