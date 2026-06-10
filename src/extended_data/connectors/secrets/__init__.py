@@ -1,13 +1,14 @@
-"""Secrets Connector - Enterprise-grade secret synchronization.
+"""Secrets Connector - enterprise-grade SecretSync integration.
 
-This connector provides Python bindings for secretssync, enabling
-enterprise-grade secret synchronization from HashiCorp Vault to
-AWS Secrets Manager with two-phase architecture, inheritance,
-versioning, and CI/CD integration.
+This connector integrates with the standalone SecretSync project
+(`jbcom/secrets-sync`), enabling enterprise-grade secret synchronization from
+HashiCorp Vault to AWS Secrets Manager with two-phase architecture,
+inheritance, versioning, and CI/CD integration.
 
 The connector can operate in two modes:
-1. Native mode: Uses gopy-generated Python bindings for maximum performance
-2. CLI mode: Falls back to subprocess calls if bindings aren't available
+1. Native mode: Uses the optional gopy-generated `secretssync` Python module
+2. CLI mode: Falls back to the `secretsync` subprocess CLI when bindings are
+   not available
 
 Example usage:
     from extended_data.connectors.secrets import SecretsConnector
@@ -175,11 +176,11 @@ class ConfigInfo:
 
 
 class SecretsConnector(VendorConnectorBase):
-    """Enterprise-grade secret synchronization connector.
+    """Enterprise-grade SecretSync connector.
 
-    This connector wraps the secretssync Go library, providing Python
-    bindings for enterprise-grade secret synchronization between
-    HashiCorp Vault and AWS Secrets Manager.
+    This connector wraps the standalone SecretSync project
+    (`jbcom/secrets-sync`) through either the optional native `secretssync`
+    Python bindings or the `secretsync` CLI.
 
     Features:
     - Two-phase pipeline architecture (merge → sync)
@@ -217,7 +218,7 @@ class SecretsConnector(VendorConnectorBase):
         self.logger.info(f"SecretsConnector initialized in {mode} mode")
 
     def _find_cli(self) -> str | None:
-        """Find the secretsync CLI binary."""
+        """Find the SecretSync `secretsync` CLI binary."""
         # Check common locations
         candidates = [
             "secretsync",

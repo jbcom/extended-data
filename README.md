@@ -143,9 +143,11 @@ secret leak by default.
 Raw SDK/client objects and raw transport responses remain available from the
 methods that explicitly return them.
 
-The `secrets` connector integrates with the standalone `secretsync` CLI or
-native bindings. CLI fallback expects `secretsync pipeline --output json` to
-return the stable pipeline result envelope used by this package.
+The `secrets` connector integrates with the standalone SecretSync project
+(`jbcom/secrets-sync`) through either the optional native `secretssync` Python
+module or the `secretsync` CLI. CLI fallback expects
+`secretsync pipeline --output json` to return the stable pipeline result
+envelope used by this package.
 
 ```python
 from extended_data import SecretsConnector, SyncOptions
