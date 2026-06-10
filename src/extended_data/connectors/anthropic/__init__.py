@@ -37,7 +37,7 @@ import httpx
 from pydantic import BaseModel, ConfigDict, Field
 
 from extended_data.connectors.base import VendorConnectorBase
-from extended_data.containers import to_builtin
+from extended_data.containers import ExtendedDict, extend_data, to_builtin
 from extended_data.logging import Logging
 
 
@@ -261,13 +261,13 @@ class AnthropicConnector(VendorConnectorBase):
         return bool(os.environ.get("ANTHROPIC_API_KEY"))
 
     @staticmethod
-    def get_available_models() -> dict[str, str]:
+    def get_available_models() -> ExtendedDict:
         """Get dictionary of available Claude models.
 
         Returns:
-            Dictionary mapping model IDs to display names.
+            Extended dictionary mapping model IDs to display names.
         """
-        return CLAUDE_MODELS.copy()
+        return extend_data(CLAUDE_MODELS.copy())
 
     def _handle_error(self, response: httpx.Response) -> None:
         """Handle API error responses.

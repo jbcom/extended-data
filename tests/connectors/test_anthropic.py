@@ -102,11 +102,12 @@ class TestAnthropicConnector:
             assert AnthropicConnector.is_available() is False
 
     def test_get_available_models(self):
-        """get_available_models should return model dictionary."""
+        """get_available_models should return extended model metadata."""
         models = AnthropicConnector.get_available_models()
         assert "claude-sonnet-4-20250514" in models
         assert "claude-opus-4-20250514" in models
-        assert isinstance(models, dict)
+        assert isinstance(models, ExtendedDict)
+        assert isinstance(models["claude-sonnet-4-20250514"], ExtendedString)
 
     def test_validate_model(self):
         """validate_model should check against known models."""
