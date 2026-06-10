@@ -10,6 +10,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
+from extended_data.connectors.ai_tools import raise_unknown_tool_framework
 from extended_data.containers import ExtendedDict, extend_data
 
 
@@ -167,7 +168,7 @@ def get_tools(framework: str = "auto") -> list[Any]:
     if framework == "strands":
         return get_strands_tools()
 
-    raise ValueError(f"Unknown framework: {framework}")
+    return raise_unknown_tool_framework(framework)
 
 
 __all__ = [

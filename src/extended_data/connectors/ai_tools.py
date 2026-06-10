@@ -9,10 +9,11 @@ from __future__ import annotations
 import builtins
 
 from collections.abc import Callable, Iterable, Mapping
-from typing import Any, cast
+from typing import Any, NoReturn, cast
 
 from pydantic import BaseModel
 
+from extended_data.connectors.redaction import redact_sensitive_text
 from extended_data.containers import ExtendedDict, extend_data
 
 
@@ -37,6 +38,13 @@ def get_pydantic_schema(model: builtins.type[BaseModel]) -> ExtendedDict:
     schema.pop("description", None)
 
     return cast(ExtendedDict, extend_data(schema))
+
+
+def raise_unknown_tool_framework(framework: str) -> NoReturn:
+    """Raise a redacted unknown-framework diagnostic for AI tool factories."""
+    safe_framework = redact_sensitive_text(framework)
+    msg = f"Unknown framework: {safe_framework}. Options: auto, langchain, crewai, strands"
+    raise ValueError(msg)
 
 
 def build_langchain_tools(tool_definitions: Iterable[Mapping[str, Any]]) -> list[Any]:

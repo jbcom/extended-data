@@ -28,3 +28,18 @@ def test_get_tools_rejects_functions_alias(module_path: str) -> None:
 
     with pytest.raises(ValueError, match="Unknown framework"):
         module.get_tools("functions")
+
+
+@pytest.mark.parametrize("module_path", TOOL_MODULES)
+def test_get_tools_redacts_unknown_framework_diagnostics(module_path: str) -> None:
+    """Unknown framework diagnostics should not echo secret-bearing input."""
+    module = importlib.import_module(module_path)
+
+    with pytest.raises(ValueError) as exc_info:
+        module.get_tools("password=hunter2 Authorization: Bearer raw_token")
+
+    message = str(exc_info.value)
+    assert "hunter2" not in message
+    assert "raw_token" not in message
+    assert "[REDACTED]" in message
+    assert "auto, langchain, crewai, strands" in message
