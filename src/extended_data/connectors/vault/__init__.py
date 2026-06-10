@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, Any
 from extended_data import is_nothing
 from extended_data.connectors._optional import require_extra
 from extended_data.connectors.base import VendorConnectorBase
+from extended_data.containers import ExtendedDict, ExtendedList, ExtendedString
 from extended_data.logging import Logging
 
 
@@ -173,7 +174,7 @@ class VaultConnector(VendorConnectorBase):
         root_path: str = "/",
         mount_point: str = "secret",
         max_depth: int | None = None,
-    ) -> dict[str, dict[str, Any]]:
+    ) -> ExtendedDict:
         """List secrets recursively from Vault KV v2 engine.
 
         Args:
@@ -253,7 +254,7 @@ class VaultConnector(VendorConnectorBase):
         self,
         path: str,
         mount_point: str = "secret",
-    ) -> dict[str, Any] | None:
+    ) -> ExtendedDict | None:
         """Read a single secret from Vault.
 
         Args:
@@ -282,7 +283,7 @@ class VaultConnector(VendorConnectorBase):
         secret_name: str | None = None,
         matchers: dict[str, str] | None = None,
         mount_point: str = "secret",
-    ) -> dict[str, Any] | None:
+    ) -> ExtendedDict | None:
         """Get Vault secret by path, name, or by searching with matchers.
 
         This method supports three modes:
@@ -405,7 +406,7 @@ class VaultConnector(VendorConnectorBase):
         self,
         mount_point: str = "aws",
         name_prefix: str | None = None,
-    ) -> list[str]:
+    ) -> ExtendedList[ExtendedString]:
         """List AWS IAM roles configured in Vault's AWS secrets engine.
 
         Args:
@@ -437,7 +438,7 @@ class VaultConnector(VendorConnectorBase):
         self,
         role_name: str,
         mount_point: str = "aws",
-    ) -> dict[str, Any] | None:
+    ) -> ExtendedDict | None:
         """Retrieve details about a specific AWS IAM role configured in Vault.
 
         Args:
@@ -472,7 +473,7 @@ class VaultConnector(VendorConnectorBase):
         mount_point: str = "aws",
         ttl: str | None = None,
         credential_type: str | None = None,
-    ) -> dict[str, Any]:
+    ) -> ExtendedDict:
         """Generate AWS credentials via Vault's AWS secrets engine.
 
         Args:

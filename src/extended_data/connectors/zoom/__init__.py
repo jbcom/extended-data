@@ -9,6 +9,7 @@ from typing import Any
 import requests
 
 from extended_data.connectors.base import VendorConnectorBase
+from extended_data.containers import ExtendedDict, ExtendedList
 from extended_data.logging import Logging
 
 
@@ -60,7 +61,7 @@ class ZoomConnector(VendorConnectorBase):
             raise RuntimeError(msg)
         return {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
 
-    def get_zoom_users(self) -> dict[str, dict[str, Any]]:
+    def get_zoom_users(self) -> ExtendedDict:
         """Get all Zoom users."""
         url = "https://api.zoom.us/v2/users"
         headers = self.get_headers()
@@ -120,7 +121,7 @@ class ZoomConnector(VendorConnectorBase):
             self.logger.exception(error_msg)
             return False
 
-    def list_users(self) -> dict[str, dict[str, Any]]:
+    def list_users(self) -> ExtendedDict:
         """List all Zoom users.
 
         This is an alias for get_zoom_users() for consistency with AI tools naming.
@@ -130,7 +131,7 @@ class ZoomConnector(VendorConnectorBase):
         """
         return self.get_zoom_users()
 
-    def get_user(self, user_id: str) -> dict[str, Any]:
+    def get_user(self, user_id: str) -> ExtendedDict:
         """Get a specific Zoom user by ID or email.
 
         Args:
@@ -149,7 +150,7 @@ class ZoomConnector(VendorConnectorBase):
         except requests.exceptions.RequestException as exc:
             raise RuntimeError(f"Failed to get Zoom user {user_id}: {exc}") from exc
 
-    def list_meetings(self, user_id: str, meeting_type: str = "scheduled") -> list[dict[str, Any]]:
+    def list_meetings(self, user_id: str, meeting_type: str = "scheduled") -> ExtendedList[ExtendedDict]:
         """List meetings for a specific user.
 
         Args:
@@ -171,7 +172,7 @@ class ZoomConnector(VendorConnectorBase):
         except requests.exceptions.RequestException as exc:
             raise RuntimeError(f"Failed to list meetings for user {user_id}: {exc}") from exc
 
-    def get_meeting(self, meeting_id: str) -> dict[str, Any]:
+    def get_meeting(self, meeting_id: str) -> ExtendedDict:
         """Get details of a specific meeting.
 
         Args:

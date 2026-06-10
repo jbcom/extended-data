@@ -34,7 +34,7 @@ import httpx
 from pydantic import BaseModel, ConfigDict, Field
 
 from extended_data.connectors.base import VendorConnectorBase
-from extended_data.containers import to_builtin
+from extended_data.containers import ExtendedDict, ExtendedList, ExtendedString, to_builtin
 from extended_data.logging import Logging
 
 
@@ -418,7 +418,7 @@ class CursorConnector(VendorConnectorBase):
     # Agent Operations
     # =========================================================================
 
-    def list_agents(self) -> list[dict[str, Any]]:
+    def list_agents(self) -> ExtendedList[ExtendedDict]:
         """List all agents.
 
         Returns:
@@ -435,7 +435,7 @@ class CursorConnector(VendorConnectorBase):
         agents_data = data.get("agents", [])
         return self.extend_result([self._model_payload(Agent.model_validate(a)) for a in agents_data])
 
-    def get_agent_status(self, agent_id: str) -> dict[str, Any]:
+    def get_agent_status(self, agent_id: str) -> ExtendedDict:
         """Get status of a specific agent.
 
         Args:
@@ -456,7 +456,7 @@ class CursorConnector(VendorConnectorBase):
             raise CursorAPIError(f"Empty response when getting agent status for {agent_id}")
         return self.extend_result(self._model_payload(Agent.model_validate(data)))
 
-    def get_agent_conversation(self, agent_id: str) -> dict[str, Any]:
+    def get_agent_conversation(self, agent_id: str) -> ExtendedDict:
         """Get conversation history for an agent.
 
         Args:
@@ -491,7 +491,7 @@ class CursorConnector(VendorConnectorBase):
         skip_reviewer_request: bool = False,
         webhook_url: str | None = None,
         webhook_secret: str | None = None,
-    ) -> dict[str, Any]:
+    ) -> ExtendedDict:
         """Launch a new agent.
 
         Args:
@@ -590,7 +590,7 @@ class CursorConnector(VendorConnectorBase):
     # Repository Operations
     # =========================================================================
 
-    def list_repositories(self) -> list[dict[str, Any]]:
+    def list_repositories(self) -> ExtendedList[ExtendedDict]:
         """List available repositories.
 
         Returns:
@@ -611,7 +611,7 @@ class CursorConnector(VendorConnectorBase):
     # Model Operations
     # =========================================================================
 
-    def list_models(self) -> list[str]:
+    def list_models(self) -> ExtendedList[ExtendedString]:
         """List available models.
 
         Returns:

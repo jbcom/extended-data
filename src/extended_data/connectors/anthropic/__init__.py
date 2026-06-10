@@ -27,6 +27,7 @@ from __future__ import annotations
 
 import os
 
+from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
@@ -37,7 +38,7 @@ import httpx
 from pydantic import BaseModel, ConfigDict, Field
 
 from extended_data.connectors.base import VendorConnectorBase
-from extended_data.containers import ExtendedDict, extend_data, to_builtin
+from extended_data.containers import ExtendedDict, ExtendedList, extend_data, to_builtin
 from extended_data.logging import Logging
 
 
@@ -299,7 +300,7 @@ class AnthropicConnector(VendorConnectorBase):
         return model.model_dump(mode="json")
 
     @staticmethod
-    def _message_text(message: dict[str, Any]) -> str:
+    def _message_text(message: Mapping[str, Any]) -> str:
         """Extract concatenated text blocks from an extended message payload."""
         return "".join(
             str(block.get("text", ""))
@@ -324,7 +325,7 @@ class AnthropicConnector(VendorConnectorBase):
         tools: list[dict[str, Any]] | None = None,
         tool_choice: dict[str, Any] | None = None,
         metadata: dict[str, Any] | None = None,
-    ) -> dict[str, Any]:
+    ) -> ExtendedDict:
         """Create a message using Claude.
 
         Args:
@@ -423,7 +424,7 @@ class AnthropicConnector(VendorConnectorBase):
     # Model Operations
     # =========================================================================
 
-    def list_models(self) -> list[dict[str, Any]]:
+    def list_models(self) -> ExtendedList[ExtendedDict]:
         """List available models from the API.
 
         Returns:
@@ -443,7 +444,7 @@ class AnthropicConnector(VendorConnectorBase):
         models_data = data.get("data", [])
         return self.extend_result([self._model_payload(Model.model_validate(m)) for m in models_data])
 
-    def get_model(self, model_id: str) -> dict[str, Any]:
+    def get_model(self, model_id: str) -> ExtendedDict:
         """Get information about a specific model.
 
         Args:

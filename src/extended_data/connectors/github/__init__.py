@@ -5,6 +5,7 @@ from __future__ import annotations
 import io
 import os
 
+from collections.abc import Mapping, Sequence
 from copy import deepcopy
 from typing import TYPE_CHECKING, Any
 
@@ -18,6 +19,7 @@ from extended_data import (
 )
 from extended_data.connectors._optional import require_extra
 from extended_data.connectors.base import VendorConnectorBase
+from extended_data.containers import ExtendedDict
 from extended_data.logging import Logging
 
 
@@ -299,7 +301,7 @@ class GitHubConnector(VendorConnectorBase):
         self,
         role: str | None = None,
         include_pending: bool = False,
-    ) -> dict[str, dict[str, Any]]:
+    ) -> ExtendedDict:
         """List organization members.
 
         Args:
@@ -347,7 +349,7 @@ class GitHubConnector(VendorConnectorBase):
         self.logger.info(f"Retrieved {len(members)} organization members")
         return self.extend_result(members)
 
-    def get_org_member(self, username: str) -> dict[str, Any] | None:
+    def get_org_member(self, username: str) -> ExtendedDict | None:
         """Get a specific organization member.
 
         Args:
@@ -383,7 +385,7 @@ class GitHubConnector(VendorConnectorBase):
         self,
         type_filter: str = "all",
         include_branches: bool = False,
-    ) -> dict[str, dict[str, Any]]:
+    ) -> ExtendedDict:
         """List organization repositories.
 
         Args:
@@ -433,7 +435,7 @@ class GitHubConnector(VendorConnectorBase):
         self.logger.info(f"Retrieved {len(repos)} repositories")
         return self.extend_result(repos)
 
-    def get_repository(self, repo_name: str) -> dict[str, Any] | None:
+    def get_repository(self, repo_name: str) -> ExtendedDict | None:
         """Get a specific repository.
 
         Args:
@@ -472,7 +474,7 @@ class GitHubConnector(VendorConnectorBase):
         self,
         include_members: bool = False,
         include_repos: bool = False,
-    ) -> dict[str, dict[str, Any]]:
+    ) -> ExtendedDict:
         """List organization teams.
 
         Args:
@@ -528,7 +530,7 @@ class GitHubConnector(VendorConnectorBase):
         self.logger.info(f"Retrieved {len(teams)} teams")
         return self.extend_result(teams)
 
-    def get_team(self, team_slug: str) -> dict[str, Any] | None:
+    def get_team(self, team_slug: str) -> ExtendedDict | None:
         """Get a specific team.
 
         Args:
@@ -603,7 +605,7 @@ class GitHubConnector(VendorConnectorBase):
     # GraphQL Queries
     # =========================================================================
 
-    def execute_graphql(self, query: str, variables: dict[str, Any] | None = None) -> dict[str, Any]:
+    def execute_graphql(self, query: str, variables: dict[str, Any] | None = None) -> ExtendedDict:
         """Execute a GraphQL query against the GitHub API.
 
         Args:
@@ -628,9 +630,9 @@ class GitHubConnector(VendorConnectorBase):
 
     def get_users_with_verified_emails(
         self,
-        members: dict[str, dict[str, Any]] | None = None,
+        members: Mapping[str, Mapping[str, Any]] | None = None,
         domain_filter: str | None = None,
-    ) -> dict[str, dict[str, Any]]:
+    ) -> ExtendedDict:
         """Get organization members with their verified emails.
 
         Uses GraphQL to get verified email addresses for org members.
@@ -668,7 +670,7 @@ class GitHubConnector(VendorConnectorBase):
                 verified_emails = user_data.get("organizationVerifiedDomainEmails", [])
                 primary_email = user_data.get("email")
 
-                enriched_data = member_data.copy()
+                enriched_data = dict(member_data)
                 enriched_data["verified_emails"] = verified_emails
                 enriched_data["primary_email"] = primary_email
 
@@ -683,7 +685,7 @@ class GitHubConnector(VendorConnectorBase):
 
             except Exception as e:
                 self.logger.warning(f"Failed to get verified emails for {username}: {e}")
-                enriched[username] = member_data
+                enriched[username] = dict(member_data)
 
         self.logger.info(f"Retrieved verified emails for {len(enriched)} users")
         return self.extend_result(enriched)
@@ -695,13 +697,13 @@ class GitHubConnector(VendorConnectorBase):
     def build_workflow(
         self,
         name: str,
-        on: dict[str, Any],
-        jobs: dict[str, dict[str, Any]],
-        env: dict[str, str] | None = None,
-        permissions: dict[str, str] | None = None,
-        concurrency: dict[str, Any] | None = None,
-        defaults: dict[str, Any] | None = None,
-    ) -> dict[str, Any]:
+        on: Mapping[str, Any],
+        jobs: Mapping[str, Mapping[str, Any]],
+        env: Mapping[str, str] | None = None,
+        permissions: Mapping[str, str] | None = None,
+        concurrency: Mapping[str, Any] | None = None,
+        defaults: Mapping[str, Any] | None = None,
+    ) -> ExtendedDict:
         """Build a GitHub Actions workflow structure.
 
         Args:
@@ -739,15 +741,15 @@ class GitHubConnector(VendorConnectorBase):
     def build_workflow_job(
         self,
         runs_on: str = "ubuntu-latest",
-        steps: list[dict[str, Any]] | None = None,
-        needs: list[str] | None = None,
+        steps: Sequence[Mapping[str, Any]] | None = None,
+        needs: Sequence[str] | None = None,
         if_condition: str | None = None,
-        env: dict[str, str] | None = None,
-        strategy: dict[str, Any] | None = None,
+        env: Mapping[str, str] | None = None,
+        strategy: Mapping[str, Any] | None = None,
         timeout_minutes: int | None = None,
-        services: dict[str, Any] | None = None,
-        outputs: dict[str, str] | None = None,
-    ) -> dict[str, Any]:
+        services: Mapping[str, Any] | None = None,
+        outputs: Mapping[str, str] | None = None,
+    ) -> ExtendedDict:
         """Build a GitHub Actions workflow job.
 
         Args:
@@ -787,7 +789,7 @@ class GitHubConnector(VendorConnectorBase):
         if outputs:
             job["outputs"] = outputs
 
-        job["steps"] = steps or []
+        job["steps"] = list(steps or [])
 
         return self.extend_result(job)
 
@@ -796,13 +798,13 @@ class GitHubConnector(VendorConnectorBase):
         name: str,
         uses: str | None = None,
         run: str | None = None,
-        with_params: dict[str, Any] | None = None,
-        env: dict[str, str] | None = None,
+        with_params: Mapping[str, Any] | None = None,
+        env: Mapping[str, str] | None = None,
         if_condition: str | None = None,
         working_directory: str | None = None,
         shell: str | None = None,
         id: str | None = None,  # noqa: A002
-    ) -> dict[str, Any]:
+    ) -> ExtendedDict:
         """Build a GitHub Actions workflow step.
 
         Args:
@@ -851,7 +853,7 @@ class GitHubConnector(VendorConnectorBase):
         format_command: str | None = "ruff format --check",
         install_command: str = "uv sync --all-packages",
         working_directory: str = ".",
-    ) -> dict[str, Any]:
+    ) -> ExtendedDict:
         """Create a standard Python CI workflow.
 
         Args:

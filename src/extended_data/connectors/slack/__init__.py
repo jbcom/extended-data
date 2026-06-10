@@ -284,7 +284,7 @@ class SlackConnector(VendorConnectorBase):
                 raise SlackAPIError(exc.response) from exc
             return exc.response
 
-    def get_bot_channels(self) -> dict[str, dict[str, Any]]:
+    def get_bot_channels(self) -> ExtendedDict:
         """Return channels the bot account is a member of.
 
         Returns:
@@ -308,7 +308,7 @@ class SlackConnector(VendorConnectorBase):
         include_bots: bool | None = None,
         include_app_users: bool | None = None,
         **kwargs: Any,
-    ) -> dict[str, dict[str, Any]]:
+    ) -> ExtendedDict:
         """List Slack users with optional filtering flags.
 
         Args:
@@ -368,7 +368,7 @@ class SlackConnector(VendorConnectorBase):
         team_id: str | None = None,
         usergroup_ids: str | Sequence[str] | None = None,
         **kwargs: Any,
-    ) -> dict[str, dict[str, Any]]:
+    ) -> ExtendedDict:
         """List Slack user groups with optional filtering.
 
         Args:
@@ -420,7 +420,7 @@ class SlackConnector(VendorConnectorBase):
         get_members: bool | None = None,
         channels_only: bool | None = None,
         **kwargs: Any,
-    ) -> dict[str, dict[str, Any]]:
+    ) -> ExtendedDict:
         """List Slack conversations with optional filtering.
 
         Args:
