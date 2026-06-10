@@ -51,8 +51,7 @@ Usage:
 
 from __future__ import annotations
 
-
-__version__ = "1.1.3"
+from extended_data._version import __version__
 
 # Core imports (always available)
 from extended_data.connectors import meshy
@@ -62,7 +61,7 @@ from extended_data.connectors.cloud_params import (
     get_cloud_call_params,
     get_google_call_params,
 )
-from extended_data.connectors.connectors import VendorConnectors
+from extended_data.connectors.connectors import ConnectorFabric
 
 # Connectors with no extra dependencies (always available)
 from extended_data.connectors.cursor import CursorConnector
@@ -96,10 +95,9 @@ except ImportError:
 
 # GitHub connector (requires: pip install extended-data[github])
 try:
-    from extended_data.connectors.github import GitHubConnector, GithubConnector
+    from extended_data.connectors.github import GitHubConnector
 except ImportError:
     GitHubConnector = None  # type: ignore[misc, assignment]
-    GithubConnector = None  # type: ignore[misc, assignment]
 
 # Google connector (requires: pip install extended-data[google])
 try:
@@ -132,42 +130,34 @@ except ImportError:
     VaultConnector = None  # type: ignore[misc, assignment]
 
 __all__ = [
-    # AWS
     "AWSConnector",
     "AWSConnectorFull",
     "AWSOrganizationsMixin",
     "AWSS3Mixin",
     "AWSSSOmixin",
-    # AI/Agent connectors
     "AnthropicConnector",
+    "ConnectorFabric",
     "CursorConnector",
-    # Other connectors
     "GitHubConnector",
-    "GithubConnector",
     "GoogleBillingMixin",
     "GoogleCloudMixin",
-    # Google
     "GoogleConnector",
     "GoogleConnectorFull",
     "GoogleServicesMixin",
     "GoogleWorkspaceMixin",
     "SlackConnector",
     "VaultConnector",
-    # Base class for all connectors
     "VendorConnectorBase",
-    "VendorConnectors",
     "ZoomConnector",
+    "__version__",
     "get_aws_call_params",
-    # Cloud param utilities
     "get_cloud_call_params",
     "get_connector",
     "get_connector_class",
     "get_connector_info",
     "get_google_call_params",
     "list_connector_info",
-    # Registry - unified access to all connectors
     "list_connectors",
-    # Meshy AI (3D asset generation) - functional interface
     "meshy",
 ]
 

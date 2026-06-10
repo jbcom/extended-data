@@ -204,7 +204,7 @@ class AnthropicConnector(VendorConnectorBase):
         api_version: API version string. Default "2023-06-01".
         timeout: Request timeout in seconds. Default 60s.
         logger: Optional logger instance.
-        **kwargs: Additional DirectedInputsClass arguments.
+        **kwargs: Additional InputProvider arguments.
 
     Example:
         >>> connector = AnthropicConnector()

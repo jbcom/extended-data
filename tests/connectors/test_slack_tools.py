@@ -256,7 +256,7 @@ class TestGetTools:
         """Test auto-detection falls back to strands/functions."""
         from extended_data.connectors.slack.tools import get_tools
 
-        with patch("extended_data.connectors._compat.is_available", return_value=False):
+        with patch("extended_data.connectors._optional.is_available", return_value=False):
             tools = get_tools(framework="auto")
 
         assert len(tools) > 0

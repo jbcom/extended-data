@@ -1,4 +1,4 @@
-"""VendorConnectors - Public API with caching like TerraformDataSource."""
+"""ConnectorFabric - Public API with caching like TerraformDataSource."""
 
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ from extended_data import get_default_dict, get_unique_signature, make_hashable
 
 # Import zoom directly (no extra deps)
 from extended_data.connectors.zoom import ZoomConnector
-from extended_data.inputs import DirectedInputsClass
+from extended_data.inputs import InputProvider
 from extended_data.logging import Logging
 
 
@@ -25,20 +25,20 @@ if TYPE_CHECKING:
     from botocore.config import Config
 
     from extended_data.connectors.aws import AWSConnector
-    from extended_data.connectors.github import GithubConnector
+    from extended_data.connectors.github import GitHubConnector
     from extended_data.connectors.google import GoogleConnector
     from extended_data.connectors.slack import SlackConnector
     from extended_data.connectors.vault import VaultConnector
 
 
-class VendorConnectors(DirectedInputsClass):
+class ConnectorFabric(InputProvider):
     """Public API for extended data connectors with client caching.
 
     This class provides cached access to all extended data connectors, similar to
     how TerraformDataSource works in terraform-modules libraries.
 
     Usage:
-        vc = VendorConnectors()
+        vc = ConnectorFabric()
         slack = vc.get_slack_client(token="...", bot_token="...")
         github = vc.get_github_client(github_owner="org", github_token="...")
         aws_client = vc.get_aws_client("s3")
@@ -226,13 +226,13 @@ class VendorConnectors(DirectedInputsClass):
         github_repo: str | None = None,
         github_branch: str | None = None,
         github_token: str | None = None,
-    ) -> GithubConnector:
-        """Get a cached GithubConnector instance.
+    ) -> GitHubConnector:
+        """Get a cached GitHubConnector instance.
 
         Requires: pip install extended-data[github]
         """
         try:
-            from extended_data.connectors.github import GithubConnector
+            from extended_data.connectors.github import GitHubConnector
         except ImportError as e:
             msg = "GitHub connector requires PyGithub. Install with: pip install extended-data[github]"
             raise ImportError(msg) from e
@@ -252,7 +252,7 @@ class VendorConnectors(DirectedInputsClass):
         if cached:
             return cached
 
-        connector = GithubConnector(
+        connector = GitHubConnector(
             github_owner=github_owner,
             github_repo=github_repo,
             github_branch=github_branch,

@@ -23,7 +23,7 @@ guides and are part of the documented contract, not throwaway snippets.
 ## Running Examples
 
 ```bash
-# From the monorepo root, run the full example suite
+# From the repository root, run the full example suite
 tox -e edt-examples
 
 # Or run a single example with the prepared tox environment

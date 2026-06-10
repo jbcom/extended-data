@@ -1,7 +1,7 @@
 """Cursor Connector - HTTP client for Cursor Background Agent API.
 
 This connector provides Python access to the Cursor Background Agent API for
-managing AI coding agents through the shared connector patterns in this monorepo.
+managing AI coding agents through shared extended-data connector patterns.
 
 Usage:
     from extended_data.connectors.cursor import CursorConnector
@@ -326,7 +326,7 @@ class CursorConnector(VendorConnectorBase):
         base_url: API base URL. Only override for testing.
         timeout: Request timeout in seconds. Default 60s.
         logger: Optional logger instance.
-        **kwargs: Additional DirectedInputsClass arguments.
+        **kwargs: Additional InputProvider arguments.
 
     Example:
         >>> connector = CursorConnector()

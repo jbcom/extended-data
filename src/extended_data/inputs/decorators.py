@@ -1,8 +1,8 @@
-"""Decorator-based input handling for DirectedInputsClass consumers.
+"""Decorator-based input handling for InputProvider consumers.
 
 This module provides two decorators:
 
-1. ``@directed_inputs`` - class decorator that wires DirectedInputsClass style
+1. ``@directed_inputs`` - class decorator that wires InputProvider style
    input loading (environment variables, stdin, explicit mappings) into plain
    Python classes without requiring inheritance.
 2. ``@input_config`` - method decorator that allows fine-grained control over
@@ -24,13 +24,13 @@ from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
-from extended_data.inputs.__main__ import DirectedInputsClass
+from extended_data.inputs.__main__ import InputProvider
 
 
 if TYPE_CHECKING:
     from collections.abc import MutableMapping
 
-__all__ = ["DirectedInputsMetadata", "InputConfig", "directed_inputs", "input_config"]
+__all__ = ["InputConfig", "InputProviderMetadata", "directed_inputs", "input_config"]
 
 # Sentinel object used to differentiate between "no default provided" and
 # "explicitly default to None".
@@ -38,9 +38,9 @@ _MISSING = object()
 
 # Reserved keyword arguments consumed by the decorator wrapper. The names are
 # intentionally obscure to avoid collisions with user-defined parameters.
-_CONFIG_KWARG = "_directed_inputs_config"
-_RUNTIME_LOGGING_KWARG = "_directed_inputs_runtime_logging"
-_RUNTIME_SETTINGS_KWARG = "_directed_inputs_runtime_settings"
+_CONFIG_KWARG = "_input_provider_config"
+_RUNTIME_LOGGING_KWARG = "_input_provider_runtime_logging"
+_RUNTIME_SETTINGS_KWARG = "_input_provider_runtime_settings"
 
 # Error messages
 _ERR_CONTEXT_NOT_INITIALIZED = "directed_inputs decorator not initialized on this instance"
@@ -65,8 +65,8 @@ class InputConfig:
     is_path: bool = False
     is_datetime: bool = False
 
-    def resolve(self, provider: DirectedInputsClass) -> Any | object:
-        """Resolve a value from the provided DirectedInputsClass instance."""
+    def resolve(self, provider: InputProvider) -> Any | object:
+        """Resolve a value from the provided InputProvider instance."""
         key = self.source_name or self.parameter_name
         default_value = None if self.default is _MISSING else self.default
         source_present = key in provider.inputs
@@ -100,14 +100,14 @@ class InputConfig:
 
 
 @dataclass(frozen=True)
-class DirectedInputsMetadata:
+class InputProviderMetadata:
     """Metadata exposed on decorated classes for runtime integrations."""
 
     options: dict[str, Any] = field(default_factory=dict)
 
 
 class InputContext:
-    """Lightweight wrapper around DirectedInputsClass instantiation."""
+    """Lightweight wrapper around InputProvider instantiation."""
 
     def __init__(
         self,
@@ -125,10 +125,10 @@ class InputContext:
             "env_prefix": env_prefix,
             "strip_env_prefix": strip_env_prefix,
         }
-        self._instance: DirectedInputsClass | None = None
+        self._instance: InputProvider | None = None
 
     def refresh(self, **overrides: Any) -> None:
-        """Refresh the context with new DirectedInputsClass options."""
+        """Refresh the context with new InputProvider options."""
         self._options.update(overrides)
         self._instance = None
 
@@ -142,14 +142,14 @@ class InputContext:
         return config.resolve(self._ensure_instance())
 
     @property
-    def directed_inputs(self) -> DirectedInputsClass:
-        """Return the lazily-instantiated DirectedInputsClass instance."""
+    def input_provider(self) -> InputProvider:
+        """Return the lazily-instantiated InputProvider instance."""
         return self._ensure_instance()
 
-    def _ensure_instance(self) -> DirectedInputsClass:
+    def _ensure_instance(self) -> InputProvider:
         if self._instance is None:
             kwargs = {k: v for k, v in self._options.items() if v is not None}
-            self._instance = DirectedInputsClass(**kwargs)
+            self._instance = InputProvider(**kwargs)
         return self._instance
 
 
@@ -158,13 +158,13 @@ def input_config(parameter_name: str, **config_kwargs: Any) -> Callable[[Callabl
     default_value = config_kwargs.pop("default", _MISSING)
 
     def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
-        config_map: MutableMapping[str, InputConfig] = getattr(func, "_directed_inputs_configs", {}).copy()
+        config_map: MutableMapping[str, InputConfig] = getattr(func, "_input_provider_configs", {}).copy()
         config_map[parameter_name] = InputConfig(
             parameter_name=parameter_name,
             default=default_value,
             **config_kwargs,
         )
-        func._directed_inputs_configs = config_map  # type: ignore[attr-defined]
+        func._input_provider_configs = config_map  # type: ignore[attr-defined]
         return func
 
     return decorator
@@ -178,7 +178,7 @@ def directed_inputs(
     env_prefix: str | None = None,
     strip_env_prefix: bool = False,
 ) -> Callable[[builtins.type[Any]], builtins.type[Any]]:
-    """Class decorator that injects DirectedInputsClass behavior."""
+    """Class decorator that injects InputProvider behavior."""
     base_options = {
         "inputs": inputs,
         "from_environment": from_environment,
@@ -188,12 +188,12 @@ def directed_inputs(
     }
 
     def decorator(cls: builtins.type[Any]) -> builtins.type[Any]:
-        if getattr(cls, "__directed_inputs_enabled__", False):
+        if getattr(cls, "__input_provider_enabled__", False):
             return cls
 
-        metadata = DirectedInputsMetadata(options={k: v for k, v in base_options.items() if v is not None})
-        cls.__directed_inputs_enabled__ = True
-        cls.__directed_inputs_metadata__ = metadata
+        metadata = InputProviderMetadata(options={k: v for k, v in base_options.items() if v is not None})
+        cls.__input_provider_enabled__ = True
+        cls.__input_provider_metadata__ = metadata
 
         original_init = cls.__init__
 
@@ -218,14 +218,14 @@ def directed_inputs(
                 msg = f"env_prefix must be a str or None, got {type(ctx_env_prefix).__name__}"
                 raise TypeError(msg)
 
-            self._directed_inputs_context = InputContext(
+            self._input_provider_context = InputContext(
                 inputs=ctx_inputs,
                 from_environment=bool(merged_options.get("from_environment", True)),
                 from_stdin=bool(merged_options.get("from_stdin", False)),
                 env_prefix=ctx_env_prefix,
                 strip_env_prefix=bool(merged_options.get("strip_env_prefix", False)),
             )
-            self._directed_inputs_runtime_settings = runtime_settings
+            self._input_provider_runtime_settings = runtime_settings
 
             if runtime_logging and not hasattr(self, "logging"):
                 self.logging = runtime_logging
@@ -247,17 +247,17 @@ def _inject_proxies(cls: builtins.type[Any]) -> None:
     """Inject helper properties/methods for interacting with the context."""
 
     def _get_context(self: Any) -> InputContext:
-        context: InputContext | None = getattr(self, "_directed_inputs_context", None)
+        context: InputContext | None = getattr(self, "_input_provider_context", None)
         if context is None:
             raise AttributeError(_ERR_CONTEXT_NOT_INITIALIZED)
         return context
 
-    if not hasattr(cls, "directed_inputs"):
+    if not hasattr(cls, "input_provider"):
 
-        def _get_directed_inputs(self: Any) -> DirectedInputsClass:
-            return _get_context(self).directed_inputs
+        def _get_input_provider(self: Any) -> InputProvider:
+            return _get_context(self).input_provider
 
-        cls.directed_inputs = property(_get_directed_inputs)
+        cls.input_provider = property(_get_input_provider)
 
     if not hasattr(cls, "refresh_inputs"):
 
@@ -274,7 +274,7 @@ def _wrap_instance_methods(cls: builtins.type[Any]) -> None:
             continue
 
         function = attribute
-        configs = getattr(function, "_directed_inputs_configs", {})
+        configs = getattr(function, "_input_provider_configs", {})
         signature = inspect.signature(function)
         is_coroutine = inspect.iscoroutinefunction(function)
 
@@ -296,7 +296,7 @@ def _wrap_instance_methods(cls: builtins.type[Any]) -> None:
                         continue
 
                     config = fn_configs.get(param_name) or InputConfig(parameter_name=param_name)
-                    context = getattr(instance, "_directed_inputs_context", None)
+                    context = getattr(instance, "_input_provider_context", None)
                     if context is None:
                         raise AttributeError(_ERR_CONTEXT_MISSING)
                     value = context.resolve(config)

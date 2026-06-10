@@ -4,16 +4,16 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock, patch
 
-from extended_data.connectors import GitHubConnector
-from extended_data.connectors.github import GithubConnector
+from extended_data.connectors import GitHubConnector as RootGitHubConnector
+from extended_data.connectors.github import GitHubConnector
 
 
-class TestGithubConnector:
+class TestGitHubConnector:
     """Test suite for GitHub connector behavior."""
 
     def test_root_export_alias_points_to_same_connector(self):
-        """The canonical root export and legacy alias should resolve to the same class."""
-        assert GitHubConnector is GithubConnector
+        """The canonical root export and canonical class should resolve to the same class."""
+        assert RootGitHubConnector is GitHubConnector
 
     @patch("extended_data.connectors.github.Github")
     def test_init_with_repo(self, mock_github_class, base_connector_kwargs):
@@ -27,7 +27,7 @@ class TestGithubConnector:
         mock_github.get_repo.return_value = mock_repo
         mock_github_class.return_value = mock_github
 
-        connector = GithubConnector(
+        connector = GitHubConnector(
             github_owner="test-org", github_repo="test-repo", github_token="test-token", **base_connector_kwargs
         )
 
@@ -44,7 +44,7 @@ class TestGithubConnector:
         mock_github.get_organization.return_value = mock_org
         mock_github_class.return_value = mock_github
 
-        connector = GithubConnector(github_owner="test-org", github_token="test-token", **base_connector_kwargs)
+        connector = GitHubConnector(github_owner="test-org", github_token="test-token", **base_connector_kwargs)
 
         assert connector.repo is None
 
@@ -62,7 +62,7 @@ class TestGithubConnector:
         mock_github.get_repo.return_value = mock_repo
         mock_github_class.return_value = mock_github
 
-        connector = GithubConnector(
+        connector = GitHubConnector(
             github_owner="test-org", github_repo="test-repo", github_token="test-token", **base_connector_kwargs
         )
 
@@ -86,7 +86,7 @@ class TestGithubConnector:
         mock_github.get_repo.return_value = mock_repo
         mock_github_class.return_value = mock_github
 
-        connector = GithubConnector(
+        connector = GitHubConnector(
             github_owner="test-org", github_repo="test-repo", github_token="test-token", **base_connector_kwargs
         )
 

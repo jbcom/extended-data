@@ -1,12 +1,12 @@
-"""Extended Data Types Library.
+"""Extended Data.
 
-This library provides extended functionality for handling various data types in Python.
-It includes utilities for YAML, JSON, TOML, Base64, file paths, Git repositories, strings,
-lists, maps, and more.
+This package provides Python utilities for structured data primitives, inputs,
+logging, vendor data connectors, and workflow-oriented integrations.
 """
 
 from __future__ import annotations
 
+from extended_data._version import __version__
 from extended_data.base64_utils import base64_decode, base64_encode
 from extended_data.export_utils import (
     make_raw_data_export_safe,
@@ -108,11 +108,10 @@ from extended_data.type_utils import (
 from extended_data.yaml_utils import decode_yaml, encode_yaml, is_yaml_data
 
 
-__version__ = "7.0.0"  # x-release-please-version
-
 __all__ = [
     "FilePath",
     "SortedDefaultDict",
+    "__version__",
     "all_non_empty",
     "all_non_empty_in_dict",
     "all_non_empty_in_list",

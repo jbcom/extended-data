@@ -92,9 +92,9 @@ def list_repositories(
     Returns:
         List of repository data.
     """
-    from extended_data.connectors.github import GithubConnector
+    from extended_data.connectors.github import GitHubConnector
 
-    connector = GithubConnector(github_owner=github_owner, github_token=github_token)
+    connector = GitHubConnector(github_owner=github_owner, github_token=github_token)
     repos = connector.list_repositories(type_filter=type_filter, include_branches=include_branches)
 
     result = []
@@ -121,9 +121,9 @@ def get_repository(
     Returns:
         Dict with repository data and status.
     """
-    from extended_data.connectors.github import GithubConnector
+    from extended_data.connectors.github import GitHubConnector
 
-    connector = GithubConnector(github_owner=github_owner, github_token=github_token)
+    connector = GitHubConnector(github_owner=github_owner, github_token=github_token)
     data = connector.get_repository(repo_name)
 
     if data:
@@ -150,9 +150,9 @@ def list_teams(
     Returns:
         List of team data.
     """
-    from extended_data.connectors.github import GithubConnector
+    from extended_data.connectors.github import GitHubConnector
 
-    connector = GithubConnector(github_owner=github_owner, github_token=github_token)
+    connector = GitHubConnector(github_owner=github_owner, github_token=github_token)
     teams = connector.list_teams(include_members=include_members, include_repos=include_repos)
     return list(teams.values())
 
@@ -173,9 +173,9 @@ def get_team(
     Returns:
         Dict with team data and status.
     """
-    from extended_data.connectors.github import GithubConnector
+    from extended_data.connectors.github import GitHubConnector
 
-    connector = GithubConnector(github_owner=github_owner, github_token=github_token)
+    connector = GitHubConnector(github_owner=github_owner, github_token=github_token)
     data = connector.get_team(team_slug)
 
     if data:
@@ -202,9 +202,9 @@ def list_org_members(
     Returns:
         List of member data.
     """
-    from extended_data.connectors.github import GithubConnector
+    from extended_data.connectors.github import GitHubConnector
 
-    connector = GithubConnector(github_owner=github_owner, github_token=github_token)
+    connector = GitHubConnector(github_owner=github_owner, github_token=github_token)
     members = connector.list_org_members(role=role, include_pending=include_pending)
     return list(members.values())
 
@@ -229,9 +229,9 @@ def get_repository_file(
     Returns:
         Dict with content, sha, path, and status.
     """
-    from extended_data.connectors.github import GithubConnector
+    from extended_data.connectors.github import GitHubConnector
 
-    connector = GithubConnector(
+    connector = GitHubConnector(
         github_owner=github_owner,
         github_repo=github_repo,
         github_branch=github_branch,
@@ -350,7 +350,7 @@ def get_strands_tools() -> list[Any]:
 
 def get_tools(framework: str = "auto") -> list[Any]:
     """Get GitHub tools for the specified or auto-detected framework."""
-    from extended_data.connectors._compat import is_available
+    from extended_data.connectors._optional import is_available
 
     if framework == "auto":
         if is_available("crewai"):

@@ -1,4 +1,4 @@
-"""GitHub connector using shared packages from this monorepo."""
+"""GitHub connector using shared extended-data primitives."""
 
 from __future__ import annotations
 
@@ -36,7 +36,7 @@ def get_github_api_error(exc: GithubException) -> str | None:
 DEFAULT_PER_PAGE = 100
 
 
-class GithubConnector(VendorConnectorBase):
+class GitHubConnector(VendorConnectorBase):
     """GitHub connector for repository operations."""
 
     def __init__(
@@ -980,13 +980,9 @@ from extended_data.connectors.github.tools import (
 )
 
 
-GitHubConnector = GithubConnector
-
-
 __all__ = [
     # Core connector
     "GitHubConnector",
-    "GithubConnector",
     "get_crewai_tools",
     "get_langchain_tools",
     "get_strands_tools",

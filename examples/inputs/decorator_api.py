@@ -84,7 +84,7 @@ def main() -> None:
     service.get_port()  # Converted to int from SERVICE_PORT
 
     # Override inputs at instantiation
-    custom_service = UserService(_directed_inputs_config={"inputs": {"USER_ID": "custom-999"}})
+    custom_service = UserService(_input_provider_config={"inputs": {"USER_ID": "custom-999"}})
     custom_service.get_user()
 
     # Explicit arguments always win

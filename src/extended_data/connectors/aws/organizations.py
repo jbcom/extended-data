@@ -539,7 +539,7 @@ class AWSOrganizationsMixin:
     ) -> dict[str, dict[str, Any]]:
         """Return normalized metadata for every AWS account.
 
-        This mirrors the legacy ``label_aws_account`` helper from terraform-modules.
+        This mirrors the historical ``label_aws_account`` helper from terraform-modules.
 
         Args:
             domains: Mapping of environment -> root domain.

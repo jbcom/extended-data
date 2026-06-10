@@ -20,7 +20,7 @@ uv run python -m examples.encoding_decoding
 
 ### basic_usage.py
 
-Demonstrates the legacy `DirectedInputsClass` API:
+Demonstrates the `InputProvider` API:
 - Loading inputs from environment variables
 - Environment variable prefix filtering
 - Type conversion (boolean, integer, float)

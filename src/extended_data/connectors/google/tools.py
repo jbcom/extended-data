@@ -416,7 +416,7 @@ def get_tools(framework: str = "auto") -> list[Any]:
         ImportError: If the requested framework is not installed.
         ValueError: If an unknown framework is specified.
     """
-    from extended_data.connectors._compat import is_available
+    from extended_data.connectors._optional import is_available
 
     if framework == "auto":
         if is_available("crewai"):

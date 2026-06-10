@@ -337,7 +337,7 @@ def get_tools(framework: str = "auto") -> list[Any]:
     Returns:
         List of tools in the appropriate format
     """
-    from extended_data.connectors._compat import is_available
+    from extended_data.connectors._optional import is_available
 
     if framework == "auto":
         if is_available("crewai"):

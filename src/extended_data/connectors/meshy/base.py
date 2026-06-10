@@ -2,7 +2,7 @@
 
 This module handles ALL the HTTP infrastructure. API modules import this.
 
-Uses DirectedInputsClass for credential loading, consistent with all other
+Uses InputProvider for credential loading, consistent with all other
 extended-data. Credentials can come from:
 - Environment variables (MESHY_API_KEY)
 - Direct parameters
@@ -17,7 +17,7 @@ import httpx
 
 from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
 
-from extended_data.inputs import DirectedInputsClass
+from extended_data.inputs import InputProvider
 
 
 class RateLimitError(Exception):
@@ -34,18 +34,18 @@ class MeshyAPIError(Exception):
 
 # Global client state
 _client: httpx.Client | None = None
-_inputs: DirectedInputsClass | None = None
+_inputs: InputProvider | None = None
 _last_request_time: float = 0
 _min_request_interval: float = 0.5  # 500ms between requests
 
 BASE_URL = "https://api.meshy.ai"
 
 
-def _get_inputs() -> DirectedInputsClass:
-    """Get or create the DirectedInputsClass instance."""
+def _get_inputs() -> InputProvider:
+    """Get or create the InputProvider instance."""
     global _inputs
     if _inputs is None:
-        _inputs = DirectedInputsClass()
+        _inputs = InputProvider()
     return _inputs
 
 
@@ -60,13 +60,13 @@ def configure(api_key: str | None = None, **kwargs) -> None:
     inputs = {"MESHY_API_KEY": api_key} if api_key else {}
     inputs.update(kwargs)
     if _inputs is None:
-        _inputs = DirectedInputsClass(inputs=inputs)
+        _inputs = InputProvider(inputs=inputs)
     else:
         _inputs.merge_inputs(inputs)
 
 
 def get_api_key() -> str:
-    """Get API key from DirectedInputsClass (env vars, direct inputs, or stdin)."""
+    """Get API key from InputProvider (env vars, direct inputs, or stdin)."""
     inputs = _get_inputs()
     return inputs.get_input("MESHY_API_KEY", required=True)
 
