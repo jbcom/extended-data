@@ -10,7 +10,7 @@ import httpx
 import pytest
 
 from extended_data.connectors.base import VendorConnectorBase
-from extended_data.containers import ExtendedDict, ExtendedString
+from extended_data.containers import ExtendedDict, ExtendedList, ExtendedString
 from extended_data.logging import Logging
 
 
@@ -113,6 +113,31 @@ def test_request_data_decodes_response_body() -> None:
     mock_client.request.assert_called_once()
     assert mock_client.request.call_args.args[0] == "GET"
     assert mock_client.request.call_args.args[1] == "https://api.example.com/status"
+
+
+def test_extend_result_promotes_connector_payloads() -> None:
+    """Connector data payloads cross into the Tier 2 container layer explicitly."""
+    connector = _connector()
+
+    data = connector.extend_result({"service": {"name": "api"}, "tags": ["core"]})
+
+    assert isinstance(data, ExtendedDict)
+    assert isinstance(data["service"], ExtendedDict)
+    assert isinstance(data["service"]["name"], ExtendedString)
+    assert isinstance(data["tags"], ExtendedList)
+    assert data["service"]["name"].upper_first() == "Api"
+
+
+def test_handle_ai_tool_call_promotes_result_payloads() -> None:
+    """AI tool dispatch should expose extended containers, not raw dict payloads."""
+    connector = _connector()
+    connector.register_tool(lambda: {"status": "ok", "items": ["one"]}, name="status")
+
+    result = connector.handle_ai_tool_call("status", {})
+
+    assert isinstance(result, ExtendedDict)
+    assert isinstance(result["items"], ExtendedList)
+    assert result["status"].upper_first() == "Ok"
 
 
 def test_request_uses_connector_max_retries(mocker) -> None:

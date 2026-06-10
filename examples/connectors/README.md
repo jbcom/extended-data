@@ -3,6 +3,12 @@
 This directory contains working examples for `extended_data.connectors` and the
 vendor adapters that hang off `ConnectorFabric`.
 
+Connector examples assume the major-version `extended-data` contract: vendor
+data payloads are promoted into Tier 2 containers at connector boundaries.
+Callers can use `ExtendedDict`, `ExtendedList`, and `ExtendedString` methods on
+decoded API, file, and SDK-shaped results, then call `to_builtin()` only when a
+plain Python payload is needed for serialization or SDK handoff.
+
 ## Quick Start
 
 Install extended-data with the extras you need:

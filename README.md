@@ -79,7 +79,7 @@ extended-data info github --json
 ```text
 extended_data/
   primitives/   Tier 1 pure functions and codecs
-  containers/   Tier 2 ExtendedString/Dict/List/Set wrappers
+  containers/   Tier 2 ExtendedString/Dict/List/Tuple/Set wrappers
   io/           Tier 3 file, import, export, and base64 processors
   inputs/       InputProvider and decorator-based input injection
   logging/      structured lifecycle logging
@@ -92,6 +92,11 @@ Vendor connectors are first-class adapters in the data fabric. `ConnectorFabric`
 uses the registry to resolve connectors by name, injects shared input/logging
 context, caches connector instances, and lets specialized helpers coexist with
 generic vendor lookup.
+Connector data payloads are promoted into Tier 2 containers at the boundary, so
+decoded files, HTTP response data, GraphQL responses, and SDK-shaped maps can
+use `ExtendedDict`, `ExtendedList`, and `ExtendedString` methods immediately.
+Raw SDK/client objects and raw transport responses remain available from the
+methods that explicitly return them.
 
 The `secrets` connector integrates with the standalone `secretsync` CLI or
 native bindings. CLI fallback expects `secretsync pipeline --output json` to

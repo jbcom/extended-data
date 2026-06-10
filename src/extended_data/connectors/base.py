@@ -359,6 +359,12 @@ class VendorConnectorBase(InputProvider, ABC):
 
         return decode_file(response.content, suffix=resolved_suffix, as_extended=as_extended)
 
+    def extend_result(self, value: Any) -> Any:
+        """Promote connector data payloads into Tier 2 containers."""
+        from extended_data.containers import extend_data
+
+        return extend_data(value)
+
     def request_data(
         self,
         method: str,
@@ -561,4 +567,4 @@ class VendorConnectorBase(InputProvider, ABC):
             raise ValueError(msg)
 
         func = self._tool_functions[name]
-        return func(**arguments)
+        return self.extend_result(func(**arguments))

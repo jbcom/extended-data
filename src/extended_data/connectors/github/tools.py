@@ -10,6 +10,8 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
+from extended_data.containers import extend_data
+
 
 # =============================================================================
 # Input Schemas
@@ -102,7 +104,7 @@ def list_repositories(
         repo_data = data.copy()
         repo_data["name"] = name
         result.append(repo_data)
-    return result
+    return extend_data(result)
 
 
 def get_repository(
@@ -127,9 +129,8 @@ def get_repository(
     data = connector.get_repository(repo_name)
 
     if data:
-        return {"status": "found", **data}
-    else:
-        return {"status": "not_found", "name": repo_name}
+        return extend_data({"status": "found", **data})
+    return extend_data({"status": "not_found", "name": repo_name})
 
 
 def list_teams(
@@ -154,7 +155,7 @@ def list_teams(
 
     connector = GitHubConnector(github_owner=github_owner, github_token=github_token)
     teams = connector.list_teams(include_members=include_members, include_repos=include_repos)
-    return list(teams.values())
+    return extend_data(list(teams.values()))
 
 
 def get_team(
@@ -179,9 +180,8 @@ def get_team(
     data = connector.get_team(team_slug)
 
     if data:
-        return {"status": "found", **data}
-    else:
-        return {"status": "not_found", "slug": team_slug}
+        return extend_data({"status": "found", **data})
+    return extend_data({"status": "not_found", "slug": team_slug})
 
 
 def list_org_members(
@@ -206,7 +206,7 @@ def list_org_members(
 
     connector = GitHubConnector(github_owner=github_owner, github_token=github_token)
     members = connector.list_org_members(role=role, include_pending=include_pending)
-    return list(members.values())
+    return extend_data(list(members.values()))
 
 
 def get_repository_file(
@@ -247,12 +247,14 @@ def get_repository_file(
 
     status = "empty" if content is None else "retrieved"
 
-    return {
-        "status": status,
-        "path": file_path,
-        "content": content,
-        "sha": sha,
-    }
+    return extend_data(
+        {
+            "status": status,
+            "path": file_path,
+            "content": content,
+            "sha": sha,
+        }
+    )
 
 
 # =============================================================================

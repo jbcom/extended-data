@@ -148,6 +148,18 @@ Connectors that inherit `VendorConnectorBase` can keep raw transport access with
 `request()` or use `request_data()`, `get_data()`, `post_data()`, and the other
 verb-specific helpers to decode HTTP JSON, YAML, TOML, HCL, or text responses
 through the same Tier 2 container bridge used by file and input decoding.
+Connector methods that return vendor data payloads should call
+`extend_result()` at the return boundary, making SDK-shaped dictionaries,
+lists, decoded repository files, GraphQL results, and workflow-builder output
+first-class `ExtendedDict`, `ExtendedList`, `ExtendedTuple`, and
+`ExtendedString` values. This is an intentional major-version break from plain
+`dict`/`list` payloads; use `to_builtin()` at serialization, CLI, MCP, or SDK
+handoff boundaries.
+
+```python
+payload = github.get_repository_file("service.json")
+assert payload["service"]["name"].upper_first() == "Api"
+```
 
 The `secrets` adapter is the Python-facing bridge to the standalone
 `secretsync` project. It uses native bindings when present and otherwise falls

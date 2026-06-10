@@ -8,6 +8,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from extended_data.containers import ExtendedDict, ExtendedList, ExtendedString
+
 
 # Patch target for GitHubConnector - patch at source since tools.py imports lazily inside functions
 GITHUB_CONNECTOR_PATCH = "extended_data.connectors.github.GitHubConnector"
@@ -86,9 +88,12 @@ class TestListRepositories:
 
         result = list_repositories(github_owner="test-org", github_token="test-token")
 
+        assert isinstance(result, ExtendedList)
+        assert isinstance(result[0], ExtendedDict)
         assert len(result) == 2
         assert result[0]["name"] == "repo1"
         assert result[0]["description"] == "Test repository"
+        assert isinstance(result[0]["description"], ExtendedString)
         assert result[1]["name"] == "repo2"
 
     @patch(GITHUB_CONNECTOR_PATCH)
@@ -125,6 +130,7 @@ class TestGetRepository:
 
         result = get_repository(github_owner="test-org", github_token="test-token", repo_name="test-repo")
 
+        assert isinstance(result, ExtendedDict)
         assert result["status"] == "found"
         assert result["name"] == "test-repo"
         assert result["full_name"] == "org/test-repo"
@@ -140,6 +146,7 @@ class TestGetRepository:
 
         result = get_repository(github_owner="test-org", github_token="test-token", repo_name="nonexistent")
 
+        assert isinstance(result, ExtendedDict)
         assert result["status"] == "not_found"
         assert result["name"] == "nonexistent"
 
@@ -179,6 +186,8 @@ class TestListTeams:
 
         result = list_teams(github_owner="test-org", github_token="test-token")
 
+        assert isinstance(result, ExtendedList)
+        assert isinstance(result[0], ExtendedDict)
         assert len(result) == 2
         assert result[0]["slug"] == "team1"
         assert result[0]["name"] == "Team 1"
@@ -218,6 +227,7 @@ class TestGetTeam:
 
         result = get_team(github_owner="test-org", github_token="test-token", team_slug="test-team")
 
+        assert isinstance(result, ExtendedDict)
         assert result["status"] == "found"
         assert result["slug"] == "test-team"
         assert result["name"] == "Test Team"
@@ -233,6 +243,7 @@ class TestGetTeam:
 
         result = get_team(github_owner="test-org", github_token="test-token", team_slug="nonexistent")
 
+        assert isinstance(result, ExtendedDict)
         assert result["status"] == "not_found"
         assert result["slug"] == "nonexistent"
 
@@ -270,6 +281,8 @@ class TestListOrgMembers:
 
         result = list_org_members(github_owner="test-org", github_token="test-token")
 
+        assert isinstance(result, ExtendedList)
+        assert isinstance(result[0], ExtendedDict)
         assert len(result) == 2
         assert result[0]["login"] == "user1"
         assert result[0]["role"] == "member"
@@ -309,6 +322,7 @@ class TestGetRepositoryFile:
             file_path="test.json",
         )
 
+        assert isinstance(result, ExtendedDict)
         assert result["path"] == "test.json"
         assert result["content"] == '{"test": "content"}'
         assert result["sha"] == "abc123"
@@ -352,6 +366,7 @@ class TestGetRepositoryFile:
             file_path="empty.txt",
         )
 
+        assert isinstance(result, ExtendedDict)
         assert result["status"] == "empty"
 
 

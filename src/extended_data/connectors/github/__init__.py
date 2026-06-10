@@ -11,8 +11,7 @@ from typing import TYPE_CHECKING, Any
 from ruamel.yaml import YAML
 
 from extended_data import (
-    decode_json,
-    decode_yaml,
+    decode_file,
     get_encoding_for_file_path,
     is_nothing,
     wrap_raw_data_for_export,
@@ -33,7 +32,6 @@ else:
 
     class GitHubFallbackError(Exception):
         """Fallback exception used until PyGithub is imported."""
-
 
     GithubException = GitHubFallbackError
     UnknownObjectException = GitHubFallbackError
@@ -196,23 +194,17 @@ class GitHubConnector(VendorConnectorBase):
             decode = False
 
         if not decode or is_nothing(file_data):
-            return get_retval(file_data, file_sha, file_path_text)
+            return self.extend_result(get_retval(file_data, file_sha, file_path_text))
 
         # Decode file content based on file type
         encoding = get_encoding_for_file_path(file_path_text)
         try:
-            if encoding == "json":
-                decoded_data = decode_json(file_data)
-            elif encoding == "yaml":
-                decoded_data = decode_yaml(file_data)
-            else:
-                # For raw or unknown types, return the string as-is
-                decoded_data = file_data
+            decoded_data = decode_file(file_data, file_path=file_path_text, as_extended=True)
         except Exception as exc:
             self.logger.warning(f"Failed to decode {file_path_text} as {encoding}: {exc}")
             decoded_data = file_data
 
-        return get_retval(decoded_data, file_sha, file_path_text)
+        return self.extend_result(get_retval(decoded_data, file_sha, file_path_text))
 
     def update_repository_file(
         self,
@@ -353,7 +345,7 @@ class GitHubConnector(VendorConnectorBase):
                 }
 
         self.logger.info(f"Retrieved {len(members)} organization members")
-        return members
+        return self.extend_result(members)
 
     def get_org_member(self, username: str) -> dict[str, Any] | None:
         """Get a specific organization member.
@@ -367,16 +359,18 @@ class GitHubConnector(VendorConnectorBase):
         try:
             member = self.git.get_user(username)
             membership = self.org.get_user_membership(member)
-            return {
-                "id": member.id,
-                "login": member.login,
-                "name": member.name,
-                "email": member.email,
-                "role": membership.role,
-                "state": membership.state,
-                "avatar_url": member.avatar_url,
-                "html_url": member.html_url,
-            }
+            return self.extend_result(
+                {
+                    "id": member.id,
+                    "login": member.login,
+                    "name": member.name,
+                    "email": member.email,
+                    "role": membership.role,
+                    "state": membership.state,
+                    "avatar_url": member.avatar_url,
+                    "html_url": member.html_url,
+                }
+            )
         except UnknownObjectException:
             self.logger.warning(f"User not found: {username}")
             return None
@@ -437,7 +431,7 @@ class GitHubConnector(VendorConnectorBase):
             repos[repo.name] = repo_data
 
         self.logger.info(f"Retrieved {len(repos)} repositories")
-        return repos
+        return self.extend_result(repos)
 
     def get_repository(self, repo_name: str) -> dict[str, Any] | None:
         """Get a specific repository.
@@ -450,20 +444,22 @@ class GitHubConnector(VendorConnectorBase):
         """
         try:
             repo = self.git.get_repo(f"{self.GITHUB_OWNER}/{repo_name}")
-            return {
-                "id": repo.id,
-                "name": repo.name,
-                "full_name": repo.full_name,
-                "description": repo.description,
-                "private": repo.private,
-                "archived": repo.archived,
-                "default_branch": repo.default_branch,
-                "html_url": repo.html_url,
-                "clone_url": repo.clone_url,
-                "ssh_url": repo.ssh_url,
-                "language": repo.language,
-                "topics": repo.topics,
-            }
+            return self.extend_result(
+                {
+                    "id": repo.id,
+                    "name": repo.name,
+                    "full_name": repo.full_name,
+                    "description": repo.description,
+                    "private": repo.private,
+                    "archived": repo.archived,
+                    "default_branch": repo.default_branch,
+                    "html_url": repo.html_url,
+                    "clone_url": repo.clone_url,
+                    "ssh_url": repo.ssh_url,
+                    "language": repo.language,
+                    "topics": repo.topics,
+                }
+            )
         except UnknownObjectException:
             self.logger.warning(f"Repository not found: {repo_name}")
             return None
@@ -530,7 +526,7 @@ class GitHubConnector(VendorConnectorBase):
             teams[team.slug] = team_data
 
         self.logger.info(f"Retrieved {len(teams)} teams")
-        return teams
+        return self.extend_result(teams)
 
     def get_team(self, team_slug: str) -> dict[str, Any] | None:
         """Get a specific team.
@@ -543,17 +539,19 @@ class GitHubConnector(VendorConnectorBase):
         """
         try:
             team = self.org.get_team_by_slug(team_slug)
-            return {
-                "id": team.id,
-                "name": team.name,
-                "slug": team.slug,
-                "description": team.description,
-                "privacy": team.privacy,
-                "permission": team.permission,
-                "html_url": team.html_url,
-                "members_count": team.members_count,
-                "repos_count": team.repos_count,
-            }
+            return self.extend_result(
+                {
+                    "id": team.id,
+                    "name": team.name,
+                    "slug": team.slug,
+                    "description": team.description,
+                    "privacy": team.privacy,
+                    "permission": team.permission,
+                    "html_url": team.html_url,
+                    "members_count": team.members_count,
+                    "repos_count": team.repos_count,
+                }
+            )
         except UnknownObjectException:
             self.logger.warning(f"Team not found: {team_slug}")
             return None
@@ -616,10 +614,12 @@ class GitHubConnector(VendorConnectorBase):
             Query response data.
         """
         headers = {"Authorization": f"Bearer {self.GITHUB_TOKEN}"}
-        return self.graphql_client.execute(
-            query=query,
-            variables=variables or {},
-            headers=headers,
+        return self.extend_result(
+            self.graphql_client.execute(
+                query=query,
+                variables=variables or {},
+                headers=headers,
+            )
         )
 
     # =========================================================================
@@ -686,7 +686,7 @@ class GitHubConnector(VendorConnectorBase):
                 enriched[username] = member_data
 
         self.logger.info(f"Retrieved verified emails for {len(enriched)} users")
-        return enriched
+        return self.extend_result(enriched)
 
     # =========================================================================
     # GitHub Actions Workflows
@@ -734,7 +734,7 @@ class GitHubConnector(VendorConnectorBase):
 
         workflow["jobs"] = jobs
 
-        return workflow
+        return self.extend_result(workflow)
 
     def build_workflow_job(
         self,
@@ -789,7 +789,7 @@ class GitHubConnector(VendorConnectorBase):
 
         job["steps"] = steps or []
 
-        return job
+        return self.extend_result(job)
 
     def build_workflow_step(
         self,
@@ -841,7 +841,7 @@ class GitHubConnector(VendorConnectorBase):
         if env:
             step["env"] = env
 
-        return step
+        return self.extend_result(step)
 
     def create_python_ci_workflow(
         self,
