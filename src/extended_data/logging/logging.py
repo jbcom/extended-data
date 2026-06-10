@@ -32,7 +32,7 @@ import orjson
 from extended_data import (
     get_unique_signature,
     is_nothing,
-    strtobool,
+    string_to_bool,
     to_camel_case,
     to_kebab_case,
     to_pascal_case,
@@ -194,10 +194,10 @@ class Logging:
             logger.setLevel(gunicorn_logger.level)
             return
 
-        if self.enable_console or strtobool(os.getenv("OVERRIDE_TO_CONSOLE", "False")):
+        if self.enable_console or string_to_bool(os.getenv("OVERRIDE_TO_CONSOLE", "False")):
             add_console_handler(logger)
 
-        if self.enable_file or strtobool(os.getenv("OVERRIDE_TO_FILE", "False")):
+        if self.enable_file or string_to_bool(os.getenv("OVERRIDE_TO_FILE", "False")):
             # Pass the log file name directly
             add_file_handler(logger, log_file_name)
 

@@ -85,6 +85,18 @@ def test_clean_major_version_public_names() -> None:
     assert not hasattr(extended_data, "removeprefix")
     assert not hasattr(extended_data, "removesuffix")
     assert not hasattr(extended_data, "bytestostr")
+    old_type_converters = (
+        "strtobool",
+        "strtodate",
+        "strtodatetime",
+        "strtofloat",
+        "strtoint",
+        "strtopath",
+        "strtotime",
+    )
+    for old_name in old_type_converters:
+        assert not hasattr(primitives, old_name)
+        assert not hasattr(extended_data, old_name)
 
 
 def test_old_monorepo_import_namespaces_are_not_preserved() -> None:

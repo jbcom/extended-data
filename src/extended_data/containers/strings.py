@@ -25,7 +25,7 @@ from extended_data.primitives.strings import (
     truncate,
     upper_first_char,
 )
-from extended_data.primitives.types import strtobool
+from extended_data.primitives.types import string_to_bool
 
 
 if TYPE_CHECKING:
@@ -154,4 +154,4 @@ class ExtendedString(UserString):
 
     def to_bool(self, *, raise_on_error: bool = False) -> bool | None:
         """Return a boolean parsed from the string."""
-        return strtobool(self.data, raise_on_error=raise_on_error)
+        return string_to_bool(self.data, raise_on_error=raise_on_error)

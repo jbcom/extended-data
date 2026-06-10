@@ -114,7 +114,7 @@ class ConversionError(ValueError):
         super().__init__(f"Invalid {type_str} value: {self.value!r}")
 
 
-def strtobool(val: str | bool | None, raise_on_error: bool = False) -> bool | None:
+def string_to_bool(val: str | bool | None, raise_on_error: bool = False) -> bool | None:
     """Converts a string representation of truth to boolean.
 
     Args:
@@ -145,7 +145,7 @@ def strtobool(val: str | bool | None, raise_on_error: bool = False) -> bool | No
     return None
 
 
-def strtofloat(val: str, raise_on_error: bool = False) -> float | None:
+def string_to_float(val: str, raise_on_error: bool = False) -> float | None:
     """Converts a string representation of a float to a float.
 
     Args:
@@ -172,7 +172,7 @@ def strtofloat(val: str, raise_on_error: bool = False) -> float | None:
     return None
 
 
-def strtoint(val: str, raise_on_error: bool = False) -> int | None:
+def string_to_int(val: str, raise_on_error: bool = False) -> int | None:
     """Converts a string representation of an integer to an int.
 
     Args:
@@ -187,7 +187,7 @@ def strtoint(val: str, raise_on_error: bool = False) -> int | None:
     """
     val = str(val)
     try:
-        float_value = strtofloat(val, raise_on_error=raise_on_error)
+        float_value = string_to_float(val, raise_on_error=raise_on_error)
         if float_value is not None:
             return int(float_value)
     except ConversionError as exc:
@@ -200,7 +200,7 @@ def strtoint(val: str, raise_on_error: bool = False) -> int | None:
     return None
 
 
-def strtopath(val: str | bytes | os.PathLike[str] | None, raise_on_error: bool = False) -> Path | None:
+def string_to_path(val: str | bytes | os.PathLike[str] | None, raise_on_error: bool = False) -> Path | None:
     """Converts a string or byte representation of a path to a pathlib.Path object.
 
     Args:
@@ -234,7 +234,7 @@ def strtopath(val: str | bytes | os.PathLike[str] | None, raise_on_error: bool =
     return None
 
 
-def strtodate(val: str, raise_on_error: bool = False) -> datetime.date | None:
+def string_to_date(val: str, raise_on_error: bool = False) -> datetime.date | None:
     """Converts a string representation of a date to a datetime.date object.
 
     Args:
@@ -260,7 +260,7 @@ def strtodate(val: str, raise_on_error: bool = False) -> datetime.date | None:
     return None
 
 
-def strtodatetime(val: str, raise_on_error: bool = False) -> datetime.datetime | None:
+def string_to_datetime(val: str, raise_on_error: bool = False) -> datetime.datetime | None:
     """Converts a string representation of a datetime to a datetime.datetime object.
 
     Args:
@@ -291,7 +291,7 @@ def strtodatetime(val: str, raise_on_error: bool = False) -> datetime.datetime |
     return None
 
 
-def strtotime(val: str, raise_on_error: bool = False) -> datetime.time | None:
+def string_to_time(val: str, raise_on_error: bool = False) -> datetime.time | None:
     """Converts a string representation of a time to a datetime.time object.
 
     Args:
@@ -431,19 +431,19 @@ def reconstruct_special_type(converted_obj: str, fail_silently: bool = False) ->
         if converted_obj in {"None", "null"}:
             return None
         if DATETIME_PATTERN.match(converted_obj):
-            return strtodatetime(converted_obj)
+            return string_to_datetime(converted_obj)
         if DATE_PATTERN.match(converted_obj):
-            return strtodate(converted_obj)
+            return string_to_date(converted_obj)
         if TIME_PATTERN.match(converted_obj):
-            return strtotime(converted_obj)
+            return string_to_time(converted_obj)
         if PATH_PATTERN.match(converted_obj):
             return pathlib.Path(converted_obj)
         if TRUTHY_PATTERN.match(converted_obj) or FALSY_PATTERN.match(converted_obj):
-            return strtobool(converted_obj)
+            return string_to_bool(converted_obj)
         if NUMBER_PATTERN.match(converted_obj):
             if INTEGER_PATTERN.match(converted_obj):
-                return strtoint(converted_obj)
-            return strtofloat(converted_obj)
+                return string_to_int(converted_obj)
+            return string_to_float(converted_obj)
 
         if is_potential_yaml(converted_obj):
             return decode_yaml(converted_obj)

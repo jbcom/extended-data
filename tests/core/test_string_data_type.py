@@ -14,9 +14,9 @@ Fixtures are used extensively to provide test data, promoting reusability and cl
     - `upper_first_char_data`: Provides input strings and expected results for testing uppercase conversion of the first character.
     - `url_data`: Provides URLs and expected validation results for testing URL checks.
     - `titleize_name_data`: Provides camelCase names and expected TitleCase results for testing titleization.
-    - `strtobool_data`: Provides strings representing truth values for testing boolean conversion.
-    - `strtofloat_data`: Provides strings representing floats for testing float conversion.
-    - `strtoint_data`: Provides strings representing integers for testing integer conversion.
+    - `string_to_bool_data`: Provides strings representing truth values for testing boolean conversion.
+    - `string_to_float_data`: Provides strings representing floats for testing float conversion.
+    - `string_to_int_data`: Provides strings representing integers for testing integer conversion.
     - `valid_path_data`: Provides valid input values and expected results for testing path conversion.
     - `invalid_path_data`: Provides invalid inputs and expected exceptions for testing path conversion with errors.
     - `silent_invalid_path_data`: Provides invalid inputs for testing path conversion when errors are silenced.
@@ -29,12 +29,12 @@ The module contains the following test functions:
     - `test_upper_first_char`: Tests converting the first character of a string to uppercase.
     - `test_is_url`: Tests checking if a string is a valid URL.
     - `test_titleize_name`: Tests converting camelCase names to TitleCase.
-    - `test_strtobool`: Tests converting a string to a boolean value.
-    - `test_strtofloat`: Tests converting a string to a float value.
-    - `test_strtoint`: Tests converting a string to an integer value.
-    - `test_strtopath`: Tests converting valid inputs into pathlib.Path objects.
-    - `test_strtopath_invalid`: Tests handling invalid path inputs that should raise exceptions.
-    - `test_strtopath_invalid_silent`: Tests handling invalid path inputs when errors are silenced.
+    - `test_string_to_bool`: Tests converting a string to a boolean value.
+    - `test_string_to_float`: Tests converting a string to a float value.
+    - `test_string_to_int`: Tests converting a string to an integer value.
+    - `test_string_to_path`: Tests converting valid inputs into pathlib.Path objects.
+    - `test_string_to_path_invalid`: Tests handling invalid path inputs that should raise exceptions.
+    - `test_string_to_path_invalid_silent`: Tests handling invalid path inputs when errors are silenced.
 """
 
 from __future__ import annotations

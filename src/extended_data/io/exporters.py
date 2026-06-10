@@ -20,7 +20,7 @@ from extended_data.primitives.formats.yaml import (
     is_yaml_data,
 )
 from extended_data.primitives.serialization import normalize_data_encoding
-from extended_data.primitives.types import convert_special_types, strtobool
+from extended_data.primitives.types import convert_special_types, string_to_bool
 
 
 def wrap_raw_data_for_export(
@@ -61,7 +61,7 @@ def wrap_raw_data_for_export(
 
         # Attempt to convert string-based allow_encoding to a boolean
         try:
-            allow_encoding_bool = strtobool(allow_encoding, raise_on_error=True)
+            allow_encoding_bool = string_to_bool(allow_encoding, raise_on_error=True)
             allow_encoding = allow_encoding_bool if isinstance(allow_encoding_bool, bool) else allow_encoding
         except ValueError as e:
             raise ValueError(f"Invalid allow_encoding value: {allow_encoding}") from e

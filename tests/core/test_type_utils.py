@@ -25,13 +25,13 @@ from extended_data.primitives.types import (
     make_hashable,
     reconstruct_special_type,
     reconstruct_special_types,
-    strtobool,
-    strtodate,
-    strtodatetime,
-    strtofloat,
-    strtoint,
-    strtopath,
-    strtotime,
+    string_to_bool,
+    string_to_date,
+    string_to_datetime,
+    string_to_float,
+    string_to_int,
+    string_to_path,
+    string_to_time,
     typeof,
 )
 
@@ -44,8 +44,8 @@ EXPECTED_INT_2 = 3
 
 
 @pytest.fixture(params=[("yes", True), ("no", False), ("invalid", None)])
-def strtobool_data(request: Any) -> tuple[str, bool | None]:
-    """Provides data for testing strtobool function.
+def string_to_bool_data(request: Any) -> tuple[str, bool | None]:
+    """Provides data for testing string_to_bool function.
 
     Yields:
         tuple[str, bool | None]: A tuple containing the input string and the expected boolean or None result.
@@ -54,8 +54,8 @@ def strtobool_data(request: Any) -> tuple[str, bool | None]:
 
 
 @pytest.fixture(params=[("3.14", EXPECTED_FLOAT_1), ("42", EXPECTED_FLOAT_2), ("invalid", None)])
-def strtofloat_data(request: Any) -> tuple[str, float | None]:
-    """Provides data for testing strtofloat function.
+def string_to_float_data(request: Any) -> tuple[str, float | None]:
+    """Provides data for testing string_to_float function.
 
     Yields:
         tuple[str, float | None]: A tuple containing the input value and the expected float or None result.
@@ -64,8 +64,8 @@ def strtofloat_data(request: Any) -> tuple[str, float | None]:
 
 
 @pytest.fixture(params=[("42", EXPECTED_INT_1), ("3.0", EXPECTED_INT_2), ("invalid", None)])
-def strtoint_data(request: Any) -> tuple[str, int | None]:
-    """Provides data for testing strtoint function.
+def string_to_int_data(request: Any) -> tuple[str, int | None]:
+    """Provides data for testing string_to_int function.
 
     Yields:
         tuple[str, int | None]: A tuple containing the input value and the expected int or None result.
@@ -82,7 +82,7 @@ def strtoint_data(request: Any) -> tuple[str, int | None]:
     ]
 )
 def valid_path_data(request: Any) -> tuple[str | bytes | Path | None, Path | None]:
-    """Provides valid input and expected output pairs for testing strtopath function.
+    """Provides valid input and expected output pairs for testing string_to_path function.
 
     Yields:
         tuple[str | bytes | Path | None, Path | None]: A tuple containing the input value and the expected Path or None result.
@@ -92,7 +92,7 @@ def valid_path_data(request: Any) -> tuple[str | bytes | Path | None, Path | Non
 
 @pytest.fixture(params=[("invalid:://path", ValueError, True), (b"\x80invalid", ValueError, True)])
 def invalid_path_data(request: Any) -> tuple[str | bytes, type[Exception], bool]:
-    """Provides invalid input, expected exception type, and raise_on_error flag for testing strtopath.
+    """Provides invalid input, expected exception type, and raise_on_error flag for testing string_to_path.
 
     Yields:
         tuple[str | bytes, Type[Exception], bool]: A tuple containing the input value, expected exception type, and the raise_on_error flag.
@@ -102,7 +102,7 @@ def invalid_path_data(request: Any) -> tuple[str | bytes, type[Exception], bool]
 
 @pytest.fixture(params=["invalid:://path", b"\x80invalid"])
 def silent_invalid_path_data(request: Any) -> str | bytes:
-    """Provides invalid input values for testing strtopath when raise_on_error is False.
+    """Provides invalid input values for testing string_to_path when raise_on_error is False.
 
     Yields:
         str | bytes: The invalid input value to test.
@@ -117,8 +117,8 @@ def silent_invalid_path_data(request: Any) -> str | bytes:
         ("invalid-date", None),
     ]
 )
-def strtodate_data(request: Any) -> tuple[str, datetime.date | None]:
-    """Provides data for testing strtodate function.
+def string_to_date_data(request: Any) -> tuple[str, datetime.date | None]:
+    """Provides data for testing string_to_date function.
 
     Yields:
         tuple[str, datetime.date | None]: A tuple containing the input string and the expected date object or None.
@@ -143,8 +143,8 @@ def strtodate_data(request: Any) -> tuple[str, datetime.date | None]:
         ("invalid-datetime", None),
     ]
 )
-def strtodatetime_data(request: Any) -> tuple[str, datetime.datetime | None]:
-    """Provides data for testing strtodatetime function.
+def string_to_datetime_data(request: Any) -> tuple[str, datetime.datetime | None]:
+    """Provides data for testing string_to_datetime function.
 
     Yields:
         tuple[str, datetime.datetime | None]: A tuple containing the input string and the expected datetime object or None.
@@ -160,8 +160,8 @@ def strtodatetime_data(request: Any) -> tuple[str, datetime.datetime | None]:
         ("invalid-time", None),
     ]
 )
-def strtotime_data(request: Any) -> tuple[str, datetime.time | None]:
-    """Provides data for testing strtotime function.
+def string_to_time_data(request: Any) -> tuple[str, datetime.time | None]:
+    """Provides data for testing string_to_time function.
 
     Yields:
         tuple[str, datetime.time | None]: A tuple containing the input string and the expected time object or None.
@@ -169,42 +169,42 @@ def strtotime_data(request: Any) -> tuple[str, datetime.time | None]:
     return request.param
 
 
-def test_strtobool(strtobool_data: tuple[str, bool | None]) -> None:
+def test_string_to_bool(string_to_bool_data: tuple[str, bool | None]) -> None:
     """Tests converting a string to a boolean value.
 
     Args:
-        strtobool_data (tuple[str, bool | None]): A fixture providing the input string and the expected boolean or None result.
+        string_to_bool_data (tuple[str, bool | None]): A fixture providing the input string and the expected boolean or None result.
 
     Asserts:
-        The result of strtobool is True for truthy strings, False for falsy strings, and raises a ConversionError for invalid strings if specified.
+        The result of string_to_bool is True for truthy strings, False for falsy strings, and raises a ConversionError for invalid strings if specified.
     """
-    val, expected = strtobool_data
-    assert strtobool(val) == expected
+    val, expected = string_to_bool_data
+    assert string_to_bool(val) == expected
     if expected is None and val == "invalid":
         with pytest.raises(ConversionError, match=r"Invalid <class 'bool'> value: 'invalid'"):
-            strtobool(val, raise_on_error=True)
+            string_to_bool(val, raise_on_error=True)
 
 
-def test_strtobool_passthrough_for_bool_and_none() -> None:
+def test_string_to_bool_passthrough_for_bool_and_none() -> None:
     """Return boolean and None inputs unchanged."""
-    assert strtobool(True) is True
-    assert strtobool(False) is False
-    assert strtobool(None) is None
+    assert string_to_bool(True) is True
+    assert string_to_bool(False) is False
+    assert string_to_bool(None) is None
 
 
-def test_strtobool_rejects_non_strings_when_requested() -> None:
+def test_string_to_bool_rejects_non_strings_when_requested() -> None:
     """Reject unsupported non-string inputs when raise_on_error is enabled."""
     with pytest.raises(ConversionError, match=r"Invalid <class 'bool'> value: 123"):
-        strtobool(123, raise_on_error=True)
+        string_to_bool(123, raise_on_error=True)
 
 
 def test_string_type_converters_accept_extended_string_values() -> None:
     """Type conversion primitives compose with Tier 2 ExtendedString values."""
-    assert strtobool(ExtendedString("true")) is True
-    assert strtofloat(ExtendedString("3.14")) == EXPECTED_FLOAT_1
-    assert strtoint(ExtendedString("42")) == EXPECTED_INT_1
-    assert strtodate(ExtendedString("2023-09-05")) == datetime.date(2023, 9, 5)
-    assert strtodatetime(ExtendedString("2023-09-05T12:30:00")) == datetime.datetime(
+    assert string_to_bool(ExtendedString("true")) is True
+    assert string_to_float(ExtendedString("3.14")) == EXPECTED_FLOAT_1
+    assert string_to_int(ExtendedString("42")) == EXPECTED_INT_1
+    assert string_to_date(ExtendedString("2023-09-05")) == datetime.date(2023, 9, 5)
+    assert string_to_datetime(ExtendedString("2023-09-05T12:30:00")) == datetime.datetime(
         2023,
         9,
         5,
@@ -213,215 +213,215 @@ def test_string_type_converters_accept_extended_string_values() -> None:
         0,
         tzinfo=datetime.timezone.utc,
     )
-    assert strtotime(ExtendedString("12:30")) == datetime.time(12, 30, 0)
-    assert strtopath(ExtendedString("/valid/path")) == Path("/valid/path")
+    assert string_to_time(ExtendedString("12:30")) == datetime.time(12, 30, 0)
+    assert string_to_path(ExtendedString("/valid/path")) == Path("/valid/path")
 
 
-def test_strtofloat(strtofloat_data: tuple[str, float | None]) -> None:
+def test_string_to_float(string_to_float_data: tuple[str, float | None]) -> None:
     """Tests converting a string to a float value.
 
     Args:
-        strtofloat_data (tuple[str, float | None]): A fixture providing the input value and the expected float or None result.
+        string_to_float_data (tuple[str, float | None]): A fixture providing the input value and the expected float or None result.
 
     Asserts:
-        The result of strtofloat matches the expected float value and raises a ConversionError for invalid strings if specified.
+        The result of string_to_float matches the expected float value and raises a ConversionError for invalid strings if specified.
     """
-    val, expected = strtofloat_data
-    assert strtofloat(val) == expected
+    val, expected = string_to_float_data
+    assert string_to_float(val) == expected
     if expected is None and val == "invalid":
         with pytest.raises(ConversionError, match=r"Invalid <class 'float'> value: 'invalid'"):
-            strtofloat(val, raise_on_error=True)
+            string_to_float(val, raise_on_error=True)
 
 
-def test_strtofloat_wraps_float_value_errors(mocker) -> None:
+def test_string_to_float_wraps_float_value_errors(mocker) -> None:
     """Surface float conversion failures as ConversionError when requested."""
     mocker.patch("builtins.float", side_effect=ValueError("boom"))
 
     with pytest.raises(ConversionError, match=r"Invalid .* value: '3.14'"):
-        strtofloat("3.14", raise_on_error=True)
+        string_to_float("3.14", raise_on_error=True)
 
 
-def test_strtofloat_swallows_float_value_errors_when_not_requested(mocker) -> None:
+def test_string_to_float_swallows_float_value_errors_when_not_requested(mocker) -> None:
     """Return None when float conversion fails and raise_on_error is disabled."""
     mocker.patch("builtins.float", side_effect=ValueError("boom"))
-    assert strtofloat("3.14") is None
+    assert string_to_float("3.14") is None
 
 
-def test_strtoint(strtoint_data: tuple[str, int | None]) -> None:
+def test_string_to_int(string_to_int_data: tuple[str, int | None]) -> None:
     """Tests converting a string to an integer value.
 
     Args:
-        strtoint_data (tuple[str, int | None]): A fixture providing the input value and the expected int or None result.
+        string_to_int_data (tuple[str, int | None]): A fixture providing the input value and the expected int or None result.
 
     Asserts:
-        The result of strtoint matches the expected integer value and raises a ConversionError for invalid strings if specified.
+        The result of string_to_int matches the expected integer value and raises a ConversionError for invalid strings if specified.
     """
-    val, expected = strtoint_data
-    assert strtoint(val) == expected
+    val, expected = string_to_int_data
+    assert string_to_int(val) == expected
     if expected is None and val == "invalid":
         with pytest.raises(ConversionError, match=r"Invalid <class 'int'> value: 'invalid'"):
-            strtoint(val, raise_on_error=True)
+            string_to_int(val, raise_on_error=True)
 
 
-def test_strtoint_wraps_nested_conversion_errors(mocker) -> None:
+def test_string_to_int_wraps_nested_conversion_errors(mocker) -> None:
     """Map nested float conversion failures to integer conversion failures."""
     mocker.patch(
-        "extended_data.primitives.types.strtofloat",
+        "extended_data.primitives.types.string_to_float",
         side_effect=ConversionError(float, "3.14"),
     )
 
     with pytest.raises(ConversionError, match=r"Invalid <class 'int'> value: '3.14'"):
-        strtoint("3.14", raise_on_error=True)
+        string_to_int("3.14", raise_on_error=True)
 
 
-def test_strtoint_swallows_nested_conversion_errors_when_not_requested(mocker) -> None:
+def test_string_to_int_swallows_nested_conversion_errors_when_not_requested(mocker) -> None:
     """Return None when nested conversion fails and raise_on_error is disabled."""
     mocker.patch(
-        "extended_data.primitives.types.strtofloat",
+        "extended_data.primitives.types.string_to_float",
         side_effect=ConversionError(float, "3.14"),
     )
 
-    assert strtoint("3.14") is None
+    assert string_to_int("3.14") is None
 
 
-def test_strtoint_raises_when_nested_conversion_returns_none(mocker) -> None:
+def test_string_to_int_raises_when_nested_conversion_returns_none(mocker) -> None:
     """Raise an integer conversion error when nested conversion returns no value."""
-    mocker.patch("extended_data.primitives.types.strtofloat", return_value=None)
+    mocker.patch("extended_data.primitives.types.string_to_float", return_value=None)
 
     with pytest.raises(ConversionError, match=r"Invalid <class 'int'> value: '3.14'"):
-        strtoint("3.14", raise_on_error=True)
+        string_to_int("3.14", raise_on_error=True)
 
 
-def test_strtopath(
+def test_string_to_path(
     valid_path_data: tuple[str | bytes | Path | None, Path | None],
 ) -> None:
-    """Tests the strtopath function for converting valid inputs into Path objects.
+    """Tests the string_to_path function for converting valid inputs into Path objects.
 
     Args:
         valid_path_data (tuple[str | bytes | Path | None, Path | None]): A fixture providing the input value and the expected Path or None result.
 
     Asserts:
-        The result of strtopath matches the expected Path object or None.
+        The result of string_to_path matches the expected Path object or None.
     """
     value, expected = valid_path_data
-    assert strtopath(value) == expected
+    assert string_to_path(value) == expected
 
 
-def test_strtopath_invalid(
+def test_string_to_path_invalid(
     invalid_path_data: tuple[str | bytes, type[Exception], bool],
 ) -> None:
-    """Tests the strtopath function for handling invalid inputs that should raise exceptions.
+    """Tests the string_to_path function for handling invalid inputs that should raise exceptions.
 
     Args:
         invalid_path_data (tuple[str | bytes, Type[Exception], bool]): A fixture providing the input value, expected exception type, and the raise_on_error flag.
 
     Asserts:
-        The strtopath function raises the expected exception with the correct error message when the raise_on_error flag is set to True.
+        The string_to_path function raises the expected exception with the correct error message when the raise_on_error flag is set to True.
     """
     value, expected_exception, raise_on_error = invalid_path_data
     with pytest.raises(expected_exception, match=r"Invalid <class 'pathlib.Path'> value"):
-        strtopath(value, raise_on_error=raise_on_error)
+        string_to_path(value, raise_on_error=raise_on_error)
 
 
-def test_strtopath_invalid_silent(silent_invalid_path_data: str | bytes) -> None:
-    """Tests the strtopath function with invalid inputs when fail_silently is set to True.
+def test_string_to_path_invalid_silent(silent_invalid_path_data: str | bytes) -> None:
+    """Tests the string_to_path function with invalid inputs when fail_silently is set to True.
 
     Args:
         silent_invalid_path_data (str | bytes): A fixture providing the invalid input value to test.
 
     Asserts:
-        The strtopath function returns None when the input is invalid and the raise_on_error flag is False.
+        The string_to_path function returns None when the input is invalid and the raise_on_error flag is False.
     """
-    assert strtopath(silent_invalid_path_data) is None
+    assert string_to_path(silent_invalid_path_data) is None
 
 
-def test_strtodate(strtodate_data: tuple[str, datetime.date | None]) -> None:
+def test_string_to_date(string_to_date_data: tuple[str, datetime.date | None]) -> None:
     """Tests converting a string to a date value.
 
     Args:
-        strtodate_data (tuple[str, datetime.date | None]): A fixture providing the input string and the expected date object or None.
+        string_to_date_data (tuple[str, datetime.date | None]): A fixture providing the input string and the expected date object or None.
 
     Asserts:
-        The result of strtodate matches the expected date value and raises a ConversionError for invalid strings if specified.
+        The result of string_to_date matches the expected date value and raises a ConversionError for invalid strings if specified.
     """
-    val, expected = strtodate_data
-    assert strtodate(val) == expected
+    val, expected = string_to_date_data
+    assert string_to_date(val) == expected
     if expected is None and val == "invalid-date":
         with pytest.raises(
             ConversionError,
             match=r"Invalid <class 'datetime.date'> value: 'invalid-date'",
         ):
-            strtodate(val, raise_on_error=True)
+            string_to_date(val, raise_on_error=True)
 
 
-def test_strtodate_invalid_matching_pattern_raises() -> None:
+def test_string_to_date_invalid_matching_pattern_raises() -> None:
     """Reject impossible calendar dates that still match the date pattern."""
-    assert strtodate("2023-13-40") is None
+    assert string_to_date("2023-13-40") is None
     with pytest.raises(ConversionError, match=r"Invalid <class 'datetime.date'> value: '2023-13-40'"):
-        strtodate("2023-13-40", raise_on_error=True)
+        string_to_date("2023-13-40", raise_on_error=True)
 
 
-def test_strtodatetime(
-    strtodatetime_data: tuple[str, datetime.datetime | None],
+def test_string_to_datetime(
+    string_to_datetime_data: tuple[str, datetime.datetime | None],
 ) -> None:
     """Tests converting a string to a datetime value.
 
     Args:
-        strtodatetime_data (tuple[str, datetime.datetime | None]): A fixture providing the input string and the expected datetime object or None.
+        string_to_datetime_data (tuple[str, datetime.datetime | None]): A fixture providing the input string and the expected datetime object or None.
 
     Asserts:
-        The result of strtodatetime matches the expected datetime value and raises a ConversionError for invalid strings if specified.
+        The result of string_to_datetime matches the expected datetime value and raises a ConversionError for invalid strings if specified.
     """
-    val, expected = strtodatetime_data
-    assert strtodatetime(val) == expected
+    val, expected = string_to_datetime_data
+    assert string_to_datetime(val) == expected
     if expected is None and val == "invalid-datetime":
         with pytest.raises(
             ConversionError,
             match=r"Invalid <class 'datetime.datetime'> value: 'invalid-datetime'",
         ):
-            strtodatetime(val, raise_on_error=True)
+            string_to_datetime(val, raise_on_error=True)
 
 
-def test_strtodatetime_invalid_matching_pattern_raises() -> None:
+def test_string_to_datetime_invalid_matching_pattern_raises() -> None:
     """Reject impossible datetimes that still match the datetime pattern."""
     invalid_value = "2023-13-05T25:61:00"
-    assert strtodatetime(invalid_value) is None
+    assert string_to_datetime(invalid_value) is None
     with pytest.raises(ConversionError, match=r"Invalid <class 'datetime.datetime'> value: '2023-13-05T25:61:00'"):
-        strtodatetime(invalid_value, raise_on_error=True)
+        string_to_datetime(invalid_value, raise_on_error=True)
 
 
-def test_strtodatetime_preserves_explicit_timezone() -> None:
+def test_string_to_datetime_preserves_explicit_timezone() -> None:
     """Keep explicit timezone offsets instead of forcing UTC."""
-    result = strtodatetime("2023-09-05T12:30:00+02:00")
+    result = string_to_datetime("2023-09-05T12:30:00+02:00")
 
     assert result == datetime.datetime(2023, 9, 5, 12, 30, 0, tzinfo=datetime.timezone(datetime.timedelta(hours=2)))
 
 
-def test_strtotime(strtotime_data: tuple[str, datetime.time | None]) -> None:
+def test_string_to_time(string_to_time_data: tuple[str, datetime.time | None]) -> None:
     """Tests converting a string to a time value.
 
     Args:
-        strtotime_data (tuple[str, datetime.time | None]): A fixture providing the input string and the expected time object or None.
+        string_to_time_data (tuple[str, datetime.time | None]): A fixture providing the input string and the expected time object or None.
 
     Asserts:
-        The result of strtotime matches the expected time value and raises a ConversionError for invalid strings if specified.
+        The result of string_to_time matches the expected time value and raises a ConversionError for invalid strings if specified.
     """
-    val, expected = strtotime_data
-    assert strtotime(val) == expected
+    val, expected = string_to_time_data
+    assert string_to_time(val) == expected
     if expected is None and val == "invalid-time":
         with pytest.raises(
             ConversionError,
             match=r"Invalid <class 'datetime.time'> value: 'invalid-time'",
         ):
-            strtotime(val, raise_on_error=True)
+            string_to_time(val, raise_on_error=True)
 
 
-def test_strtotime_invalid_matching_pattern_raises() -> None:
+def test_string_to_time_invalid_matching_pattern_raises() -> None:
     """Reject impossible times that still match the time pattern."""
     invalid_value = "25:61:00"
-    assert strtotime(invalid_value) is None
+    assert string_to_time(invalid_value) is None
     with pytest.raises(ConversionError, match=r"Invalid <class 'datetime.time'> value: '25:61:00'"):
-        strtotime(invalid_value, raise_on_error=True)
+        string_to_time(invalid_value, raise_on_error=True)
 
 
 # Test for get_default_value_for_type function

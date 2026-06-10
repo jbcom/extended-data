@@ -25,7 +25,13 @@ from extended_data.primitives.formats.errors import DataDecodeError
 from extended_data.primitives.formats.json import decode_json
 from extended_data.primitives.formats.yaml import decode_yaml
 from extended_data.primitives.state import is_nothing
-from extended_data.primitives.types import strtobool, strtodatetime, strtofloat, strtoint, strtopath
+from extended_data.primitives.types import (
+    string_to_bool,
+    string_to_datetime,
+    string_to_float,
+    string_to_int,
+    string_to_path,
+)
 
 
 if TYPE_CHECKING:
@@ -76,7 +82,7 @@ class InputProvider:
             env_inputs = self._filtered_environment(os.environ, env_prefix=env_prefix, strip_prefix=strip_env_prefix)
             current_inputs = self._merge_inputs(env_inputs, current_inputs)
 
-        if from_stdin and not strtobool(os.getenv("OVERRIDE_STDIN", "False")):
+        if from_stdin and not string_to_bool(os.getenv("OVERRIDE_STDIN", "False")):
             stdin_inputs = self._load_from_stdin()
             current_inputs = self._merge_inputs(stdin_inputs, current_inputs)
 
@@ -192,35 +198,35 @@ class InputProvider:
 
         if is_bool and not isinstance(inp, bool):
             try:
-                inp = strtobool(str(inp), raise_on_error=True)
+                inp = string_to_bool(str(inp), raise_on_error=True)
             except (TypeError, ValueError) as exc:
                 message = f"Input {k} cannot be converted to boolean."
                 raise RuntimeError(message) from exc
 
         if is_integer and inp is not None and not isinstance(inp, int):
             try:
-                inp = strtoint(str(inp), raise_on_error=True)
+                inp = string_to_int(str(inp), raise_on_error=True)
             except (TypeError, ValueError) as exc:
                 message = f"Input {k} cannot be converted to integer."
                 raise RuntimeError(message) from exc
 
         if is_float and inp is not None and not isinstance(inp, float):
             try:
-                inp = strtofloat(str(inp), raise_on_error=True)
+                inp = string_to_float(str(inp), raise_on_error=True)
             except (TypeError, ValueError) as exc:
                 message = f"Input {k} cannot be converted to float."
                 raise RuntimeError(message) from exc
 
         if is_path and inp is not None:
             try:
-                inp = strtopath(str(inp), raise_on_error=True)
+                inp = string_to_path(str(inp), raise_on_error=True)
             except (TypeError, ValueError) as exc:
                 message = f"Input {k} cannot be converted to Path."
                 raise RuntimeError(message) from exc
 
         if is_datetime and inp is not None:
             try:
-                inp = strtodatetime(str(inp), raise_on_error=True)
+                inp = string_to_datetime(str(inp), raise_on_error=True)
             except (TypeError, ValueError) as exc:
                 message = f"Input {k} cannot be converted to datetime."
                 raise RuntimeError(message) from exc
