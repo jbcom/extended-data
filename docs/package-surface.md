@@ -14,6 +14,8 @@ from extended_data import (
     ExtendedString,
     InputProvider,
     Logging,
+    SecretsConnector,
+    SyncOptions,
     decode_json,
     extend_data,
     encode_yaml,
@@ -132,6 +134,15 @@ The `secrets` adapter is the Python-facing bridge to the standalone
 `secretsync` project. It uses native bindings when present and otherwise falls
 back to the CLI, which must emit the stable `secretsync pipeline --output json`
 result envelope for both dry-run and apply runs.
+
+```python
+from extended_data import SecretsConnector, SyncOptions
+
+result = SecretsConnector(prefer_native=False).run_pipeline(
+    "pipeline.yaml",
+    SyncOptions(dry_run=True),
+)
+```
 
 Use the catalog helpers when a workflow needs to inspect which integrations can
 run in the current environment:

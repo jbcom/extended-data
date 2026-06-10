@@ -128,6 +128,7 @@ if TYPE_CHECKING:
     )
     from extended_data.inputs import InputProvider, directed_inputs, input_config
     from extended_data.logging import ExitRunError, KeyTransform, Logging
+    from extended_data.secrets import OutputFormat, SecretsConnector, SyncOperation, SyncOptions, SyncResult
 
 
 _LAZY_EXPORTS = {
@@ -137,6 +138,11 @@ _LAZY_EXPORTS = {
     "InputProvider": ("extended_data.inputs", "InputProvider"),
     "KeyTransform": ("extended_data.logging", "KeyTransform"),
     "Logging": ("extended_data.logging", "Logging"),
+    "OutputFormat": ("extended_data.secrets", "OutputFormat"),
+    "SecretsConnector": ("extended_data.secrets", "SecretsConnector"),
+    "SyncOperation": ("extended_data.secrets", "SyncOperation"),
+    "SyncOptions": ("extended_data.secrets", "SyncOptions"),
+    "SyncResult": ("extended_data.secrets", "SyncResult"),
     "VendorConnectorBase": ("extended_data.connectors", "VendorConnectorBase"),
     "directed_inputs": ("extended_data.inputs", "directed_inputs"),
     "get_connector": ("extended_data.connectors", "get_connector"),
@@ -173,7 +179,12 @@ __all__ = [
     "InputProvider",
     "KeyTransform",
     "Logging",
+    "OutputFormat",
+    "SecretsConnector",
     "SortedDefaultDict",
+    "SyncOperation",
+    "SyncOptions",
+    "SyncResult",
     "VendorConnectorBase",
     "WorkflowResult",
     "WorkflowStep",

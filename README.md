@@ -96,6 +96,15 @@ The `secrets` connector integrates with the standalone `secretsync` CLI or
 native bindings. CLI fallback expects `secretsync pipeline --output json` to
 return the stable pipeline result envelope used by this package.
 
+```python
+from extended_data import SecretsConnector, SyncOptions
+
+result = SecretsConnector(prefer_native=False).run_pipeline(
+    "pipeline.yaml",
+    SyncOptions(dry_run=True),
+)
+```
+
 The package is intentionally tiered:
 
 - Tier 1 functions stay stateless and composable.

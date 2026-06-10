@@ -7,7 +7,7 @@ from importlib.metadata import version
 import extended_data
 import extended_data.logging as lifecycle_logging
 
-from extended_data import connectors, inputs
+from extended_data import connectors, inputs, secrets
 from extended_data.connectors.connectors import ConnectorFabric
 from extended_data.inputs import InputProvider
 from extended_data.logging import Logging
@@ -21,6 +21,7 @@ def test_package_version_is_distribution_version() -> None:
     assert connectors.__version__ == expected
     assert inputs.__version__ == expected
     assert lifecycle_logging.__version__ == expected
+    assert secrets.__version__ == expected
 
 
 def test_clean_major_version_public_names() -> None:
@@ -41,6 +42,11 @@ def test_root_exports_first_class_integrated_primitives() -> None:
     assert extended_data.ConnectorInfo.__name__ == "ConnectorInfo"
     assert extended_data.WorkflowResult.__name__ == "WorkflowResult"
     assert extended_data.WorkflowStep.__name__ == "WorkflowStep"
+    assert extended_data.SecretsConnector is secrets.SecretsConnector
+    assert extended_data.SyncOptions is secrets.SyncOptions
+    assert extended_data.SyncResult is secrets.SyncResult
+    assert extended_data.SyncOperation is secrets.SyncOperation
+    assert extended_data.OutputFormat is secrets.OutputFormat
     assert callable(extended_data.directed_inputs)
     assert callable(extended_data.get_connector)
     assert callable(extended_data.list_connector_info)
