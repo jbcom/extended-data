@@ -113,9 +113,25 @@ def test_get_input_required():
     This test verifies that the InputProvider raises an error if a required
     input is not provided.
     """
-    dic = InputProvider(inputs={"key1": "value1"})
-    with pytest.raises(RuntimeError, match="Required input key2 not passed"):
+    dic = InputProvider(inputs={"key1": "value1", "API_TOKEN": "super-secret"}, from_environment=False)
+    with pytest.raises(RuntimeError, match="Required input key2 not passed") as exc_info:
         dic.get_input("key2", required=True)
+
+    message = str(exc_info.value)
+    assert "key1" in message
+    assert "API_TOKEN" in message
+    assert "value1" not in message
+    assert "super-secret" not in message
+
+
+def test_init_with_invalid_stdin_does_not_echo_payload(monkeypatch):
+    """Invalid stdin diagnostics do not expose raw stdin content."""
+    monkeypatch.setattr("sys.stdin.read", lambda: '{"API_TOKEN": "super-secret"')
+
+    with pytest.raises(RuntimeError, match="Failed to decode stdin as JSON") as exc_info:
+        InputProvider(from_stdin=True)
+
+    assert "super-secret" not in str(exc_info.value)
 
 
 def test_get_input_boolean():
@@ -134,6 +150,16 @@ def test_get_input_boolean_existing_bool():
     assert dic.get_input("bool_key", is_bool=True) is False
 
 
+def test_get_input_boolean_conversion_errors_do_not_echo_values():
+    """Boolean conversion diagnostics identify the key without exposing the value."""
+    dic = InputProvider(inputs={"bool_key": "super-secret"})
+
+    with pytest.raises(RuntimeError, match="Input bool_key cannot be converted to boolean") as exc_info:
+        dic.get_input("bool_key", is_bool=True)
+
+    assert "super-secret" not in str(exc_info.value)
+
+
 def test_get_input_integer():
     """Test retrieving and converting an integer input.
 
@@ -143,6 +169,16 @@ def test_get_input_integer():
     dic = InputProvider(inputs={"int_key": "10"})
     integer_test_value = 10
     assert dic.get_input("int_key", is_integer=True) == integer_test_value
+
+
+def test_get_input_conversion_errors_do_not_echo_values():
+    """Type conversion diagnostics identify the key without exposing the value."""
+    dic = InputProvider(inputs={"int_key": "super-secret"})
+
+    with pytest.raises(RuntimeError, match="Input int_key cannot be converted to integer") as exc_info:
+        dic.get_input("int_key", is_integer=True)
+
+    assert "super-secret" not in str(exc_info.value)
 
 
 def test_decode_input_json():
@@ -196,6 +232,29 @@ def test_decode_input_json_can_return_extended_containers():
     assert isinstance(decoded, ExtendedDict)
     assert isinstance(decoded["name"], ExtendedString)
     assert decoded["name"].upper_first() == "Test"
+
+
+def test_decode_input_errors_do_not_echo_values():
+    """Decode diagnostics identify the input key without exposing raw values."""
+    dic = InputProvider(
+        inputs={
+            "json_key": '{"token": "super-secret"',
+            "yaml_key": "token: [super-secret",
+            "base64_key": "not valid base64!",
+        }
+    )
+
+    with pytest.raises(RuntimeError, match="Failed to decode input json_key from JSON") as json_exc:
+        dic.decode_input("json_key", decode_from_json=True)
+    with pytest.raises(RuntimeError, match="Failed to decode input yaml_key from YAML") as yaml_exc:
+        dic.decode_input("yaml_key", decode_from_yaml=True)
+    with pytest.raises(RuntimeError, match="Failed to decode input base64_key from Base64") as base64_exc:
+        dic.decode_input("base64_key", decode_from_base64=True)
+
+    for exc_info in (json_exc, yaml_exc, base64_exc):
+        message = str(exc_info.value)
+        assert "super-secret" not in message
+        assert "not valid base64" not in message
 
 
 def test_decode_input_base64_external_json_can_return_extended_containers():

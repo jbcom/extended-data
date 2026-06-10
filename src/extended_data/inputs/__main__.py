@@ -126,7 +126,7 @@ class InputProvider:
             decoded_stdin: dict[str, Any] = json.loads(inputs_from_stdin)
             return decoded_stdin
         except json.JSONDecodeError as exc:
-            message = f"Failed to decode stdin:\n{inputs_from_stdin}"
+            message = f"Failed to decode stdin as JSON ({len(inputs_from_stdin)} characters)."
             raise RuntimeError(message) from exc
 
     @staticmethod
@@ -138,10 +138,19 @@ class InputProvider:
             try:
                 return value.decode("utf-8")
             except UnicodeDecodeError as exc:
-                message = f"Failed to decode bytes to string: {value!r}"
+                message = f"Failed to decode {type(value).__name__} input as UTF-8 text."
                 raise RuntimeError(message) from exc
 
         return value
+
+    @staticmethod
+    def _format_available_keys(inputs: Mapping[str, Any]) -> str:
+        """Format available input keys without exposing their values."""
+        if not inputs:
+            return "none"
+
+        keys = sorted(str(key) for key in inputs)
+        return ", ".join(keys[:20]) + (f", ... ({len(keys)} total)" if len(keys) > 20 else "")
 
     def get_input(
         self,
@@ -179,38 +188,43 @@ class InputProvider:
             inp = default
 
         if is_bool and not isinstance(inp, bool):
-            inp = strtobool(inp)
+            try:
+                inp = strtobool(inp, raise_on_error=True)
+            except (TypeError, ValueError) as exc:
+                message = f"Input {k} cannot be converted to boolean."
+                raise RuntimeError(message) from exc
 
         if is_integer and inp is not None and not isinstance(inp, int):
             try:
-                inp = strtoint(inp)
+                inp = strtoint(inp, raise_on_error=True)
             except (TypeError, ValueError) as exc:
-                message = f"Input {k} cannot be converted to integer: {inp!r}"
+                message = f"Input {k} cannot be converted to integer."
                 raise RuntimeError(message) from exc
 
         if is_float and inp is not None and not isinstance(inp, float):
             try:
-                inp = strtofloat(str(inp))
+                inp = strtofloat(str(inp), raise_on_error=True)
             except (TypeError, ValueError) as exc:
-                message = f"Input {k} cannot be converted to float: {inp!r}"
+                message = f"Input {k} cannot be converted to float."
                 raise RuntimeError(message) from exc
 
         if is_path and inp is not None:
             try:
-                inp = strtopath(str(inp))
+                inp = strtopath(str(inp), raise_on_error=True)
             except (TypeError, ValueError) as exc:
-                message = f"Input {k} cannot be converted to Path: {inp!r}"
+                message = f"Input {k} cannot be converted to Path."
                 raise RuntimeError(message) from exc
 
         if is_datetime and inp is not None:
             try:
-                inp = strtodatetime(str(inp))
+                inp = strtodatetime(str(inp), raise_on_error=True)
             except (TypeError, ValueError) as exc:
-                message = f"Input {k} cannot be converted to datetime: {inp!r}"
+                message = f"Input {k} cannot be converted to datetime."
                 raise RuntimeError(message) from exc
 
         if is_nothing(inp) and required:
-            message = f"Required input {k} not passed from inputs:\n{self.inputs}"
+            available = self._format_available_keys(self.inputs)
+            message = f"Required input {k} not passed. Available input keys: {available}."
             raise RuntimeError(message)
 
         return inp
@@ -260,7 +274,7 @@ class InputProvider:
                     encoding="json" if decode_from_json else "yaml",
                 )
             except binascii.Error as exc:
-                message = f"Failed to decode {conf} from base64"
+                message = f"Failed to decode input {k} from Base64."
                 raise RuntimeError(message) from exc
 
             if not isinstance(conf, str):
@@ -272,13 +286,13 @@ class InputProvider:
             try:
                 conf = decode_yaml(conf)
             except YAMLError as exc:
-                message = f"Failed to decode {conf} from YAML"
+                message = f"Failed to decode input {k} from YAML."
                 raise RuntimeError(message) from exc
         elif decode_from_json:
             try:
                 conf = decode_json(conf)
             except json.JSONDecodeError as exc:
-                message = f"Failed to decode {conf} from JSON"
+                message = f"Failed to decode input {k} from JSON."
                 raise RuntimeError(message) from exc
 
         if conf is None and not allow_none:

@@ -62,10 +62,13 @@ to lower extended containers back to standard Python data.
 `InputProvider` loads input data from explicit mappings, environment variables,
 and stdin, then decodes or coerces values through the primitive layer. Its
 `decode_input(..., as_extended=True)` path gives input-driven workflows the same
-container bridge as file and Base64 decoding. `Logging` provides structured
-lifecycle logging for applications and connector workflows. `ConnectorFabric`
-caches and coordinates vendor connectors while sharing input loading, logging,
-data normalization, retry behavior, and serialization.
+container bridge as file and Base64 decoding. Requested input coercions are
+strict, and diagnostics identify the input key and failed operation without
+echoing raw values from environment variables, stdin, JSON, YAML, or Base64
+payloads. `Logging` provides structured lifecycle logging for applications and
+connector workflows. `ConnectorFabric` caches and coordinates vendor connectors
+while sharing input loading, logging, data normalization, retry behavior, and
+serialization.
 
 ## Connector Fabric
 
