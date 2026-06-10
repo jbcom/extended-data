@@ -92,6 +92,10 @@ uses the registry to resolve connectors by name, injects shared input/logging
 context, caches connector instances, and lets specialized helpers coexist with
 generic vendor lookup.
 
+The `secrets` connector integrates with the standalone `secretsync` CLI or
+native bindings. CLI fallback expects `secretsync pipeline --output json` to
+return the stable pipeline result envelope used by this package.
+
 The package is intentionally tiered:
 
 - Tier 1 functions stay stateless and composable.

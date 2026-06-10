@@ -402,6 +402,14 @@ class SecretsConnector(VendorConnectorBase):
 
             if result.returncode == 0:
                 output = json.loads(result.stdout)
+                if not isinstance(output, dict) or "success" not in output:
+                    return SyncResult(
+                        success=False,
+                        error_message=(
+                            "Unsupported secretsync JSON output: expected pipeline result envelope. "
+                            "Upgrade secretsync or use native bindings."
+                        ),
+                    )
                 return SyncResult.from_cli_output(output)
             else:
                 return SyncResult(

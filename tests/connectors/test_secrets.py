@@ -138,6 +138,63 @@ def test_cli_run_pipeline_default_output_is_json(mock_run: MagicMock, connector:
 
 
 @patch("subprocess.run")
+def test_cli_run_pipeline_parses_result_envelope(mock_run: MagicMock, connector: SecretsConnector) -> None:
+    output = {
+        "success": True,
+        "target_count": 2,
+        "secrets_processed": 5,
+        "secrets_added": 1,
+        "secrets_modified": 2,
+        "secrets_removed": 0,
+        "secrets_unchanged": 2,
+        "duration_ms": 321,
+        "results": [
+            {"target": "prod", "phase": "merge", "success": True},
+            {"target": "prod", "phase": "sync", "success": True},
+        ],
+        "diff_output": '{"summary":{"added":1}}',
+        "diff": {"dry_run": True},
+    }
+    mock_run.return_value = MagicMock(
+        returncode=0,
+        stdout=json.dumps(output),
+        stderr="",
+    )
+
+    result = connector.run_pipeline("config.yaml")
+
+    assert result.success is True
+    assert result.target_count == 2
+    assert result.secrets_processed == 5
+    assert result.secrets_added == 1
+    assert result.secrets_modified == 2
+    assert result.secrets_unchanged == 2
+    assert result.duration_ms == 321
+    assert json.loads(result.results_json) == output["results"]
+    assert result.diff_output == '{"summary":{"added":1}}'
+
+
+@patch("subprocess.run")
+def test_cli_run_pipeline_rejects_legacy_raw_diff_json(mock_run: MagicMock, connector: SecretsConnector) -> None:
+    mock_run.return_value = MagicMock(
+        returncode=0,
+        stdout=json.dumps(
+            {
+                "dry_run": True,
+                "summary": {"added": 1, "modified": 0, "removed": 0, "unchanged": 0},
+                "targets": [],
+            }
+        ),
+        stderr="",
+    )
+
+    result = connector.run_pipeline("config.yaml", SyncOptions(dry_run=True, compute_diff=True))
+
+    assert result.success is False
+    assert "expected pipeline result envelope" in result.error_message
+
+
+@patch("subprocess.run")
 def test_cli_run_pipeline_only_emits_supported_cli_flags(mock_run: MagicMock, connector: SecretsConnector) -> None:
     mock_run.return_value = MagicMock(
         returncode=0,

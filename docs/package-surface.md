@@ -128,6 +128,11 @@ Connectors that inherit `VendorConnectorBase` can keep raw transport access with
 verb-specific helpers to decode HTTP JSON, YAML, TOML, HCL, or text responses
 through the same Tier 2 container bridge used by file and input decoding.
 
+The `secrets` adapter is the Python-facing bridge to the standalone
+`secretsync` project. It uses native bindings when present and otherwise falls
+back to the CLI, which must emit the stable `secretsync pipeline --output json`
+result envelope for both dry-run and apply runs.
+
 Use the catalog helpers when a workflow needs to inspect which integrations can
 run in the current environment:
 

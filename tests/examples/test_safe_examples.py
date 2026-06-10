@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import importlib.util
 import os
+import py_compile
 import subprocess
 import sys
 
@@ -26,6 +28,14 @@ SAFE_EXAMPLES = [
     "examples/logging/markers_and_storage.py",
     "examples/logging/verbosity_control.py",
 ]
+CONNECTOR_EXAMPLES = [
+    "examples/connectors/basic_aws.py",
+    "examples/connectors/basic_google.py",
+    "examples/connectors/basic_meshy.py",
+    "examples/connectors/langchain_tools.py",
+    "examples/connectors/mcp_server.py",
+]
+ALL_EXAMPLES = SAFE_EXAMPLES + CONNECTOR_EXAMPLES
 
 
 @pytest.mark.parametrize("example_path", SAFE_EXAMPLES)
@@ -45,3 +55,23 @@ def test_safe_example_runs(example_path: str, tmp_path: Path) -> None:
     )
 
     assert result.returncode == 0, f"{example_path} failed\nSTDOUT:\n{result.stdout}\nSTDERR:\n{result.stderr}"
+
+
+@pytest.mark.parametrize("example_path", ALL_EXAMPLES)
+def test_example_compiles(example_path: str, tmp_path: Path) -> None:
+    """Every example should at least remain syntactically valid."""
+    py_compile.compile(str(REPO_ROOT / example_path), cfile=str(tmp_path / "example.pyc"), doraise=True)
+
+
+@pytest.mark.parametrize("example_path", CONNECTOR_EXAMPLES)
+def test_connector_example_imports_without_live_credentials(example_path: str) -> None:
+    """Credential-gated connector examples should keep import-time side effects out."""
+    module_path = REPO_ROOT / example_path
+    module_name = example_path.replace("/", "_").removesuffix(".py")
+    spec = importlib.util.spec_from_file_location(module_name, module_path)
+    assert spec is not None
+    module = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    spec.loader.exec_module(module)
+
+    assert callable(module.main)
