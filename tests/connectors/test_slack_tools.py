@@ -12,6 +12,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from extended_data.containers import ExtendedDict, ExtendedList, ExtendedString
+
 
 @pytest.fixture(autouse=True)
 def mock_slack_sdk():
@@ -90,9 +92,12 @@ class TestListChannels:
         with patch("extended_data.connectors.slack.tools._get_connector", return_value=mock_connector):
             result = list_channels()
 
+        assert isinstance(result, ExtendedList)
+        assert isinstance(result[0], ExtendedDict)
         assert len(result) == 2
         assert result[0]["id"] == "C12345"
         assert result[0]["name"] == "general"
+        assert isinstance(result[0]["name"], ExtendedString)
         assert result[0]["member_count"] == 42
 
     def test_list_channels_with_archived(self, mock_slack_sdk):
@@ -138,9 +143,12 @@ class TestListUsers:
         with patch("extended_data.connectors.slack.tools._get_connector", return_value=mock_connector):
             result = list_users()
 
+        assert isinstance(result, ExtendedList)
+        assert isinstance(result[0], ExtendedDict)
         assert len(result) == 2
         assert result[0]["id"] == "U12345"
         assert result[0]["name"] == "john.doe"
+        assert isinstance(result[0]["email"], ExtendedString)
         assert result[0]["email"] == "john@example.com"
         assert result[0]["is_admin"] is True
 
@@ -172,6 +180,8 @@ class TestSendMessage:
         with patch("extended_data.connectors.slack.tools._get_connector", return_value=mock_connector):
             result = send_message(channel="general", text="Hello, world!")
 
+        assert isinstance(result, ExtendedDict)
+        assert isinstance(result["channel"], ExtendedString)
         assert result["channel"] == "general"
         assert result["text"] == "Hello, world!"
         assert result["timestamp"] == "1234567890.123456"
@@ -223,9 +233,12 @@ class TestGetChannelHistory:
         with patch("extended_data.connectors.slack.tools._get_connector", return_value=mock_connector):
             result = get_channel_history(channel="general")
 
+        assert isinstance(result, ExtendedList)
+        assert isinstance(result[0], ExtendedDict)
         assert len(result) == 2
         assert result[0]["timestamp"] == "1234567890.123456"
         assert result[0]["user"] == "U12345"
+        assert isinstance(result[0]["text"], ExtendedString)
         assert result[0]["text"] == "Hello, world!"
 
     def test_get_channel_history_channel_not_found(self, mock_slack_sdk):
@@ -238,6 +251,7 @@ class TestGetChannelHistory:
         with patch("extended_data.connectors.slack.tools._get_connector", return_value=mock_connector):
             result = get_channel_history(channel="nonexistent")
 
+        assert isinstance(result, ExtendedList)
         assert len(result) == 0
 
 

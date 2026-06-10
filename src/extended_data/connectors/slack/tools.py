@@ -29,6 +29,8 @@ from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, Field
 
+from extended_data.containers import extend_data
+
 
 if TYPE_CHECKING:
     from extended_data.connectors.slack import SlackConnector
@@ -133,7 +135,7 @@ def list_channels(
             }
         )
 
-    return result
+    return extend_data(result)
 
 
 def list_users(
@@ -172,7 +174,7 @@ def list_users(
             }
         )
 
-    return result
+    return extend_data(result)
 
 
 def send_message(
@@ -197,12 +199,14 @@ def send_message(
         thread_id=thread_id or None,
     )
 
-    return {
-        "channel": channel,
-        "text": text,
-        "timestamp": timestamp,
-        "status": "sent",
-    }
+    return extend_data(
+        {
+            "channel": channel,
+            "text": text,
+            "timestamp": timestamp,
+            "status": "sent",
+        }
+    )
 
 
 def get_channel_history(
@@ -229,7 +233,7 @@ def get_channel_history(
             break
 
     if not channel_id:
-        return []
+        return extend_data([])
 
     # Get conversation history using the internal _call_api method
     history = connector._call_api(
@@ -252,7 +256,7 @@ def get_channel_history(
             }
         )
 
-    return result
+    return extend_data(result)
 
 
 # =============================================================================

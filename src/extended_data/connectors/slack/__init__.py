@@ -293,7 +293,8 @@ class SlackConnector(VendorConnectorBase):
             SlackAPIError: If Slack returns an error.
         """
         try:
-            return {channel["name"]: channel for channel in self.bot_web_client.users_conversations()["channels"]}
+            channels = {channel["name"]: channel for channel in self.bot_web_client.users_conversations()["channels"]}
+            return self.extend_result(channels)
         except SlackApiError as exc:
             raise SlackAPIError(exc.response) from exc
 
@@ -340,7 +341,7 @@ class SlackConnector(VendorConnectorBase):
         )
 
         if include_deleted and include_bots and include_app_users:
-            return response
+            return self.extend_result(response)
 
         filtered = {}
         for user_id, user_data in response.items():
@@ -356,7 +357,7 @@ class SlackConnector(VendorConnectorBase):
                 continue
             filtered[user_id] = user_data
 
-        return filtered
+        return self.extend_result(filtered)
 
     def list_usergroups(
         self,
@@ -405,9 +406,9 @@ class SlackConnector(VendorConnectorBase):
         )
 
         if not normalized_ids:
-            return response
+            return self.extend_result(response)
 
-        return {gid: gdata for gid, gdata in response.items() if gid in normalized_ids}
+        return self.extend_result({gid: gdata for gid, gdata in response.items() if gid in normalized_ids})
 
     def list_conversations(
         self,
@@ -464,9 +465,9 @@ class SlackConnector(VendorConnectorBase):
         )
 
         if not channels_only:
-            return response
+            return self.extend_result(response)
 
-        return {cid: cdata for cid, cdata in response.items() if cdata.get("is_channel")}
+        return self.extend_result({cid: cdata for cid, cdata in response.items() if cdata.get("is_channel")})
 
     def _call_api(
         self,

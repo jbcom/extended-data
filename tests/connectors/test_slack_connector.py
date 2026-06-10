@@ -9,6 +9,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from extended_data.connectors.slack import SlackConnector
+from extended_data.containers import ExtendedDict, ExtendedString
 
 
 def test_slack_connector_requires_slack_sdk_when_constructed_without_extra():
@@ -48,6 +49,9 @@ class TestSlackConnector:
         connector = SlackConnector(token="test-token", bot_token="bot-token", **base_connector_kwargs)
 
         channels = connector.get_bot_channels()
+        assert isinstance(channels, ExtendedDict)
+        assert isinstance(channels["general"], ExtendedDict)
+        assert isinstance(channels["general"]["id"], ExtendedString)
         assert "general" in channels
         assert channels["general"]["id"] == "C12345"
 
@@ -98,6 +102,8 @@ class TestSlackConnector:
             include_app_users=False,
         )
 
+        assert isinstance(users, ExtendedDict)
+        assert isinstance(users["U1"], ExtendedDict)
         assert list(users.keys()) == ["U1"]
         mock_call_api.assert_called_once_with(
             "users_list",
@@ -135,6 +141,8 @@ class TestSlackConnector:
             usergroup_ids="S1,S3",
         )
 
+        assert isinstance(groups, ExtendedDict)
+        assert isinstance(groups["S1"]["name"], ExtendedString)
         assert groups == {"S1": {"id": "S1", "name": "Ops"}}
         mock_call_api.assert_called_once_with(
             "usergroups_list",
@@ -174,6 +182,8 @@ class TestSlackConnector:
             cursor="cursor123",
         )
 
+        assert isinstance(conversations, ExtendedDict)
+        assert isinstance(conversations["C1"], ExtendedDict)
         assert conversations == {"C1": {"id": "C1", "is_channel": True}}
         mock_call_api.assert_called_once_with(
             "conversations_list",
