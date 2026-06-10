@@ -7,6 +7,7 @@ from extended_data.connectors.cloud_params import (
     get_cloud_call_params,
     get_google_call_params,
 )
+from extended_data.containers import ExtendedDict, ExtendedString
 
 
 class TestGetCloudCallParams:
@@ -15,6 +16,7 @@ class TestGetCloudCallParams:
     def test_default_max_results(self):
         """Default max_results is 10."""
         params = get_cloud_call_params()
+        assert isinstance(params, ExtendedDict)
         assert params == {"MaxResults": 10}
 
     def test_custom_max_results(self):
@@ -35,6 +37,7 @@ class TestGetCloudCallParams:
     def test_kwargs_included(self):
         """Additional kwargs are included."""
         params = get_cloud_call_params(NextToken="abc123")
+        assert isinstance(params["NextToken"], ExtendedString)
         assert params == {"MaxResults": 10, "NextToken": "abc123"}
 
     def test_reject_null_values(self):
@@ -64,6 +67,7 @@ class TestGetAwsCallParams:
     def test_default_max_results(self):
         """AWS default max_results is 100."""
         params = get_aws_call_params()
+        assert isinstance(params, ExtendedDict)
         assert params == {"MaxResults": 100}
 
     def test_first_letter_upper(self):
@@ -91,6 +95,7 @@ class TestGetGoogleCallParams:
     def test_default_max_results(self):
         """Google default max_results is 200."""
         params = get_google_call_params()
+        assert isinstance(params, ExtendedDict)
         assert params == {"maxResults": 200}
 
     def test_first_letter_lower(self):

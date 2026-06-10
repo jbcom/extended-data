@@ -344,3 +344,23 @@ class TestCursorConnector:
         assert isinstance(models, ExtendedList)
         assert isinstance(models[0], ExtendedString)
         assert models[0].to_snake_case() == "cursor_small"
+
+    @patch("extended_data.connectors.cursor.httpx.Client")
+    def test_list_models_empty_response_returns_extended_list(self, mock_client_class):
+        """list_models should extend the empty response path too."""
+        mock_client = MagicMock()
+        mock_client_class.return_value = mock_client
+
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.is_success = True
+        mock_response.headers = {"content-type": "application/json"}
+        mock_response.text = "{}"
+        mock_response.json.return_value = {}
+        mock_client.request.return_value = mock_response
+
+        connector = CursorConnector(api_key="test-key")
+        models = connector.list_models()
+
+        assert isinstance(models, ExtendedList)
+        assert models == []

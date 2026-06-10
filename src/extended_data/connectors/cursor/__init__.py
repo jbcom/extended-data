@@ -623,6 +623,6 @@ class CursorConnector(VendorConnectorBase):
         self.logger.info("Listing models")
         data = self._request_api("/models")
         if not data:
-            return []
+            return self.extend_result([])
 
         return self.extend_result(data.get("models", []))

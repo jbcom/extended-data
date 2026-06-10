@@ -17,6 +17,7 @@ from __future__ import annotations
 from typing import Any
 
 from extended_data import is_nothing, lower_first_char, upper_first_char
+from extended_data.containers import ExtendedDict, extend_data
 
 
 def get_cloud_call_params(
@@ -26,7 +27,7 @@ def get_cloud_call_params(
     first_letter_to_lower: bool = False,
     first_letter_to_upper: bool = False,
     **kwargs: Any,
-) -> dict[str, Any]:
+) -> ExtendedDict:
     """Build a parameter dictionary for cloud API calls.
 
     This function creates properly formatted parameter dictionaries for
@@ -42,7 +43,7 @@ def get_cloud_call_params(
         **kwargs: Additional parameters to include.
 
     Returns:
-        A dictionary of parameters ready for the cloud API call.
+        An extended dictionary of parameters ready for the cloud API call.
 
     Examples:
         >>> get_cloud_call_params(max_results=100, NextToken="abc123")
@@ -58,7 +59,7 @@ def get_cloud_call_params(
         params["MaxResults"] = max_results
 
     if not first_letter_to_lower and not first_letter_to_upper:
-        return params
+        return extend_data(params)
 
     if first_letter_to_lower:
         params = {lower_first_char(k): v for k, v in params.items()}
@@ -66,10 +67,10 @@ def get_cloud_call_params(
     if first_letter_to_upper:
         params = {upper_first_char(k): v for k, v in params.items()}
 
-    return params
+    return extend_data(params)
 
 
-def get_aws_call_params(max_results: int | None = 100, **kwargs: Any) -> dict[str, Any]:
+def get_aws_call_params(max_results: int | None = 100, **kwargs: Any) -> ExtendedDict:
     """Build parameters for AWS API calls.
 
     AWS APIs typically use PascalCase keys (e.g., MaxResults, NextToken).
@@ -80,7 +81,7 @@ def get_aws_call_params(max_results: int | None = 100, **kwargs: Any) -> dict[st
         **kwargs: Additional parameters (will be PascalCased).
 
     Returns:
-        Parameter dictionary with PascalCase keys.
+        Extended parameter dictionary with PascalCase keys.
 
     Examples:
         >>> get_aws_call_params(NextToken="abc")
@@ -94,7 +95,7 @@ def get_aws_call_params(max_results: int | None = 100, **kwargs: Any) -> dict[st
 
 def get_google_call_params(
     max_results: int | None = 200, no_max_results: bool = False, **kwargs: Any
-) -> dict[str, Any]:
+) -> ExtendedDict:
     """Build parameters for Google Cloud API calls.
 
     Google APIs typically use camelCase keys (e.g., maxResults, pageToken).
@@ -106,7 +107,7 @@ def get_google_call_params(
         **kwargs: Additional parameters (will be camelCased).
 
     Returns:
-        Parameter dictionary with camelCase keys.
+        Extended parameter dictionary with camelCase keys.
 
     Examples:
         >>> get_google_call_params(pageToken="xyz")
