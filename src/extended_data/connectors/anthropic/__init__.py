@@ -537,7 +537,7 @@ If the task requires code changes, describe exactly what changes should be made.
             return AgentExecutionResult(
                 success=False,
                 output="",
-                error=str(e),
+                error=redact_sensitive_text(e),
                 duration_seconds=duration,
             )
 

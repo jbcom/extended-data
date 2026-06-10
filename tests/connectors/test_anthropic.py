@@ -276,6 +276,26 @@ class TestAnthropicConnector:
         assert "raw_token" not in message
         assert "[REDACTED]" in message
 
+    def test_execute_agent_task_redacts_error_result(self):
+        """Agent task failures should not expose secrets in public result errors."""
+        import httpx
+
+        with patch.object(httpx, "Client"):
+            connector = AnthropicConnector(api_key="test-key")
+
+        with patch.object(
+            connector,
+            "create_message",
+            side_effect=AnthropicError("failed password=hunter2 Authorization: Bearer raw_token"),
+        ):
+            result = connector.execute_agent_task("summarize")
+
+        assert result.success is False
+        assert result.error is not None
+        assert "hunter2" not in result.error
+        assert "raw_token" not in result.error
+        assert "[REDACTED]" in result.error
+
 
 class TestClaudeModels:
     """Tests for Claude model constants.

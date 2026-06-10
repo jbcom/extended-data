@@ -218,6 +218,39 @@ class TestWebhookHandler:
         call_args = mock_repository.record_task_update.call_args
         assert call_args[1]["error"] == "Generation failed due to invalid prompt"
 
+    def test_handle_webhook_redacts_failed_task_error(self, webhook_handler, mock_repository):
+        """Failed task errors recorded from webhook payloads should be redacted."""
+        asset_manifest = AssetManifest(
+            asset_spec_hash="hash-xyz",
+            spec_fingerprint="hash-xyz",
+            project="project1",
+            asset_intent="creature",
+            task_graph=[
+                TaskGraphEntry(
+                    task_id="task-failed-secret",
+                    service="text3d",
+                    status="IN_PROGRESS",
+                    created_at=datetime.now(timezone.utc),
+                    updated_at=datetime.now(timezone.utc),
+                )
+            ],
+        )
+        mock_repository.find_task_by_id.return_value = _task_lookup_payload("project1", "hash-xyz", asset_manifest)
+
+        payload = MeshyWebhookPayload(
+            id="task-failed-secret",
+            status="FAILED",
+            created_at=1700000000,
+            task_error={"message": "denied password=hunter2 Authorization: Bearer raw_token"},
+        )
+
+        webhook_handler.handle_webhook(payload)
+
+        error = mock_repository.record_task_update.call_args.kwargs["error"]
+        assert "hunter2" not in error
+        assert "raw_token" not in error
+        assert "[REDACTED]" in error
+
     def test_handle_webhook_downloads_artifact(self, temp_dir, webhook_payload_succeeded):
         """Test that handler downloads artifacts on success."""
         from pathlib import Path
@@ -325,6 +358,22 @@ class TestWebhookHandler:
             "status": "error",
             "message": "Invalid webhook signature",
         }
+        mock_repository.find_task_by_id.assert_not_called()
+        mock_repository.record_task_update.assert_not_called()
+
+    def test_handle_signed_webhook_redacts_invalid_payload_error(self, mock_repository):
+        """Signed payload parse failures should not echo secret-bearing input."""
+        payload = b'{"id":"task-12345-abcde","password":"hunter2","authorization":"Bearer raw_token"}'
+        signature = hmac.new(b"secret", payload, hashlib.sha256).hexdigest()
+        handler = WebhookHandler(repository=mock_repository, webhook_secret="secret")
+
+        result = handler.handle_signed_webhook(payload, signature)
+
+        assert result["status"] == "error"
+        assert result["message"] == "Invalid webhook payload"
+        assert "hunter2" not in result["error"]
+        assert "raw_token" not in result["error"]
+        assert "[REDACTED]" in result["error"]
         mock_repository.find_task_by_id.assert_not_called()
         mock_repository.record_task_update.assert_not_called()
 

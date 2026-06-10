@@ -40,6 +40,7 @@ from pathlib import Path
 from typing import Any
 
 from extended_data.connectors.base import VendorConnectorBase
+from extended_data.connectors.redaction import redact_sensitive_data, redact_sensitive_text
 from extended_data.containers import ExtendedDict, extend_data
 from extended_data.logging import Logging
 
@@ -94,18 +95,19 @@ class SyncResult:
     @classmethod
     def from_cli_output(cls, output: dict[str, Any]) -> SyncResult:
         """Create from CLI JSON output."""
+        safe_output = redact_sensitive_data(output)
         return cls(
-            success=output.get("success", False),
-            target_count=output.get("target_count", 0),
-            secrets_processed=output.get("secrets_processed", 0),
-            secrets_added=output.get("secrets_added", 0),
-            secrets_modified=output.get("secrets_modified", 0),
-            secrets_removed=output.get("secrets_removed", 0),
-            secrets_unchanged=output.get("secrets_unchanged", 0),
-            duration_ms=output.get("duration_ms", 0),
-            error_message=output.get("error_message", ""),
-            results_json=json.dumps(output.get("results", [])),
-            diff_output=output.get("diff_output", ""),
+            success=safe_output.get("success", False),
+            target_count=safe_output.get("target_count", 0),
+            secrets_processed=safe_output.get("secrets_processed", 0),
+            secrets_added=safe_output.get("secrets_added", 0),
+            secrets_modified=safe_output.get("secrets_modified", 0),
+            secrets_removed=safe_output.get("secrets_removed", 0),
+            secrets_unchanged=safe_output.get("secrets_unchanged", 0),
+            duration_ms=safe_output.get("duration_ms", 0),
+            error_message=safe_output.get("error_message", ""),
+            results_json=json.dumps(safe_output.get("results", [])),
+            diff_output=safe_output.get("diff_output", ""),
         )
 
     def to_dict(self) -> ExtendedDict:
@@ -221,11 +223,11 @@ class SecretsConnector(VendorConnectorBase):
             )
             if result.returncode == 0:
                 return True, "Configuration is valid"
-            return False, result.stderr or result.stdout
+            return False, redact_sensitive_text(result.stderr or result.stdout)
         except subprocess.TimeoutExpired:
             return False, "Validation timed out"
         except Exception as e:
-            return False, str(e)
+            return False, redact_sensitive_text(e)
 
     def get_config_info(self, config_path: str) -> ExtendedDict:
         """Get detailed information about a configuration.
@@ -264,9 +266,9 @@ class SecretsConnector(VendorConnectorBase):
                 aws_region=cfg.get("aws", {}).get("region", ""),
             )
         except FileNotFoundError:
-            return ConfigInfo(error_message=f"Configuration file not found: {config_path}")
+            return ConfigInfo(error_message=f"Configuration file not found: {redact_sensitive_text(config_path)}")
         except yaml.YAMLError as e:
-            return ConfigInfo(error_message=f"Error parsing YAML file: {e}")
+            return ConfigInfo(error_message=f"Error parsing YAML file: {redact_sensitive_text(e)}")
 
     def run_pipeline(
         self,
@@ -354,7 +356,9 @@ class SecretsConnector(VendorConnectorBase):
                         )
                     parsed = SyncResult.from_cli_output(output)
                     if result.returncode != 0 and not parsed.error_message:
-                        parsed.error_message = result.stderr or f"secretsync exited with status {result.returncode}"
+                        parsed.error_message = redact_sensitive_text(
+                            result.stderr or f"secretsync exited with status {result.returncode}"
+                        )
                     return parsed
 
             if result.returncode == 0:
@@ -365,7 +369,7 @@ class SecretsConnector(VendorConnectorBase):
 
             return SyncResult(
                 success=False,
-                error_message=result.stderr or result.stdout,
+                error_message=redact_sensitive_text(result.stderr or result.stdout),
             )
         except subprocess.TimeoutExpired:
             return SyncResult(
@@ -375,12 +379,12 @@ class SecretsConnector(VendorConnectorBase):
         except json.JSONDecodeError as e:
             return SyncResult(
                 success=False,
-                error_message=f"Failed to parse output: {e}",
+                error_message=f"Failed to parse output: {redact_sensitive_text(e)}",
             )
         except Exception as e:
             return SyncResult(
                 success=False,
-                error_message=str(e),
+                error_message=redact_sensitive_text(e),
             )
 
     def dry_run(self, config_path: str) -> ExtendedDict:

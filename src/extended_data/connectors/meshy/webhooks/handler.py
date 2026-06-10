@@ -10,6 +10,7 @@ from datetime import datetime, timezone
 
 from extended_data.connectors.meshy import base
 from extended_data.connectors.meshy.webhooks.schemas import MeshyWebhookPayload
+from extended_data.connectors.redaction import redact_sensitive_text
 from extended_data.containers import ExtendedDict, extend_data, to_builtin
 
 from ..persistence.repository import TaskRepository
@@ -65,7 +66,7 @@ class WebhookHandler:
             return extend_data({
                 "status": "error",
                 "message": "Invalid webhook payload",
-                "error": str(exc),
+                "error": redact_sensitive_text(exc),
             })
 
         return self.handle_webhook(parsed_payload, project=project, spec_hash=spec_hash)
@@ -111,7 +112,8 @@ class WebhookHandler:
 
         error_message = None
         if payload.status == "FAILED":
-            error_message = payload.get_error_message()
+            raw_error_message = payload.get_error_message()
+            error_message = redact_sensitive_text(raw_error_message) if raw_error_message else None
 
         result_paths = to_builtin(payload.get_all_urls())
 

@@ -274,6 +274,44 @@ def test_cli_run_pipeline_parses_failure_result_envelope(mock_run: MagicMock, co
 
 
 @patch("subprocess.run")
+def test_cli_run_pipeline_redacts_failure_result_envelope(
+    mock_run: MagicMock,
+    connector: SecretsConnector,
+) -> None:
+    mock_run.return_value = MagicMock(
+        returncode=1,
+        stdout=json.dumps(
+            {
+                "success": False,
+                "error_message": "pipeline failed password=hunter2 Authorization: Bearer raw_token",
+                "results": [
+                    {
+                        "target": "prod",
+                        "success": False,
+                        "error": "target denied api_key=key_123",
+                        "password": "hunter2",
+                    }
+                ],
+                "diff_output": "changed token=tok_123",
+            }
+        ),
+        stderr="",
+    )
+
+    result = connector.run_pipeline("config.yaml")
+
+    assert result["success"] is False
+    assert "hunter2" not in result["error_message"]
+    assert "raw_token" not in result["error_message"]
+    assert "[REDACTED]" in result["error_message"]
+    assert "hunter2" not in result["results_json"]
+    assert "key_123" not in result["results_json"]
+    assert '"password": "[REDACTED]"' in result["results_json"]
+    assert "tok_123" not in result["diff_output"]
+    assert "[REDACTED]" in result["diff_output"]
+
+
+@patch("subprocess.run")
 def test_cli_run_pipeline_failure_envelope_uses_stderr_when_error_message_missing(
     mock_run: MagicMock,
     connector: SecretsConnector,
@@ -322,6 +360,25 @@ def test_cli_run_pipeline_non_json_failure_uses_cli_output(mock_run: MagicMock, 
 
 
 @patch("subprocess.run")
+def test_cli_run_pipeline_non_json_failure_redacts_cli_output(
+    mock_run: MagicMock,
+    connector: SecretsConnector,
+) -> None:
+    mock_run.return_value = MagicMock(
+        returncode=1,
+        stdout="",
+        stderr="failed password=hunter2 Authorization: Bearer raw_token",
+    )
+
+    result = connector.run_pipeline("config.yaml")
+
+    assert result["success"] is False
+    assert "hunter2" not in result["error_message"]
+    assert "raw_token" not in result["error_message"]
+    assert "[REDACTED]" in result["error_message"]
+
+
+@patch("subprocess.run")
 def test_cli_run_pipeline_only_emits_supported_cli_flags(mock_run: MagicMock, connector: SecretsConnector) -> None:
     mock_run.return_value = MagicMock(
         returncode=0,
@@ -359,6 +416,22 @@ def test_cli_validate_config(mock_run: MagicMock, connector: SecretsConnector) -
 
     args = mock_run.call_args[0][0]
     assert "validate" in args
+
+
+@patch("subprocess.run")
+def test_cli_validate_config_redacts_cli_output(mock_run: MagicMock, connector: SecretsConnector) -> None:
+    mock_run.return_value = MagicMock(
+        returncode=1,
+        stdout="",
+        stderr="invalid password=hunter2 Authorization: Bearer raw_token",
+    )
+
+    validation = connector.validate_config("config.yaml")
+
+    assert validation["valid"] is False
+    assert "hunter2" not in validation["message"]
+    assert "raw_token" not in validation["message"]
+    assert "[REDACTED]" in validation["message"]
 
 
 @patch("extended_data.connectors.secrets.SecretsConnector")
