@@ -28,6 +28,7 @@ from extended_data.connectors.google.services import GoogleServicesMixin
 from extended_data.connectors.google.workspace import GoogleWorkspaceMixin
 from extended_data.connectors.meshy.connector import MeshyConnector
 from extended_data.connectors.registry import BUILTIN_CONNECTORS
+from extended_data.connectors.secrets import SecretsConnector
 from extended_data.connectors.slack import SlackConnector
 from extended_data.connectors.surface import connector_data_methods, is_connector_data_method
 from extended_data.connectors.vault import VaultConnector
@@ -178,6 +179,14 @@ PAYLOAD_METHODS = (
     (MeshyConnector.rig_model, ExtendedDict | ExtendedString),
     (MeshyConnector.apply_animation, ExtendedDict | ExtendedString),
     (MeshyConnector.retexture_model, ExtendedDict | ExtendedString),
+    (SecretsConnector.validate_config, ExtendedDict),
+    (SecretsConnector.get_config_info, ExtendedDict),
+    (SecretsConnector.run_pipeline, ExtendedDict),
+    (SecretsConnector.dry_run, ExtendedDict),
+    (SecretsConnector.merge, ExtendedDict),
+    (SecretsConnector.sync, ExtendedDict),
+    (SecretsConnector.get_targets, ExtendedDict),
+    (SecretsConnector.get_sources, ExtendedDict),
     (SlackConnector.send_message, ExtendedString | ExtendedDict),
     (SlackConnector.get_bot_channels, ExtendedDict),
     (SlackConnector.list_users, ExtendedDict),

@@ -191,4 +191,7 @@ def test_clean_major_version_does_not_preserve_duplicate_tool_modules() -> None:
     """Secrets tool factories live on the package root and connector implementation module."""
     assert util.find_spec("extended_data.secrets.tools") is None
     assert callable(secrets.get_tools)
+    assert callable(secrets.get_langchain_tools)
+    assert callable(secrets.get_crewai_tools)
+    assert callable(secrets.get_strands_tools)
     assert callable(connectors.SecretsConnector)
