@@ -92,6 +92,11 @@ Both paths share the same input provider and lifecycle logger, and both cache
 instances by connector type and constructor inputs. Generic connector names are
 stripped and lowercased before lookup.
 
+Connectors that inherit `VendorConnectorBase` can keep raw transport access with
+`request()` or use `request_data()`, `get_data()`, `post_data()`, and the other
+verb-specific helpers to decode HTTP JSON, YAML, TOML, HCL, or text responses
+through the same Tier 2 container bridge used by file and input decoding.
+
 Use the catalog helpers when a workflow needs to inspect which integrations can
 run in the current environment:
 

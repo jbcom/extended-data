@@ -288,25 +288,104 @@ class VendorConnectorBase(InputProvider, ABC):
 
         return response
 
+    @staticmethod
+    def _suffix_from_content_type(content_type: str | None) -> str | None:
+        """Infer a data suffix from an HTTP Content-Type header."""
+        if not content_type:
+            return None
+
+        media_type = content_type.split(";", maxsplit=1)[0].strip().lower()
+        if media_type == "application/json" or media_type.endswith("+json"):
+            return "json"
+        if media_type in {"application/yaml", "application/x-yaml", "text/yaml", "text/x-yaml"} or media_type.endswith(
+            "+yaml"
+        ):
+            return "yaml"
+        if media_type in {"application/toml", "text/toml"}:
+            return "toml"
+        if media_type in {"application/hcl", "text/hcl"}:
+            return "hcl"
+        if media_type.startswith("text/"):
+            return "raw"
+        return None
+
+    def decode_response(
+        self,
+        response: httpx.Response,
+        *,
+        suffix: str | None = None,
+        as_extended: bool = True,
+    ) -> Any:
+        """Decode an HTTP response body through the extended-data IO layer.
+
+        Structured response bodies are decoded from JSON, YAML, TOML, or HCL and
+        promoted to Tier 2 containers by default. Text responses become raw
+        strings, and unknown binary responses remain bytes.
+        """
+        if not response.content:
+            return None
+
+        resolved_suffix = suffix or self._suffix_from_content_type(response.headers.get("content-type"))
+        if resolved_suffix is None:
+            return response.content
+
+        from extended_data.io.files import decode_file
+
+        return decode_file(response.content, suffix=resolved_suffix, as_extended=as_extended)
+
+    def request_data(
+        self,
+        method: str,
+        endpoint: str,
+        *,
+        headers: dict[str, str] | None = None,
+        suffix: str | None = None,
+        as_extended: bool = True,
+        **kwargs: Any,
+    ) -> Any:
+        """Make an HTTP request and return decoded response data."""
+        response = self.request(method, endpoint, headers=headers, **kwargs)
+        return self.decode_response(response, suffix=suffix, as_extended=as_extended)
+
     def get(self, endpoint: str, **kwargs: Any) -> httpx.Response:
         """HTTP GET request."""
         return self.request("GET", endpoint, **kwargs)
+
+    def get_data(self, endpoint: str, *, suffix: str | None = None, as_extended: bool = True, **kwargs: Any) -> Any:
+        """HTTP GET request returning decoded response data."""
+        return self.request_data("GET", endpoint, suffix=suffix, as_extended=as_extended, **kwargs)
 
     def post(self, endpoint: str, **kwargs: Any) -> httpx.Response:
         """HTTP POST request."""
         return self.request("POST", endpoint, **kwargs)
 
+    def post_data(self, endpoint: str, *, suffix: str | None = None, as_extended: bool = True, **kwargs: Any) -> Any:
+        """HTTP POST request returning decoded response data."""
+        return self.request_data("POST", endpoint, suffix=suffix, as_extended=as_extended, **kwargs)
+
     def put(self, endpoint: str, **kwargs: Any) -> httpx.Response:
         """HTTP PUT request."""
         return self.request("PUT", endpoint, **kwargs)
+
+    def put_data(self, endpoint: str, *, suffix: str | None = None, as_extended: bool = True, **kwargs: Any) -> Any:
+        """HTTP PUT request returning decoded response data."""
+        return self.request_data("PUT", endpoint, suffix=suffix, as_extended=as_extended, **kwargs)
 
     def delete(self, endpoint: str, **kwargs: Any) -> httpx.Response:
         """HTTP DELETE request."""
         return self.request("DELETE", endpoint, **kwargs)
 
+    def delete_data(self, endpoint: str, *, suffix: str | None = None, as_extended: bool = True, **kwargs: Any) -> Any:
+        """HTTP DELETE request returning decoded response data."""
+        return self.request_data("DELETE", endpoint, suffix=suffix, as_extended=as_extended, **kwargs)
+
     def patch(self, endpoint: str, **kwargs: Any) -> httpx.Response:
         """HTTP PATCH request."""
         return self.request("PATCH", endpoint, **kwargs)
+
+    def patch_data(self, endpoint: str, *, suffix: str | None = None, as_extended: bool = True, **kwargs: Any) -> Any:
+        """HTTP PATCH request returning decoded response data."""
+        return self.request_data("PATCH", endpoint, suffix=suffix, as_extended=as_extended, **kwargs)
 
     # -------------------------------------------------------------------------
     # File Downloads
