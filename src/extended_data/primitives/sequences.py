@@ -10,7 +10,11 @@ Functions:
 
 from __future__ import annotations
 
-from typing import Any
+from collections.abc import Iterable
+from typing import Any, TypeVar
+
+
+T = TypeVar("T")
 
 
 def flatten_list(matrix: list[Any]) -> list[Any]:
@@ -44,19 +48,19 @@ def flatten_list(matrix: list[Any]) -> list[Any]:
 
 
 def filter_list(
-    items: list[str] | None,
-    allowlist: list[str] | None = None,
-    denylist: list[str] | None = None,
-) -> list[str]:
+    items: Iterable[T] | None,
+    allowlist: Iterable[T] | None = None,
+    denylist: Iterable[T] | None = None,
+) -> list[T]:
     """Filters a list based on allowlist and denylist.
 
     Args:
-        items (list[str] | None): The list to filter.
-        allowlist (list[str] | None): The list of allowed items.
-        denylist (list[str] | None): The list of denied items.
+        items: The values to filter.
+        allowlist: The allowed values.
+        denylist: The denied values.
 
     Returns:
-        list[str]: The filtered list.
+        The filtered list.
     """
     if items is None:
         items = []

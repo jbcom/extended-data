@@ -132,6 +132,10 @@ def test_extended_list_composes_sequence_primitives() -> None:
     assert value.unique() == [1, [2, [3]], "", 2]
     assert value.filter(lambda item: isinstance(item, int)) == [1, 2]
     assert ExtendedList([1, 2]).map(lambda item: item * 2) == [2, 4]
+    assert ExtendedList(["api", "worker", "db"]).filter_values(
+        allowlist=["api", "worker"],
+        denylist=["worker"],
+    ) == ["api"]
 
 
 def test_extended_list_promotes_nested_values_on_mutation() -> None:

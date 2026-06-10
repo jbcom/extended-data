@@ -7,7 +7,7 @@ from collections.abc import Callable, Iterable, Iterator, MutableSet
 from operator import index as operator_index
 from typing import Any, SupportsIndex, TypeVar, cast, overload
 
-from extended_data.primitives.sequences import flatten_list
+from extended_data.primitives.sequences import filter_list, flatten_list
 from extended_data.primitives.state import is_nothing
 from extended_data.primitives.types import make_hashable
 
@@ -84,6 +84,15 @@ class ExtendedList(UserList[T]):
     def filter(self, predicate: Callable[[T], bool]) -> ExtendedList[T]:
         """Return a copy containing items accepted by a predicate."""
         return ExtendedList(item for item in self.data if predicate(item))
+
+    def filter_values(
+        self,
+        *,
+        allowlist: Iterable[T] | None = None,
+        denylist: Iterable[T] | None = None,
+    ) -> ExtendedList[T]:
+        """Return a copy filtered by explicit allowed and denied values."""
+        return ExtendedList(filter_list(self.data, allowlist=allowlist, denylist=denylist))
 
     def unique(self) -> ExtendedList[T]:
         """Return a copy with duplicate values removed while preserving order."""

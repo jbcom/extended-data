@@ -65,6 +65,7 @@ the public error message does not echo the raw payload.
 name = ExtendedString("API Response Value").to_snake_case()
 payload = ExtendedDict({"outer": {"inner": 1}}).flatten()
 items = ExtendedList([1, [2, [3]]]).flatten()
+services = ExtendedList(["api", "worker", "db"]).filter_values(allowlist=["api", "worker"])
 aliases = ExtendedTuple(("api", ("gateway",))).flatten()
 tags = ExtendedSet({"prod", "prod", ""}).compact()
 words = number_to_words(42)

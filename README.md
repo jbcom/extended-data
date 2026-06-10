@@ -167,6 +167,8 @@ Tier 3 decoders return Tier 2 containers by default, so
 data files, Base64 payloads, and directed inputs can immediately use
 `ExtendedDict`, `ExtendedList`, `ExtendedTuple`, `ExtendedSet`, and
 `ExtendedString` methods.
+`ExtendedList.filter_values()` exposes the Tier 1 allowlist/denylist list
+filtering primitive as a chainable container operation.
 Generic type routing can still ask for plain data roles with
 `typeof(value, primitive_only=True)`, which treats Extended containers as their
 underlying `str`, `list`, `dict`, and `set` roles.
