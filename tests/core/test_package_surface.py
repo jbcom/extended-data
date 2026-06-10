@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
+from importlib import util
 from importlib.metadata import version
 from types import ModuleType
 
 import extended_data
 import extended_data.logging as lifecycle_logging
-import extended_data.secrets.tools as secrets_tools
 
 from extended_data import connectors, containers, inputs, io, primitives, secrets, workflows
 from extended_data.connectors.connectors import ConnectorFabric
@@ -120,7 +120,8 @@ def test_aws_full_connector_keeps_operation_mixins_without_aws_extra() -> None:
     assert callable(connectors.AWSConnectorFull.list_sso_users)
 
 
-def test_secrets_tools_alias_preserves_public_exports() -> None:
-    """The shorter secrets tool path mirrors the canonical connector module."""
-    assert "run_pipeline" in secrets_tools.__all__
-    assert callable(secrets_tools.run_pipeline)
+def test_clean_major_version_does_not_preserve_duplicate_tool_modules() -> None:
+    """Secrets tool factories live on the package root and connector implementation module."""
+    assert util.find_spec("extended_data.secrets.tools") is None
+    assert callable(secrets.get_tools)
+    assert callable(connectors.SecretsConnector)
