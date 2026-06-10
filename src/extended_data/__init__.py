@@ -108,7 +108,7 @@ _LAZY_EXPORTS = {
 
 
 def __getattr__(name: str) -> Any:
-    """Lazily expose integrated subpackage primitives at the package root."""
+    """Lazily expose integrated adapters and processors at the package root."""
     if name not in _LAZY_EXPORTS:
         raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 

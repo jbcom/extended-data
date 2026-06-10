@@ -83,6 +83,14 @@ def test_tier1_primitives_are_not_root_exports() -> None:
         assert name not in extended_data.__all__
 
 
+def test_root_lazy_exports_do_not_describe_tier1_primitives() -> None:
+    """The package root lazy loader should not present Tier 1 primitives as root exports."""
+    lazy_loader_docs = extended_data.__getattr__.__doc__ or ""
+
+    assert "primitives" not in lazy_loader_docs
+    assert "adapters and processors" in lazy_loader_docs
+
+
 def test_clean_major_version_public_names() -> None:
     """The public surface uses integrated extended-data names."""
     assert inputs.InputProvider.__name__ == "InputProvider"
@@ -132,7 +140,7 @@ def test_old_monorepo_import_namespaces_are_not_preserved() -> None:
         assert util.find_spec(namespace) is None
 
 
-def test_root_exports_first_class_integrated_primitives() -> None:
+def test_root_exports_first_class_integrated_surfaces() -> None:
     """Inputs, logging, and connector fabric are available from the root package."""
     assert extended_data.DataDecodeError.__name__ == "DataDecodeError"
     assert extended_data.DataWorkflow.__name__ == "DataWorkflow"
