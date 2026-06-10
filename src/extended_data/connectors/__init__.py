@@ -70,13 +70,10 @@ from extended_data.connectors.connectors import ConnectorFabric
 from extended_data.connectors.cursor import CursorConnector
 from extended_data.connectors.github import GitHubConnector
 from extended_data.connectors.google import (
-    GoogleBillingConnector,
     GoogleBillingMixin,
-    GoogleCloudConnector,
     GoogleCloudMixin,
     GoogleConnector,
     GoogleServicesMixin,
-    GoogleWorkspaceConnector,
     GoogleWorkspaceMixin,
     JulesConnector,
 )
@@ -97,13 +94,10 @@ __all__ = [
     "ConnectorInfo",
     "CursorConnector",
     "GitHubConnector",
-    "GoogleBillingConnector",
     "GoogleBillingMixin",
-    "GoogleCloudConnector",
     "GoogleCloudMixin",
     "GoogleConnector",
     "GoogleServicesMixin",
-    "GoogleWorkspaceConnector",
     "GoogleWorkspaceMixin",
     "JulesConnector",
     "MeshyConnector",

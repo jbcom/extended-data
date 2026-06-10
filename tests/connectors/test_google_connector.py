@@ -11,12 +11,7 @@ pytest.importorskip("google.oauth2.service_account")
 pytest.importorskip("googleapiclient")
 
 from extended_data.containers import ExtendedDict, ExtendedString
-from extended_data.connectors.google import (
-    GoogleBillingConnector,
-    GoogleCloudConnector,
-    GoogleConnector,
-    GoogleWorkspaceConnector,
-)
+from extended_data.connectors.google import GoogleConnector
 
 
 def _service_account():
@@ -240,19 +235,20 @@ class TestGoogleConnector:
         assert "team@example.com" in result
         assert result["team@example.com"]["primaryEmail"] == "team@example.com"
 
-    def test_specialized_connector_exports_match_available_operations(self, base_connector_kwargs):
-        """Specialized Google connectors expose the operations their entry points advertise."""
+    def test_unified_connector_exposes_all_google_operations(self, base_connector_kwargs):
+        """The single Google connector exposes Workspace, Cloud, and Billing operations."""
         service_account = _service_account()
 
-        cloud = GoogleCloudConnector(service_account_info=service_account, **base_connector_kwargs)
-        workspace = GoogleWorkspaceConnector(service_account_info=service_account, **base_connector_kwargs)
-        billing = GoogleBillingConnector(service_account_info=service_account, **base_connector_kwargs)
         connector = GoogleConnector(service_account_info=service_account, **base_connector_kwargs)
-
-        assert hasattr(cloud, "list_projects")
-        assert hasattr(workspace, "list_users")
-        assert hasattr(billing, "list_billing_accounts")
 
         assert hasattr(connector, "list_projects")
         assert hasattr(connector, "list_users")
         assert hasattr(connector, "list_billing_accounts")
+
+    def test_specialized_google_connector_aliases_are_not_preserved(self):
+        """Clean major-version surface should keep Google operations on GoogleConnector."""
+        import extended_data.connectors.google as google_module
+
+        assert not hasattr(google_module, "GoogleCloudConnector")
+        assert not hasattr(google_module, "GoogleWorkspaceConnector")
+        assert not hasattr(google_module, "GoogleBillingConnector")

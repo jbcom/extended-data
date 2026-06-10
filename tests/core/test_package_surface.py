@@ -82,6 +82,12 @@ def test_clean_major_version_public_names() -> None:
     assert not hasattr(connectors, "VendorConnectors")
     assert not hasattr(connectors, "AWSConnectorFull")
     assert not hasattr(connectors, "GoogleConnectorFull")
+    assert not hasattr(connectors, "GoogleCloudConnector")
+    assert not hasattr(connectors, "GoogleWorkspaceConnector")
+    assert not hasattr(connectors, "GoogleBillingConnector")
+    assert not hasattr(extended_data, "GoogleCloudConnector")
+    assert not hasattr(extended_data, "GoogleWorkspaceConnector")
+    assert not hasattr(extended_data, "GoogleBillingConnector")
     assert not hasattr(primitives, "removeprefix")
     assert not hasattr(primitives, "removesuffix")
     assert not hasattr(primitives, "bytestostr")
@@ -169,6 +175,16 @@ def test_first_class_connectors_keep_operation_mixins_without_optional_extras() 
     assert callable(connectors.GoogleConnector.list_projects)
     assert callable(connectors.GoogleConnector.list_users)
     assert callable(connectors.GoogleConnector.list_billing_accounts)
+
+
+def test_google_registry_uses_single_first_class_connector() -> None:
+    """Google Workspace, Cloud, and Billing operations should not be split into connector aliases."""
+    connector_names = set(connectors.list_connectors())
+
+    assert "google" in connector_names
+    assert "google_cloud" not in connector_names
+    assert "google_workspace" not in connector_names
+    assert "google_billing" not in connector_names
 
 
 def test_clean_major_version_does_not_preserve_duplicate_tool_modules() -> None:

@@ -117,6 +117,8 @@ generic vendor lookup.
 Organizations, SSO, Workspace, Cloud Resource Manager, Billing, and services
 operations live on those connectors directly rather than on separate
 `*Full` classes.
+Google registry names are unified as well: use `google` for Workspace, Cloud,
+Billing, and service discovery rather than split `google_*` connector aliases.
 AWS Secrets Manager prefix loading is exposed as the generic
 `load_secrets_by_prefix()` data method rather than as a vendor-specific helper.
 Connector data payloads are promoted into Tier 2 containers at the boundary, so

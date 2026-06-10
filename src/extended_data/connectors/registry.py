@@ -96,9 +96,6 @@ BUILTIN_CONNECTORS: dict[str, BuiltinConnectorSpec] = {
     # Google connectors
     "jules": BuiltinConnectorSpec("extended_data.connectors.google.jules", "JulesConnector", "google"),
     "google": BuiltinConnectorSpec("extended_data.connectors.google", "GoogleConnector", "google"),
-    "google_cloud": BuiltinConnectorSpec("extended_data.connectors.google", "GoogleCloudConnector", "google"),
-    "google_workspace": BuiltinConnectorSpec("extended_data.connectors.google", "GoogleWorkspaceConnector", "google"),
-    "google_billing": BuiltinConnectorSpec("extended_data.connectors.google", "GoogleBillingConnector", "google"),
     # Other connectors
     "cursor": BuiltinConnectorSpec("extended_data.connectors.cursor", "CursorConnector", "cursor"),
     "github": BuiltinConnectorSpec("extended_data.connectors.github", "GitHubConnector", "github"),

@@ -586,18 +586,6 @@ from extended_data.connectors.google.tools import (
 )
 
 
-class GoogleCloudConnector(GoogleConnector):
-    """Google connector entry point for Cloud Resource Manager and IAM workflows."""
-
-
-class GoogleWorkspaceConnector(GoogleConnector):
-    """Google connector entry point for Admin Directory user and group workflows."""
-
-
-class GoogleBillingConnector(GoogleConnector):
-    """Google connector entry point for Cloud Billing account and project billing workflows."""
-
-
 __all__ = [
     "DEFAULT_DOMAIN",
     "DEFAULT_SCOPES",
@@ -607,13 +595,10 @@ __all__ = [
     "GCP_REQUIRED_ORGANIZATION_ROLES",
     "GCP_REQUIRED_ROLES",
     "GCP_SECURITY_PROJECT",
-    "GoogleBillingConnector",
     "GoogleBillingMixin",
-    "GoogleCloudConnector",
     "GoogleCloudMixin",
     "GoogleConnector",
     "GoogleServicesMixin",
-    "GoogleWorkspaceConnector",
     "GoogleWorkspaceMixin",
     "JulesConnector",
     "JulesError",

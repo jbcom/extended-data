@@ -179,6 +179,10 @@ major version: common S3, Organizations, SSO, Workspace, Cloud Resource
 Manager, Billing, and service-discovery operations live directly on those
 connectors. The old split between base connector classes and separate `*Full`
 connector classes is intentionally not preserved.
+The Google registry surface is unified too: `google` is the first-class
+connector name for Workspace, Cloud Resource Manager, Billing, and service
+discovery operations. Split `google_cloud`, `google_workspace`, and
+`google_billing` connector aliases are intentionally not preserved.
 AWS Secrets Manager prefix loading is generic too: use
 `AWSConnector.load_secrets_by_prefix()` when a workflow needs a promoted mapping
 of secret names to values. The old vendor-specific ASM loader name is
