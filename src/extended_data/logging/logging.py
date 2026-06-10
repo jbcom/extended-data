@@ -39,7 +39,7 @@ from extended_data import (
     to_snake_case,
     wrap_raw_data_for_export,
 )
-from extended_data.containers import ExtendedDict, ExtendedSet
+from extended_data.containers import ExtendedDict, ExtendedSet, to_builtin
 from extended_data.logging.const import VERBOSITY
 from extended_data.logging.handlers import add_console_handler, add_file_handler
 from extended_data.logging.log_types import LogLevel
@@ -294,6 +294,14 @@ class Logging:
         promoted_messages = ExtendedSet[str](stored_messages or [])
         self.stored_messages[storage_marker] = promoted_messages
         return promoted_messages
+
+    def get_stored_messages(self, storage_marker: str) -> ExtendedSet[str]:
+        """Return a detached promoted copy of messages for one storage marker."""
+        return ExtendedSet[str](deepcopy(to_builtin(self.stored_messages.get(storage_marker, ExtendedSet()))))
+
+    def snapshot_stored_messages(self) -> ExtendedDict:
+        """Return a detached Tier 2 snapshot of all stored message collections."""
+        return ExtendedDict(deepcopy(to_builtin(self.stored_messages)))
 
     def logged_statement(
         self,

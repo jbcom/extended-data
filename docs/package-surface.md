@@ -205,7 +205,9 @@ input value should remain in Tier 2 form.
 workflows without creating log files unless file output is explicitly enabled.
 Stored log message collections are exposed as `ExtendedDict` values keyed by
 storage marker, with each marker containing an `ExtendedSet` of promoted
-messages.
+messages. `get_stored_messages()` returns a detached promoted message set for
+one marker, and `snapshot_stored_messages()` returns a detached `ExtendedDict`
+copy of all stored collections for downstream export or workflow composition.
 
 `ConnectorFabric` caches and coordinates vendor connectors while sharing input
 loading, logging, data normalization, retry behavior, and serialization.

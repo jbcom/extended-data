@@ -53,8 +53,8 @@ def main() -> None:
         log_level="info",
     )
 
-    # Access stored messages
-    for messages in logger.stored_messages.values():
+    # Access stored messages through a detached promoted snapshot
+    for messages in logger.snapshot_stored_messages().values():
         for _msg in messages:
             print(_msg)
 

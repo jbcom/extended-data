@@ -13,7 +13,7 @@ import extended_data.logging as lifecycle_logging
 from extended_data import connectors, containers, inputs, io, primitives, secrets, workflows
 from extended_data.connectors.connectors import ConnectorFabric
 from extended_data.connectors.registry import BUILTIN_CONNECTORS
-from extended_data.containers import ExtendedDict, ExtendedList, ExtendedString, ExtendedTuple
+from extended_data.containers import ExtendedDict, ExtendedList, ExtendedSet, ExtendedString, ExtendedTuple
 from extended_data.inputs import InputProvider
 from extended_data.logging import Logging
 
@@ -152,6 +152,23 @@ def test_root_exports_first_class_integrated_primitives() -> None:
     assert get_type_hints(connectors.list_connectors)["return"] == ExtendedList[ExtendedString]
     assert get_type_hints(ConnectorFabric.list_connectors)["return"] == ExtendedList[ExtendedString]
     assert "github" in connector_names
+
+
+def test_logging_exposes_stored_messages_as_detached_tier2_data() -> None:
+    """Stored log message collections should be consumable through Tier 2 containers."""
+    logger = Logging(enable_console=False, enable_file=False)
+
+    logger.logged_statement("Stored message", storage_marker="events", log_level="info")
+    messages = logger.get_stored_messages("events")
+    snapshot = logger.snapshot_stored_messages()
+
+    messages.add("Local mutation")
+
+    assert isinstance(messages, ExtendedSet)
+    assert isinstance(snapshot, ExtendedDict)
+    assert isinstance(snapshot["events"], ExtendedSet)
+    assert "Local mutation" not in logger.stored_messages["events"]
+    assert sorted(snapshot.to_export_safe()["events"]) == ["Stored message"]
 
 
 def test_tier2_container_methods_expose_integrated_primitives() -> None:

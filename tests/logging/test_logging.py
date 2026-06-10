@@ -79,6 +79,28 @@ def test_storage_marker(logger: Logging) -> None:
     assert isinstance(stored_msg, ExtendedString)
 
 
+def test_stored_message_snapshots_are_detached_extended_collections(logger: Logging) -> None:
+    """Stored logging data can be consumed through promoted detached snapshots."""
+    logger.logged_statement("First message", storage_marker="events", log_level="info")  # type: ignore[arg-type]
+    logger.logged_statement("Second message", storage_marker="events", log_level="info")  # type: ignore[arg-type]
+
+    messages = logger.get_stored_messages("events")
+    snapshot = logger.snapshot_stored_messages()
+    missing = logger.get_stored_messages("missing")
+
+    messages.add("Local mutation")
+    snapshot["events"].add("Snapshot mutation")
+
+    assert isinstance(messages, ExtendedSet)
+    assert all(isinstance(message, ExtendedString) for message in messages)
+    assert isinstance(snapshot, ExtendedDict)
+    assert isinstance(snapshot["events"], ExtendedSet)
+    assert missing == set()
+    assert "Local mutation" not in logger.stored_messages["events"]
+    assert "Snapshot mutation" not in logger.stored_messages["events"]
+    assert sorted(logger.snapshot_stored_messages().to_export_safe()["events"]) == ["First message", "Second message"]
+
+
 def test_context_marker(logger: Logging) -> None:
     """Test message prefixing with context markers.
 

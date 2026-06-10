@@ -221,6 +221,8 @@ Tier 2 form and keep using container methods such as `reconstruct_special_types(
 and `to_export_safe()`.
 `Logging` stores marked log message collections as `ExtendedDict` and
 `ExtendedSet` values while keeping Python logger and handler objects plain.
+Use `get_stored_messages()` or `snapshot_stored_messages()` when downstream
+data workflows need detached promoted copies of collected messages.
 
 More detail lives in [`docs/package-surface.md`](docs/package-surface.md).
 
