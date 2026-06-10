@@ -9,12 +9,15 @@ from typing import Any, get_args, get_origin, get_type_hints
 
 import pytest
 
+import extended_data.connectors as connector_exports
+
 from extended_data.connectors.anthropic import AnthropicConnector
 from extended_data.connectors.aws import AWSConnector
 from extended_data.connectors.aws.codedeploy import create_codedeploy_deployment, get_aws_codedeploy_deployments
 from extended_data.connectors.aws.organizations import AWSOrganizationsMixin
 from extended_data.connectors.aws.s3 import AWSS3Mixin
 from extended_data.connectors.aws.sso import AWSSSOmixin
+from extended_data.connectors.base import VendorConnectorBase
 from extended_data.connectors.cursor import CursorConnector
 from extended_data.connectors.github import GitHubConnector
 from extended_data.connectors.google import GoogleConnector
@@ -24,10 +27,13 @@ from extended_data.connectors.google.jules import JulesConnector
 from extended_data.connectors.google.services import GoogleServicesMixin
 from extended_data.connectors.google.workspace import GoogleWorkspaceMixin
 from extended_data.connectors.meshy.connector import MeshyConnector
+from extended_data.connectors.registry import BUILTIN_CONNECTORS
 from extended_data.connectors.slack import SlackConnector
+from extended_data.connectors.surface import connector_data_methods, is_connector_data_method
 from extended_data.connectors.vault import VaultConnector
 from extended_data.connectors.zoom import ZoomConnector
 from extended_data.containers import ExtendedDict, ExtendedList, ExtendedString, ExtendedTuple
+from extended_data.inputs import InputProvider
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -199,6 +205,58 @@ RAW_CONNECTOR_BOUNDARIES = {
     ("src/extended_data/connectors/zoom/__init__.py", "ZoomConnector.get_headers"),
 }
 
+RAW_DATA_SURFACE_METHOD_NAMES = {
+    "close",
+    "delete",
+    "delete_data",
+    "download",
+    "extend_result",
+    "freeze_inputs",
+    "get",
+    "get_ai_tool_definitions",
+    "get_data",
+    "get_input",
+    "get_tools",
+    "handle_ai_tool_call",
+    "merge_inputs",
+    "patch",
+    "patch_data",
+    "post",
+    "post_data",
+    "put",
+    "put_data",
+    "replace_inputs",
+    "request",
+    "request_data",
+    "snapshot_inputs",
+}
+
+RAW_DATA_SURFACE_METHODS = (
+    VendorConnectorBase.close,
+    VendorConnectorBase.delete,
+    VendorConnectorBase.delete_data,
+    VendorConnectorBase.download,
+    VendorConnectorBase.extend_result,
+    VendorConnectorBase.get,
+    VendorConnectorBase.get_ai_tool_definitions,
+    VendorConnectorBase.get_data,
+    VendorConnectorBase.get_tools,
+    VendorConnectorBase.handle_ai_tool_call,
+    VendorConnectorBase.patch,
+    VendorConnectorBase.patch_data,
+    VendorConnectorBase.post,
+    VendorConnectorBase.post_data,
+    VendorConnectorBase.put,
+    VendorConnectorBase.put_data,
+    VendorConnectorBase.request,
+    VendorConnectorBase.request_data,
+    InputProvider.freeze_inputs,
+    InputProvider.get_input,
+    InputProvider.merge_inputs,
+    InputProvider.replace_inputs,
+    InputProvider.snapshot_inputs,
+)
+
 
 class _RawContainerReturnVisitor(ast.NodeVisitor):
     def __init__(self, relative_path: str) -> None:
@@ -251,6 +309,36 @@ def test_direct_connector_methods_advertise_extended_payloads(method: object, ex
         return
 
     assert return_type == expected_return
+
+
+@pytest.mark.parametrize(("method", "expected_return"), PAYLOAD_METHODS)
+def test_payload_methods_are_accepted_by_connector_data_surface(method: object, expected_return: object) -> None:
+    """Every annotated connector payload method should be eligible for data-surface exposure."""
+    assert is_connector_data_method(method), f"{method!r} -> {expected_return!r}"
+
+
+@pytest.mark.parametrize("method", RAW_DATA_SURFACE_METHODS)
+def test_inherited_transport_and_input_helpers_are_not_data_surface_methods(method: object) -> None:
+    """Inherited raw helpers should stay out of CLI and MCP data surfaces."""
+    assert not is_connector_data_method(method), getattr(method, "__qualname__", repr(method))
+
+
+def test_builtin_connector_data_surfaces_do_not_expose_raw_helpers() -> None:
+    """Built-in connector CLI/MCP surfaces should expose payload methods, not fabric plumbing."""
+    offenders: dict[str, list[str]] = {}
+    empty_surfaces: list[str] = []
+
+    for name, spec in BUILTIN_CONNECTORS.items():
+        connector_class = getattr(connector_exports, spec.class_name)
+        method_names = {method_name for method_name, _ in connector_data_methods(connector_class)}
+        leaked = sorted(method_names & RAW_DATA_SURFACE_METHOD_NAMES)
+        if leaked:
+            offenders[name] = leaked
+        if not method_names:
+            empty_surfaces.append(name)
+
+    assert offenders == {}
+    assert empty_surfaces == []
 
 
 def test_raw_connector_container_returns_are_explicit_boundaries() -> None:
