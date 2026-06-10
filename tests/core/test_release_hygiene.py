@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import re
 
-from importlib import resources
+from importlib import import_module, resources
 from pathlib import Path
 
 import tomlkit
@@ -147,6 +147,30 @@ def test_public_install_guidance_names_known_extras() -> None:
                 for extra in (part.strip() for part in extra_group.split(",")):
                     if extra and extra not in known_extras:
                         offenders.append(f"{relative_path}:{line_number}: {extra} in extended-data[{extra_group}]")
+
+    assert offenders == []
+
+
+def test_project_scripts_point_to_callables() -> None:
+    """Console-script metadata should resolve to importable callables."""
+    scripts = _pyproject()["project"]["scripts"]
+    offenders: list[str] = []
+
+    for script_name, target in scripts.items():
+        module_name, separator, attribute_name = str(target).partition(":")
+        if not separator:
+            offenders.append(f"{script_name}: {target} has no attribute separator")
+            continue
+
+        try:
+            module = import_module(module_name)
+        except Exception as exc:
+            offenders.append(f"{script_name}: cannot import {module_name}: {exc}")
+            continue
+
+        entry_point = getattr(module, attribute_name, None)
+        if not callable(entry_point):
+            offenders.append(f"{script_name}: {target} is not callable")
 
     assert offenders == []
 
