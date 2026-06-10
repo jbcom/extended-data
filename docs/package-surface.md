@@ -102,7 +102,9 @@ helpers through `ExtendedString`. Scalar conversion paths `to_bool()`,
 `ExtendedString`. `ExtendedString.reconstruct_special_type()` and container
 `reconstruct_special_types()` methods restore booleans, numbers, paths, dates,
 times, and structured JSON/YAML values while keeping reconstructed collections
-inside Tier 2 containers.
+inside Tier 2 containers. Container `to_export_safe()` and `wrap_for_export()`
+methods expose the Tier 3 export boundary directly from promoted values for
+JSON, YAML, TOML, HCL, and raw string output.
 
 Container methods that return derived collections stay in Tier 2 as well:
 `ExtendedDict.filter()` returns an `ExtendedTuple` of accepted and rejected

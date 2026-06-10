@@ -7,7 +7,7 @@ import datetime
 from collections import UserString
 from collections.abc import Iterable, Mapping
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import extended_data.primitives.matching as primitive_matching
 
@@ -207,3 +207,15 @@ class ExtendedString(UserString):
         from extended_data.containers.factory import extend_data
 
         return extend_data(reconstruct_special_type(self.data, fail_silently=fail_silently))
+
+    def to_export_safe(self, *, export_to_yaml: bool = False) -> Any:
+        """Return this value converted to export-safe primitive data."""
+        from extended_data.io.exporters import make_raw_data_export_safe
+
+        return make_raw_data_export_safe(self.data, export_to_yaml=export_to_yaml)
+
+    def wrap_for_export(self, allow_encoding: bool | str = True, **format_opts: Any) -> str:
+        """Return this value wrapped as an encoded export string."""
+        from extended_data.io.exporters import wrap_raw_data_for_export
+
+        return wrap_raw_data_for_export(self.data, allow_encoding=allow_encoding, **format_opts)

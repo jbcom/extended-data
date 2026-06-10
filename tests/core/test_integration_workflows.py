@@ -45,7 +45,7 @@ def test_integration_workflow_serialization_transformation_export():
         assert transformed["item_list"] == ["Item one", "Item two"]
 
         # 4. Export: Make safe for export (e.g. GitHub Actions)
-        export_safe = edt.make_raw_data_export_safe(transformed)
+        export_safe = edt.ExtendedDict(transformed).to_export_safe()
         assert isinstance(export_safe, dict)
         # Verify it's still equivalent
         assert export_safe["name"] == "MyGreatProject"
