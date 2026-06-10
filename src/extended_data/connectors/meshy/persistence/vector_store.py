@@ -41,12 +41,14 @@ import json
 import sqlite3
 
 from contextlib import contextmanager, suppress
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 from typing_extensions import Self
+
+from extended_data.containers import ExtendedDict, ExtendedList, extend_data
 
 
 if TYPE_CHECKING:
@@ -92,6 +94,23 @@ class SimilarityResult:
     record: GenerationRecord
     distance: float
     score: float  # 1 - distance (higher = more similar)
+
+
+def _record_payload(record: GenerationRecord) -> dict[str, Any]:
+    """Convert an internal generation record to a JSON-friendly payload."""
+    payload = asdict(record)
+    payload["created_at"] = record.created_at.isoformat()
+    payload["updated_at"] = record.updated_at.isoformat()
+    return payload
+
+
+def _similarity_payload(result: SimilarityResult) -> dict[str, Any]:
+    """Convert an internal similarity result to a JSON-friendly payload."""
+    return {
+        "record": _record_payload(result.record),
+        "distance": result.distance,
+        "score": result.score,
+    }
 
 
 class VectorStore:
@@ -220,7 +239,7 @@ class VectorStore:
         task_id: str | None = None,
         embedding: list[float] | None = None,
         metadata: dict[str, Any] | None = None,
-    ) -> GenerationRecord:
+    ) -> ExtendedDict:
         """Record a new generation (idempotent by spec_hash).
 
         If a record with the same spec_hash exists, returns existing.
@@ -235,7 +254,7 @@ class VectorStore:
             metadata: Additional metadata dict
 
         Returns:
-            GenerationRecord (existing or newly created)
+            Extended generation record payload (existing or newly created)
         """
         now = _utc_now().isoformat()
 
@@ -245,7 +264,7 @@ class VectorStore:
             row = cursor.fetchone()
 
             if row:
-                return self._row_to_record(row)
+                return cast(ExtendedDict, extend_data(_record_payload(self._row_to_record(row))))
 
             # Insert new record
             metadata_json = json.dumps(metadata) if metadata else None
@@ -270,7 +289,7 @@ class VectorStore:
                     (record_id, embedding_blob),
                 )
 
-            return GenerationRecord(
+            record = GenerationRecord(
                 id=record_id,
                 spec_hash=spec_hash,
                 project=project,
@@ -283,6 +302,7 @@ class VectorStore:
                 created_at=datetime.fromisoformat(now),
                 updated_at=datetime.fromisoformat(now),
             )
+            return cast(ExtendedDict, extend_data(_record_payload(record)))
 
     def update_status(
         self,
@@ -325,40 +345,44 @@ class VectorStore:
 
             return cursor.rowcount > 0
 
-    def get_by_spec_hash(self, spec_hash: str) -> GenerationRecord | None:
+    def get_by_spec_hash(self, spec_hash: str) -> ExtendedDict | None:
         """Get generation record by spec hash.
 
         Args:
             spec_hash: Generation spec hash
 
         Returns:
-            GenerationRecord or None
+            Extended generation record payload or None
         """
         conn = self._get_conn()
         cursor = conn.execute("SELECT * FROM generations WHERE spec_hash = ?", (spec_hash,))
         row = cursor.fetchone()
-        return self._row_to_record(row) if row else None
+        if not row:
+            return None
+        return cast(ExtendedDict, extend_data(_record_payload(self._row_to_record(row))))
 
-    def get_by_task_id(self, task_id: str) -> GenerationRecord | None:
+    def get_by_task_id(self, task_id: str) -> ExtendedDict | None:
         """Get generation record by Meshy task ID.
 
         Args:
             task_id: Meshy task ID
 
         Returns:
-            GenerationRecord or None
+            Extended generation record payload or None
         """
         conn = self._get_conn()
         cursor = conn.execute("SELECT * FROM generations WHERE task_id = ?", (task_id,))
         row = cursor.fetchone()
-        return self._row_to_record(row) if row else None
+        if not row:
+            return None
+        return cast(ExtendedDict, extend_data(_record_payload(self._row_to_record(row))))
 
     def search_similar(
         self,
         query_embedding: list[float],
         limit: int = 10,
         project: str | None = None,
-    ) -> list[SimilarityResult]:
+    ) -> ExtendedList[ExtendedDict]:
         """Search for similar generations using vector similarity.
 
         Args:
@@ -367,10 +391,10 @@ class VectorStore:
             project: Optional project filter
 
         Returns:
-            List of SimilarityResult ordered by similarity (highest first)
+            Extended similarity result payloads ordered by similarity (highest first)
         """
         if not _HAS_VECTOR:
-            return []
+            return cast(ExtendedList[ExtendedDict], extend_data([]))
 
         conn = self._get_conn()
         query_blob = self._serialize_embedding(query_embedding)
@@ -399,26 +423,28 @@ class VectorStore:
                 (query_blob, limit),
             )
 
-        results = []
+        results: list[dict[str, Any]] = []
         for row in cursor:
             record = self._row_to_record(row)
             distance = row["distance"]
             results.append(
-                SimilarityResult(
-                    record=record,
-                    distance=distance,
-                    score=1.0 - min(distance, 1.0),
+                _similarity_payload(
+                    SimilarityResult(
+                        record=record,
+                        distance=distance,
+                        score=1.0 - min(distance, 1.0),
+                    )
                 )
             )
 
-        return results
+        return cast(ExtendedList[ExtendedDict], extend_data(results))
 
     def search_text(
         self,
         query: str,
         limit: int = 10,
         project: str | None = None,
-    ) -> list[GenerationRecord]:
+    ) -> ExtendedList[ExtendedDict]:
         """Full-text search for prompts.
 
         Falls back to this when vector search is unavailable.
@@ -429,7 +455,7 @@ class VectorStore:
             project: Optional project filter
 
         Returns:
-            List of matching GenerationRecords
+            Extended generation record payloads
         """
         conn = self._get_conn()
 
@@ -456,16 +482,19 @@ class VectorStore:
                 (query, limit),
             )
 
-        return [self._row_to_record(row) for row in cursor]
+        return cast(
+            ExtendedList[ExtendedDict],
+            extend_data([_record_payload(self._row_to_record(row)) for row in cursor]),
+        )
 
-    def list_pending(self, project: str | None = None) -> list[GenerationRecord]:
+    def list_pending(self, project: str | None = None) -> ExtendedList[ExtendedDict]:
         """List all pending/in-progress generations.
 
         Args:
             project: Optional project filter
 
         Returns:
-            List of pending GenerationRecords
+            Extended pending generation record payloads
         """
         conn = self._get_conn()
 
@@ -477,7 +506,10 @@ class VectorStore:
         else:
             cursor = conn.execute("SELECT * FROM generations WHERE status IN ('pending', 'in_progress')")
 
-        return [self._row_to_record(row) for row in cursor]
+        return cast(
+            ExtendedList[ExtendedDict],
+            extend_data([_record_payload(self._row_to_record(row)) for row in cursor]),
+        )
 
     def compute_spec_hash(self, spec: dict[str, Any]) -> str:
         """Compute deterministic hash for a generation spec.
