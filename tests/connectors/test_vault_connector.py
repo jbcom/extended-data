@@ -12,6 +12,7 @@ pytest.importorskip("hvac")
 
 from hvac.exceptions import VaultError
 
+from extended_data.containers import ExtendedDict, ExtendedList, ExtendedString
 from extended_data.connectors.vault import VaultConnector
 
 
@@ -115,6 +116,9 @@ class TestVaultConnector:
 
         secrets = connector.list_secrets()
 
+        assert isinstance(secrets, ExtendedDict)
+        assert isinstance(secrets["shared"], ExtendedDict)
+        assert isinstance(secrets["shared"]["value"], ExtendedString)
         assert secrets == {
             "shared": {"value": "shared"},
             "finance/dev": {"value": "dev"},
@@ -136,6 +140,7 @@ class TestVaultConnector:
 
         secrets = connector.list_secrets(root_path="does/not/exist")
 
+        assert isinstance(secrets, ExtendedDict)
         assert secrets == {}
         mock_client.secrets.kv.v2.list_secrets.assert_called_once_with(
             path="does/not/exist",
@@ -173,6 +178,8 @@ class TestVaultConnector:
 
         roles = connector.list_aws_iam_roles(name_prefix="prod")
 
+        assert isinstance(roles, ExtendedList)
+        assert isinstance(roles[0], ExtendedString)
         assert roles == ["prod-sync"]
         mock_client.secrets.aws.list_roles.assert_called_once_with(mount_point="aws")
 
@@ -190,6 +197,7 @@ class TestVaultConnector:
 
         roles = connector.list_aws_iam_roles()
 
+        assert isinstance(roles, ExtendedList)
         assert roles == []
 
     def test_get_aws_iam_role_returns_data(self, base_connector_kwargs):
@@ -206,6 +214,8 @@ class TestVaultConnector:
 
         role_data = connector.get_aws_iam_role(role_name="prod")
 
+        assert isinstance(role_data, ExtendedDict)
+        assert isinstance(role_data["arn"], ExtendedString)
         assert role_data == {"arn": "arn:aws:iam::123:role/prod"}
         mock_client.secrets.aws.read_role.assert_called_once_with(name="prod", mount_point="aws")
 
@@ -239,6 +249,8 @@ class TestVaultConnector:
 
         credentials = connector.generate_aws_credentials(role_name="prod", ttl="1h", credential_type="sts")
 
+        assert isinstance(credentials, ExtendedDict)
+        assert isinstance(credentials["access_key"], ExtendedString)
         assert credentials["access_key"] == "AKIA"
         mock_client.secrets.aws.generate_credentials.assert_called_once_with(
             name="prod",

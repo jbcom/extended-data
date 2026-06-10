@@ -214,7 +214,7 @@ class VaultConnector(VendorConnectorBase):
             ]
         except VaultError as e:
             self.logger.warning(f"Invalid root path {display_root}: {e}")
-            return secrets
+            return self.extend_result(secrets)
 
         stack: deque[tuple[str, int]] = deque(initial_paths)
 
@@ -247,7 +247,7 @@ class VaultConnector(VendorConnectorBase):
                     self.logger.warning(f"Failed to list path {current_path}: {e}")
 
         self.logger.info(f"Listed {len(secrets)} Vault secrets")
-        return secrets
+        return self.extend_result(secrets)
 
     def read_secret(
         self,
@@ -268,7 +268,10 @@ class VaultConnector(VendorConnectorBase):
                 path=path,
                 mount_point=mount_point,
             )
-            return result.get("data", {}).get("data")
+            data = result.get("data", {}).get("data")
+            if data is None:
+                return None
+            return self.extend_result(data)
         except VaultError as e:
             self.logger.warning(f"Failed to read secret {path}: {e}")
             return None
@@ -318,7 +321,7 @@ class VaultConnector(VendorConnectorBase):
                     + (f"/{secret_name}" if not is_nothing(secret_name) else "")
                     + f": {e}"
                 )
-            return secret_data
+            return self.extend_result(secret_data) if secret_data is not None else None
 
         # No secret_name provided - search under path
         self.logger.info(f"Finding secrets under {path}")
@@ -364,7 +367,7 @@ class VaultConnector(VendorConnectorBase):
             if found_match:
                 secret_data = matching_secret_data
 
-        return secret_data
+        return self.extend_result(secret_data) if secret_data is not None else None
 
     def write_secret(
         self,
@@ -421,14 +424,14 @@ class VaultConnector(VendorConnectorBase):
             response = aws_secrets.list_roles(mount_point=mount_point)
         except VaultError as e:
             self.logger.warning(f"Failed to list AWS IAM roles from mount {mount_point}: {e}")
-            return []
+            return self.extend_result([])
 
         role_names = response.get("data", {}).get("keys", []) or []
         if name_prefix:
             role_names = [role for role in role_names if role.startswith(name_prefix)]
 
         self.logger.info(f"Found {len(role_names)} AWS IAM roles under mount {mount_point}")
-        return role_names
+        return self.extend_result(role_names)
 
     def get_aws_iam_role(
         self,
@@ -461,7 +464,7 @@ class VaultConnector(VendorConnectorBase):
             self.logger.warning(f"AWS IAM role {role_name} exists but returned no data")
             return None
 
-        return role_data
+        return self.extend_result(role_data)
 
     def generate_aws_credentials(
         self,
@@ -509,7 +512,7 @@ class VaultConnector(VendorConnectorBase):
             raise RuntimeError(f"Vault returned empty credentials for role {role_name}")
 
         self.logger.info(f"Generated AWS credentials for role {role_name}")
-        return credentials
+        return self.extend_result(credentials)
 
 
 from extended_data.connectors.vault.tools import (

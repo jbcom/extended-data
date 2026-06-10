@@ -6,9 +6,12 @@ AI agent frameworks.
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from typing import Any
 
 from pydantic import BaseModel, Field
+
+from extended_data.containers import extend_data
 
 
 # =============================================================================
@@ -63,10 +66,10 @@ def list_secrets(
                 "path": path,
                 "mount_point": mount_point,
                 "data": data,
-                "key_count": len(data) if isinstance(data, dict) else 0,
+                "key_count": len(data) if isinstance(data, Mapping) else 0,
             }
         )
-    return result
+    return extend_data(result)
 
 
 def read_secret(
@@ -87,12 +90,14 @@ def read_secret(
     connector = VaultConnector()
     data = connector.read_secret(path=path, mount_point=mount_point)
 
-    return {
-        "path": path,
-        "mount_point": mount_point,
-        "data": data or {},
-        "found": data is not None,
-    }
+    return extend_data(
+        {
+            "path": path,
+            "mount_point": mount_point,
+            "data": data or {},
+            "found": data is not None,
+        }
+    )
 
 
 # =============================================================================

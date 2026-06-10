@@ -8,6 +8,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from extended_data.containers import ExtendedDict, ExtendedList, ExtendedString, extend_data
+
 
 # Patch target for VaultConnector - must patch where it's used (in tools.py), not where it's defined
 VAULT_CONNECTOR_PATCH = "extended_data.connectors.vault.VaultConnector"
@@ -60,14 +62,20 @@ class TestListSecrets:
         from extended_data.connectors.vault.tools import list_secrets
 
         mock_connector = MagicMock()
-        mock_connector.list_secrets.return_value = {
-            "app/db-password": {"username": "admin", "password": "secret123"},
-            "app/api-key": {"key": "abc123xyz"},
-        }
+        mock_connector.list_secrets.return_value = extend_data(
+            {
+                "app/db-password": {"username": "admin", "password": "secret123"},
+                "app/api-key": {"key": "abc123xyz"},
+            }
+        )
         mock_connector_class.return_value = mock_connector
 
         result = list_secrets()
 
+        assert isinstance(result, ExtendedList)
+        assert isinstance(result[0], ExtendedDict)
+        assert isinstance(result[0]["path"], ExtendedString)
+        assert isinstance(result[0]["data"], ExtendedDict)
         assert len(result) == 2
         assert result[0]["path"] == "app/db-password"
         assert result[0]["mount_point"] == "secret"
@@ -146,6 +154,9 @@ class TestReadSecret:
 
         result = read_secret("app/db-password")
 
+        assert isinstance(result, ExtendedDict)
+        assert isinstance(result["path"], ExtendedString)
+        assert isinstance(result["data"], ExtendedDict)
         assert result["path"] == "app/db-password"
         assert result["mount_point"] == "secret"
         assert result["data"]["username"] == "admin"
@@ -163,6 +174,8 @@ class TestReadSecret:
 
         result = read_secret("app/missing-secret")
 
+        assert isinstance(result, ExtendedDict)
+        assert isinstance(result["data"], ExtendedDict)
         assert result["path"] == "app/missing-secret"
         assert result["mount_point"] == "secret"
         assert result["data"] == {}
