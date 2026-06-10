@@ -13,6 +13,7 @@ from extended_data.connectors.cursor import (
     AgentState,
     Conversation,
     ConversationMessage,
+    CursorAPIError,
     CursorConnector,
     CursorError,
     CursorValidationError,
@@ -24,6 +25,17 @@ from extended_data.connectors.cursor import (
     validate_webhook_url,
 )
 from extended_data.containers import ExtendedDict, ExtendedList, ExtendedString, extend_data
+
+
+def _logged_text(logger: MagicMock) -> str:
+    """Collect structured mock log calls into one searchable diagnostic string."""
+    messages: list[str] = []
+    for method_name in ("debug", "info", "warning", "error", "exception"):
+        method = getattr(logger, method_name)
+        for call in method.call_args_list:
+            messages.extend(str(arg) for arg in call.args)
+            messages.extend(str(value) for value in call.kwargs.values())
+    return "\n".join(messages)
 
 
 class TestValidators:
@@ -122,6 +134,17 @@ class TestValidators:
         assert "hunter2" not in redacted
         assert "tok_123" not in redacted
         assert "raw_token" not in redacted
+        assert "[REDACTED]" in redacted
+
+    def test_sanitize_error_redacts_explicit_values(self):
+        """Cursor sanitization should remove caller-provided identifiers, not just secret keys."""
+        redacted = sanitize_error(
+            "request to /agents/secret-agent failed for secret-org/private-repo",
+            values=["secret-agent", "secret-org/private-repo"],
+        )
+
+        assert "secret-agent" not in redacted
+        assert "secret-org/private-repo" not in redacted
         assert "[REDACTED]" in redacted
 
     def test_agent_model_payload_redacts_error(self):
@@ -259,6 +282,32 @@ class TestCursorConnector:
         assert agent["pr_url"] == "https://github.com/org/repo/pull/1"
 
     @patch("extended_data.connectors.cursor.httpx.Client")
+    def test_get_agent_status_empty_response_redacts_agent_id(self, mock_client_class):
+        """Empty status responses should not leak the raw agent ID in logs or errors."""
+        mock_client = MagicMock()
+        mock_client_class.return_value = mock_client
+
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.is_success = True
+        mock_response.headers = {"content-type": "text/plain"}
+        mock_response.text = ""
+        mock_client.request.return_value = mock_response
+
+        connector = CursorConnector(api_key="test-key")
+        connector.logger = MagicMock()
+
+        with pytest.raises(CursorAPIError) as exc_info:
+            connector.get_agent_status("secret-agent")
+
+        assert exc_info.value.__cause__ is None
+        assert "secret-agent" not in str(exc_info.value)
+        assert "[REDACTED]" in str(exc_info.value)
+        logs = _logged_text(connector.logger)
+        assert "secret-agent" not in logs
+        assert "[REDACTED]" in logs
+
+    @patch("extended_data.connectors.cursor.httpx.Client")
     def test_get_agent_conversation_returns_extended_dict(self, mock_client_class):
         """get_agent_conversation should return an extended conversation payload."""
         mock_client = MagicMock()
@@ -313,6 +362,30 @@ class TestCursorConnector:
         assert "source" in call_args.kwargs["json"]
         assert isinstance(call_args.kwargs["json"]["prompt"]["images"], list)
         assert isinstance(call_args.kwargs["json"]["prompt"]["images"][0], dict)
+
+    @patch("extended_data.connectors.cursor.httpx.Client")
+    def test_launch_agent_redacts_repository_diagnostics_but_preserves_payload(self, mock_client_class):
+        """Agent launches should send raw repository data while redacting logs."""
+        mock_client = MagicMock()
+        mock_client_class.return_value = mock_client
+
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.is_success = True
+        mock_response.headers = {"content-type": "application/json"}
+        mock_response.text = '{"id": "new-agent", "state": "pending"}'
+        mock_response.json.return_value = {"id": "new-agent", "state": "pending"}
+        mock_client.request.return_value = mock_response
+
+        connector = CursorConnector(api_key="test-key")
+        connector.logger = MagicMock()
+        connector.launch_agent(prompt_text="Implement feature X", repository="secret-org/private-repo")
+
+        call_args = mock_client.request.call_args
+        assert call_args.kwargs["json"]["source"]["repository"] == "secret-org/private-repo"
+        logs = _logged_text(connector.logger)
+        assert "secret-org/private-repo" not in logs
+        assert "[REDACTED]" in logs
 
     @patch("extended_data.connectors.cursor.httpx.Client")
     def test_launch_agent_validation(self, mock_client_class):

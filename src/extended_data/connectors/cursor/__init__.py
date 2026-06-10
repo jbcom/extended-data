@@ -23,6 +23,7 @@ from __future__ import annotations
 import os
 import re
 
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
@@ -273,7 +274,7 @@ def validate_webhook_url(url: str) -> None:
     try:
         parsed = urlparse(url)
     except Exception as e:
-        raise CursorValidationError(f"Webhook URL is not a valid URL: {e}") from e
+        raise CursorValidationError(f"Webhook URL is not a valid URL: {_safe_cursor_text(e, url)}") from None
 
     # Security: Only allow HTTPS
     if parsed.scheme != "https":
@@ -294,17 +295,43 @@ def validate_webhook_url(url: str) -> None:
         raise CursorValidationError(msg)
 
 
-def sanitize_error(error: Any) -> str:
+def _iter_diagnostic_values(values: Iterable[Any]) -> Iterable[Any]:
+    """Yield scalar values from nested diagnostic context."""
+    for value in values:
+        if value is None:
+            continue
+        if isinstance(value, Mapping):
+            yield from _iter_diagnostic_values(value.values())
+        elif isinstance(value, (str, bytes)):
+            yield value
+        elif isinstance(value, Iterable):
+            yield from _iter_diagnostic_values(value)
+        else:
+            yield value
+
+
+def _safe_cursor_text(value: Any, *sensitive_values: Any) -> str:
+    """Redact secrets and caller-provided Cursor identifiers from diagnostics."""
+    return redact_sensitive_text(value, values=_iter_diagnostic_values(sensitive_values))
+
+
+def _safe_cursor_ref(value: Any) -> str:
+    """Redact a single Cursor resource reference for diagnostic logs."""
+    return _safe_cursor_text(value, value)
+
+
+def sanitize_error(error: Any, *, values: Iterable[Any] | None = None) -> str:
     """Sanitize error messages to prevent sensitive data leakage.
 
     Args:
         error: The error to sanitize.
+        values: Explicit caller-provided values that must not appear in diagnostics.
 
     Returns:
         Sanitized error message string.
     """
     message = str(error) if not isinstance(error, str) else error
-    return redact_sensitive_text(message)
+    return redact_sensitive_text(message, values=_iter_diagnostic_values(values or ()))
 
 
 # =============================================================================
@@ -350,7 +377,7 @@ class CursorConnector(VendorConnectorBase):
             msg = "CURSOR_API_KEY is required. Set it in environment or pass to constructor."
             raise CursorError(msg)
 
-        self.logger.info(f"Initialized CursorConnector with base URL: {self._base_url}")
+        self.logger.info(f"Initialized CursorConnector with base URL: {_safe_cursor_ref(self._base_url)}")
 
     @staticmethod
     def is_available() -> bool:
@@ -398,12 +425,12 @@ class CursorConnector(VendorConnectorBase):
 
             return response.json()
 
-        except httpx.TimeoutException as e:
-            raise CursorAPIError(f"Request timeout after {self._timeout}s") from e
+        except httpx.TimeoutException:
+            raise CursorAPIError(f"Request timeout after {self._timeout}s") from None
         except Exception as e:
             if isinstance(e, CursorAPIError):
                 raise
-            raise CursorAPIError(sanitize_error(str(e))) from e
+            raise CursorAPIError(sanitize_error(str(e), values=[endpoint, json_body])) from None
 
     @staticmethod
     def _model_payload(model: BaseModel) -> dict[str, Any]:
@@ -448,11 +475,11 @@ class CursorConnector(VendorConnectorBase):
             CursorAPIError: If the API request fails or returns empty response.
         """
         validate_agent_id(agent_id)
-        self.logger.info(f"Getting status for agent: {agent_id}")
+        self.logger.info(f"Getting status for agent: {_safe_cursor_ref(agent_id)}")
 
         data = self._request_api(f"/agents/{agent_id}")
         if not data:
-            raise CursorAPIError(f"Empty response when getting agent status for {agent_id}")
+            raise CursorAPIError(f"Empty response when getting agent status for {_safe_cursor_ref(agent_id)}")
         return self.extend_result(self._model_payload(Agent.model_validate(data)))
 
     def get_agent_conversation(self, agent_id: str) -> ExtendedDict:
@@ -469,7 +496,7 @@ class CursorConnector(VendorConnectorBase):
             CursorAPIError: If the API request fails.
         """
         validate_agent_id(agent_id)
-        self.logger.info(f"Getting conversation for agent: {agent_id}")
+        self.logger.info(f"Getting conversation for agent: {_safe_cursor_ref(agent_id)}")
 
         data = self._request_api(f"/agents/{agent_id}/conversation")
         if not data:
@@ -522,7 +549,7 @@ class CursorConnector(VendorConnectorBase):
         if webhook_url:
             validate_webhook_url(webhook_url)
 
-        self.logger.info(f"Launching agent for repository: {repository}")
+        self.logger.info(f"Launching agent for repository: {_safe_cursor_ref(repository)}")
 
         body: dict[str, Any] = {
             "prompt": {
@@ -577,7 +604,7 @@ class CursorConnector(VendorConnectorBase):
         validate_agent_id(agent_id)
         validate_prompt_text(prompt_text)
 
-        self.logger.info(f"Adding follow-up to agent: {agent_id}")
+        self.logger.info(f"Adding follow-up to agent: {_safe_cursor_ref(agent_id)}")
 
         self._request_api(
             f"/agents/{agent_id}/followup",

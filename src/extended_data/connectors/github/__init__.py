@@ -13,6 +13,7 @@ from ruamel.yaml import YAML
 
 from extended_data.connectors._optional import require_extra
 from extended_data.connectors.base import VendorConnectorBase
+from extended_data.connectors.github._diagnostics import safe_github_ref, safe_github_text
 from extended_data.containers import ExtendedDict, ExtendedList, ExtendedString, ExtendedTuple
 from extended_data.io import (
     decode_file,
@@ -109,11 +110,12 @@ class GitHubConnector(VendorConnectorBase):
 
         self.repo = None
         if github_repo:
+            repo_ref = f"{self.GITHUB_OWNER}/{self.GITHUB_REPO}"
             try:
-                self.repo = self.git.get_repo(f"{self.GITHUB_OWNER}/{self.GITHUB_REPO}")
-                self.logger.info(f"Connecting to Git repository {self.GITHUB_OWNER}/{self.GITHUB_REPO}")
+                self.repo = self.git.get_repo(repo_ref)
+                self.logger.info(f"Connecting to Git repository {safe_github_ref(repo_ref)}")
             except UnknownObjectException:
-                self.logger.warning(f"Repository {self.GITHUB_OWNER}/{self.GITHUB_REPO} does not exist")
+                self.logger.warning(f"Repository {safe_github_ref(repo_ref)} does not exist")
 
         if github_branch is None and self.repo:
             self.GITHUB_BRANCH: str | None = self.repo.default_branch
@@ -125,26 +127,34 @@ class GitHubConnector(VendorConnectorBase):
     def get_repository_branch(self, branch_name: str) -> Any | None:
         """Get a repository branch by name."""
         if self.repo is None:
-            self.logger.warning(f"Repository not set for {self.GITHUB_OWNER}, cannot get branch {branch_name}")
+            self.logger.warning(
+                f"Repository not set for {safe_github_ref(self.GITHUB_OWNER)}, "
+                f"cannot get branch {safe_github_ref(branch_name)}"
+            )
             return None
 
         try:
             return self.repo.get_branch(branch_name)
         except UnknownObjectException:
-            self.logger.warning(f"{branch_name} does not yet exist")
+            self.logger.warning(f"{safe_github_ref(branch_name)} does not yet exist")
             return None
 
     def create_repository_branch(self, branch_name: str, parent_branch: str | None = None) -> Any | None:
         """Create a new repository branch."""
         if self.repo is None:
-            self.logger.warning(f"Repository not set for {self.GITHUB_OWNER}, cannot create branch {branch_name}")
+            self.logger.warning(
+                f"Repository not set for {safe_github_ref(self.GITHUB_OWNER)}, "
+                f"cannot create branch {safe_github_ref(branch_name)}"
+            )
             return None
 
         parent_branch_ref = self.get_repository_branch(parent_branch or self.repo.default_branch)
         if parent_branch_ref is None or is_nothing(parent_branch_ref):
-            raise RuntimeError(
-                f"Cannot create Git branch {branch_name}, parent branch {parent_branch} does not yet exist"
+            msg = (
+                f"Cannot create Git branch {safe_github_ref(branch_name)}, "
+                f"parent branch {safe_github_ref(parent_branch)} does not yet exist"
             )
+            raise RuntimeError(msg)
 
         try:
             return self.repo.create_git_ref(
@@ -153,10 +163,11 @@ class GitHubConnector(VendorConnectorBase):
             )
         except GithubException as exc:
             if get_github_api_error(exc) == "Reference already exists":
-                self.logger.info(f"Branch {branch_name} already exists in Git repository")
+                self.logger.info(f"Branch {safe_github_ref(branch_name)} already exists in Git repository")
                 return self.get_repository_branch(branch_name)
 
-            raise RuntimeError(f"Failed to create branch {branch_name}") from exc
+            msg = f"Failed to create branch {safe_github_ref(branch_name)}: {safe_github_text(exc, branch_name)}"
+            raise RuntimeError(msg) from None
 
     def get_repository_file(
         self,
@@ -170,8 +181,11 @@ class GitHubConnector(VendorConnectorBase):
     ) -> ExtendedDict | ExtendedList[Any] | ExtendedString | ExtendedTuple[Any] | None:
         """Get a file from the repository."""
         file_path_text = os.fspath(file_path)
+        safe_file_path = safe_github_ref(file_path_text)
         if self.repo is None:
-            self.logger.warning(f"Repository not set for {self.GITHUB_OWNER}, cannot get file {file_path_text}")
+            self.logger.warning(
+                f"Repository not set for {safe_github_ref(self.GITHUB_OWNER)}, cannot get file {safe_file_path}"
+            )
             return None
 
         def state_negative_result(result: str) -> None:
@@ -192,19 +206,21 @@ class GitHubConnector(VendorConnectorBase):
         file_data: Any = {} if decode else ""
         file_sha = None
 
-        self.logger.debug(f"Getting repository file: {file_path_text}")
+        self.logger.debug(f"Getting repository file: {safe_file_path}")
 
         try:
             raw_file_data = self.repo.get_contents(file_path_text, ref=self.GITHUB_BRANCH)
             file_sha = raw_file_data.sha
             if is_nothing(raw_file_data.content):
-                self.logger.warning(f"{file_path_text} is empty of content: {self.GITHUB_BRANCH}")
+                self.logger.warning(
+                    f"{safe_file_path} is empty of content: {safe_github_ref(self.GITHUB_BRANCH)}"
+                )
             else:
                 file_data = raw_file_data.decoded_content.decode(charset, errors)
         except (UnknownObjectException, AttributeError):
-            state_negative_result(f"{file_path_text} does not exist")
+            state_negative_result(f"{safe_file_path} does not exist")
         except ValueError as exc:
-            self.logger.warning(f"Reading {file_path_text} not supported: {exc}")
+            self.logger.warning(f"Reading {safe_file_path} not supported: {safe_github_text(exc, file_path_text)}")
             decode = False
 
         if not decode or is_nothing(file_data):
@@ -215,7 +231,9 @@ class GitHubConnector(VendorConnectorBase):
         try:
             decoded_data = decode_file(file_data, file_path=file_path_text, as_extended=True)
         except Exception as exc:
-            self.logger.warning(f"Failed to decode {file_path_text} as {encoding}: {exc}")
+            self.logger.warning(
+                f"Failed to decode {safe_file_path} as {encoding}: {safe_github_text(exc, file_path_text)}"
+            )
             decoded_data = file_data
 
         return self.extend_result(get_retval(decoded_data, file_sha, file_path_text))
@@ -232,16 +250,19 @@ class GitHubConnector(VendorConnectorBase):
     ) -> Any | None:
         """Update a file in the repository."""
         file_path_text = os.fspath(file_path)
+        safe_file_path = safe_github_ref(file_path_text)
         if self.repo is None:
-            self.logger.warning(f"Repository not set for {self.GITHUB_OWNER}, cannot update file {file_path_text}")
+            self.logger.warning(
+                f"Repository not set for {safe_github_ref(self.GITHUB_OWNER)}, cannot update file {safe_file_path}"
+            )
             return None
 
         if is_nothing(file_data) and not allow_empty:
-            self.logger.warning(f"Empty file data for {file_path_text} not allowed")
+            self.logger.warning(f"Empty file data for {safe_file_path} not allowed")
             return None
 
         if msg:
-            self.logger.info(msg)
+            self.logger.info("Using caller-provided repository file message")
 
         if allow_encoding is None:
             allow_encoding = get_encoding_for_file_path(file_path_text)
@@ -251,7 +272,7 @@ class GitHubConnector(VendorConnectorBase):
         if not isinstance(file_data, str):
             file_data = str(file_data)
 
-        self.logger.info(f"Updating repository file: {file_path_text}")
+        self.logger.info(f"Updating repository file: {safe_file_path}")
 
         if file_sha is None:
             result = self.get_repository_file(file_path_text, return_sha=True)
@@ -281,11 +302,14 @@ class GitHubConnector(VendorConnectorBase):
     def delete_repository_file(self, file_path: FilePath, msg: str | None = None) -> Any | None:
         """Delete a file from the repository."""
         file_path_text = os.fspath(file_path)
+        safe_file_path = safe_github_ref(file_path_text)
         if self.repo is None:
-            self.logger.warning(f"Repository not set for {self.GITHUB_OWNER}, cannot delete file {file_path_text}")
+            self.logger.warning(
+                f"Repository not set for {safe_github_ref(self.GITHUB_OWNER)}, cannot delete file {safe_file_path}"
+            )
             return None
 
-        self.logger.info(f"Deleting repository file: {file_path_text}")
+        self.logger.info(f"Deleting repository file: {safe_file_path}")
 
         result = self.get_repository_file(file_path=file_path_text, return_sha=True)
         sha = None
@@ -323,7 +347,7 @@ class GitHubConnector(VendorConnectorBase):
         Returns:
             Dictionary mapping usernames to member data.
         """
-        self.logger.info(f"Listing members for organization: {self.GITHUB_OWNER}")
+        self.logger.info(f"Listing members for organization: {safe_github_ref(self.GITHUB_OWNER)}")
 
         members: dict[str, dict[str, Any]] = {}
 
@@ -386,7 +410,7 @@ class GitHubConnector(VendorConnectorBase):
                 }
             )
         except UnknownObjectException:
-            self.logger.warning(f"User not found: {username}")
+            self.logger.warning(f"User not found: {safe_github_ref(username)}")
             return None
 
     # =========================================================================
@@ -407,7 +431,7 @@ class GitHubConnector(VendorConnectorBase):
         Returns:
             Dictionary mapping repo names to repository data.
         """
-        self.logger.info(f"Listing repositories for organization: {self.GITHUB_OWNER}")
+        self.logger.info(f"Listing repositories for organization: {safe_github_ref(self.GITHUB_OWNER)}")
 
         repos: dict[str, dict[str, Any]] = {}
 
@@ -475,7 +499,7 @@ class GitHubConnector(VendorConnectorBase):
                 }
             )
         except UnknownObjectException:
-            self.logger.warning(f"Repository not found: {repo_name}")
+            self.logger.warning(f"Repository not found: {safe_github_ref(repo_name)}")
             return None
 
     # =========================================================================
@@ -496,7 +520,7 @@ class GitHubConnector(VendorConnectorBase):
         Returns:
             Dictionary mapping team slugs to team data.
         """
-        self.logger.info(f"Listing teams for organization: {self.GITHUB_OWNER}")
+        self.logger.info(f"Listing teams for organization: {safe_github_ref(self.GITHUB_OWNER)}")
 
         teams: dict[str, dict[str, Any]] = {}
 
@@ -567,7 +591,7 @@ class GitHubConnector(VendorConnectorBase):
                 }
             )
         except UnknownObjectException:
-            self.logger.warning(f"Team not found: {team_slug}")
+            self.logger.warning(f"Team not found: {safe_github_ref(team_slug)}")
             return None
 
     def add_team_member(self, team_slug: str, username: str, role: str = "member") -> bool:
@@ -581,15 +605,19 @@ class GitHubConnector(VendorConnectorBase):
         Returns:
             True if successful.
         """
-        self.logger.info(f"Adding {username} to team {team_slug}")
+        safe_username = safe_github_ref(username)
+        safe_team = safe_github_ref(team_slug)
+        self.logger.info(f"Adding {safe_username} to team {safe_team}")
         try:
             team = self.org.get_team_by_slug(team_slug)
             user = self.git.get_user(username)
             team.add_membership(user, role=role)
-            self.logger.info(f"Added {username} to team {team_slug}")
+            self.logger.info(f"Added {safe_username} to team {safe_team}")
             return True
         except (UnknownObjectException, GithubException) as e:
-            self.logger.exception(f"Failed to add {username} to team: {e}")
+            self.logger.error(  # noqa: TRY400 - traceback can expose raw GitHub identifiers.
+                f"Failed to add {safe_username} to team {safe_team}: {safe_github_text(e, username, team_slug)}"
+            )
             return False
 
     def remove_team_member(self, team_slug: str, username: str) -> bool:
@@ -602,15 +630,19 @@ class GitHubConnector(VendorConnectorBase):
         Returns:
             True if successful.
         """
-        self.logger.info(f"Removing {username} from team {team_slug}")
+        safe_username = safe_github_ref(username)
+        safe_team = safe_github_ref(team_slug)
+        self.logger.info(f"Removing {safe_username} from team {safe_team}")
         try:
             team = self.org.get_team_by_slug(team_slug)
             user = self.git.get_user(username)
             team.remove_membership(user)
-            self.logger.info(f"Removed {username} from team {team_slug}")
+            self.logger.info(f"Removed {safe_username} from team {safe_team}")
             return True
         except (UnknownObjectException, GithubException) as e:
-            self.logger.exception(f"Failed to remove {username} from team: {e}")
+            self.logger.error(  # noqa: TRY400 - traceback can expose raw GitHub identifiers.
+                f"Failed to remove {safe_username} from team {safe_team}: {safe_github_text(e, username, team_slug)}"
+            )
             return False
 
     # =========================================================================
@@ -656,7 +688,7 @@ class GitHubConnector(VendorConnectorBase):
         Returns:
             Dictionary mapping usernames to member data with verified emails.
         """
-        self.logger.info(f"Getting users with verified emails for {self.GITHUB_OWNER}")
+        self.logger.info(f"Getting users with verified emails for {safe_github_ref(self.GITHUB_OWNER)}")
 
         if members is None:
             members = self.list_org_members()
@@ -696,7 +728,10 @@ class GitHubConnector(VendorConnectorBase):
                 enriched[username] = enriched_data
 
             except Exception as e:
-                self.logger.warning(f"Failed to get verified emails for {username}: {e}")
+                self.logger.warning(
+                    f"Failed to get verified emails for {safe_github_ref(username)}: "
+                    f"{safe_github_text(e, username)}"
+                )
                 enriched[username] = dict(member_data)
 
         self.logger.info(f"Retrieved verified emails for {len(enriched)} users")
