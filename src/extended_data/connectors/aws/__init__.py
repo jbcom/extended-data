@@ -25,7 +25,7 @@ from extended_data.connectors.aws.organizations import AWSOrganizationsMixin
 from extended_data.connectors.aws.s3 import AWSS3Mixin
 from extended_data.connectors.aws.sso import AWSSSOmixin
 from extended_data.connectors.base import VendorConnectorBase
-from extended_data.containers import ExtendedDict, ExtendedList, ExtendedString, extend_data, to_builtin
+from extended_data.containers import ExtendedDict, ExtendedList, ExtendedString, to_builtin
 from extended_data.logging import Logging
 
 
@@ -560,49 +560,51 @@ class AWSConnector(AWSOrganizationsMixin, AWSSSOmixin, AWSS3Mixin, VendorConnect
         self.logger.info(f"Uploaded secrets to {s3_uri}")
         return self.extend_result(s3_uri)
 
-    @staticmethod
-    def load_vendors_from_asm(prefix: str = "/vendors/") -> ExtendedDict:
-        """Load vendor secrets from AWS Secrets Manager.
-
-        This is used in Lambda environments where vendor credentials are stored
-        in ASM under a common prefix (e.g., /vendors/).
+    def load_secrets_by_prefix(
+        self,
+        prefix: str,
+        *,
+        strip_prefix: bool = True,
+        uppercase_keys: bool = False,
+        skip_empty_secrets: bool = True,
+        execution_role_arn: str | None = None,
+        role_session_name: str | None = None,
+    ) -> ExtendedDict:
+        """Load AWS Secrets Manager values into a mapping keyed by secret name.
 
         Args:
-            prefix: The prefix path for vendor secrets (default: /vendors/)
+            prefix: AWS Secrets Manager name prefix to load.
+            strip_prefix: Remove the prefix from returned mapping keys.
+            uppercase_keys: Uppercase returned mapping keys for env-style use.
+            skip_empty_secrets: Skip missing or empty secret values.
+            execution_role_arn: ARN of role to assume for cross-account access.
+            role_session_name: Session name for assumed role.
 
         Returns:
-            Dictionary mapping secret keys (with prefix removed) to their values.
+            Mapping of transformed secret names to secret values.
         """
-        import os
+        if not prefix:
+            msg = "prefix is required to load secrets"
+            raise ValueError(msg)
 
-        vendors: dict[str, str] = {}
-        prefix = os.getenv("TM_VENDORS_PREFIX", prefix)
+        secrets = self.list_secrets(
+            prefix=prefix,
+            get_secret_values=True,
+            skip_empty_secrets=skip_empty_secrets,
+            execution_role_arn=execution_role_arn,
+            role_session_name=role_session_name,
+        )
 
-        try:
-            aws_sdk = _load_aws_sdk()
-            session = aws_sdk.Session()
-            secretsmanager = session.client("secretsmanager")
+        loaded: dict[str, AWSSecretValue] = {}
+        for secret_name, secret_value in secrets.items():
+            key = str(secret_name)
+            if strip_prefix and key.startswith(prefix):
+                key = key.removeprefix(prefix)
+            if uppercase_keys:
+                key = key.upper()
+            loaded[key] = secret_value
 
-            # List secrets with the prefix
-            paginator = secretsmanager.get_paginator("list_secrets")
-            for page in paginator.paginate(Filters=[{"Key": "name", "Values": [prefix]}]):
-                for secret in page.get("SecretList", []):
-                    secret_name = secret["Name"]
-                    if secret_name.startswith(prefix):
-                        try:
-                            response = secretsmanager.get_secret_value(SecretId=secret_name)
-                            secret_value = response.get("SecretString", "")
-                            # Remove prefix from key name
-                            key = secret_name.removeprefix(prefix).upper()
-                            vendors[key] = secret_value
-                        except ClientError:
-                            # Skip secrets we can't read
-                            pass
-        except ClientError:
-            # Return empty dict if we can't access Secrets Manager
-            pass
-
-        return extend_data(vendors)
+        return self.extend_result(loaded)
 
 
 from extended_data.connectors.aws.codedeploy import create_codedeploy_deployment, get_aws_codedeploy_deployments

@@ -50,7 +50,7 @@ PAYLOAD_METHODS = (
     (AWSConnector.delete_secret, ExtendedDict),
     (AWSConnector.delete_secrets_matching, ExtendedList[ExtendedString]),
     (AWSConnector.copy_secrets_to_s3, ExtendedString),
-    (AWSConnector.load_vendors_from_asm, ExtendedDict),
+    (AWSConnector.load_secrets_by_prefix, ExtendedDict),
     (AWSOrganizationsMixin.get_organization_accounts, ExtendedDict),
     (AWSOrganizationsMixin.get_controltower_accounts, ExtendedDict),
     (AWSOrganizationsMixin.get_accounts, ExtendedDict),

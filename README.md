@@ -117,6 +117,8 @@ generic vendor lookup.
 Organizations, SSO, Workspace, Cloud Resource Manager, Billing, and services
 operations live on those connectors directly rather than on separate
 `*Full` classes.
+AWS Secrets Manager prefix loading is exposed as the generic
+`load_secrets_by_prefix()` data method rather than as a vendor-specific helper.
 Connector data payloads are promoted into Tier 2 containers at the boundary, so
 decoded files, HTTP response data, GraphQL responses, and SDK-shaped maps can
 use `ExtendedDict`, `ExtendedList`, and `ExtendedString` methods immediately.

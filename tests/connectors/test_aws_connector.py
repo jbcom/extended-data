@@ -423,22 +423,36 @@ class TestAWSConnector:
             ContentType="application/json",
         )
 
-    def test_load_vendors_from_asm_returns_extended_mapping(self):
-        """Ensure load_vendors_from_asm promotes loaded vendor secrets."""
-        mock_secretsmanager = MagicMock()
-        mock_paginator = MagicMock()
-        mock_paginator.paginate.return_value = [{"SecretList": [{"Name": "/vendors/github_token"}]}]
-        mock_secretsmanager.get_paginator.return_value = mock_paginator
-        mock_secretsmanager.get_secret_value.return_value = {"SecretString": "ghp_test"}
+    def test_load_secrets_by_prefix_returns_extended_mapping(self, base_connector_kwargs):
+        """Ensure prefix-loaded secrets are promoted without vendor-specific naming."""
+        connector = AWSConnector(**base_connector_kwargs)
+        connector.list_secrets = MagicMock(return_value={"/services/github_token": "ghp_test"})
 
-        mock_session = MagicMock()
-        mock_session.client.return_value = mock_secretsmanager
-        mock_sdk = MagicMock()
-        mock_sdk.Session.return_value = mock_session
+        secrets = connector.load_secrets_by_prefix(
+            prefix="/services/",
+            uppercase_keys=True,
+            execution_role_arn="arn:role:override",
+            role_session_name="session",
+        )
 
-        with patch("extended_data.connectors.aws._load_aws_sdk", return_value=mock_sdk):
-            vendors = AWSConnector.load_vendors_from_asm(prefix="/vendors/")
+        assert isinstance(secrets, ExtendedDict)
+        assert isinstance(secrets["GITHUB_TOKEN"], ExtendedString)
+        assert secrets == {"GITHUB_TOKEN": "ghp_test"}
+        connector.list_secrets.assert_called_once_with(
+            prefix="/services/",
+            get_secret_values=True,
+            skip_empty_secrets=True,
+            execution_role_arn="arn:role:override",
+            role_session_name="session",
+        )
 
-        assert isinstance(vendors, ExtendedDict)
-        assert isinstance(vendors["GITHUB_TOKEN"], ExtendedString)
-        assert vendors == {"GITHUB_TOKEN": "ghp_test"}
+    def test_load_secrets_by_prefix_requires_prefix(self, base_connector_kwargs):
+        """Ensure prefix loading fails loudly without a prefix."""
+        connector = AWSConnector(**base_connector_kwargs)
+
+        with pytest.raises(ValueError, match="prefix is required"):
+            connector.load_secrets_by_prefix("")
+
+    def test_aws_connector_does_not_keep_vendor_secret_loader_alias(self):
+        """Clean major-version surface should not preserve the old vendor loader name."""
+        assert not hasattr(AWSConnector, "load_vendors_from_asm")
