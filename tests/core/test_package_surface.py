@@ -13,7 +13,7 @@ import extended_data.logging as lifecycle_logging
 from extended_data import connectors, containers, inputs, io, primitives, secrets, workflows
 from extended_data.connectors.connectors import ConnectorFabric
 from extended_data.connectors.registry import BUILTIN_CONNECTORS
-from extended_data.containers import ExtendedList, ExtendedString
+from extended_data.containers import ExtendedDict, ExtendedList, ExtendedString, ExtendedTuple
 from extended_data.inputs import InputProvider
 from extended_data.logging import Logging
 
@@ -152,6 +152,25 @@ def test_root_exports_first_class_integrated_primitives() -> None:
     assert get_type_hints(connectors.list_connectors)["return"] == ExtendedList[ExtendedString]
     assert get_type_hints(ConnectorFabric.list_connectors)["return"] == ExtendedList[ExtendedString]
     assert "github" in connector_names
+
+
+def test_tier2_container_methods_expose_integrated_primitives() -> None:
+    """Tier 2 containers should expose common primitive operations directly."""
+    matched = ExtendedString("api-gateway").is_partial_match("gateway")
+    typed = ExtendedList(["api", 2]).split_by_type(primitive_only=True)
+    mapped = ExtendedTuple(("service", "region")).zipmap(("api", "us-east-1"))
+    first_entry = ExtendedDict({"empty": "", "service": "api"}).first_non_empty_entry("empty", "service")
+    selected = ExtendedList([None, "", {"service": "api"}]).first_non_empty()
+
+    assert matched is True
+    assert isinstance(typed, ExtendedDict)
+    assert typed["str"] == ["api"]
+    assert isinstance(mapped, ExtendedDict)
+    assert mapped["service"].upper_first() == "Api"
+    assert isinstance(first_entry, ExtendedDict)
+    assert first_entry["service"].upper_first() == "Api"
+    assert isinstance(selected, ExtendedDict)
+    assert selected["service"].upper_first() == "Api"
 
 
 def test_connectors_root_exports_builtin_connector_classes() -> None:
