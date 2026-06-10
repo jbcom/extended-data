@@ -4,7 +4,10 @@ from __future__ import annotations
 
 import re
 
+from importlib import resources
 from pathlib import Path
+
+import tomlkit
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -29,6 +32,10 @@ SECRETSSYNC_PROJECT_PATTERNS = (
     re.compile(r"\bsecretssync\s+(?:Go\s+)?(?:project|library|repo|repository|CLI|connector|bindings?)\b", re.IGNORECASE),
     re.compile(r"\b(?:project|library|repo|repository|CLI|connector|bindings?)\s+secretssync\b", re.IGNORECASE),
 )
+
+
+def _pyproject() -> tomlkit.TOMLDocument:
+    return tomlkit.parse((REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8"))
 
 
 def test_workflow_actions_are_pinned_to_exact_shas() -> None:
@@ -88,6 +95,15 @@ def test_old_package_namespace_shims_do_not_exist() -> None:
             offenders.append(str(module_path.relative_to(REPO_ROOT)))
 
     assert offenders == []
+
+
+def test_typed_classifier_has_pep561_marker() -> None:
+    """The typed package classifier should be backed by a PEP 561 marker."""
+    classifiers = _pyproject()["project"]["classifiers"]
+
+    assert "Typing :: Typed" in classifiers
+    assert (REPO_ROOT / "src" / "extended_data" / "py.typed").is_file()
+    assert resources.files("extended_data").joinpath("py.typed").is_file()
 
 
 def test_public_guidance_does_not_use_removed_runtime_keywords() -> None:
