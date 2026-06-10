@@ -120,7 +120,7 @@ from extended_data.primitives.types import (
     strtotime,
     typeof,
 )
-from extended_data.workflows import DataWorkflow, WorkflowResult, WorkflowStep
+from extended_data.workflows import DataWorkflow, StepLike, WorkflowAction, WorkflowResult, WorkflowStep
 
 
 if TYPE_CHECKING:
@@ -190,10 +190,12 @@ __all__ = [
     "OutputFormat",
     "SecretsConnector",
     "SortedDefaultDict",
+    "StepLike",
     "SyncOperation",
     "SyncOptions",
     "SyncResult",
     "VendorConnectorBase",
+    "WorkflowAction",
     "WorkflowResult",
     "WorkflowStep",
     "__version__",

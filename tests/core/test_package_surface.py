@@ -67,6 +67,12 @@ def test_public_all_exports_are_import_star_visible() -> None:
         assert set(namespace) == set(module.__all__)
 
 
+def test_root_exports_tiered_data_surfaces() -> None:
+    """The root package should expose the integrated primitive, container, IO, and workflow surfaces."""
+    for module in (primitives, containers, io, workflows):
+        assert set(module.__all__) <= set(extended_data.__all__), module.__name__
+
+
 def test_clean_major_version_public_names() -> None:
     """The public surface uses integrated extended-data names."""
     assert inputs.InputProvider.__name__ == "InputProvider"
