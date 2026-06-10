@@ -28,6 +28,7 @@ import sys
 from collections.abc import Callable, Iterable, Mapping
 from typing import Any, cast
 
+from extended_data.connectors.redaction import redact_sensitive_data
 from extended_data.connectors.registry import _list_connector_classes, get_connector
 from extended_data.connectors.surface import connector_data_methods
 from extended_data.containers import to_builtin
@@ -105,8 +106,8 @@ def _jsonable_tool_result(result: Any) -> Any:
         result = [item.model_dump() if hasattr(item, "model_dump") else item for item in result]
     result = to_builtin(result)
     if isinstance(result, set | frozenset):
-        return [to_builtin(item) for item in result]
-    return result
+        result = [to_builtin(item) for item in result]
+    return redact_sensitive_data(result)
 
 
 def create_server() -> Any:

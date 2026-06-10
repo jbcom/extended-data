@@ -39,6 +39,13 @@ def test_jsonable_tool_result_lowers_extended_mapping_payloads() -> None:
     assert _jsonable_tool_result(payload) == {"service": {"name": "api"}}
 
 
+def test_jsonable_tool_result_redacts_sensitive_mapping_payloads() -> None:
+    """MCP result serialization should not bypass connector redaction."""
+    payload = ExtendedDict({"password": "hunter2", "nested": {"api_key": "key_123"}})
+
+    assert _jsonable_tool_result(payload) == {"password": "[REDACTED]", "nested": {"api_key": "[REDACTED]"}}
+
+
 def test_jsonable_tool_result_lowers_extended_sequence_payloads() -> None:
     """MCP result serialization keeps Tier 2 sequence payloads as JSON arrays."""
     payload = ExtendedList([{"service": "api"}])
