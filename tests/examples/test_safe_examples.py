@@ -55,6 +55,7 @@ FUNCTION_FIRST_BASIC_USAGE_HELPERS = (
     "truncate",
 )
 ROOT_DISALLOWED_TIER1_IMPORTS = tuple(sorted(primitives.__all__))
+PYTHON_MARKDOWN_BLOCK_RE = re.compile(r"```python\n(?P<code>.*?)\n```", re.DOTALL)
 
 
 def _readme_usage_snippet() -> str:
@@ -111,6 +112,23 @@ def test_readme_usage_snippet_runs(tmp_path: Path) -> None:
     )
 
     assert result.returncode == 0, f"README usage snippet failed\nSTDOUT:\n{result.stdout}\nSTDERR:\n{result.stderr}"
+
+
+def test_markdown_python_snippets_compile() -> None:
+    """Documentation snippets may be conceptual, but they should remain valid Python."""
+    markdown_paths = [REPO_ROOT / "README.md", *(REPO_ROOT / "docs").rglob("*.md")]
+    offenders: list[str] = []
+
+    for path in sorted(markdown_paths):
+        text = path.read_text(encoding="utf-8")
+        for index, match in enumerate(PYTHON_MARKDOWN_BLOCK_RE.finditer(text), start=1):
+            code = match.group("code")
+            try:
+                compile(code, f"{path.relative_to(REPO_ROOT)}#python-block-{index}", "exec")
+            except SyntaxError as exc:
+                offenders.append(f"{path.relative_to(REPO_ROOT)} block {index}: {exc}")
+
+    assert offenders == []
 
 
 def test_examples_do_not_document_stale_command_paths() -> None:
