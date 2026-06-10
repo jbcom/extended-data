@@ -15,6 +15,7 @@ from typing import Any
 
 from extended_data.connectors.meshy import base, text3d
 from extended_data.connectors.meshy.models import ArtStyle, AssetIntent, AssetSpec, Text3DRequest
+from extended_data.containers import ExtendedDict, ExtendedList, extend_data, to_builtin
 
 
 @dataclass
@@ -37,8 +38,9 @@ class AssetManifest:
         if self.metadata is None:
             self.metadata = {}
 
-    def to_dict(self) -> dict[str, Any]:
-        return asdict(self)
+    def to_dict(self) -> ExtendedDict:
+        """Return an extended manifest payload."""
+        return extend_data(asdict(self))
 
 
 class AssetGenerator:
@@ -58,8 +60,8 @@ class AssetGenerator:
         desc_hash = hashlib.sha256(spec.description.encode()).hexdigest()[:8]
         return f"{spec.intent.value}_{desc_hash}"
 
-    def generate_model(self, spec: AssetSpec, wait: bool = True, poll_interval: float = 5.0) -> AssetManifest:
-        """Generate 3D model from spec."""
+    def generate_model(self, spec: AssetSpec, wait: bool = True, poll_interval: float = 5.0) -> ExtendedDict:
+        """Generate 3D model from spec and return an extended manifest payload."""
         asset_id = self._generate_asset_id(spec)
 
         # Create task using text3d module
@@ -85,7 +87,7 @@ class AssetGenerator:
         )
 
         if not wait:
-            return manifest
+            return manifest.to_dict()
 
         # Poll until complete
         result = text3d.poll(task_id, interval=poll_interval)
@@ -119,12 +121,12 @@ class AssetGenerator:
         # Save manifest
         manifest_path = output_dir / f"{asset_id}_manifest.json"
         with open(manifest_path, "w") as f:
-            json.dump(manifest.to_dict(), f, indent=2)
+            json.dump(to_builtin(manifest.to_dict()), f, indent=2)
 
-        return manifest
+        return manifest.to_dict()
 
-    def batch_generate(self, specs: list[AssetSpec], max_concurrent: int = 3) -> list[AssetManifest]:
-        """Generate multiple assets (respecting rate limits)."""
+    def batch_generate(self, specs: list[AssetSpec], max_concurrent: int = 3) -> ExtendedList[ExtendedDict]:
+        """Generate multiple assets and return extended manifest payloads."""
         manifests = []
 
         for spec in specs:
@@ -134,7 +136,7 @@ class AssetGenerator:
             except Exception:  # noqa: S112 - batch continues on individual failures
                 continue
 
-        return manifests
+        return extend_data(manifests)
 
 
 # Example specs

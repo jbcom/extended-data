@@ -22,6 +22,7 @@ from extended_data.connectors.meshy.webhooks.schemas import (
     WebhookModelUrls,
     WebhookRiggingResult,
 )
+from extended_data.containers import ExtendedDict, ExtendedString
 
 
 class TestMeshyWebhookPayload:
@@ -149,6 +150,8 @@ class TestWebhookHandler:
             payload = MeshyWebhookPayload(**webhook_payload_succeeded)
             result = webhook_handler.handle_webhook(payload)
 
+            assert isinstance(result, ExtendedDict)
+            assert isinstance(result["status"], ExtendedString)
             assert result["status"] == "success"
             assert result["task_id"] == "task-12345-abcde"
             assert result["project"] == "project1"
@@ -168,6 +171,8 @@ class TestWebhookHandler:
         )
         result = webhook_handler.handle_webhook(payload)
 
+        assert isinstance(result, ExtendedDict)
+        assert isinstance(result["message"], ExtendedString)
         assert result["status"] == "error"
         assert "not found" in result["message"]
 
@@ -194,6 +199,7 @@ class TestWebhookHandler:
         payload = MeshyWebhookPayload(**webhook_payload_failed)
         result = webhook_handler.handle_webhook(payload)
 
+        assert isinstance(result, ExtendedDict)
         assert result["status"] == "success"  # Handler succeeded
         assert result["task_status"] == "FAILED"  # Task failed
 
@@ -248,6 +254,7 @@ class TestWebhookHandler:
             payload = MeshyWebhookPayload(**webhook_payload_succeeded)
             result = handler.handle_webhook(payload)
 
+            assert isinstance(result, ExtendedDict)
             assert result["artifacts_downloaded"] == 1
             mock_base.download.assert_called_once()
 
@@ -262,6 +269,7 @@ class TestWebhookHandler:
             payload = MeshyWebhookPayload(**webhook_payload_succeeded)
             result = handler.handle_webhook(payload)
 
+            assert isinstance(result, ExtendedDict)
             assert result["artifacts_downloaded"] == 0
             mock_base.download.assert_not_called()
 
@@ -301,6 +309,7 @@ class TestWebhookHandler:
 
         result = handler.handle_signed_webhook(payload, "invalid")
 
+        assert isinstance(result, ExtendedDict)
         assert result == {
             "status": "error",
             "message": "Invalid webhook signature",
@@ -322,6 +331,7 @@ class TestWebhookHandler:
 
         result = handler.handle_signed_webhook(payload, signature)
 
+        assert isinstance(result, ExtendedDict)
         assert result["status"] == "success"
         assert result["task_id"] == "task-12345-abcde"
         mock_repository.record_task_update.assert_called_once()

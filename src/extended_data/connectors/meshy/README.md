@@ -58,7 +58,7 @@ from extended_data.connectors.meshy.jobs import AssetGenerator, example_characte
 generator = AssetGenerator(output_root="client/public")
 manifest = generator.generate_model(example_character_spec(), wait=True)
 
-print(manifest.model_path)
+print(manifest["model_path"])
 ```
 
 Built-in example specs are available as:

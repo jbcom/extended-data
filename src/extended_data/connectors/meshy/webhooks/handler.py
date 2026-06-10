@@ -7,10 +7,10 @@ import hashlib
 import hmac
 
 from datetime import datetime, timezone
-from typing import Any
 
 from extended_data.connectors.meshy import base
 from extended_data.connectors.meshy.webhooks.schemas import MeshyWebhookPayload
+from extended_data.containers import ExtendedDict, extend_data
 
 from ..persistence.repository import TaskRepository
 from ..persistence.schemas import ArtifactRecord
@@ -51,28 +51,28 @@ class WebhookHandler:
         signature: str,
         project: str | None = None,
         spec_hash: str | None = None,
-    ) -> dict[str, Any]:
+    ) -> ExtendedDict:
         """Verify a raw webhook payload before parsing and processing it."""
         if not self.verify_signature(payload, signature):
-            return {
+            return extend_data({
                 "status": "error",
                 "message": "Invalid webhook signature",
-            }
+            })
 
         try:
             parsed_payload = MeshyWebhookPayload.model_validate_json(payload)
         except ValueError as exc:
-            return {
+            return extend_data({
                 "status": "error",
                 "message": "Invalid webhook payload",
                 "error": str(exc),
-            }
+            })
 
         return self.handle_webhook(parsed_payload, project=project, spec_hash=spec_hash)
 
     def handle_webhook(
         self, payload: MeshyWebhookPayload, project: str | None = None, spec_hash: str | None = None
-    ) -> dict[str, Any]:
+    ) -> ExtendedDict:
         """Process webhook payload and update repository.
 
         Args:
@@ -81,16 +81,16 @@ class WebhookHandler:
             spec_hash: Optional spec hash (will search if not provided)
 
         Returns:
-            Dict with status and details
+            Extended dict with status and details.
         """
         task_lookup = self.repository.find_task_by_id(task_id=payload.id, project=project)
 
         if not task_lookup:
-            return {
+            return extend_data({
                 "status": "error",
                 "message": f"Task {payload.id} not found in repository",
                 "task_id": payload.id,
-            }
+            })
 
         found_project, found_spec_hash, asset_manifest = task_lookup
 
@@ -101,11 +101,11 @@ class WebhookHandler:
                 break
 
         if not service_name:
-            return {
+            return extend_data({
                 "status": "error",
                 "message": f"Task {payload.id} not found in task graph",
                 "task_id": payload.id,
-            }
+            })
 
         error_message = None
         if payload.status == "FAILED":
@@ -137,7 +137,7 @@ class WebhookHandler:
             error=error_message,
         )
 
-        return {
+        return extend_data({
             "status": "success",
             "task_id": payload.id,
             "project": found_project,
@@ -145,7 +145,7 @@ class WebhookHandler:
             "service": service_name,
             "task_status": payload.status,
             "artifacts_downloaded": len(artifacts),
-        }
+        })
 
     def _download_glb_artifact(self, project: str, spec_hash: str, service: str, glb_url: str) -> ArtifactRecord | None:
         """Download GLB artifact and create record."""

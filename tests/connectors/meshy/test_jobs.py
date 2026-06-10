@@ -22,6 +22,7 @@ from extended_data.connectors.meshy.models import (
     Text3DResult,
     TextureUrls,
 )
+from extended_data.containers import ExtendedDict, ExtendedList, ExtendedString
 
 
 class TestAssetManifest:
@@ -50,6 +51,8 @@ class TestAssetManifest:
             model_path="models/test.glb",
         )
         data = manifest.to_dict()
+        assert isinstance(data, ExtendedDict)
+        assert isinstance(data["asset_id"], ExtendedString)
         assert data["asset_id"] == "test-001"
         assert data["model_path"] == "models/test.glb"
 
@@ -125,9 +128,11 @@ class TestAssetGenerator:
 
             manifest = generator.generate_model(spec, wait=False)
 
-            assert manifest.asset_id == "project1-001"
-            assert manifest.task_id == "task-12345"
-            assert manifest.model_path is None  # Not downloaded yet
+            assert isinstance(manifest, ExtendedDict)
+            assert isinstance(manifest["asset_id"], ExtendedString)
+            assert manifest["asset_id"] == "project1-001"
+            assert manifest["task_id"] == "task-12345"
+            assert manifest["model_path"] is None  # Not downloaded yet
             mock_text3d.create.assert_called_once()
 
     def test_generate_model_with_wait(self, temp_dir):
@@ -159,9 +164,10 @@ class TestAssetGenerator:
 
             manifest = generator.generate_model(spec, wait=True, poll_interval=0.01)
 
-            assert manifest.asset_id == "project1-001"
-            assert manifest.model_path is not None
-            assert "project1-001.glb" in manifest.model_path
+            assert isinstance(manifest, ExtendedDict)
+            assert manifest["asset_id"] == "project1-001"
+            assert manifest["model_path"] is not None
+            assert "project1-001.glb" in manifest["model_path"]
             mock_base.download.assert_called()
 
     def test_generate_model_saves_manifest_json(self, temp_dir):
@@ -233,9 +239,11 @@ class TestAssetGenerator:
 
             manifests = generator.batch_generate(specs)
 
+            assert isinstance(manifests, ExtendedList)
+            assert isinstance(manifests[0], ExtendedDict)
             assert len(manifests) == 2
-            assert manifests[0].asset_id == "item-001"
-            assert manifests[1].asset_id == "item-002"
+            assert manifests[0]["asset_id"] == "item-001"
+            assert manifests[1]["asset_id"] == "item-002"
 
     def test_batch_generate_continues_on_failure(self, temp_dir):
         """Test that batch generation continues if one fails."""
@@ -282,8 +290,9 @@ class TestAssetGenerator:
             manifests = generator.batch_generate(specs)
 
             # Only the successful one should be in results
+            assert isinstance(manifests, ExtendedList)
             assert len(manifests) == 1
-            assert manifests[0].asset_id == "success-001"
+            assert manifests[0]["asset_id"] == "success-001"
 
 
 class TestExampleSpecs:
