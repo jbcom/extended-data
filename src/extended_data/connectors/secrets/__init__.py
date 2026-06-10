@@ -298,9 +298,8 @@ class SecretsConnector(VendorConnectorBase):
                 error_message="secretsync CLI not available",
             )
 
-        # CLI mode always requests JSON so this Python surface can reliably
-        # return a structured SyncResult. Native mode can pass through other
-        # output formats because it returns a typed result directly.
+        # Always request JSON so this Python surface can reliably return a
+        # structured SyncResult from the supported CLI contract.
         cmd = [
             self._cli_path,
             "pipeline",

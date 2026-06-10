@@ -1,6 +1,6 @@
 import json
 
-from inspect import signature
+from inspect import getsource, signature
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -43,6 +43,8 @@ def test_secrets_connector_has_single_cli_runtime_contract() -> None:
 
     assert "prefer_native" not in parameters
     assert not hasattr(SecretsConnector(cli_path="/usr/bin/secretsync"), "native_available")
+    assert "Native mode" not in getsource(SecretsConnector)
+    assert "native bindings" not in getsource(SecretsConnector)
 
 
 def test_cli_get_config_info_valid(connector: SecretsConnector, tmp_path: Path) -> None:
