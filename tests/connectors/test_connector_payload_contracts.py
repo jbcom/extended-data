@@ -264,6 +264,30 @@ RAW_DATA_SURFACE_METHODS = (
 )
 
 
+RAW_CONTAINER_ANNOTATIONS = {"Dict", "List", "Set", "Tuple", "dict", "list", "set", "tuple"}
+
+
+def _annotation_includes_raw_container(annotation: ast.AST) -> bool:
+    """Return whether an annotation AST includes a built-in raw container type."""
+    if isinstance(annotation, ast.Name):
+        return annotation.id in RAW_CONTAINER_ANNOTATIONS
+    if isinstance(annotation, ast.Attribute):
+        return annotation.attr in RAW_CONTAINER_ANNOTATIONS
+    if isinstance(annotation, ast.Subscript):
+        return _annotation_includes_raw_container(annotation.value) or _annotation_includes_raw_container(
+            annotation.slice
+        )
+    if isinstance(annotation, ast.BinOp):
+        return _annotation_includes_raw_container(annotation.left) or _annotation_includes_raw_container(
+            annotation.right
+        )
+    if isinstance(annotation, ast.Tuple):
+        return any(_annotation_includes_raw_container(item) for item in annotation.elts)
+    if isinstance(annotation, ast.List):
+        return any(_annotation_includes_raw_container(item) for item in annotation.elts)
+    return False
+
+
 class _RawContainerReturnVisitor(ast.NodeVisitor):
     def __init__(self, relative_path: str) -> None:
         self.relative_path = relative_path
@@ -293,8 +317,7 @@ class _RawContainerReturnVisitor(ast.NodeVisitor):
 
         if not is_nested_function and not node.name.startswith("_") and node.returns is not None:
             annotation = ast.unparse(node.returns)
-            has_raw_container = any(token in annotation for token in ("dict", "list"))
-            if has_raw_container and "Extended" not in annotation:
+            if _annotation_includes_raw_container(node.returns):
                 boundary = (self.relative_path, qualname)
                 if boundary not in RAW_CONNECTOR_BOUNDARIES:
                     self.offenders.append(f"{self.relative_path}:{node.lineno}: {qualname} -> {annotation}")

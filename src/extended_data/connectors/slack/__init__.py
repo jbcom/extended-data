@@ -12,11 +12,11 @@ from typing import Any
 
 # batched was added in Python 3.12
 if sys.version_info >= (3, 12):
-    from itertools import batched
+    from itertools import batched as _batched
 else:
     from itertools import islice
 
-    def batched(iterable: Iterable[Any], n: int) -> Iterator[tuple[Any, ...]]:
+    def _batched(iterable: Iterable[Any], n: int) -> Iterator[tuple[Any, ...]]:
         """Batch an iterable into chunks of size n for Python < 3.12."""
         it = iter(iterable)
         while batch := tuple(islice(it, n)):
@@ -134,7 +134,7 @@ def get_field_context_message_blocks(field_name: str, context_data: Mapping[str,
         get_divider(),
     ]
 
-    for field_keys in batched(context_data.keys(), 10):
+    for field_keys in _batched(context_data.keys(), 10):
         context_elements: list[dict[str, str]] = []
         for field_key in field_keys:
             field_value = context_data.get(field_key)

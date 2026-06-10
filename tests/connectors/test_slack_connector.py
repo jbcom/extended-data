@@ -8,6 +8,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+import extended_data.connectors.slack as slack_module
+
 from extended_data.connectors.slack import (
     SlackAPIError,
     SlackConnector,
@@ -48,6 +50,11 @@ def test_slack_block_helpers_return_extended_payloads():
     assert isinstance(key_value[0]["text"], ExtendedDict)
     assert isinstance(rich, ExtendedList)
     assert isinstance(rich[0]["elements"], ExtendedList)
+
+
+def test_slack_module_does_not_export_internal_batching_helper() -> None:
+    """Compatibility helpers should not become public connector surface."""
+    assert not hasattr(slack_module, "batched")
 
 
 def test_slack_api_error_redacts_sensitive_response_text() -> None:
