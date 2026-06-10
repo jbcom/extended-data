@@ -12,8 +12,17 @@ pytest.importorskip("hvac")
 
 from hvac.exceptions import VaultError
 
-from extended_data.containers import ExtendedDict, ExtendedList, ExtendedString
+from extended_data.containers import ExtendedDict, ExtendedList, ExtendedString, extend_data
 from extended_data.connectors.vault import VaultConnector
+
+
+def _logged_text(logger: MagicMock) -> str:
+    """Return concatenated mock logger messages."""
+    return "\n".join(
+        str(arg)
+        for call in logger.method_calls
+        for arg in call.args
+    )
 
 
 class TestVaultConnector:
@@ -147,6 +156,27 @@ class TestVaultConnector:
             mount_point="secret",
         )
 
+    def test_list_secrets_redacts_vault_error_logs(self, base_connector_kwargs):
+        """Vault list failures should not log raw secret-bearing exception text."""
+        connector = VaultConnector(
+            vault_url="https://vault.example.com", vault_token="test-token", **base_connector_kwargs
+        )
+
+        mock_client = MagicMock()
+        connector._vault_client = mock_client
+        connector._vault_token_expiration = datetime(2099, 1, 1, tzinfo=timezone.utc)
+        mock_client.secrets.kv.v2.list_secrets.side_effect = VaultError(
+            "denied password=hunter2 Authorization: Bearer raw_token"
+        )
+
+        secrets = connector.list_secrets(root_path="does/not/exist")
+
+        logs = _logged_text(connector.logger)
+        assert secrets == {}
+        assert "hunter2" not in logs
+        assert "raw_token" not in logs
+        assert "[REDACTED]" in logs
+
     def test_list_secrets_rejects_path_traversal(self, base_connector_kwargs):
         """Ensure list_secrets rejects path traversal in root_path."""
         connector = VaultConnector(
@@ -242,6 +272,27 @@ class TestVaultConnector:
 
         assert connector.get_aws_iam_role(role_name="missing") is None
 
+    def test_get_secret_matcher_logs_redact_secret_values(self, base_connector_kwargs):
+        """Matcher-success logs should not expose matched Vault secret values."""
+        connector = VaultConnector(
+            vault_url="https://vault.example.com", vault_token="test-token", **base_connector_kwargs
+        )
+
+        mock_client = MagicMock()
+        connector._vault_client = mock_client
+        connector._vault_token_expiration = datetime(2099, 1, 1, tzinfo=timezone.utc)
+        connector.list_secrets = MagicMock(return_value=extend_data({"prod/db": {}}))  # type: ignore[method-assign]
+        mock_client.secrets.kv.v2.read_secret_version.return_value = {
+            "data": {"data": {"password": "hunter2", "username": "admin"}}
+        }
+
+        secret = connector.get_secret(path="prod", matchers={"password": "hunter2"})
+
+        logs = _logged_text(connector.logger)
+        assert secret == {"password": "hunter2", "username": "admin"}
+        assert "hunter2" not in logs
+        assert "Matched prod/db on matcher password" in logs
+
     def test_generate_aws_credentials_success(self, base_connector_kwargs):
         """generate_aws_credentials should return the generated credential payload."""
         connector = VaultConnector(
@@ -282,3 +333,28 @@ class TestVaultConnector:
 
         with pytest.raises(RuntimeError):
             connector.generate_aws_credentials(role_name="prod")
+
+    def test_generate_aws_credentials_redacts_error_diagnostics(self, base_connector_kwargs):
+        """Vault credential failures should redact role names and exception payloads."""
+        connector = VaultConnector(
+            vault_url="https://vault.example.com", vault_token="test-token", **base_connector_kwargs
+        )
+
+        mock_client = MagicMock()
+        connector._vault_client = mock_client
+        connector._vault_token_expiration = datetime(2099, 1, 1, tzinfo=timezone.utc)
+        mock_client.secrets.aws.generate_credentials.side_effect = VaultError(
+            "denied api_key=key_123 Authorization: Bearer raw_token"
+        )
+
+        with pytest.raises(RuntimeError) as exc_info:
+            connector.generate_aws_credentials(role_name="prod password=hunter2")
+
+        logs = _logged_text(connector.logger)
+        message = str(exc_info.value)
+        assert "hunter2" not in logs
+        assert "key_123" not in logs
+        assert "raw_token" not in logs
+        assert "hunter2" not in message
+        assert "[REDACTED]" in logs
+        assert "[REDACTED]" in message
