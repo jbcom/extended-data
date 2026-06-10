@@ -25,6 +25,7 @@ else:
 from extended_data import is_nothing, wrap_raw_data_for_export
 from extended_data.connectors._optional import require_extra
 from extended_data.connectors.base import VendorConnectorBase
+from extended_data.containers import ExtendedDict, ExtendedList, extend_data, to_builtin
 from extended_data.logging import Logging
 
 
@@ -64,31 +65,31 @@ class SlackAPIError(RuntimeError):
         super().__init__(f"Slack API error: {response}")
 
 
-def get_divider() -> dict[str, str]:
+def get_divider() -> ExtendedDict:
     """Return a Slack divider block.
 
     Returns:
-        dict[str, str]: Slack block definition for a divider element.
+        Extended Slack block definition for a divider element.
     """
-    return {"type": "divider"}
+    return extend_data({"type": "divider"})
 
 
-def get_header_block(field_title: str) -> list[dict[str, Any]]:
+def get_header_block(field_title: str) -> ExtendedList[ExtendedDict]:
     """Return header and divider blocks for a section title.
 
     Args:
         field_title: Title text to render in the header block.
 
     Returns:
-        list[dict[str, Any]]: Header block followed by a divider.
+        Extended Slack blocks containing a header followed by a divider.
     """
-    return [
+    return extend_data([
         {"type": "header", "text": {"type": "plain_text", "text": field_title}},
         get_divider(),
-    ]
+    ])
 
 
-def get_field_context_message_blocks(field_name: str, context_data: Mapping[str, Any]) -> list[dict[str, Any]]:
+def get_field_context_message_blocks(field_name: str, context_data: Mapping[str, Any]) -> ExtendedList[ExtendedDict]:
     """Build header and context blocks for detailed field data.
 
     Args:
@@ -96,10 +97,10 @@ def get_field_context_message_blocks(field_name: str, context_data: Mapping[str,
         context_data: Mapping of key/value pairs rendered inside context blocks.
 
     Returns:
-        list[dict[str, Any]]: Blocks describing the field data.
+        Extended Slack blocks describing the field data.
     """
     field_title = field_name.title()
-    blocks: list[dict[str, Any]] = [
+    blocks: list[Any] = [
         {"type": "header", "text": {"type": "plain_text", "text": field_title}},
         get_divider(),
     ]
@@ -117,10 +118,10 @@ def get_field_context_message_blocks(field_name: str, context_data: Mapping[str,
 
         blocks.extend([{"type": "context", "elements": context_elements}, get_divider()])
 
-    return blocks
+    return extend_data(blocks)
 
 
-def get_key_value_blocks(k: str, v: Any) -> list[dict[str, Any]]:
+def get_key_value_blocks(k: str, v: Any) -> ExtendedList[ExtendedDict]:
     """Format a key/value pair into Slack section blocks.
 
     Args:
@@ -128,7 +129,7 @@ def get_key_value_blocks(k: str, v: Any) -> list[dict[str, Any]]:
         v: Value to render. Mappings are encoded to Slack-safe text.
 
     Returns:
-        list[dict[str, Any]]: Section block followed by a divider.
+        Extended Slack section block followed by a divider.
     """
     k = k.title()
     if isinstance(v, Mapping):
@@ -136,7 +137,7 @@ def get_key_value_blocks(k: str, v: Any) -> list[dict[str, Any]]:
     if not isinstance(v, str):
         v = str(v)
 
-    return [{"type": "section", "text": {"type": "mrkdwn", "text": f"*{k}*: {v}"}}, get_divider()]
+    return extend_data([{"type": "section", "text": {"type": "mrkdwn", "text": f"*{k}*: {v}"}}, get_divider()])
 
 
 def get_rich_text_blocks(
@@ -144,7 +145,7 @@ def get_rich_text_blocks(
     bold: bool = False,
     italic: bool = False,
     strike: bool = False,
-) -> list[dict[str, Any]]:
+) -> ExtendedList[ExtendedDict]:
     """Build a rich text block for multiline messages.
 
     Args:
@@ -154,7 +155,7 @@ def get_rich_text_blocks(
         strike: Whether to strike through the text.
 
     Returns:
-        list[dict[str, Any]]: Rich-text block followed by a divider.
+        Extended rich-text block followed by a divider.
     """
     style: dict[str, bool] = {}
     if bold:
@@ -171,7 +172,7 @@ def get_rich_text_blocks(
             element["style"] = style
         elements.append(element)
 
-    return [{"type": "rich_text", "elements": elements}, get_divider()]
+    return extend_data([{"type": "rich_text", "elements": elements}, get_divider()])
 
 
 class SlackConnector(VendorConnectorBase):
@@ -228,7 +229,7 @@ class SlackConnector(VendorConnectorBase):
         self,
         channel_name: str,
         text: str,
-        blocks: list[dict[str, Any]] | None = None,
+        blocks: list[Any] | ExtendedList[ExtendedDict] | None = None,
         lines: list[str] | None = None,
         bold: bool = False,
         italic: bool = False,
@@ -277,7 +278,7 @@ class SlackConnector(VendorConnectorBase):
             opts["thread_ts"] = thread_id
 
         try:
-            return self.extend_result(self.bot_web_client.chat_postMessage(**opts).get("ts"))
+            return self.extend_result(self.bot_web_client.chat_postMessage(**to_builtin(opts)).get("ts"))
         except SlackApiError as exc:
             if raise_on_api_error:
                 raise SlackAPIError(exc.response) from exc

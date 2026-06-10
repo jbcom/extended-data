@@ -8,8 +8,15 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from extended_data.connectors.slack import SlackConnector
-from extended_data.containers import ExtendedDict, ExtendedString
+from extended_data.connectors.slack import (
+    SlackConnector,
+    get_divider,
+    get_field_context_message_blocks,
+    get_header_block,
+    get_key_value_blocks,
+    get_rich_text_blocks,
+)
+from extended_data.containers import ExtendedDict, ExtendedList, ExtendedString
 
 
 def test_slack_connector_requires_slack_sdk_when_constructed_without_extra():
@@ -19,6 +26,27 @@ def test_slack_connector_requires_slack_sdk_when_constructed_without_extra():
 
     with pytest.raises(ImportError, match=r"extended-data\[slack\]"):
         SlackConnector(token="xoxp-test", bot_token="xoxb-test", from_environment=False)
+
+
+def test_slack_block_helpers_return_extended_payloads():
+    """Slack block helper payloads are first-class extended containers."""
+    divider = get_divider()
+    header = get_header_block("Deploys")
+    context = get_field_context_message_blocks("deploy", {"service": "api"})
+    key_value = get_key_value_blocks("service", {"name": "api"})
+    rich = get_rich_text_blocks(["hello"], bold=True)
+
+    assert isinstance(divider, ExtendedDict)
+    assert isinstance(divider["type"], ExtendedString)
+    assert isinstance(header, ExtendedList)
+    assert isinstance(header[0], ExtendedDict)
+    assert isinstance(header[0]["text"], ExtendedDict)
+    assert isinstance(context, ExtendedList)
+    assert isinstance(context[0], ExtendedDict)
+    assert isinstance(key_value, ExtendedList)
+    assert isinstance(key_value[0]["text"], ExtendedDict)
+    assert isinstance(rich, ExtendedList)
+    assert isinstance(rich[0]["elements"], ExtendedList)
 
 
 class TestSlackConnector:
@@ -72,6 +100,27 @@ class TestSlackConnector:
         assert isinstance(ts, ExtendedString)
         assert ts == "1234567890.123456"
         mock_bot_client.chat_postMessage.assert_called_once()
+
+    @patch("extended_data.connectors.slack.WebClient")
+    def test_send_message_converts_extended_blocks_for_sdk(self, mock_webclient_class, base_connector_kwargs):
+        """Slack SDK calls should receive builtin payloads even when helpers are extended."""
+        mock_bot_client = MagicMock()
+        mock_bot_client.users_conversations.return_value = {"channels": [{"name": "general", "id": "C12345"}]}
+        mock_bot_client.chat_postMessage.return_value = {"ts": "1234567890.123456"}
+
+        mock_user_client = MagicMock()
+        mock_webclient_class.side_effect = [mock_user_client, mock_bot_client]
+
+        connector = SlackConnector(token="test-token", bot_token="bot-token", **base_connector_kwargs)
+
+        connector.send_message(channel_name="general", text="Test message", lines=["hello"], bold=True)
+
+        kwargs = mock_bot_client.chat_postMessage.call_args.kwargs
+        assert isinstance(kwargs["blocks"], list)
+        assert not isinstance(kwargs["blocks"], ExtendedList)
+        assert isinstance(kwargs["blocks"][0], dict)
+        assert not isinstance(kwargs["blocks"][0], ExtendedDict)
+        assert isinstance(kwargs["channel"], str)
 
     @patch("extended_data.connectors.slack.SlackConnector._call_api")
     @patch("extended_data.connectors.slack.WebClient")
