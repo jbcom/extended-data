@@ -10,6 +10,8 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
+from extended_data.containers import extend_data
+
 
 # =============================================================================
 # Input Schemas
@@ -64,7 +66,7 @@ def list_users(max_results: int = 100) -> list[dict[str, Any]]:
     users = connector.list_users()
     # Sort by email for consistent output in tests
     sorted_users = [users[email] for email in sorted(users.keys())]
-    return sorted_users[:max_results]
+    return extend_data(sorted_users[:max_results])
 
 
 def get_user(user_id: str) -> dict[str, Any]:
@@ -79,7 +81,7 @@ def get_user(user_id: str) -> dict[str, Any]:
     from extended_data.connectors.zoom import ZoomConnector
 
     connector = ZoomConnector()
-    return connector.get_user(user_id)
+    return extend_data(connector.get_user(user_id))
 
 
 def list_meetings(
@@ -101,7 +103,7 @@ def list_meetings(
 
     connector = ZoomConnector()
     meetings = connector.list_meetings(user_id, meeting_type)
-    return meetings[:max_results]
+    return extend_data(meetings[:max_results])
 
 
 def get_meeting(meeting_id: str) -> dict[str, Any]:
@@ -116,7 +118,7 @@ def get_meeting(meeting_id: str) -> dict[str, Any]:
     from extended_data.connectors.zoom import ZoomConnector
 
     connector = ZoomConnector()
-    return connector.get_meeting(meeting_id)
+    return extend_data(connector.get_meeting(meeting_id))
 
 
 # =============================================================================

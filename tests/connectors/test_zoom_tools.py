@@ -4,6 +4,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from extended_data.containers import ExtendedDict, ExtendedList, ExtendedString
+
 
 CONNECTOR_PATCH = "extended_data.connectors.zoom.ZoomConnector"
 
@@ -76,9 +78,12 @@ class TestListUsers:
 
         result = list_users()
 
+        assert isinstance(result, ExtendedList)
+        assert isinstance(result[0], ExtendedDict)
         assert len(result) == 2
         assert result[0]["email"] == "user1@example.com"
         assert result[0]["id"] == "123"
+        assert isinstance(result[0]["first_name"], ExtendedString)
         assert result[0]["first_name"] == "John"
         assert result[1]["email"] == "user2@example.com"
 
@@ -142,6 +147,8 @@ class TestGetUser:
 
         result = get_user("user1@example.com")
 
+        assert isinstance(result, ExtendedDict)
+        assert isinstance(result["first_name"], ExtendedString)
         assert result["email"] == "user1@example.com"
         assert result["id"] == "123"
         assert result["first_name"] == "John"
@@ -205,6 +212,8 @@ class TestListMeetings:
 
         result = list_meetings("user1@example.com")
 
+        assert isinstance(result, ExtendedList)
+        assert isinstance(result[0], ExtendedDict)
         assert len(result) == 2
         assert result[0]["id"] == "111"
         assert result[0]["topic"] == "Team Meeting"
@@ -274,6 +283,8 @@ class TestGetMeeting:
 
         result = get_meeting("111")
 
+        assert isinstance(result, ExtendedDict)
+        assert isinstance(result["topic"], ExtendedString)
         assert result["id"] == "111"
         assert result["topic"] == "Team Meeting"
         assert result["host_email"] == "host@example.com"

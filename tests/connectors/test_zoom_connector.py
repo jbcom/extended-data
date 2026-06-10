@@ -7,6 +7,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from extended_data.connectors.zoom import ZoomConnector
+from extended_data.containers import ExtendedDict, ExtendedList, ExtendedString
 
 
 class TestZoomConnector:
@@ -89,6 +90,9 @@ class TestZoomConnector:
         )
 
         users = connector.get_zoom_users()
+        assert isinstance(users, ExtendedDict)
+        assert isinstance(users["user1@example.com"], ExtendedDict)
+        assert isinstance(users["user1@example.com"]["first_name"], ExtendedString)
         assert "user1@example.com" in users
         assert "user2@example.com" in users
         assert len(users) == 2
@@ -143,6 +147,8 @@ class TestZoomConnector:
         )
 
         users = connector.list_users()
+        assert isinstance(users, ExtendedDict)
+        assert isinstance(users["user1@example.com"], ExtendedDict)
         assert "user1@example.com" in users
 
     @patch("extended_data.connectors.zoom.requests.get")
@@ -172,6 +178,8 @@ class TestZoomConnector:
         )
 
         user = connector.get_user("user1@example.com")
+        assert isinstance(user, ExtendedDict)
+        assert isinstance(user["first_name"], ExtendedString)
         assert user["email"] == "user1@example.com"
         assert user["id"] == "123"
 
@@ -202,6 +210,8 @@ class TestZoomConnector:
         )
 
         meetings = connector.list_meetings("user1@example.com")
+        assert isinstance(meetings, ExtendedList)
+        assert isinstance(meetings[0], ExtendedDict)
         assert len(meetings) == 2
         assert meetings[0]["id"] == "111"
 
@@ -231,5 +241,7 @@ class TestZoomConnector:
         )
 
         meeting = connector.get_meeting("111")
+        assert isinstance(meeting, ExtendedDict)
+        assert isinstance(meeting["topic"], ExtendedString)
         assert meeting["id"] == "111"
         assert meeting["topic"] == "Team Meeting"

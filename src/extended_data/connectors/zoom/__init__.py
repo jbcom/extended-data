@@ -86,7 +86,7 @@ class ZoomConnector(VendorConnectorBase):
             except requests.exceptions.RequestException as exc:
                 raise RuntimeError(f"Failed to get Zoom users: {exc}") from exc
 
-        return users
+        return self.extend_result(users)
 
     def remove_zoom_user(self, email: str) -> None:
         """Remove a Zoom user."""
@@ -145,7 +145,7 @@ class ZoomConnector(VendorConnectorBase):
         try:
             response = requests.get(url, headers=headers, timeout=DEFAULT_REQUEST_TIMEOUT)
             response.raise_for_status()
-            return response.json()
+            return self.extend_result(response.json())
         except requests.exceptions.RequestException as exc:
             raise RuntimeError(f"Failed to get Zoom user {user_id}: {exc}") from exc
 
@@ -167,7 +167,7 @@ class ZoomConnector(VendorConnectorBase):
             response = requests.get(url, headers=headers, params=params, timeout=DEFAULT_REQUEST_TIMEOUT)
             response.raise_for_status()
             data = response.json()
-            return data.get("meetings", [])
+            return self.extend_result(data.get("meetings", []))
         except requests.exceptions.RequestException as exc:
             raise RuntimeError(f"Failed to list meetings for user {user_id}: {exc}") from exc
 
@@ -186,7 +186,7 @@ class ZoomConnector(VendorConnectorBase):
         try:
             response = requests.get(url, headers=headers, timeout=DEFAULT_REQUEST_TIMEOUT)
             response.raise_for_status()
-            return response.json()
+            return self.extend_result(response.json())
         except requests.exceptions.RequestException as exc:
             raise RuntimeError(f"Failed to get meeting {meeting_id}: {exc}") from exc
 
