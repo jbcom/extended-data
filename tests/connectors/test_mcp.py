@@ -4,7 +4,13 @@ from __future__ import annotations
 
 import pytest
 
-from extended_data.connectors.mcp import _get_public_methods, _jsonable_tool_result, _tool_error_text, create_server
+from extended_data.connectors.mcp import (
+    _get_public_methods,
+    _jsonable_tool_result,
+    _tool_error_text,
+    _unknown_tool_text,
+    create_server,
+)
 from extended_data.connectors.meshy.connector import MeshyConnector
 from extended_data.containers import ExtendedDict, ExtendedList, ExtendedSet
 
@@ -75,6 +81,15 @@ def test_tool_error_text_redacts_sensitive_exception_values() -> None:
     error = RuntimeError("failed password=hunter2 Authorization: Bearer raw_token")
 
     text = _tool_error_text(error)
+
+    assert "hunter2" not in text
+    assert "raw_token" not in text
+    assert "[REDACTED]" in text
+
+
+def test_unknown_tool_text_redacts_sensitive_tool_names() -> None:
+    """Generic MCP unknown-tool diagnostics should redact user-controlled names."""
+    text = _unknown_tool_text("password=hunter2 Authorization: Bearer raw_token")
 
     assert "hunter2" not in text
     assert "raw_token" not in text

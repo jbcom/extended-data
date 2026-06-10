@@ -30,3 +30,12 @@ def test_meshy_mcp_error_payload_redacts_sensitive_values() -> None:
     assert "key_123" not in payload["error"]
     assert "raw_token" not in payload["error"]
     assert "[REDACTED]" in payload["error"]
+
+
+def test_meshy_mcp_error_payload_redacts_unknown_tool_names() -> None:
+    """Meshy MCP unknown-tool diagnostics should redact user-controlled names."""
+    payload = _tool_error_payload("Unknown tool: password=hunter2 Authorization: Bearer raw_token")
+
+    assert "hunter2" not in payload["error"]
+    assert "raw_token" not in payload["error"]
+    assert "[REDACTED]" in payload["error"]

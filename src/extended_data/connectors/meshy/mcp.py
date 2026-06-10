@@ -313,7 +313,7 @@ def create_server() -> Any:
             return [
                 TextContent(
                     type="text",
-                    text=json.dumps({"error": f"Unknown tool: {name}"}),
+                    text=json.dumps(_tool_error_payload(f"Unknown tool: {name}")),
                 )
             ]
 

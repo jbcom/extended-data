@@ -567,7 +567,7 @@ class VendorConnectorBase(InputProvider, ABC):
             Tool result
         """
         if name not in self._tool_functions:
-            msg = f"Unknown tool: {name}"
+            msg = f"Unknown tool: {redact_sensitive_text(name)}"
             raise ValueError(msg)
 
         func = self._tool_functions[name]

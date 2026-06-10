@@ -142,6 +142,19 @@ def test_handle_ai_tool_call_promotes_result_payloads() -> None:
     assert result["status"].upper_first() == "Ok"
 
 
+def test_handle_ai_tool_call_redacts_unknown_tool_names() -> None:
+    """Unknown AI tool diagnostics should not echo secret-bearing names."""
+    connector = _connector()
+
+    with pytest.raises(ValueError) as exc_info:
+        connector.handle_ai_tool_call("password=hunter2 Authorization: Bearer raw_token", {})
+
+    message = str(exc_info.value)
+    assert "hunter2" not in message
+    assert "raw_token" not in message
+    assert "[REDACTED]" in message
+
+
 def test_get_ai_tool_definitions_promotes_definition_payloads() -> None:
     """AI tool definition export should expose extended containers."""
 

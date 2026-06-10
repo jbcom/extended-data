@@ -115,6 +115,11 @@ def _tool_error_text(error: Exception) -> str:
     return f"Error: {type(error).__name__}: {redact_sensitive_text(error)}"
 
 
+def _unknown_tool_text(name: str) -> str:
+    """Return an MCP-safe unknown-tool diagnostic."""
+    return f"Unknown tool: {redact_sensitive_text(name)}"
+
+
 def create_server() -> Any:
     """Create the unified MCP server with all registered connectors."""
     try:
@@ -176,7 +181,7 @@ def create_server() -> Any:
     async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
         """Execute a tool and return results."""
         if name not in tools:
-            return [TextContent(type="text", text=f"Unknown tool: {name}")]
+            return [TextContent(type="text", text=_unknown_tool_text(name))]
 
         tool = tools[name]
         connector_name = tool["connector"]
