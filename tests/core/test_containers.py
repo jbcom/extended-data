@@ -34,6 +34,13 @@ def test_extended_string_chains_primitive_transforms() -> None:
     formatted_map = ExtendedString("{service}.{component}").format_map(
         {"service": ExtendedString("api"), "component": "worker"}
     )
+    decoded_json = ExtendedString('{"service": {"name": "api"}}').decode_json()
+    decoded_yaml = ExtendedString("service:\n  name: api\n").decode_yaml()
+    decoded_toml = ExtendedString('service = { name = "api" }\n').decode_toml()
+    decoded_hcl = ExtendedString('locals { service = "api" }\n').decode_hcl2()
+    encoded_base64 = ExtendedString('{"service": {"name": "api"}}').encode_base64(wrap_raw_data=False)
+    decoded_base64 = encoded_base64.decode_base64(encoding="json")
+    plain_decoded_json = ExtendedString('{"service": "api"}').decode_json(as_extended=False)
 
     assert value.to_snake_case().remove_suffix("_value") == "api_response"
     assert value.to_snake_case().remove_prefix("api_") == "response_value"
@@ -85,6 +92,20 @@ def test_extended_string_chains_primitive_transforms() -> None:
     assert formatted == "api.worker"
     assert isinstance(formatted_map, ExtendedString)
     assert formatted_map == "api.worker"
+    assert isinstance(decoded_json, ExtendedDict)
+    assert decoded_json["service"]["name"].upper_first() == "Api"
+    assert isinstance(decoded_yaml, ExtendedDict)
+    assert decoded_yaml["service"]["name"].upper_first() == "Api"
+    assert isinstance(decoded_toml, ExtendedDict)
+    assert decoded_toml["service"]["name"].upper_first() == "Api"
+    assert isinstance(decoded_hcl, ExtendedDict)
+    assert isinstance(decoded_hcl["locals"], ExtendedList)
+    assert decoded_hcl["locals"][0]["service"].upper_first() == "Api"
+    assert isinstance(encoded_base64, ExtendedString)
+    assert isinstance(decoded_base64, ExtendedDict)
+    assert decoded_base64["service"]["name"].upper_first() == "Api"
+    assert isinstance(plain_decoded_json, dict)
+    assert plain_decoded_json == {"service": "api"}
 
 
 def test_extended_dict_composes_mapping_primitives() -> None:

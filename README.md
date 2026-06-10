@@ -192,6 +192,10 @@ without requiring callers to drop back to function-only utility code.
 `ExtendedString.to_bool()`, `to_int()`, `to_float()`, `to_path()`,
 `to_date()`, `to_datetime()`, and `to_time()` expose the Tier 1 scalar
 conversion family as direct string-container methods.
+`ExtendedString.decode_json()`, `decode_yaml()`, `decode_toml()`,
+`decode_hcl2()`, and `decode_base64()` expose structured text decoding from
+the string container and promote decoded maps/lists into Tier 2 data by
+default.
 `ExtendedString.reconstruct_special_type()` and the container
 `reconstruct_special_types()` methods restore booleans, numbers, dates, times,
 paths, and structured JSON/YAML values while staying in promoted Tier 2 data.

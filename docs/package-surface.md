@@ -99,7 +99,10 @@ values containing `ExtendedString` parts, while `partition()` and
 helpers through `ExtendedString`. Scalar conversion paths `to_bool()`,
 `to_int()`, `to_float()`, `to_path()`, `to_date()`, `to_datetime()`, and
 `to_time()` expose the Tier 1 `string_to_*()` family directly on
-`ExtendedString`. `ExtendedString.reconstruct_special_type()` and container
+`ExtendedString`. Structured text paths `decode_json()`, `decode_yaml()`,
+`decode_toml()`, `decode_hcl2()`, and `decode_base64()` decode from the string
+container and promote decoded maps/lists into Tier 2 data by default.
+`ExtendedString.reconstruct_special_type()` and container
 `reconstruct_special_types()` methods restore booleans, numbers, paths, dates,
 times, and structured JSON/YAML values while keeping reconstructed collections
 inside Tier 2 containers. Container `to_export_safe()` and `wrap_for_export()`

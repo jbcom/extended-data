@@ -208,6 +208,61 @@ class ExtendedString(UserString):
 
         return extend_data(reconstruct_special_type(self.data, fail_silently=fail_silently))
 
+    def decode_json(self, *, as_extended: bool = True) -> Any:
+        """Decode this JSON string, promoting structured values by default."""
+        from extended_data.containers.factory import extend_data
+        from extended_data.primitives.formats.json import decode_json
+
+        decoded = decode_json(self.data)
+        return extend_data(decoded) if as_extended else decoded
+
+    def decode_yaml(self, *, as_extended: bool = True) -> Any:
+        """Decode this YAML string, promoting structured values by default."""
+        from extended_data.containers.factory import extend_data
+        from extended_data.primitives.formats.yaml import decode_yaml
+
+        decoded = decode_yaml(self.data)
+        return extend_data(decoded) if as_extended else decoded
+
+    def decode_toml(self, *, as_extended: bool = True) -> Any:
+        """Decode this TOML string, promoting structured values by default."""
+        from extended_data.containers.factory import extend_data
+        from extended_data.primitives.formats.toml import decode_toml
+
+        decoded = decode_toml(self.data)
+        return extend_data(decoded) if as_extended else decoded
+
+    def decode_hcl2(self, *, as_extended: bool = True) -> Any:
+        """Decode this HCL2 string, promoting structured values by default."""
+        from extended_data.containers.factory import extend_data
+        from extended_data.primitives.formats.hcl import decode_hcl2
+
+        decoded = decode_hcl2(self.data)
+        return extend_data(decoded) if as_extended else decoded
+
+    def encode_base64(self, *, wrap_raw_data: bool = True) -> ExtendedString:
+        """Return this string encoded as Base64."""
+        from extended_data.io.base64 import base64_encode
+
+        return ExtendedString(base64_encode(self.data, wrap_raw_data=wrap_raw_data))
+
+    def decode_base64(
+        self,
+        unwrap_raw_data: bool = True,
+        encoding: str = "yaml",
+        *,
+        as_extended: bool = True,
+    ) -> Any:
+        """Decode this Base64 string, promoting structured values by default."""
+        from extended_data.io.base64 import base64_decode
+
+        return base64_decode(
+            self.data,
+            unwrap_raw_data=unwrap_raw_data,
+            encoding=encoding,
+            as_extended=as_extended,
+        )
+
     def to_export_safe(self, *, export_to_yaml: bool = False) -> Any:
         """Return this value converted to export-safe primitive data."""
         from extended_data.io.exporters import make_raw_data_export_safe
