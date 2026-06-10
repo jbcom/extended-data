@@ -9,6 +9,7 @@ import pytest
 from extended_data import (
     DataWorkflow,
     ExtendedDict,
+    ExtendedTuple,
     WorkflowResult,
     WorkflowStep,
     base64_decode,
@@ -115,6 +116,18 @@ def test_data_workflow_can_lower_and_promote_values() -> None:
     assert not isinstance(builtin.value, ExtendedDict)
     assert isinstance(extended.value, ExtendedDict)
     assert extended.value["service"]["name"].upper_first() == "Api"
+
+
+def test_data_workflow_preserves_tuples_until_serialization(tmp_path: Path) -> None:
+    """Workflow values keep tuple shape in memory and serialize to JSON arrays at the edge."""
+    workflow = DataWorkflow.from_value({"aliases": ("api", "gateway")})
+
+    assert isinstance(workflow.value["aliases"], ExtendedTuple)
+    assert workflow.result().as_builtin() == {"aliases": ("api", "gateway")}
+
+    result = workflow.write("build/aliases.json", tld=tmp_path)
+
+    assert decode_file(read_file(result.output_path), file_path=result.output_path) == {"aliases": ["api", "gateway"]}
 
 
 def test_data_workflow_missing_file_fails_loudly(tmp_path: Path) -> None:
