@@ -37,10 +37,27 @@ SECRETSSYNC_PROJECT_PATTERNS = (
 EXTRA_REFERENCE_RE = re.compile(r"extended-data\[([^\]\n]+)\]")
 NON_RUNTIME_EXTRAS = {"all", "dev", "tests", "typing"}
 PACKAGE_SHAPE_RE = re.compile(r"^  ([a-z_]+)/\s+")
+UNPATCHED_RUNTIME_VULNERABILITIES = {
+    "chromadb": "GHSA-f4j7-r4q5-qw2c",
+}
 
 
 def _pyproject() -> tomlkit.TOMLDocument:
     return tomlkit.parse((REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+
+
+def _uv_lock() -> tomlkit.TOMLDocument:
+    return tomlkit.parse((REPO_ROOT / "uv.lock").read_text(encoding="utf-8"))
+
+
+def _requirement_name(requirement: str) -> str:
+    name_chars: list[str] = []
+    for char in requirement:
+        if char.isalnum() or char in {"-", "_", "."}:
+            name_chars.append(char)
+            continue
+        break
+    return "".join(name_chars).lower().replace("_", "-")
 
 
 def _workflow_action_pins() -> dict[str, tuple[str, str]]:
@@ -164,6 +181,31 @@ def test_all_extra_contains_every_runtime_extra_dependency() -> None:
                 missing.append(f"{extra_name}: {dependency_text}")
 
     assert missing == []
+
+
+def test_dependency_manifests_do_not_lock_unpatched_runtime_vulnerabilities() -> None:
+    """Runtime dependency manifests should not carry known unpatched vulnerable packages."""
+    vulnerable = set(UNPATCHED_RUNTIME_VULNERABILITIES)
+    offenders: list[str] = []
+    project = _pyproject()["project"]
+
+    for dependency in project["dependencies"]:
+        name = _requirement_name(str(dependency))
+        if name in vulnerable:
+            offenders.append(f"pyproject.toml dependency {dependency}: {UNPATCHED_RUNTIME_VULNERABILITIES[name]}")
+
+    for extra_name, dependencies in project["optional-dependencies"].items():
+        for dependency in dependencies:
+            name = _requirement_name(str(dependency))
+            if name in vulnerable:
+                offenders.append(f"pyproject.toml extra {extra_name} dependency {dependency}: {UNPATCHED_RUNTIME_VULNERABILITIES[name]}")
+
+    for package in _uv_lock()["package"]:
+        name = str(package["name"]).lower().replace("_", "-")
+        if name in vulnerable:
+            offenders.append(f"uv.lock package {name}: {UNPATCHED_RUNTIME_VULNERABILITIES[name]}")
+
+    assert offenders == []
 
 
 def test_public_install_guidance_names_known_extras() -> None:
