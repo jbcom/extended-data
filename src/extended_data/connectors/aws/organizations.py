@@ -15,6 +15,7 @@ from typing import TYPE_CHECKING, Any
 
 from deepmerge import always_merger
 
+from extended_data.connectors.aws._diagnostics import safe_aws_ref, safe_aws_text
 from extended_data.containers import ExtendedDict, to_builtin
 from extended_data.primitives import is_nothing, unhump_map
 
@@ -90,10 +91,11 @@ class AWSOrganizationsMixin:
 
         try:
             root_parent_id = roots["Roots"][0]["Id"]
-        except (KeyError, IndexError) as exc:
-            raise RuntimeError(f"Failed to find root parent ID: {roots}") from exc
+        except (KeyError, IndexError):
+            msg = f"Failed to find root parent ID: {safe_aws_text(roots, roots)}"
+            raise RuntimeError(msg) from None
 
-        self.logger.info(f"Root parent ID: {root_parent_id}")
+        self.logger.info(f"Root parent ID: {safe_aws_ref(root_parent_id)}")
 
         accounts_paginator = orgs.get_paginator("list_accounts_for_parent")
         ou_paginator = orgs.get_paginator("list_organizational_units_for_parent")
@@ -203,7 +205,7 @@ class AWSOrganizationsMixin:
                             pass
 
         except ClientError as e:
-            self.logger.warning(f"Could not list Control Tower accounts: {e}")
+            self.logger.warning(f"Could not list Control Tower accounts: {safe_aws_text(e)}")
 
         # Apply transformations
         if unhump_accounts:
@@ -471,7 +473,7 @@ class AWSOrganizationsMixin:
             labels: Dictionary of label key-value pairs to apply.
             execution_role_arn: ARN of role to assume for cross-account access.
         """
-        self.logger.info(f"Labeling AWS account {account_id} with {len(labels)} tags")
+        self.logger.info(f"Labeling AWS account {safe_aws_ref(account_id)} with {len(labels)} tags")
         role_arn = execution_role_arn or getattr(self, "execution_role_arn", None)
 
         orgs = self.get_aws_client(
@@ -481,7 +483,7 @@ class AWSOrganizationsMixin:
 
         tags = [{"Key": str(k), "Value": str(v)} for k, v in labels.items()]
         orgs.tag_resource(ResourceId=account_id, Tags=tags)
-        self.logger.info(f"Applied {len(labels)} tags to account {account_id}")
+        self.logger.info(f"Applied {len(labels)} tags to account {safe_aws_ref(account_id)}")
 
     def classify_accounts(
         self,
@@ -644,8 +646,8 @@ class AWSOrganizationsMixin:
         )
         try:
             return self.extend_result(labeled_accounts[account_id])
-        except KeyError as exc:  # pragma: no cover - defensive guard
-            raise KeyError(f"AWS account {account_id} not found") from exc
+        except KeyError:  # pragma: no cover - defensive guard
+            raise KeyError(f"AWS account {safe_aws_ref(account_id)} not found") from None
 
     def classify_aws_accounts(
         self,

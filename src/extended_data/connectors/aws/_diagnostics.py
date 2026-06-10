@@ -2,10 +2,15 @@
 
 from __future__ import annotations
 
+import re
+
 from collections.abc import Iterable, Mapping
 from typing import Any
 
 from extended_data.primitives.redaction import redact_sensitive_text
+
+
+AWS_ACCOUNT_ID_RE = re.compile(r"\b\d{12}\b")
 
 
 def _iter_diagnostic_values(values: Iterable[Any]) -> Iterable[Any]:
@@ -25,7 +30,8 @@ def _iter_diagnostic_values(values: Iterable[Any]) -> Iterable[Any]:
 
 def safe_aws_text(value: Any, *sensitive_values: Any) -> str:
     """Redact secrets and caller-provided resource identifiers from AWS diagnostics."""
-    return redact_sensitive_text(value, values=_iter_diagnostic_values(sensitive_values))
+    redacted = redact_sensitive_text(value, values=_iter_diagnostic_values(sensitive_values))
+    return AWS_ACCOUNT_ID_RE.sub("[REDACTED]", redacted)
 
 
 def safe_aws_ref(value: Any) -> str:

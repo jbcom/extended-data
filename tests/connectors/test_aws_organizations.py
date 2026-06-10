@@ -4,11 +4,14 @@
 from __future__ import annotations
 
 from typing import Any
+from unittest.mock import MagicMock
 
 import pytest
 
 pytest.importorskip("boto3")
 pytest.importorskip("botocore")
+
+from botocore.exceptions import ClientError
 
 from extended_data.containers import ExtendedDict, ExtendedList, ExtendedString, extend_data
 from extended_data.connectors.aws.organizations import AWSOrganizationsMixin
@@ -34,6 +37,11 @@ class _StubOrganizationsClient:
 
     def list_roots(self):
         return {"Roots": [{"Id": "r-root"}]}
+
+
+def _logged_text(logger: MagicMock) -> str:
+    """Return concatenated mock logger messages."""
+    return "\n".join(str(arg) for call in logger.method_calls for arg in call.args)
 
 
 class _TestAWSOrganizations(AWSOrganizationsMixin):
@@ -96,6 +104,7 @@ def test_classify_accounts_fetches_when_missing(mocker, organizations_connector:
 
 def test_label_account_tags_resource(organizations_connector: _TestAWSOrganizations):
     client = organizations_connector._clients["organizations"]
+    organizations_connector.logger = MagicMock()
 
     organizations_connector.label_account("123456789012", {"Env": "prod", "Owner": "platform"})
 
@@ -108,6 +117,76 @@ def test_label_account_tags_resource(organizations_connector: _TestAWSOrganizati
             ],
         }
     ]
+    logs = _logged_text(organizations_connector.logger)
+    assert "123456789012" not in logs
+    assert "[REDACTED]" in logs
+
+
+def test_get_organization_accounts_redacts_root_parent_id() -> None:
+    class _Paginator:
+        def __init__(self, pages: list[dict[str, Any]]) -> None:
+            self.pages = pages
+
+        def paginate(self, **_: Any) -> list[dict[str, Any]]:
+            return self.pages
+
+    class _RootClient:
+        def list_roots(self):
+            return {"Roots": [{"Id": "r-sensitive-root"}]}
+
+        def get_paginator(self, name: str):
+            if name == "list_accounts_for_parent":
+                return _Paginator([{"Accounts": []}])
+            if name == "list_organizational_units_for_parent":
+                return _Paginator([{"OrganizationalUnits": []}])
+            return _Paginator([])
+
+    connector = _TestAWSOrganizations()
+    connector.logger = MagicMock()
+    connector.register_client("organizations", _RootClient())
+
+    assert connector.get_organization_accounts() == {}
+
+    logs = _logged_text(connector.logger)
+    assert "r-sensitive-root" not in logs
+    assert "[REDACTED]" in logs
+
+
+def test_get_organization_accounts_redacts_missing_root_payload() -> None:
+    class _BadRootClient:
+        def list_roots(self):
+            return {"Roots": [{"AccountId": "123456789012"}]}
+
+    connector = _TestAWSOrganizations()
+    connector.logger = MagicMock()
+    connector.register_client("organizations", _BadRootClient())
+
+    with pytest.raises(RuntimeError) as exc_info:
+        connector.get_organization_accounts()
+
+    assert "123456789012" not in str(exc_info.value)
+    assert "[REDACTED]" in str(exc_info.value)
+    assert exc_info.value.__cause__ is None
+
+
+def test_get_controltower_accounts_redacts_provider_warning() -> None:
+    class _ControlTowerClient:
+        def get_paginator(self, _: str):
+            raise ClientError(
+                {"Error": {"Code": "AccessDenied", "Message": "Denied for 123456789012 token=raw-token"}},
+                "SearchProvisionedProducts",
+            )
+
+    connector = _TestAWSOrganizations()
+    connector.logger = MagicMock()
+    connector.register_client("servicecatalog", _ControlTowerClient())
+
+    assert connector.get_controltower_accounts() == {}
+
+    logs = _logged_text(connector.logger)
+    assert "123456789012" not in logs
+    assert "raw-token" not in logs
+    assert "[REDACTED]" in logs
 
 
 def test_preprocess_organization_compiles_sections(mocker, organizations_connector: _TestAWSOrganizations):
