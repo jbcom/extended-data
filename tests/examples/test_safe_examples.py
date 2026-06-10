@@ -42,6 +42,15 @@ STALE_EXAMPLE_COMMANDS = (
     "python -m examples.decorator_api",
     "python -m examples.encoding_decoding",
 )
+FUNCTION_FIRST_BASIC_USAGE_HELPERS = (
+    "deep_merge",
+    "filter_list",
+    "filter_map",
+    "flatten_list",
+    "flatten_map",
+    "sanitize_key",
+    "truncate",
+)
 
 
 def _readme_usage_snippet() -> str:
@@ -98,6 +107,16 @@ def test_examples_do_not_document_stale_command_paths() -> None:
         for command in STALE_EXAMPLE_COMMANDS:
             if command in text:
                 offenders.append(f"{example_path}: {command}")
+
+    assert offenders == []
+
+
+def test_basic_core_example_uses_container_first_operations() -> None:
+    """The basic example should lead with Tier 2 methods for list/map/string workflows."""
+    text = (REPO_ROOT / "examples/core/basic_usage.py").read_text(encoding="utf-8")
+    import_block = text.split("from extended_data import (", maxsplit=1)[1].split(")", maxsplit=1)[0]
+
+    offenders = [name for name in FUNCTION_FIRST_BASIC_USAGE_HELPERS if name in import_block]
 
     assert offenders == []
 

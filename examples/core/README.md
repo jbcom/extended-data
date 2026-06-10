@@ -9,7 +9,7 @@ surface docs, so treat them as part of the documented contract.
 
 ### Basic Usage
 
-- [`basic_usage.py`](basic_usage.py) - Common operations with strings, lists, and maps
+- [`basic_usage.py`](basic_usage.py) - Common state helpers plus first-class `ExtendedString`, `ExtendedList`, and `ExtendedDict` operations
 - [`composed_workflows.py`](composed_workflows.py) - Layered config, Terraform-style HCL, YAML-native tags, and payload pipelines
 - [`serialization.py`](serialization.py) - YAML, JSON, TOML, HCL, and Base64 encoding/decoding
 - [`file_operations.py`](file_operations.py) - File path utilities and Git repository helpers

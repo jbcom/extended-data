@@ -4,18 +4,13 @@
 from __future__ import annotations
 
 from extended_data import (
+    ExtendedDict,
+    ExtendedList,
     ExtendedString,
     all_non_empty,
     any_non_empty,
-    deep_merge,
-    filter_list,
-    filter_map,
     first_non_empty,
-    flatten_list,
-    flatten_map,
     is_nothing,
-    sanitize_key,
-    truncate,
 )
 
 
@@ -32,26 +27,26 @@ def demonstrate_state_utilities() -> None:
 def demonstrate_list_utilities() -> None:
     """Demonstrate list flattening and allowlist/denylist filtering."""
     print("\n=== List Utilities ===")
-    nested = ["api", ["worker", ["scheduler"]], "docs"]
-    print("Flattened:", flatten_list(nested))
+    nested = ExtendedList(["api", ["worker", ["scheduler"]], "docs"])
+    print("Flattened:", nested.flatten())
 
-    items = ["apple", "banana", "apricot", "cherry"]
-    print("Allowlist:", filter_list(items, allowlist=["apple", "apricot"]))
-    print("Denylist:", filter_list(items, denylist=["banana"]))
+    items = ExtendedList(["apple", "banana", "apricot", "cherry"])
+    print("Allowlist:", items.filter_values(allowlist=["apple", "apricot"]))
+    print("Denylist:", items.filter_values(denylist=["banana"]))
 
 
 def demonstrate_map_utilities() -> None:
     """Demonstrate map merge, flatten, and filtering helpers."""
     print("\n=== Map Utilities ===")
-    base = {"service": {"debug": False, "host": "localhost"}}
+    base = ExtendedDict({"service": {"debug": False, "host": "localhost"}})
     override = {"service": {"debug": True, "port": 8080}}
-    print("Deep merge:", deep_merge(base, override))
+    print("Deep merge:", base.deep_merge(override))
 
-    nested = {"service": {"http": {"port": 8080}}, "enabled": True}
-    print("Flattened:", flatten_map(nested))
+    nested = ExtendedDict({"service": {"http": {"port": 8080}}, "enabled": True})
+    print("Flattened:", nested.flatten())
 
-    payload = {"name": "api", "age": 30, "city": "Chicago", "active": True}
-    kept, removed = filter_map(payload, allowlist=["name", "city"])
+    payload = ExtendedDict({"name": "api", "age": 30, "city": "Chicago", "active": True})
+    kept, removed = payload.filter(allowlist=["name", "city"])
     print("Filtered map:", kept)
     print("Removed map:", removed)
 
@@ -62,8 +57,8 @@ def demonstrate_string_utilities() -> None:
     text = ExtendedString("prefix_content_suffix")
     print("Remove prefix:", text.remove_prefix("prefix_"))
     print("Remove suffix:", text.remove_suffix("_suffix"))
-    print("Truncate:", truncate("This value is intentionally too long", 20))
-    print("Sanitize key:", sanitize_key("User Name (Primary)"))
+    print("Truncate:", ExtendedString("This value is intentionally too long").truncate(20))
+    print("Sanitize key:", ExtendedString("User Name (Primary)").sanitize())
 
 
 if __name__ == "__main__":
