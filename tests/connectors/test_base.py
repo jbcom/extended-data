@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import builtins
+
 from unittest.mock import MagicMock
 
 import httpx
+import pytest
 
 from extended_data.connectors.base import VendorConnectorBase
 from extended_data.containers import ExtendedDict, ExtendedString
@@ -100,3 +103,19 @@ def test_request_data_decodes_response_body() -> None:
     mock_client.request.assert_called_once()
     assert mock_client.request.call_args.args[0] == "GET"
     assert mock_client.request.call_args.args[1] == "https://api.example.com/status"
+
+
+def test_get_tools_requires_langchain_extra(monkeypatch) -> None:
+    """Base LangChain tool export should fail visibly when langchain-core is missing."""
+    connector = _connector()
+    original_import = builtins.__import__
+
+    def fake_import(name, *args, **kwargs):
+        if name == "langchain_core.tools":
+            raise ImportError("blocked langchain-core")
+        return original_import(name, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "__import__", fake_import)
+
+    with pytest.raises(ImportError, match=r"extended-data\[langchain\]"):
+        connector.get_tools()

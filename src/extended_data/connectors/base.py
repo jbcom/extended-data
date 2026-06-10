@@ -448,9 +448,9 @@ class VendorConnectorBase(InputProvider, ABC):
         """
         try:
             from langchain_core.tools import StructuredTool
-        except ImportError:
-            self.logger.warning("langchain-core not installed, returning empty tools list")
-            return []
+        except ImportError as e:
+            msg = "langchain-core is required for LangChain tools. Install with: pip install extended-data[langchain]"
+            raise ImportError(msg) from e
 
         tools = []
         for name, func in self._tool_functions.items():
