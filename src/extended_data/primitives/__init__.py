@@ -20,7 +20,6 @@ from extended_data.primitives.introspection import (
     update_docstring,
 )
 from extended_data.primitives.mappings import (
-    SortedDefaultDict,
     all_values_from_map,
     create_merger,
     deduplicate_map,
@@ -92,7 +91,6 @@ from extended_data.primitives.types import (
 
 
 __all__ = [
-    "SortedDefaultDict",
     "all_non_empty",
     "all_non_empty_in_dict",
     "all_non_empty_in_list",

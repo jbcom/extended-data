@@ -88,6 +88,8 @@ def test_clean_major_version_public_names() -> None:
     assert not hasattr(extended_data, "GoogleCloudConnector")
     assert not hasattr(extended_data, "GoogleWorkspaceConnector")
     assert not hasattr(extended_data, "GoogleBillingConnector")
+    assert not hasattr(primitives, "SortedDefaultDict")
+    assert not hasattr(extended_data, "SortedDefaultDict")
     assert not hasattr(primitives, "removeprefix")
     assert not hasattr(primitives, "removesuffix")
     assert not hasattr(primitives, "bytestostr")

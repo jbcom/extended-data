@@ -108,6 +108,8 @@ Tier 1 primitive names are explicit in this major version. Use
 string conversion. The old `bytestostr` and `strto*` helper names are not
 preserved. Old package import namespaces are not shimmed; missing imports are
 intentional so remaining migration work fails fast.
+Tier 1 public exports stay function-oriented; use `get_default_dict()` for
+nested or sorted default mappings instead of importing the internal helper class.
 
 Vendor connectors are first-class adapters in the data fabric. `ConnectorFabric`
 uses the registry to resolve connectors by name, injects shared input/logging

@@ -58,7 +58,6 @@ from extended_data.primitives.introspection import (
     update_docstring,
 )
 from extended_data.primitives.mappings import (
-    SortedDefaultDict,
     all_values_from_map,
     create_merger,
     deduplicate_map,
@@ -225,7 +224,6 @@ __all__ = [
     "OutputFormat",
     "SecretsConnector",
     "SlackConnector",
-    "SortedDefaultDict",
     "StepLike",
     "SyncOperation",
     "SyncOptions",

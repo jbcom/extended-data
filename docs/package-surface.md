@@ -53,6 +53,9 @@ family (`string_to_bool()`, `string_to_int()`, `string_to_float()`,
 `string_to_path()`, `string_to_date()`, `string_to_datetime()`, and
 `string_to_time()`). The old `bytestostr` and `strto*` helper names are
 intentionally not preserved.
+Tier 1 public exports stay function-oriented; use `get_default_dict()` when a
+workflow needs nested or sorted default mappings rather than importing the
+internal sorted-default mapping helper class.
 
 Direct JSON, YAML, TOML, and HCL decode failures raise `DataDecodeError` with
 format and position context while preserving the parser exception as the cause;
