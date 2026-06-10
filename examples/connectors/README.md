@@ -31,6 +31,9 @@ pip install "extended-data[langchain]"
 
 # For the Meshy MCP server
 pip install "extended-data[meshy,mcp]"
+
+# For SecretSync pipeline inspection and dry-run syncs
+pip install "extended-data[secrets]"
 ```
 
 ## Examples
@@ -40,6 +43,7 @@ pip install "extended-data[meshy,mcp]"
 - [`basic_aws.py`](basic_aws.py) - AWS connector with Organizations and S3
 - [`basic_google.py`](basic_google.py) - Google Cloud connector with Workspace and Billing
 - [`basic_meshy.py`](basic_meshy.py) - Meshy AI 3D generation
+- [`basic_secrets.py`](basic_secrets.py) - SecretSync pipeline config inspection and dry-run execution
 
 ### AI Agent Integration
 
@@ -61,6 +65,10 @@ export GOOGLE_SERVICE_ACCOUNT='{"type": "service_account", ...}'
 # Meshy AI
 export MESHY_API_KEY="msy_your_key"
 
+# SecretSync
+export VAULT_ADDR="https://vault.example.com"
+export AWS_REGION="us-east-1"
+
 # For LangChain examples
 export ANTHROPIC_API_KEY="sk-ant-..."
 ```
@@ -73,4 +81,7 @@ uv run python examples/connectors/basic_meshy.py
 
 # Run with debug logging
 LOGLEVEL=DEBUG uv run python examples/connectors/basic_meshy.py
+
+# Run the SecretSync bridge against a pipeline config
+uv run python examples/connectors/basic_secrets.py pipeline.yaml
 ```

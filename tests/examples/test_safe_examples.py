@@ -36,6 +36,7 @@ CONNECTOR_EXAMPLES = [
     "examples/connectors/basic_aws.py",
     "examples/connectors/basic_google.py",
     "examples/connectors/basic_meshy.py",
+    "examples/connectors/basic_secrets.py",
     "examples/connectors/langchain_tools.py",
     "examples/connectors/mcp_server.py",
 ]
@@ -171,6 +172,24 @@ def test_examples_do_not_import_tier1_utilities_from_root() -> None:
                 offenders.append(f"{example_path}: {', '.join(disallowed)}")
 
     assert offenders == []
+
+
+def test_secrets_example_does_not_print_raw_sync_results() -> None:
+    """SecretSync output can include secret values and should not be echoed."""
+    text = (REPO_ROOT / "examples/connectors/basic_secrets.py").read_text(encoding="utf-8")
+    raw_result_fields = [
+        "error_message",
+        "secrets_processed",
+        "secrets_added",
+        "secrets_modified",
+        "secrets_removed",
+        "secrets_unchanged",
+        "diff_output",
+    ]
+
+    for field in raw_result_fields:
+        assert f'print(result["{field}"])' not in text
+        assert f"print(result['{field}'])" not in text
 
 
 @pytest.mark.parametrize("example_path", ALL_EXAMPLES)
