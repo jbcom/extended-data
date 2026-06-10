@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 import argparse
+import json
 
 from unittest.mock import MagicMock, patch
 
 import pytest
 
 from extended_data.connectors.cli import cmd_call, cmd_info, cmd_list, cmd_methods, main
+from extended_data.containers import ExtendedDict
 
 
 def test_cli_list():
@@ -94,6 +96,22 @@ def test_cli_call_accepts_json_flag_after_method() -> None:
     assert exit_code == 0
     connector.fetch.assert_called_once_with()
     assert '"ok": true' in mock_write.call_args.args[0]
+
+
+def test_cli_call_serializes_extended_containers_as_data() -> None:
+    """Call command renders Tier 2 containers as JSON data, not iterable keys."""
+    connector = MagicMock()
+    connector.fetch.return_value = ExtendedDict({"service": {"name": "api"}})
+    args = argparse.Namespace(connector="example", method="fetch", extra=[], json=True)
+
+    with (
+        patch("extended_data.connectors.cli.get_connector", return_value=connector),
+        patch("sys.stdout.write") as mock_write,
+    ):
+        exit_code = cmd_call(args)
+
+    assert exit_code == 0
+    assert json.loads(mock_write.call_args.args[0]) == {"service": {"name": "api"}}
 
 
 def test_cli_call_reports_missing_method() -> None:

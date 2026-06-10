@@ -10,15 +10,8 @@ Usage:
     # Call any connector method
     extended-data call <connector> <method> [--arg value ...]
 
-    # Interactive mode
-    extended-data shell
-
     # Start MCP server
     extended-data mcp
-
-    # Specific connector shortcuts (if implemented)
-    extended-data jules sources
-    extended-data cursor agents
 """
 
 from __future__ import annotations
@@ -27,6 +20,7 @@ import argparse
 import json
 import sys
 
+from collections.abc import Mapping
 from typing import Any
 
 from extended_data.connectors.registry import (
@@ -35,13 +29,17 @@ from extended_data.connectors.registry import (
     get_connector_info,
     list_connector_info,
 )
+from extended_data.containers.factory import to_builtin
 
 
 def _json_output(data: Any) -> str:
     """Format data as JSON for output."""
+    data = to_builtin(data)
     if hasattr(data, "model_dump"):
         data = data.model_dump()
-    elif hasattr(data, "__iter__") and not isinstance(data, (str, dict)):
+    elif isinstance(data, Mapping):
+        data = dict(data)
+    elif hasattr(data, "__iter__") and not isinstance(data, (str, bytes, bytearray)):
         data = [d.model_dump() if hasattr(d, "model_dump") else d for d in data]
     return json.dumps(data, indent=2, default=str)
 
