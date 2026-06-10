@@ -183,6 +183,23 @@ def test_extended_set_promotes_string_values() -> None:
     assert to_builtin(value) == {"api", "worker"}
 
 
+def test_extended_set_named_mutators_preserve_extended_values() -> None:
+    """Named set mutation methods keep values in the Tier 2 surface."""
+    value = ExtendedSet({"api"})
+
+    value.update(["worker"], {"scheduler"})
+    symmetric = value.symmetric_difference({"worker", "batch"})
+    value.intersection_update({"api", "scheduler", "batch"})
+    value.difference_update({"scheduler"})
+    value.symmetric_difference_update({"api", "batch"})
+
+    assert isinstance(symmetric, ExtendedSet)
+    assert symmetric.to_set() == {"api", "scheduler", "batch"}
+    assert all(isinstance(item, ExtendedString) for item in symmetric)
+    assert value.to_set() == {"batch"}
+    assert all(isinstance(item, ExtendedString) for item in value)
+
+
 def test_extended_tuple_preserves_immutable_sequence_shape() -> None:
     """ExtendedTuple composes sequence primitives without becoming an ExtendedList."""
     value = ExtendedTuple((1, (2, [3]), "", 2))

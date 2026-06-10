@@ -231,6 +231,12 @@ class ExtendedSet(MutableSet[T]):
         """Add a value to the set."""
         self._data.add(self._wrap_item(value))
 
+    def update(self, *others: Iterable[T]) -> None:
+        """Add values from one or more iterables."""
+        for other in others:
+            for value in other:
+                self.add(value)
+
     def discard(self, value: T) -> None:
         """Remove a value from the set if present."""
         self._data.discard(value)
@@ -263,6 +269,29 @@ class ExtendedSet(MutableSet[T]):
         for other in others:
             result.difference_update(other)
         return ExtendedSet(result)
+
+    def symmetric_difference(self, other: Iterable[T]) -> ExtendedSet[T]:
+        """Return a symmetric difference against another iterable."""
+        result = set(self._data)
+        for value in other:
+            wrapped = self._wrap_item(value)
+            if wrapped in result:
+                result.remove(wrapped)
+            else:
+                result.add(wrapped)
+        return ExtendedSet(result)
+
+    def intersection_update(self, *others: Iterable[T]) -> None:
+        """Keep only values found in all other iterables."""
+        self._data = self.intersection(*others)._data
+
+    def difference_update(self, *others: Iterable[T]) -> None:
+        """Remove values found in other iterables."""
+        self._data = self.difference(*others)._data
+
+    def symmetric_difference_update(self, other: Iterable[T]) -> None:
+        """Replace values with the symmetric difference against another iterable."""
+        self._data = self.symmetric_difference(other)._data
 
     def to_set(self) -> set[T]:
         """Return a plain set copy."""

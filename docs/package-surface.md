@@ -72,7 +72,9 @@ payload["service"]["name"].upper_first()
 Mutation and common operator paths are part of that contract: `setdefault()`,
 in-place dict merge, list in-place concatenation, list in-place repetition,
 tuple slicing, tuple concatenation, and tuple repetition preserve Tier 2
-containers instead of leaking plain nested values.
+containers instead of leaking plain nested values. `ExtendedSet` named
+mutators such as `update()`, `intersection_update()`, `difference_update()`,
+and `symmetric_difference_update()` preserve promoted values as well.
 String tokenization and partitioning paths are covered too:
 `ExtendedString.split()`, `rsplit()`, and `splitlines()` return `ExtendedList`
 values containing `ExtendedString` parts, while `partition()` and
