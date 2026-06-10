@@ -23,6 +23,7 @@ from extended_data.primitives.mappings import (
     flatten_map,
     unhump_map,
 )
+from extended_data.primitives.splitting import split_dict_by_type
 from extended_data.primitives.state import all_non_empty_in_dict
 
 
@@ -129,6 +130,13 @@ class ExtendedDict(UserDict[str, Any]):
         from extended_data.containers.factory import extend_data, to_builtin
 
         return extend_data(all_values_from_map(to_builtin(self.data)))
+
+    def split_by_type(self, *, primitive_only: bool = False) -> ExtendedDict:
+        """Return mapping entries grouped by value type name."""
+        from extended_data.containers.factory import extend_data, to_builtin
+
+        grouped = split_dict_by_type(to_builtin(self.data), primitive_only=primitive_only)
+        return extend_data({type_key.__name__: values for type_key, values in grouped.items()})
 
     def first_non_empty_value(self, *keys: str) -> Any:
         """Return the first non-empty value for the provided keys."""

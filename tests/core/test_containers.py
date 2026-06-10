@@ -62,16 +62,21 @@ def test_extended_string_chains_primitive_transforms() -> None:
 def test_extended_dict_composes_mapping_primitives() -> None:
     """ExtendedDict composes Tier 1 mapping primitives."""
     value = ExtendedDict({"outer": {"inner": 1}, "items": [1, 1, 2], "empty": ""})
+    typed = ExtendedDict({"service": "api", "retries": 2, "enabled": True, "ports": [80, 443]})
 
     merged = value.deep_merge({"outer": {"other": 2}})
     filtered = merged.filter(allowlist=["outer"])
     accepted, rejected = filtered
     all_values = value.all_values()
+    split = typed.split_by_type(primitive_only=True)
 
     assert isinstance(filtered, ExtendedTuple)
     assert isinstance(accepted, ExtendedDict)
     assert isinstance(rejected, ExtendedDict)
     assert isinstance(all_values, ExtendedList)
+    assert isinstance(split, ExtendedDict)
+    assert isinstance(split["str"], ExtendedDict)
+    assert isinstance(split["list"], ExtendedDict)
     assert merged["outer"] == {"inner": 1, "other": 2}
     assert value["outer"] == {"inner": 1}
     assert value.flatten() == {"outer.inner": 1, "items.0": 1, "items.1": 1, "items.2": 2, "empty": ""}
@@ -81,6 +86,10 @@ def test_extended_dict_composes_mapping_primitives() -> None:
     assert "items" in rejected
     assert all_values == [1, 1, 1, 2, ""]
     assert isinstance(all_values[-1], ExtendedString)
+    assert split["str"] == {"service": "api"}
+    assert split["int"] == {"retries": 2}
+    assert split["bool"] == {"enabled": True}
+    assert split["list"] == {"ports": [80, 443]}
 
 
 def test_extended_dict_promotes_nested_values_on_mutation() -> None:
@@ -126,6 +135,7 @@ def test_extended_dict_promotes_nested_values_on_mutation() -> None:
 def test_extended_list_composes_sequence_primitives() -> None:
     """ExtendedList composes Tier 1 sequence primitives."""
     value = ExtendedList([1, [2, [3]], "", 2])
+    typed = ExtendedList(["api", 2, True, ["nested"]])
 
     assert value.flatten() == [1, 2, 3, "", 2]
     assert value.compact() == [1, [2, [3]], 2]
@@ -136,6 +146,14 @@ def test_extended_list_composes_sequence_primitives() -> None:
         allowlist=["api", "worker"],
         denylist=["worker"],
     ) == ["api"]
+    split = typed.split_by_type(primitive_only=True)
+    assert isinstance(split, ExtendedDict)
+    assert isinstance(split["str"], ExtendedList)
+    assert isinstance(split["list"], ExtendedList)
+    assert split["str"] == ["api"]
+    assert split["int"] == [2]
+    assert split["bool"] == [True]
+    assert split["list"] == [["nested"]]
 
 
 def test_extended_list_promotes_nested_values_on_mutation() -> None:

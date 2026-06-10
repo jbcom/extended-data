@@ -169,6 +169,8 @@ data files, Base64 payloads, and directed inputs can immediately use
 `ExtendedString` methods.
 `ExtendedList.filter_values()` exposes the Tier 1 allowlist/denylist list
 filtering primitive as a chainable container operation.
+`ExtendedList.split_by_type()` and `ExtendedDict.split_by_type()` expose the
+Tier 1 type-splitting primitives as type-name keyed `ExtendedDict` results.
 Generic type routing can still ask for plain data roles with
 `typeof(value, primitive_only=True)`, which treats Extended containers as their
 underlying `str`, `list`, `dict`, and `set` roles.

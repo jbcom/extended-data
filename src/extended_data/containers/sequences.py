@@ -7,7 +7,9 @@ from collections.abc import Callable, Iterable, Iterator, MutableSet
 from operator import index as operator_index
 from typing import Any, SupportsIndex, TypeVar, cast, overload
 
+from extended_data.containers.mappings import ExtendedDict
 from extended_data.primitives.sequences import filter_list, flatten_list
+from extended_data.primitives.splitting import split_list_by_type
 from extended_data.primitives.state import is_nothing
 from extended_data.primitives.types import make_hashable
 
@@ -93,6 +95,13 @@ class ExtendedList(UserList[T]):
     ) -> ExtendedList[T]:
         """Return a copy filtered by explicit allowed and denied values."""
         return ExtendedList(filter_list(self.data, allowlist=allowlist, denylist=denylist))
+
+    def split_by_type(self, *, primitive_only: bool = False) -> ExtendedDict:
+        """Return values grouped by type name."""
+        from extended_data.containers.factory import extend_data, to_builtin
+
+        grouped = split_list_by_type(to_builtin(self.data), primitive_only=primitive_only)
+        return extend_data({type_key.__name__: values for type_key, values in grouped.items()})
 
     def unique(self) -> ExtendedList[T]:
         """Return a copy with duplicate values removed while preserving order."""
