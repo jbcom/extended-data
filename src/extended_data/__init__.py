@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import importlib
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from extended_data._version import __version__
 from extended_data.containers import ExtendedDict, ExtendedList, ExtendedSet, ExtendedString, extend_data, to_builtin
@@ -146,7 +146,7 @@ _LAZY_EXPORTS = {
 }
 
 
-def __getattr__(name: str):
+def __getattr__(name: str) -> Any:
     """Lazily expose integrated subpackage primitives at the package root."""
     if name not in _LAZY_EXPORTS:
         raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
