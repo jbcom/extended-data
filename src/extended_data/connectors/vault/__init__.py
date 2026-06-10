@@ -405,13 +405,13 @@ class VaultConnector(VendorConnectorBase):
     def list_aws_iam_roles(
         self,
         mount_point: str = "aws",
-        name_prefix: str | None = None,
+        prefix: str | None = None,
     ) -> ExtendedList[ExtendedString]:
         """List AWS IAM roles configured in Vault's AWS secrets engine.
 
         Args:
             mount_point: AWS secrets engine mount point (default: "aws").
-            name_prefix: Optional prefix filter for role names.
+            prefix: Optional prefix filter for role names.
 
         Returns:
             List of role names available for credential generation.
@@ -428,8 +428,8 @@ class VaultConnector(VendorConnectorBase):
             return self.extend_result([])
 
         role_names = response.get("data", {}).get("keys", []) or []
-        if name_prefix:
-            role_names = [role for role in role_names if role.startswith(name_prefix)]
+        if prefix:
+            role_names = [role for role in role_names if role.startswith(prefix)]
 
         self.logger.info(f"Found {len(role_names)} AWS IAM roles under mount {mount_point}")
         return self.extend_result(role_names)

@@ -123,8 +123,9 @@ Google registry names are unified as well: use `google` for Workspace, Cloud,
 Billing, and service discovery rather than split `google_*` connector aliases.
 AWS Secrets Manager prefix loading is exposed as the generic
 `load_secrets_by_prefix()` data method rather than as a vendor-specific helper.
-AWS secret listing and deletion APIs use the canonical `prefix` keyword; the old
-`name_prefix` convenience keyword is intentionally not preserved.
+AWS secret listing/deletion and Vault role filtering APIs use the canonical
+`prefix` keyword; the old `name_prefix` convenience keyword is intentionally not
+preserved.
 Connector data payloads are promoted into Tier 2 containers at the boundary, so
 decoded files, HTTP response data, GraphQL responses, and SDK-shaped maps can
 use `ExtendedDict`, `ExtendedList`, and `ExtendedString` methods immediately.

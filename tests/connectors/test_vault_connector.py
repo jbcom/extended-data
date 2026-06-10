@@ -176,12 +176,21 @@ class TestVaultConnector:
 
         mock_client.secrets.aws.list_roles.return_value = {"data": {"keys": ["prod-sync", "dev-sync"]}}
 
-        roles = connector.list_aws_iam_roles(name_prefix="prod")
+        roles = connector.list_aws_iam_roles(prefix="prod")
 
         assert isinstance(roles, ExtendedList)
         assert isinstance(roles[0], ExtendedString)
         assert roles == ["prod-sync"]
         mock_client.secrets.aws.list_roles.assert_called_once_with(mount_point="aws")
+
+    def test_list_aws_iam_roles_does_not_preserve_name_prefix_alias(self, base_connector_kwargs):
+        """Clean major-version surface should not preserve the old name_prefix keyword."""
+        connector = VaultConnector(
+            vault_url="https://vault.example.com", vault_token="test-token", **base_connector_kwargs
+        )
+
+        with pytest.raises(TypeError, match="name_prefix"):
+            connector.list_aws_iam_roles(name_prefix="prod")  # type: ignore[call-arg]
 
     def test_list_aws_iam_roles_handles_errors(self, base_connector_kwargs):
         """Vault errors while listing roles should return an empty list."""
