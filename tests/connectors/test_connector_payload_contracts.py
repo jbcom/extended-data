@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import ast
+
+from pathlib import Path
 from typing import Any, get_args, get_origin, get_type_hints
 
 import pytest
@@ -25,6 +28,8 @@ from extended_data.connectors.vault import VaultConnector
 from extended_data.connectors.zoom import ZoomConnector
 from extended_data.containers import ExtendedDict, ExtendedList, ExtendedString
 
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
 
 PAYLOAD_METHODS = (
     (AnthropicConnector.create_message, ExtendedDict),
@@ -177,6 +182,53 @@ PAYLOAD_METHODS = (
     (ZoomConnector.get_meeting, ExtendedDict),
 )
 
+RAW_CONNECTOR_BOUNDARIES = {
+    ("src/extended_data/connectors/base.py", "VendorConnectorBase.get_tools"),
+    ("src/extended_data/connectors/connectors.py", "ConnectorFabric.list_connectors"),
+    ("src/extended_data/connectors/registry.py", "list_connectors"),
+    ("src/extended_data/connectors/zoom/__init__.py", "ZoomConnector.get_headers"),
+}
+
+
+class _RawContainerReturnVisitor(ast.NodeVisitor):
+    def __init__(self, relative_path: str) -> None:
+        self.relative_path = relative_path
+        self.class_stack: list[str] = []
+        self.function_depth = 0
+        self.offenders: list[str] = []
+
+    def visit_If(self, node: ast.If) -> None:
+        if ast.unparse(node.test) == "TYPE_CHECKING":
+            return
+        self.generic_visit(node)
+
+    def visit_ClassDef(self, node: ast.ClassDef) -> None:
+        self.class_stack.append(node.name)
+        self.generic_visit(node)
+        self.class_stack.pop()
+
+    def visit_FunctionDef(self, node: ast.FunctionDef) -> None:
+        self._visit_function(node)
+
+    def visit_AsyncFunctionDef(self, node: ast.AsyncFunctionDef) -> None:
+        self._visit_function(node)
+
+    def _visit_function(self, node: ast.FunctionDef | ast.AsyncFunctionDef) -> None:
+        is_nested_function = self.function_depth > 0
+        qualname = ".".join([*self.class_stack, node.name])
+
+        if not is_nested_function and not node.name.startswith("_") and node.returns is not None:
+            annotation = ast.unparse(node.returns)
+            has_raw_container = any(token in annotation for token in ("dict", "list"))
+            if has_raw_container and "Extended" not in annotation:
+                boundary = (self.relative_path, qualname)
+                if boundary not in RAW_CONNECTOR_BOUNDARIES:
+                    self.offenders.append(f"{self.relative_path}:{node.lineno}: {qualname} -> {annotation}")
+
+        self.function_depth += 1
+        self.generic_visit(node)
+        self.function_depth -= 1
+
 
 @pytest.mark.parametrize(("method", "expected_return"), PAYLOAD_METHODS)
 def test_direct_connector_methods_advertise_extended_payloads(method: object, expected_return: object) -> None:
@@ -189,3 +241,20 @@ def test_direct_connector_methods_advertise_extended_payloads(method: object, ex
         return
 
     assert return_type == expected_return
+
+
+def test_raw_connector_container_returns_are_explicit_boundaries() -> None:
+    """Public connector payloads should not drift back to plain dict/list returns."""
+    offenders: list[str] = []
+
+    for path in sorted((REPO_ROOT / "src/extended_data/connectors").rglob("*.py")):
+        if path.name == "tools.py":
+            continue
+
+        relative_path = path.relative_to(REPO_ROOT).as_posix()
+        tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+        visitor = _RawContainerReturnVisitor(relative_path)
+        visitor.visit(tree)
+        offenders.extend(visitor.offenders)
+
+    assert offenders == []
