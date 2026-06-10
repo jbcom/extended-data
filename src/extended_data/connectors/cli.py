@@ -116,7 +116,7 @@ def cmd_list(args: argparse.Namespace) -> int:
 
 
 def cmd_call(args: argparse.Namespace) -> int:
-    """Call a connector method."""
+    """Call a connector data method."""
     connector_name = args.connector
     method_name = args.method
 
@@ -172,7 +172,7 @@ def cmd_call(args: argparse.Namespace) -> int:
 
 
 def cmd_methods(args: argparse.Namespace) -> int:
-    """List methods for a connector."""
+    """List connector data methods."""
     connector_name = args.connector
 
     try:
@@ -250,7 +250,7 @@ def main() -> int:
         epilog="""
 Examples:
   extended-data list                    # List all connectors
-  extended-data methods jules           # List Jules methods
+  extended-data methods jules           # List Jules data methods
   extended-data call jules list_sources # Call a method
   extended-data call cursor list_agents
   extended-data mcp                     # Start MCP server
@@ -265,7 +265,7 @@ Examples:
     list_parser.set_defaults(func=cmd_list)
 
     # Methods command
-    methods_parser = subparsers.add_parser("methods", help="List methods for a connector")
+    methods_parser = subparsers.add_parser("methods", help="List connector data methods")
     methods_parser.add_argument("connector", help="Connector name")
     methods_parser.add_argument("--json", action="store_true", help="JSON output")
     methods_parser.set_defaults(func=cmd_methods)
@@ -277,7 +277,7 @@ Examples:
     info_parser.set_defaults(func=cmd_info)
 
     # Call command
-    call_parser = subparsers.add_parser("call", help="Call a connector method")
+    call_parser = subparsers.add_parser("call", help="Call a connector data method")
     call_parser.add_argument("--json", action="store_true", help="JSON output")
     call_parser.add_argument("connector", help="Connector name")
     call_parser.add_argument("method", help="Method name")
