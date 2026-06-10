@@ -10,6 +10,7 @@ from typing import Any
 
 from extended_data.connectors.base import VendorConnectorBase
 from extended_data.connectors.meshy import animate, image3d, retexture, rigging, text3d
+from extended_data.containers import ExtendedDict, ExtendedString
 
 
 class MeshyConnector(VendorConnectorBase):
@@ -38,7 +39,7 @@ class MeshyConnector(VendorConnectorBase):
         target_polycount: int = 30000,
         enable_pbr: bool = True,
         wait: bool = True,
-    ) -> Any:
+    ) -> ExtendedDict | ExtendedString:
         """Generate a 3D model from text description."""
         return text3d.generate(
             prompt,
@@ -56,7 +57,7 @@ class MeshyConnector(VendorConnectorBase):
         target_polycount: int = 15000,
         enable_pbr: bool = True,
         wait: bool = True,
-    ) -> Any:
+    ) -> ExtendedDict | ExtendedString:
         """Generate a 3D model from an image."""
         return image3d.generate(
             image_url,
@@ -66,11 +67,11 @@ class MeshyConnector(VendorConnectorBase):
             wait=wait,
         )
 
-    def rig_model(self, model_id: str, wait: bool = True) -> Any:
+    def rig_model(self, model_id: str, wait: bool = True) -> ExtendedDict | ExtendedString:
         """Add skeleton/rig to a static 3D model."""
         return rigging.rig(model_id, wait=wait)
 
-    def apply_animation(self, model_id: str, animation_id: int, wait: bool = True) -> Any:
+    def apply_animation(self, model_id: str, animation_id: int, wait: bool = True) -> ExtendedDict | ExtendedString:
         """Apply animation to a rigged model."""
         return animate.apply(model_id, animation_id, wait=wait)
 
@@ -80,7 +81,7 @@ class MeshyConnector(VendorConnectorBase):
         texture_prompt: str,
         enable_pbr: bool = True,
         wait: bool = True,
-    ) -> Any:
+    ) -> ExtendedDict | ExtendedString:
         """Apply new textures to an existing model."""
         return retexture.apply(
             model_id,

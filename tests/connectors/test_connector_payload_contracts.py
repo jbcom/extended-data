@@ -23,6 +23,7 @@ from extended_data.connectors.google.cloud import GoogleCloudMixin
 from extended_data.connectors.google.jules import JulesConnector
 from extended_data.connectors.google.services import GoogleServicesMixin
 from extended_data.connectors.google.workspace import GoogleWorkspaceMixin
+from extended_data.connectors.meshy.connector import MeshyConnector
 from extended_data.connectors.slack import SlackConnector
 from extended_data.connectors.vault import VaultConnector
 from extended_data.connectors.zoom import ZoomConnector
@@ -165,6 +166,11 @@ PAYLOAD_METHODS = (
     (JulesConnector.approve_plan, ExtendedDict),
     (JulesConnector.add_user_response, ExtendedDict),
     (JulesConnector.resume_session, ExtendedDict),
+    (MeshyConnector.text3d_generate, ExtendedDict | ExtendedString),
+    (MeshyConnector.image3d_generate, ExtendedDict | ExtendedString),
+    (MeshyConnector.rig_model, ExtendedDict | ExtendedString),
+    (MeshyConnector.apply_animation, ExtendedDict | ExtendedString),
+    (MeshyConnector.retexture_model, ExtendedDict | ExtendedString),
     (SlackConnector.get_bot_channels, ExtendedDict),
     (SlackConnector.list_users, ExtendedDict),
     (SlackConnector.list_usergroups, ExtendedDict),
