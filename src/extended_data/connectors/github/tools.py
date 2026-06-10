@@ -10,7 +10,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-from extended_data.containers import extend_data
+from extended_data.containers import ExtendedDict, ExtendedList, extend_data
 
 
 # =============================================================================
@@ -82,7 +82,7 @@ def list_repositories(
     include_branches: bool = False,
     github_token: str | None = None,
     **kwargs: Any,
-) -> list[dict[str, Any]]:
+) -> ExtendedList[ExtendedDict]:
     """List repositories in a GitHub organization.
 
     Args:
@@ -112,7 +112,7 @@ def get_repository(
     repo_name: str,
     github_token: str | None = None,
     **kwargs: Any,
-) -> dict[str, Any]:
+) -> ExtendedDict:
     """Get details of a specific GitHub repository.
 
     Args:
@@ -139,7 +139,7 @@ def list_teams(
     include_repos: bool = False,
     github_token: str | None = None,
     **kwargs: Any,
-) -> list[dict[str, Any]]:
+) -> ExtendedList[ExtendedDict]:
     """List teams in a GitHub organization.
 
     Args:
@@ -163,7 +163,7 @@ def get_team(
     team_slug: str,
     github_token: str | None = None,
     **kwargs: Any,
-) -> dict[str, Any]:
+) -> ExtendedDict:
     """Get details of a specific GitHub team.
 
     Args:
@@ -190,7 +190,7 @@ def list_org_members(
     include_pending: bool = False,
     github_token: str | None = None,
     **kwargs: Any,
-) -> list[dict[str, Any]]:
+) -> ExtendedList[ExtendedDict]:
     """List members of a GitHub organization.
 
     Args:
@@ -216,7 +216,7 @@ def get_repository_file(
     github_branch: str | None = None,
     github_token: str | None = None,
     **kwargs: Any,
-) -> dict[str, Any]:
+) -> ExtendedDict:
     """Get a file from a GitHub repository.
 
     Args:

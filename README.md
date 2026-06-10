@@ -95,6 +95,9 @@ generic vendor lookup.
 Connector data payloads are promoted into Tier 2 containers at the boundary, so
 decoded files, HTTP response data, GraphQL responses, and SDK-shaped maps can
 use `ExtendedDict`, `ExtendedList`, and `ExtendedString` methods immediately.
+Data-returning AI tool wrappers expose the same `ExtendedDict`/`ExtendedList`
+payload contract; framework factory functions still return framework tool
+objects.
 Raw SDK/client objects and raw transport responses remain available from the
 methods that explicitly return them.
 

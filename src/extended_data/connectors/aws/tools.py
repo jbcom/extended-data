@@ -32,7 +32,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-from extended_data.containers import extend_data
+from extended_data.containers import ExtendedDict, ExtendedList, extend_data
 
 
 # =============================================================================
@@ -84,7 +84,7 @@ class GetSecretSchema(BaseModel):
 # =============================================================================
 
 
-def get_caller_account_id() -> dict[str, str]:
+def get_caller_account_id() -> ExtendedDict:
     """Get the AWS account ID of the caller.
 
     Returns:
@@ -97,7 +97,7 @@ def get_caller_account_id() -> dict[str, str]:
     return extend_data({"account_id": account_id})
 
 
-def list_s3_buckets() -> list[dict[str, Any]]:
+def list_s3_buckets() -> ExtendedList[ExtendedDict]:
     """List S3 buckets in the account.
 
     Returns:
@@ -119,7 +119,7 @@ def list_s3_buckets() -> list[dict[str, Any]]:
     )
 
 
-def list_s3_objects(bucket: str) -> list[dict[str, Any]]:
+def list_s3_objects(bucket: str) -> ExtendedList[ExtendedDict]:
     """List objects in an S3 bucket.
 
     Args:
@@ -151,7 +151,7 @@ def list_s3_objects(bucket: str) -> list[dict[str, Any]]:
     return extend_data(result)
 
 
-def list_accounts() -> list[dict[str, Any]]:
+def list_accounts() -> ExtendedList[ExtendedDict]:
     """List AWS organization accounts.
 
     Returns:
@@ -174,7 +174,7 @@ def list_accounts() -> list[dict[str, Any]]:
     )
 
 
-def list_sso_users() -> list[dict[str, Any]]:
+def list_sso_users() -> ExtendedList[ExtendedDict]:
     """List IAM Identity Center users.
 
     Returns:
@@ -197,7 +197,7 @@ def list_sso_users() -> list[dict[str, Any]]:
     )
 
 
-def list_sso_groups() -> list[dict[str, Any]]:
+def list_sso_groups() -> ExtendedList[ExtendedDict]:
     """List IAM Identity Center groups.
 
     Returns:
@@ -222,7 +222,7 @@ def list_sso_groups() -> list[dict[str, Any]]:
 def list_secrets(
     prefix: str = "",
     get_values: bool = False,
-) -> list[dict[str, Any]]:
+) -> ExtendedList[ExtendedDict]:
     """List secrets from AWS Secrets Manager.
 
     Args:
@@ -255,7 +255,7 @@ def list_secrets(
     return extend_data(result)
 
 
-def get_secret(secret_id: str) -> dict[str, Any]:
+def get_secret(secret_id: str) -> ExtendedDict:
     """Get a single secret value from AWS Secrets Manager.
 
     Args:

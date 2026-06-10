@@ -30,7 +30,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-from extended_data.containers import extend_data
+from extended_data.containers import ExtendedDict, ExtendedList, extend_data
 
 
 # =============================================================================
@@ -89,7 +89,7 @@ class ListWorkspaceGroupsSchema(BaseModel):
 def list_projects(
     parent: str = "",
     max_results: int = 100,
-) -> list[dict[str, Any]]:
+) -> ExtendedList[ExtendedDict]:
     """List Google Cloud projects.
 
     Args:
@@ -123,7 +123,7 @@ def list_projects(
 def list_folders(
     parent: str,
     max_results: int = 100,
-) -> list[dict[str, Any]]:
+) -> ExtendedList[ExtendedDict]:
     """List folders under a parent resource.
 
     Args:
@@ -156,7 +156,7 @@ def list_folders(
 def list_enabled_services(
     project_id: str,
     max_results: int = 100,
-) -> list[dict[str, Any]]:
+) -> ExtendedList[ExtendedDict]:
     """List enabled services in a Google Cloud project.
 
     Args:
@@ -187,7 +187,7 @@ def list_enabled_services(
 
 def list_billing_accounts(
     max_results: int = 100,
-) -> list[dict[str, Any]]:
+) -> ExtendedList[ExtendedDict]:
     """List Google Cloud billing accounts.
 
     Args:
@@ -219,7 +219,7 @@ def list_billing_accounts(
 def list_workspace_users(
     domain: str = "",
     max_results: int = 100,
-) -> list[dict[str, Any]]:
+) -> ExtendedList[ExtendedDict]:
     """List users from Google Workspace.
 
     Args:
@@ -261,7 +261,7 @@ def list_workspace_users(
 def list_workspace_groups(
     domain: str = "",
     max_results: int = 100,
-) -> list[dict[str, Any]]:
+) -> ExtendedList[ExtendedDict]:
     """List groups from Google Workspace.
 
     Args:

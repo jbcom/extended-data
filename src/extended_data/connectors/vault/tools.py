@@ -11,7 +11,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-from extended_data.containers import extend_data
+from extended_data.containers import ExtendedDict, ExtendedList, extend_data
 
 
 # =============================================================================
@@ -43,7 +43,7 @@ def list_secrets(
     root_path: str = "/",
     mount_point: str = "secret",
     max_depth: int | None = 10,
-) -> list[dict[str, Any]]:
+) -> ExtendedList[ExtendedDict]:
     """List secrets recursively from Vault KV v2 engine.
 
     Args:
@@ -75,7 +75,7 @@ def list_secrets(
 def read_secret(
     path: str,
     mount_point: str = "secret",
-) -> dict[str, Any]:
+) -> ExtendedDict:
     """Read a single secret from Vault.
 
     Args:

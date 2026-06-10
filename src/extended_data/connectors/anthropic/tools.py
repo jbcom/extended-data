@@ -6,14 +6,15 @@ AI agent frameworks.
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from typing import Any
 
 from pydantic import BaseModel, Field
 
-from extended_data.containers import extend_data
+from extended_data.containers import ExtendedDict, ExtendedList, extend_data
 
 
-def _message_text(message: dict[str, Any]) -> str:
+def _message_text(message: Mapping[str, Any]) -> str:
     """Extract concatenated text blocks from a message payload."""
     return "".join(
         str(block.get("text", ""))
@@ -40,7 +41,7 @@ def anthropic_create_message(
     prompt: str,
     max_tokens: int = 1024,
     system: str | None = None,
-) -> dict[str, Any]:
+) -> ExtendedDict:
     """Create a message using Anthropic Claude.
 
     Args:
@@ -75,7 +76,7 @@ def anthropic_create_message(
     )
 
 
-def anthropic_list_models() -> list[dict[str, Any]]:
+def anthropic_list_models() -> ExtendedList[ExtendedDict]:
     """List available Anthropic Claude models.
 
     Returns:

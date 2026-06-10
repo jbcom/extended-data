@@ -10,7 +10,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-from extended_data.containers import extend_data
+from extended_data.containers import ExtendedDict, extend_data
 
 
 def _state_value(state: Any) -> Any:
@@ -38,7 +38,7 @@ def cursor_launch_agent(
     repository: str,
     ref: str | None = None,
     branch_name: str | None = None,
-) -> dict[str, Any]:
+) -> ExtendedDict:
     """Launch a new Cursor coding agent.
 
     Args:
@@ -69,7 +69,7 @@ def cursor_launch_agent(
     )
 
 
-def cursor_get_agent_status(agent_id: str) -> dict[str, Any]:
+def cursor_get_agent_status(agent_id: str) -> ExtendedDict:
     """Get the current status of a Cursor agent.
 
     Args:

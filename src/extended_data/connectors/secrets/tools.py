@@ -10,7 +10,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-from extended_data.containers import extend_data
+from extended_data.containers import ExtendedDict, extend_data
 
 
 # =============================================================================
@@ -54,7 +54,7 @@ class GetConfigInfoSchema(BaseModel):
 # =============================================================================
 
 
-def validate_config(config_path: str) -> dict[str, Any]:
+def validate_config(config_path: str) -> ExtendedDict:
     """Validate a secrets sync pipeline configuration file.
 
     Args:
@@ -75,7 +75,7 @@ def run_pipeline(
     operation: str = "pipeline",
     targets: str | None = None,
     continue_on_error: bool = True,
-) -> dict[str, Any]:
+) -> ExtendedDict:
     """Run the secrets synchronization pipeline.
 
     This executes the two-phase pipeline (merge → sync) to synchronize
@@ -136,7 +136,7 @@ def run_pipeline(
     })
 
 
-def dry_run(config_path: str) -> dict[str, Any]:
+def dry_run(config_path: str) -> ExtendedDict:
     """Perform a dry run to see what changes would be made.
 
     Args:
@@ -162,7 +162,7 @@ def dry_run(config_path: str) -> dict[str, Any]:
     })
 
 
-def get_config_info(config_path: str) -> dict[str, Any]:
+def get_config_info(config_path: str) -> ExtendedDict:
     """Get detailed information about a pipeline configuration.
 
     Args:
@@ -177,7 +177,7 @@ def get_config_info(config_path: str) -> dict[str, Any]:
     return extend_data(connector.get_config_info(config_path))
 
 
-def get_targets(config_path: str) -> dict[str, Any]:
+def get_targets(config_path: str) -> ExtendedDict:
     """Get the list of sync targets from a configuration.
 
     Args:
@@ -192,7 +192,7 @@ def get_targets(config_path: str) -> dict[str, Any]:
     return extend_data(connector.get_targets(config_path))
 
 
-def get_sources(config_path: str) -> dict[str, Any]:
+def get_sources(config_path: str) -> ExtendedDict:
     """Get the list of secret sources from a configuration.
 
     Args:

@@ -8,6 +8,8 @@ data payloads are promoted into Tier 2 containers at connector boundaries.
 Callers can use `ExtendedDict`, `ExtendedList`, and `ExtendedString` methods on
 decoded API, file, and SDK-shaped results, then call `to_builtin()` only when a
 plain Python payload is needed for serialization or SDK handoff.
+The direct AI-tool functions follow that same payload contract; only the
+framework factory helpers return plain framework tool objects.
 
 ## Quick Start
 

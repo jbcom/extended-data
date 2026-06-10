@@ -10,7 +10,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-from extended_data.containers import extend_data
+from extended_data.containers import ExtendedDict, ExtendedList, extend_data
 
 
 # =============================================================================
@@ -51,7 +51,7 @@ class GetMeetingSchema(BaseModel):
 # =============================================================================
 
 
-def list_users(max_results: int = 100) -> list[dict[str, Any]]:
+def list_users(max_results: int = 100) -> ExtendedList[ExtendedDict]:
     """List Zoom users.
 
     Args:
@@ -69,7 +69,7 @@ def list_users(max_results: int = 100) -> list[dict[str, Any]]:
     return extend_data(sorted_users[:max_results])
 
 
-def get_user(user_id: str) -> dict[str, Any]:
+def get_user(user_id: str) -> ExtendedDict:
     """Get a specific Zoom user by ID or email.
 
     Args:
@@ -88,7 +88,7 @@ def list_meetings(
     user_id: str,
     meeting_type: str = "scheduled",
     max_results: int = 100,
-) -> list[dict[str, Any]]:
+) -> ExtendedList[ExtendedDict]:
     """List Zoom meetings for a specific user.
 
     Args:
@@ -106,7 +106,7 @@ def list_meetings(
     return extend_data(meetings[:max_results])
 
 
-def get_meeting(meeting_id: str) -> dict[str, Any]:
+def get_meeting(meeting_id: str) -> ExtendedDict:
     """Get details of a specific Zoom meeting.
 
     Args:

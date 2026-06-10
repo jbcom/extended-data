@@ -181,6 +181,10 @@ first-class `ExtendedDict`, `ExtendedList`, `ExtendedTuple`, and
 `ExtendedString` values. This is an intentional major-version break from plain
 `dict`/`list` payloads; use `to_builtin()` at serialization, CLI, MCP, or SDK
 handoff boundaries.
+Data-returning AI tool wrapper functions follow the same contract and annotate
+their payload returns as `ExtendedDict` or `ExtendedList[ExtendedDict]`.
+LangChain, CrewAI, Strands, and auto-detection factory functions still return
+plain framework tool object lists.
 
 ```python
 payload = github.get_repository_file("service.json")

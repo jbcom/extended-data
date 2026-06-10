@@ -12,7 +12,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-from extended_data.containers import extend_data
+from extended_data.containers import ExtendedDict, extend_data
 
 
 # =============================================================================
@@ -110,7 +110,7 @@ def _result_status(result: object) -> str:
     return str(status.value) if hasattr(status, "value") else str(status)
 
 
-def _extract_result_fields(result: object) -> dict[str, object]:
+def _extract_result_fields(result: object) -> ExtendedDict:
     """Extract common fields from Meshy API result objects.
 
     Safely extracts status, model_url, and thumbnail_url from result objects,
@@ -149,7 +149,7 @@ def text3d_generate(
     negative_prompt: str = "",
     target_polycount: int = 30000,
     enable_pbr: bool = True,
-) -> dict[str, Any]:
+) -> ExtendedDict:
     """Generate a 3D model from text description.
 
     Args:
@@ -194,7 +194,7 @@ def image3d_generate(
     topology: str = "",
     target_polycount: int = 15000,
     enable_pbr: bool = True,
-) -> dict[str, Any]:
+) -> ExtendedDict:
     """Generate a 3D model from an image.
 
     Args:
@@ -230,7 +230,7 @@ def image3d_generate(
     })
 
 
-def rig_model(model_id: str, wait: bool = True) -> dict[str, Any]:
+def rig_model(model_id: str, wait: bool = True) -> ExtendedDict:
     """Add skeleton/rig to a static 3D model.
 
     Args:
@@ -262,7 +262,7 @@ def rig_model(model_id: str, wait: bool = True) -> dict[str, Any]:
     raise TypeError(msg)
 
 
-def apply_animation(model_id: str, animation_id: int, wait: bool = True) -> dict[str, Any]:
+def apply_animation(model_id: str, animation_id: int, wait: bool = True) -> ExtendedDict:
     """Apply animation to a rigged model.
 
     Args:
@@ -301,7 +301,7 @@ def retexture_model(
     texture_prompt: str,
     enable_pbr: bool = True,
     wait: bool = True,
-) -> dict[str, Any]:
+) -> ExtendedDict:
     """Apply new textures to an existing model.
 
     Args:
@@ -341,7 +341,7 @@ def retexture_model(
     raise TypeError(msg)
 
 
-def list_animations(category: str = "", limit: int = 50) -> dict[str, Any]:
+def list_animations(category: str = "", limit: int = 50) -> ExtendedDict:
     """List available animations from the Meshy catalog.
 
     Args:
@@ -376,7 +376,7 @@ def list_animations(category: str = "", limit: int = 50) -> dict[str, Any]:
     })
 
 
-def check_task_status(task_id: str, task_type: str = "text-to-3d") -> dict[str, Any]:
+def check_task_status(task_id: str, task_type: str = "text-to-3d") -> ExtendedDict:
     """Check status of a Meshy task.
 
     Args:
@@ -422,7 +422,7 @@ def check_task_status(task_id: str, task_type: str = "text-to-3d") -> dict[str, 
     })
 
 
-def get_animation(animation_id: int) -> dict[str, Any]:
+def get_animation(animation_id: int) -> ExtendedDict:
     """Get details of a specific animation.
 
     Args:

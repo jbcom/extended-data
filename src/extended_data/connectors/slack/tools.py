@@ -29,7 +29,7 @@ from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, Field
 
-from extended_data.containers import extend_data
+from extended_data.containers import ExtendedDict, ExtendedList, extend_data
 
 
 if TYPE_CHECKING:
@@ -104,7 +104,7 @@ def list_channels(
     exclude_archived: bool = True,
     channels_only: bool = True,
     limit: int = 100,
-) -> list[dict[str, Any]]:
+) -> ExtendedList[ExtendedDict]:
     """List Slack channels.
 
     Args:
@@ -142,7 +142,7 @@ def list_users(
     include_bots: bool = False,
     include_deleted: bool = False,
     max_results: int = 100,
-) -> list[dict[str, Any]]:
+) -> ExtendedList[ExtendedDict]:
     """List Slack users.
 
     Args:
@@ -181,7 +181,7 @@ def send_message(
     channel: str,
     text: str,
     thread_id: str = "",
-) -> dict[str, Any]:
+) -> ExtendedDict:
     """Send a message to a Slack channel.
 
     Args:
@@ -212,7 +212,7 @@ def send_message(
 def get_channel_history(
     channel: str,
     limit: int = 100,
-) -> list[dict[str, Any]]:
+) -> ExtendedList[ExtendedDict]:
     """Get recent messages from a Slack channel.
 
     Args:
