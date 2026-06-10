@@ -227,6 +227,14 @@ def test_tier2_container_methods_expose_integrated_primitives() -> None:
     assert export_safe == {"launched": "2026-06-10"}
 
 
+def test_redaction_is_a_tier1_primitive_not_connector_local() -> None:
+    """Diagnostic redaction should live with reusable Tier 1 utilities."""
+    assert primitives.redact_sensitive_text("password=hunter2") == "password=[REDACTED]"
+    assert primitives.redact_sensitive_data({"api_key": "key_123"}) == {"api_key": "[REDACTED]"}
+    assert util.find_spec("extended_data.connectors.redaction") is None
+    assert not hasattr(connectors, "redact_sensitive_text")
+
+
 def test_connectors_root_exports_builtin_connector_classes() -> None:
     """Every built-in registry connector class is exported from the connector package root."""
     for spec in BUILTIN_CONNECTORS.values():
