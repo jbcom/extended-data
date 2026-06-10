@@ -19,7 +19,7 @@ Usage:
     )
 
     # Poll for completion
-    status = connector.get_session(session.name)
+    status = connector.get_session(session["name"])
 
 Reference: https://developers.google.com/jules/api
 """
@@ -176,7 +176,12 @@ class JulesConnector(VendorConnectorBase):
     # Sources
     # =========================================================================
 
-    def list_sources(self, page_size: int = 100, page_token: str = "") -> list[Source]:
+    @staticmethod
+    def _model_payload(model: BaseModel) -> dict[str, Any]:
+        """Serialize a Jules model using API field aliases."""
+        return model.model_dump(by_alias=True)
+
+    def list_sources(self, page_size: int = 100, page_token: str = "") -> list[dict[str, Any]]:
         """List available sources (connected GitHub repos).
 
         Args:
@@ -193,7 +198,7 @@ class JulesConnector(VendorConnectorBase):
         response = self.get("/sources", params=params)
         data = self._handle_response(response)
 
-        return [Source(**s) for s in data.get("sources", [])]
+        return self.extend_result([self._model_payload(Source(**s)) for s in data.get("sources", [])])
 
     # =========================================================================
     # Sessions
@@ -207,7 +212,7 @@ class JulesConnector(VendorConnectorBase):
         starting_branch: str = "main",
         automation_mode: str = "AUTO_CREATE_PR",
         require_plan_approval: bool = False,
-    ) -> Session:
+    ) -> dict[str, Any]:
         """Create a new Jules session.
 
         Args:
@@ -240,9 +245,9 @@ class JulesConnector(VendorConnectorBase):
         response = self.post("/sessions", json=body)
         data = self._handle_response(response)
 
-        return Session(**data)
+        return self.extend_result(self._model_payload(Session(**data)))
 
-    def get_session(self, session_name: str) -> Session:
+    def get_session(self, session_name: str) -> dict[str, Any]:
         """Get a session by name.
 
         Args:
@@ -258,9 +263,9 @@ class JulesConnector(VendorConnectorBase):
         response = self.get(f"/{session_name}")
         data = self._handle_response(response)
 
-        return Session(**data)
+        return self.extend_result(self._model_payload(Session(**data)))
 
-    def list_sessions(self, page_size: int = 20, page_token: str = "") -> list[Session]:
+    def list_sessions(self, page_size: int = 20, page_token: str = "") -> list[dict[str, Any]]:
         """List sessions.
 
         Args:
@@ -277,9 +282,9 @@ class JulesConnector(VendorConnectorBase):
         response = self.get("/sessions", params=params)
         data = self._handle_response(response)
 
-        return [Session(**s) for s in data.get("sessions", [])]
+        return self.extend_result([self._model_payload(Session(**s)) for s in data.get("sessions", [])])
 
-    def approve_plan(self, session_name: str) -> Session:
+    def approve_plan(self, session_name: str) -> dict[str, Any]:
         """Approve the plan for a session that requires approval.
 
         Args:
@@ -297,7 +302,7 @@ class JulesConnector(VendorConnectorBase):
         # API returns empty on success, fetch updated session
         return self.get_session(session_name)
 
-    def add_user_response(self, session_name: str, message: str = "") -> Session:
+    def add_user_response(self, session_name: str, message: str = "") -> dict[str, Any]:
         """Add a follow-up message to a session or resume it.
 
         Note: The Jules API uses :sendMessage endpoint. An empty body
@@ -320,7 +325,7 @@ class JulesConnector(VendorConnectorBase):
         # API returns empty on success, fetch updated session
         return self.get_session(session_name)
 
-    def resume_session(self, session_name: str) -> Session:
+    def resume_session(self, session_name: str) -> dict[str, Any]:
         """Resume a paused or awaiting session.
 
         Args:
