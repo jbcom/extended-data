@@ -13,12 +13,12 @@ import wrapt
 if TYPE_CHECKING:
     from typing import TypeAlias
 
-    _ObjectProxyBase: TypeAlias = "wrapt.ObjectProxy[Any]"
+    _ObjectProxyBase: TypeAlias = wrapt.ObjectProxy[Any]
 else:
     _ObjectProxyBase = wrapt.ObjectProxy
 
 
-class YamlTagged(_ObjectProxyBase):
+class YamlTagged(_ObjectProxyBase):  # type: ignore[misc]
     """Wrapper class for YAML tagged objects."""
 
     def __init__(self, tag: str, wrapped: Any) -> None:

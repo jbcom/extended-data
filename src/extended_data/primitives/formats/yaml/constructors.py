@@ -51,7 +51,7 @@ def yaml_construct_pairs(
     Returns:
         Union[Dict[Any, Any], YamlPairs]: The constructed YAML pairs.
     """
-    value: list[tuple[Any, Any]] = loader.construct_pairs(node)  # type: ignore[no-untyped-call]
+    value: list[tuple[Any, Any]] = loader.construct_pairs(node)
     try:
         return dict(value)
     except TypeError:

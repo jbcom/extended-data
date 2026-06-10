@@ -106,6 +106,7 @@ More detail lives in [`docs/package-surface.md`](docs/package-surface.md).
 uv sync --extra tests --extra typing
 uv run pytest
 uv run ruff check src tests
+uv run mypy src/extended_data/primitives src/extended_data/containers src/extended_data/io src/extended_data/inputs src/extended_data/logging
 uv build
 ```
 
