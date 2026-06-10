@@ -344,6 +344,32 @@ def test_cli_run_pipeline_success_without_json_is_error(mock_run: MagicMock, con
     assert "produced no JSON output" in result["error_message"]
 
 
+@patch("json.loads")
+@patch("subprocess.run")
+def test_cli_run_pipeline_success_parse_error_is_redacted(
+    mock_run: MagicMock,
+    mock_json_loads: MagicMock,
+    connector: SecretsConnector,
+) -> None:
+    mock_run.return_value = MagicMock(
+        returncode=0,
+        stdout="not json",
+        stderr="",
+    )
+    mock_json_loads.side_effect = json.JSONDecodeError(
+        "invalid password=hunter2 Authorization: Bearer raw_token",
+        "",
+        0,
+    )
+
+    result = connector.run_pipeline("config.yaml")
+
+    assert result["success"] is False
+    assert "hunter2" not in result["error_message"]
+    assert "raw_token" not in result["error_message"]
+    assert "[REDACTED]" in result["error_message"]
+
+
 @patch("subprocess.run")
 def test_cli_run_pipeline_non_json_failure_uses_cli_output(mock_run: MagicMock, connector: SecretsConnector) -> None:
     mock_run.return_value = MagicMock(

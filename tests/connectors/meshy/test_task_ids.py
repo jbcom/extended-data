@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 from extended_data.connectors.meshy import animate, image3d, retexture, rigging, text3d
 from extended_data.connectors.meshy.models import (
     AnimationRequest,
@@ -158,3 +160,41 @@ def test_retexture_get_returns_extended_payload() -> None:
     assert isinstance(result, ExtendedDict)
     assert isinstance(result["model_urls"], ExtendedDict)
     assert result["model_urls"]["glb"] == "https://example.com/retexture.glb"
+
+
+@pytest.mark.parametrize("module", [text3d, image3d, retexture, rigging, animate])
+def test_meshy_poll_redacts_failed_task_errors(monkeypatch: pytest.MonkeyPatch, module: object) -> None:
+    """All Meshy polling helpers should redact vendor task failure messages."""
+    monkeypatch.setattr(
+        module,
+        "get",
+        lambda task_id: {
+            "id": task_id,
+            "status": "FAILED",
+            "task_error": {"message": "denied password=hunter2 Authorization: Bearer raw_token"},
+            "error": "denied api_key=key_123",
+        },
+    )
+
+    with pytest.raises(RuntimeError) as exc_info:
+        module.poll("task-secret", interval=0, timeout=1)
+
+    message = str(exc_info.value)
+    assert "hunter2" not in message
+    assert "raw_token" not in message
+    assert "key_123" not in message
+    assert "[REDACTED]" in message
+
+
+def test_image3d_create_redacts_unexpected_response() -> None:
+    """Image3D create diagnostics should not echo secret-bearing response payloads."""
+    response = _json_response({"password": "hunter2", "authorization": "Bearer raw_token"})
+
+    with patch("extended_data.connectors.meshy.image3d.base.request", return_value=response):
+        with pytest.raises(RuntimeError) as exc_info:
+            image3d.create(Image3DRequest(image_url="https://example.com/source.png"))
+
+    message = str(exc_info.value)
+    assert "hunter2" not in message
+    assert "raw_token" not in message
+    assert "[REDACTED]" in message

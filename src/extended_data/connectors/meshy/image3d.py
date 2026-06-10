@@ -26,7 +26,7 @@ def create(request: Image3DRequest) -> ExtendedString:
     )
     data = response.json()
     if "result" not in data:
-        raise RuntimeError(f"Unexpected API response: missing 'result' key. Response: {data}")
+        raise RuntimeError(base.unexpected_response_message(data))
     return extend_data(data["result"])
 
 
@@ -47,7 +47,7 @@ def refine(task_id: str) -> ExtendedString:
     )
     data = response.json()
     if "result" not in data:
-        raise RuntimeError(f"Unexpected API response: missing 'result' key. Response: {data}")
+        raise RuntimeError(base.unexpected_response_message(data))
     return extend_data(data["result"])
 
 
@@ -73,8 +73,8 @@ def poll(task_id: str, interval: float = 5.0, timeout: float = 600.0) -> Extende
         if status == TaskStatus.SUCCEEDED:
             return result
         if status == TaskStatus.FAILED:
-            msg = f"Task failed: {result.get('error') or 'Unknown error'}"
-            raise RuntimeError(msg)
+            error = result.get("task_error") or result.get("error")
+            raise RuntimeError(base.task_failure_message(error))
         if status == TaskStatus.EXPIRED:
             msg = "Task expired"
             raise RuntimeError(msg)

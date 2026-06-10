@@ -343,11 +343,16 @@ class TestConnectorFabric:
         monkeypatch.setitem(
             registry._missing_builtin_connectors,
             "github",
-            ImportError("No module named 'github'"),
+            ImportError("No module named 'github' password=hunter2 Authorization: Bearer raw_token"),
         )
 
-        with pytest.raises(ImportError, match=r"extended-data\[github\]"):
+        with pytest.raises(ImportError, match=r"extended-data\[github\]") as exc_info:
             registry.get_connector_class(" github ")
+
+        message = str(exc_info.value)
+        assert "hunter2" not in message
+        assert "raw_token" not in message
+        assert "[REDACTED]" in message
 
     def test_get_connector_info_includes_known_missing_builtin(self, monkeypatch):
         """Registry metadata includes unavailable known connectors."""
@@ -355,7 +360,7 @@ class TestConnectorFabric:
         monkeypatch.setitem(
             registry._missing_builtin_connectors,
             "github",
-            ImportError("No module named 'github'"),
+            ImportError("No module named 'github' password=hunter2 Authorization: Bearer raw_token"),
         )
 
         info = registry.get_connector_info(" github ")
@@ -367,6 +372,22 @@ class TestConnectorFabric:
         assert info["extra"] == "github"
         assert info["install"] == "pip install extended-data[github]"
         assert info["class"] == "GitHubConnector"
+        assert "hunter2" not in info["error"]
+        assert "raw_token" not in info["error"]
+        assert "[REDACTED]" in info["error"]
+
+    def test_get_connector_class_redacts_unknown_connector_name(self, monkeypatch):
+        """Unknown connector diagnostics should not echo secret-bearing names."""
+        monkeypatch.setattr(registry, "_connector_cache", {})
+        monkeypatch.setattr(registry, "_missing_builtin_connectors", {})
+
+        with pytest.raises(ValueError) as exc_info:
+            registry.get_connector_class("password=hunter2 Authorization: Bearer raw_token")
+
+        message = str(exc_info.value)
+        assert "hunter2" not in message
+        assert "raw_token" not in message
+        assert "[REDACTED]" in message
 
     def test_get_connector_class_rejects_unregistered_builtin_entry_point(self, monkeypatch):
         """Declared built-ins must be registered through entry points."""

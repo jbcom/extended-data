@@ -343,7 +343,7 @@ class SecretsConnector(VendorConnectorBase):
                     if result.returncode == 0:
                         return SyncResult(
                             success=False,
-                            error_message=f"Failed to parse output: {e}",
+                            error_message=f"Failed to parse output: {redact_sensitive_text(e)}",
                         )
                 else:
                     if not isinstance(output, dict) or "success" not in output:

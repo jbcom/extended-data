@@ -30,3 +30,13 @@ def test_meshy_request_redacts_sensitive_error_body(monkeypatch: pytest.MonkeyPa
     assert "key_123" not in message
     assert "raw_token" not in message
     assert "[REDACTED]" in message
+
+
+def test_task_failure_message_redacts_sensitive_values() -> None:
+    """Meshy task failure messages should share the connector redaction boundary."""
+    message = base.task_failure_message({"message": "failed password=hunter2 Authorization: Bearer raw_token"})
+
+    assert message.startswith("Task failed:")
+    assert "hunter2" not in message
+    assert "raw_token" not in message
+    assert "[REDACTED]" in message

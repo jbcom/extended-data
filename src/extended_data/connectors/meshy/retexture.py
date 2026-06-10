@@ -42,10 +42,8 @@ def poll(task_id: str, interval: float = 5.0, timeout: float = 600.0) -> Extende
         if status == TaskStatus.SUCCEEDED:
             return result
         if status == TaskStatus.FAILED:
-            error = result.get("task_error", {})
-            msg = error.get("message", "Unknown error") if isinstance(error, dict) else str(error)
-            msg = f"Task failed: {msg}"
-            raise RuntimeError(msg)
+            error = result.get("task_error") or result.get("error")
+            raise RuntimeError(base.task_failure_message(error))
         if status == TaskStatus.EXPIRED:
             msg = "Task expired"
             raise RuntimeError(msg)

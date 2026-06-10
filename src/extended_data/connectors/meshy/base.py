@@ -14,6 +14,7 @@ from __future__ import annotations
 import threading
 import time
 
+from collections.abc import Mapping
 from typing import Any
 
 import httpx
@@ -110,6 +111,20 @@ def _headers() -> dict[str, str]:
         "Authorization": f"Bearer {get_api_key()}",
         "Content-Type": "application/json",
     }
+
+
+def task_failure_message(error: Any) -> str:
+    """Return a public, redacted Meshy task failure message."""
+    if isinstance(error, Mapping):
+        message = error.get("message") or error.get("error") or "Unknown error"
+    else:
+        message = error or "Unknown error"
+    return f"Task failed: {redact_sensitive_text(message)}"
+
+
+def unexpected_response_message(data: Any) -> str:
+    """Return a public, redacted unexpected-response diagnostic."""
+    return f"Unexpected API response: missing 'result' key. Response: {redact_sensitive_text(data)}"
 
 
 @retry(

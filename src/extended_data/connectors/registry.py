@@ -41,6 +41,7 @@ from extended_data.connectors._optional import (
     get_extra_for_connector,
     get_missing_connector_requirements,
 )
+from extended_data.connectors.redaction import redact_sensitive_text
 from extended_data.containers import ExtendedDict, ExtendedList, ExtendedString, extend_data
 
 
@@ -144,12 +145,18 @@ def _discover_connectors() -> dict[str, builtins.type[VendorConnectorBase]]:
                 continue
             import warnings
 
-            warnings.warn(f"Failed to load connector '{ep.name}': {e}", stacklevel=2)
+            warnings.warn(
+                f"Failed to load connector '{redact_sensitive_text(ep.name)}': {redact_sensitive_text(e)}",
+                stacklevel=2,
+            )
         except Exception as e:
             # Log but don't fail - allow partial loading
             import warnings
 
-            warnings.warn(f"Failed to load connector '{ep.name}': {e}", stacklevel=2)
+            warnings.warn(
+                f"Failed to load connector '{redact_sensitive_text(ep.name)}': {redact_sensitive_text(e)}",
+                stacklevel=2,
+            )
 
     _connector_cache = connectors
     return connectors
@@ -166,7 +173,7 @@ def _raise_missing_builtin_connector(name: str, error: ImportError) -> NoReturn:
     if missing:
         msg = f"{msg}\nMissing packages: {', '.join(str(package) for package in missing)}"
     if str(error):
-        msg = f"{msg}\nOriginal import error: {error}"
+        msg = f"{msg}\nOriginal import error: {redact_sensitive_text(error)}"
     raise ImportError(msg) from error
 
 
@@ -215,7 +222,7 @@ def get_connector_class(name: str) -> builtins.type[VendorConnectorBase]:
         if name_lower in BUILTIN_CONNECTORS:
             _raise_unregistered_builtin_connector(name_lower)
         available = ", ".join(sorted(connectors.keys()))
-        raise ValueError(f"Unknown connector: {name}. Available: {available}")
+        raise ValueError(f"Unknown connector: {redact_sensitive_text(name)}. Available: {available}")
 
     if name_lower in BUILTIN_CONNECTORS:
         missing = get_missing_connector_requirements(name_lower)
@@ -295,7 +302,7 @@ def _missing_builtin_connector_info(name: str, error: ImportError | None) -> Con
     """Build metadata for a known built-in connector that cannot be loaded."""
     spec = BUILTIN_CONNECTORS[name]
     error_message = (
-        str(error)
+        redact_sensitive_text(error)
         if error
         else "Built-in connector is declared but is not registered in the extended_data.connectors entry point group."
     )
@@ -338,7 +345,7 @@ def get_connector_info(name: str, *, include_unavailable: bool = True) -> Extend
         return _missing_builtin_connector_info(connector_name, None).as_dict()
 
     available = ", ".join(sorted(connectors.keys()))
-    raise ValueError(f"Unknown connector: {name}. Available: {available}")
+    raise ValueError(f"Unknown connector: {redact_sensitive_text(name)}. Available: {available}")
 
 
 def list_connector_info(*, include_unavailable: bool = True) -> ExtendedList[ExtendedDict]:
