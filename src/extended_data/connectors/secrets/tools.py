@@ -36,8 +36,8 @@ class RunPipelineSchema(BaseModel):
         description="Comma-separated list of targets to sync (empty for all)",
     )
     continue_on_error: bool = Field(
-        False,
-        description="Continue processing if errors occur",
+        True,
+        description="Continue processing remaining targets after an error",
     )
 
 
@@ -78,7 +78,7 @@ def run_pipeline(
     dry_run: bool = False,
     operation: str = "pipeline",
     targets: str | None = None,
-    continue_on_error: bool = False,
+    continue_on_error: bool = True,
 ) -> dict[str, Any]:
     """Run the secrets synchronization pipeline.
 

@@ -11,7 +11,9 @@ from extended_data.connectors.secrets import (
     SecretsConnector,
     SyncOperation,
     SyncOptions,
+    SyncResult,
 )
+from extended_data.connectors.secrets.tools import RunPipelineSchema, run_pipeline
 
 
 @pytest.fixture
@@ -172,3 +174,35 @@ def test_cli_validate_config(mock_run: MagicMock, connector: SecretsConnector) -
 
     args = mock_run.call_args[0][0]
     assert "validate" in args
+
+
+@patch("extended_data.connectors.secrets.SecretsConnector")
+def test_run_pipeline_tool_default_continue_on_error_matches_cli(mock_connector_class: MagicMock) -> None:
+    mock_connector = mock_connector_class.return_value
+    mock_connector.run_pipeline.return_value = SyncResult(success=True, secrets_processed=3)
+
+    result = run_pipeline("config.yaml")
+
+    options = mock_connector.run_pipeline.call_args.args[1]
+    assert isinstance(options, SyncOptions)
+    assert options.continue_on_error is True
+    assert result["success"] is True
+    assert result["secrets_processed"] == 3
+
+
+@patch("extended_data.connectors.secrets.SecretsConnector")
+def test_run_pipeline_tool_can_disable_continue_on_error(mock_connector_class: MagicMock) -> None:
+    mock_connector = mock_connector_class.return_value
+    mock_connector.run_pipeline.return_value = SyncResult(success=True)
+
+    run_pipeline("config.yaml", continue_on_error=False)
+
+    options = mock_connector.run_pipeline.call_args.args[1]
+    assert isinstance(options, SyncOptions)
+    assert options.continue_on_error is False
+
+
+def test_run_pipeline_schema_default_continue_on_error_matches_cli() -> None:
+    schema = RunPipelineSchema(config_path="config.yaml")
+
+    assert schema.continue_on_error is True
