@@ -20,8 +20,6 @@ from extended_data.primitives.string_transforms import (
 from extended_data.primitives.strings import (
     is_url,
     lower_first_char,
-    removeprefix,
-    removesuffix,
     sanitize_key,
     titleize_name,
     truncate,
@@ -52,11 +50,11 @@ class ExtendedString(UserString):
 
     def remove_prefix(self, prefix: str) -> ExtendedString:
         """Return a copy with a leading prefix removed."""
-        return ExtendedString(removeprefix(self.data, prefix))
+        return ExtendedString(self.data.removeprefix(str(prefix)))
 
     def remove_suffix(self, suffix: str) -> ExtendedString:
         """Return a copy with a trailing suffix removed."""
-        return ExtendedString(removesuffix(self.data, suffix))
+        return ExtendedString(self.data.removesuffix(str(suffix)))
 
     def sanitize(self, delim: str = "_") -> ExtendedString:
         """Return a key-safe copy."""

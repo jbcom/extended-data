@@ -128,33 +128,3 @@ def titleize_name(name: str) -> str:
         str: The TitleCase name.
     """
     return inflection.titleize(inflection.underscore(str(name)))
-
-
-def removeprefix(string: str, prefix: str) -> str:
-    """Removes the specified prefix from the string if present.
-
-    Args:
-        string (str): The string from which to remove the prefix.
-        prefix (str): The prefix to remove.
-
-    Returns:
-        str: The string with the prefix removed if it was present, otherwise the original string.
-    """
-    return str(string).removeprefix(str(prefix))
-
-
-def removesuffix(string: str, suffix: str) -> str:
-    """Removes the specified suffix from the string if present.
-
-    Args:
-        string (str): The string from which to remove the suffix.
-        suffix (str): The suffix to remove.
-
-    Returns:
-        str: The string with the suffix removed if it was present, otherwise the original string.
-    """
-    string = str(string)
-    suffix = str(suffix)
-    if not suffix:
-        return string
-    return string.removesuffix(suffix)

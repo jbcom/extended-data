@@ -79,6 +79,10 @@ def test_clean_major_version_public_names() -> None:
     assert connectors.ConnectorFabric is ConnectorFabric
     assert not hasattr(inputs, "DirectedInputsClass")
     assert not hasattr(connectors, "VendorConnectors")
+    assert not hasattr(primitives, "removeprefix")
+    assert not hasattr(primitives, "removesuffix")
+    assert not hasattr(extended_data, "removeprefix")
+    assert not hasattr(extended_data, "removesuffix")
 
 
 def test_old_monorepo_import_namespaces_are_not_preserved() -> None:

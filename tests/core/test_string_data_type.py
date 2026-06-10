@@ -20,8 +20,6 @@ Fixtures are used extensively to provide test data, promoting reusability and cl
     - `valid_path_data`: Provides valid input values and expected results for testing path conversion.
     - `invalid_path_data`: Provides invalid inputs and expected exceptions for testing path conversion with errors.
     - `silent_invalid_path_data`: Provides invalid inputs for testing path conversion when errors are silenced.
-    - `removeprefix_data`: Provides input strings, prefixes, and expected results for testing prefix removal.
-    - `removesuffix_data`: Provides input strings, suffixes, and expected results for testing suffix removal.
 
 ### Test Functions
 The module contains the following test functions:
@@ -37,8 +35,6 @@ The module contains the following test functions:
     - `test_strtopath`: Tests converting valid inputs into pathlib.Path objects.
     - `test_strtopath_invalid`: Tests handling invalid path inputs that should raise exceptions.
     - `test_strtopath_invalid_silent`: Tests handling invalid path inputs when errors are silenced.
-    - `test_removeprefix`: Tests removing a prefix from a string.
-    - `test_removesuffix`: Tests removing a suffix from a string.
 """
 
 from __future__ import annotations
@@ -52,8 +48,6 @@ from extended_data.primitives.strings import (
     bytestostr,
     is_url,
     lower_first_char,
-    removeprefix,
-    removesuffix,
     sanitize_key,
     titleize_name,
     truncate,
@@ -137,38 +131,6 @@ def titleize_name_data(request: Any) -> tuple[str, str]:
 
     Yields:
         tuple[str, str]: A tuple containing the input camelCase name and the expected TitleCase name.
-    """
-    return request.param
-
-
-@pytest.fixture(
-    params=[
-        ("test_string", "test_", "string"),
-        ("string", "test_", "string"),
-        ("test_string", "", "test_string"),
-    ]
-)
-def removeprefix_data(request: Any) -> tuple[str, str, str]:
-    """Provides data for testing removeprefix function.
-
-    Yields:
-        tuple[str, str, str]: A tuple containing the input string, prefix, and expected result.
-    """
-    return request.param
-
-
-@pytest.fixture(
-    params=[
-        ("test_string", "_string", "test"),
-        ("test", "_string", "test"),
-        ("test_string", "", "test_string"),
-    ]
-)
-def removesuffix_data(request: Any) -> tuple[str, str, str]:
-    """Provides data for testing removesuffix function.
-
-    Yields:
-        tuple[str, str, str]: A tuple containing the input string, suffix, and expected result.
     """
     return request.param
 
@@ -294,32 +256,6 @@ def test_titleize_name(titleize_name_data: tuple[str, str]) -> None:
     assert titleize_name(name) == expected
 
 
-def test_removeprefix(removeprefix_data: tuple[str, str, str]) -> None:
-    """Tests removing a prefix from a string.
-
-    Args:
-        removeprefix_data (tuple[str, str, str]): A fixture providing the input string, prefix, and expected result.
-
-    Asserts:
-        The result of removeprefix matches the expected string with the prefix removed.
-    """
-    string, prefix, expected = removeprefix_data
-    assert removeprefix(string, prefix) == expected
-
-
-def test_removesuffix(removesuffix_data: tuple[str, str, str]) -> None:
-    """Tests removing a suffix from a string.
-
-    Args:
-        removesuffix_data (tuple[str, str, str]): A fixture providing the input string, suffix, and expected result.
-
-    Asserts:
-        The result of removesuffix matches the expected string with the suffix removed.
-    """
-    string, suffix, expected = removesuffix_data
-    assert removesuffix(string, suffix) == expected
-
-
 def test_string_utilities_accept_extended_string_values() -> None:
     """Tier 1 string utilities compose with Tier 2 ExtendedString values."""
     value = ExtendedString("helloWorld")
@@ -330,5 +266,3 @@ def test_string_utilities_accept_extended_string_values() -> None:
     assert upper_first_char(ExtendedString("hello")) == "Hello"
     assert is_url(ExtendedString("https://example.com"))
     assert titleize_name(value) == "Hello World"
-    assert removeprefix(ExtendedString("pre_value"), ExtendedString("pre_")) == "value"
-    assert removesuffix(ExtendedString("value_suffix"), ExtendedString("_suffix")) == "value"

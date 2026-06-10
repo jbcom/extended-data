@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 from extended_data import (
+    ExtendedString,
     all_non_empty,
     any_non_empty,
     deep_merge,
@@ -13,8 +14,6 @@ from extended_data import (
     flatten_list,
     flatten_map,
     is_nothing,
-    removeprefix,
-    removesuffix,
     sanitize_key,
     truncate,
 )
@@ -60,9 +59,9 @@ def demonstrate_map_utilities() -> None:
 def demonstrate_string_utilities() -> None:
     """Demonstrate basic string cleanup helpers."""
     print("\n=== String Utilities ===")
-    text = "prefix_content_suffix"
-    print("Remove prefix:", removeprefix(text, "prefix_"))
-    print("Remove suffix:", removesuffix(text, "_suffix"))
+    text = ExtendedString("prefix_content_suffix")
+    print("Remove prefix:", text.remove_prefix("prefix_"))
+    print("Remove suffix:", text.remove_suffix("_suffix"))
     print("Truncate:", truncate("This value is intentionally too long", 20))
     print("Sanitize key:", sanitize_key("User Name (Primary)"))
 

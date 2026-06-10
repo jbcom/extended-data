@@ -47,7 +47,6 @@ from typing import Any
 from extended_data.primitives.formats.errors import DataDecodeError
 from extended_data.primitives.formats.json import decode_json
 from extended_data.primitives.formats.yaml import YamlPairs, YamlTagged, decode_yaml
-from extended_data.primitives.strings import removesuffix
 
 
 # Patterns for matching date, datetime, and time strings
@@ -366,7 +365,7 @@ def convert_special_type(obj: Any) -> Any:
         return [convert_special_types(v) for v in obj]
 
     if isinstance(obj, (datetime.date, datetime.datetime)):
-        return removesuffix(obj.isoformat(), "+00:00")
+        return obj.isoformat().removesuffix("+00:00")
     if isinstance(obj, pathlib.Path):
         return str(obj)
     if isinstance(obj, (int, float, str, bool, type(None), UserString)):

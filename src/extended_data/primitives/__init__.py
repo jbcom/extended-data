@@ -67,8 +67,6 @@ from extended_data.primitives.string_transforms import (
 from extended_data.primitives.strings import (
     bytestostr,
     lower_first_char,
-    removeprefix,
-    removesuffix,
     sanitize_key,
     titleize_name,
     truncate,
@@ -145,8 +143,6 @@ __all__ = [
     "pluralize",
     "reconstruct_special_type",
     "reconstruct_special_types",
-    "removeprefix",
-    "removesuffix",
     "sanitize_key",
     "singularize",
     "split_dict_by_type",
