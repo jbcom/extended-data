@@ -1,3 +1,4 @@
+# ruff: noqa: I001
 """Tests for AWS AI tools."""
 
 from __future__ import annotations
@@ -5,6 +6,9 @@ from __future__ import annotations
 from unittest.mock import MagicMock, patch
 
 import pytest
+
+pytest.importorskip("boto3")
+pytest.importorskip("botocore")
 
 
 # Patch target for AWSConnectorFull - must patch where it's imported

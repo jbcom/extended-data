@@ -1,8 +1,13 @@
+# ruff: noqa: I001
 """Tests for GitHub connector aliases and behavior."""
 
 from __future__ import annotations
 
 from unittest.mock import MagicMock, patch
+
+import pytest
+
+pytest.importorskip("github")
 
 from extended_data.connectors import GitHubConnector as RootGitHubConnector
 from extended_data.connectors.github import GitHubConnector

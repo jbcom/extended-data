@@ -37,6 +37,8 @@ def base64_decode(
     encoded_data: str,
     unwrap_raw_data: bool = True,
     encoding: str = "yaml",
+    *,
+    as_extended: bool = False,
 ) -> Any:
     """Decodes data from base64 format.
 
@@ -44,6 +46,7 @@ def base64_decode(
         encoded_data (str): The base64 encoded string to decode.
         unwrap_raw_data (bool): Whether to unwrap the raw data after decoding.
         encoding (str): The encoding format used for wrapping (default is 'yaml').
+        as_extended (bool): Wrap decoded container values in Tier 2 Extended Data containers.
 
     Returns:
         Any: The decoded bytes when ``unwrap_raw_data`` is ``False``, otherwise
@@ -59,4 +62,4 @@ def base64_decode(
         message = "Decoded Base64 payload is not valid UTF-8 text."
         raise ValueError(message) from exc
 
-    return unwrap_raw_data_from_import(decoded_text, encoding=encoding)
+    return unwrap_raw_data_from_import(decoded_text, encoding=encoding, as_extended=as_extended)

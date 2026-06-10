@@ -1,3 +1,4 @@
+# ruff: noqa: I001
 """Tests for Vault AI tools."""
 
 from __future__ import annotations
@@ -5,6 +6,8 @@ from __future__ import annotations
 from unittest.mock import MagicMock, patch
 
 import pytest
+
+pytest.importorskip("hvac")
 
 
 # Patch target for VaultConnector - must patch where it's used (in tools.py), not where it's defined

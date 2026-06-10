@@ -1,3 +1,4 @@
+# ruff: noqa: I001
 """Tests for AWS S3 operations."""
 
 from __future__ import annotations
@@ -8,6 +9,9 @@ from datetime import datetime
 from unittest.mock import MagicMock, patch
 
 import pytest
+
+pytest.importorskip("boto3")
+pytest.importorskip("botocore")
 
 from botocore.exceptions import ClientError
 

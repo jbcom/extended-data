@@ -27,11 +27,15 @@ class ExtendedDict(UserDict[str, Any]):
 
     def deep_merge(self, *mappings: Mapping[str, Any]) -> ExtendedDict:
         """Return a deeply merged copy."""
-        return ExtendedDict(deep_merge(self.data, *mappings))
+        from extended_data.containers.factory import extend_data, to_builtin
+
+        return extend_data(deep_merge(to_builtin(self.data), *(to_builtin(mapping) for mapping in mappings)))
 
     def flatten(self, *, separator: str = ".") -> ExtendedDict:
         """Return a flattened copy."""
-        return ExtendedDict(flatten_map(self.data, separator=separator))
+        from extended_data.containers.factory import extend_data, to_builtin
+
+        return extend_data(flatten_map(to_builtin(self.data), separator=separator))
 
     def filter(
         self,
@@ -40,25 +44,37 @@ class ExtendedDict(UserDict[str, Any]):
         denylist: list[str] | None = None,
     ) -> tuple[ExtendedDict, ExtendedDict]:
         """Return accepted and rejected mapping entries."""
-        accepted, rejected = filter_map(self.data, allowlist=allowlist, denylist=denylist)
-        return ExtendedDict(accepted), ExtendedDict(rejected)
+        from extended_data.containers.factory import extend_data, to_builtin
+
+        accepted, rejected = filter_map(to_builtin(self.data), allowlist=allowlist, denylist=denylist)
+        return extend_data(accepted), extend_data(rejected)
 
     def compact(self) -> ExtendedDict:
         """Return a copy without values considered empty."""
-        return ExtendedDict(all_non_empty_in_dict(self.data))
+        from extended_data.containers.factory import extend_data, to_builtin
+
+        return extend_data(all_non_empty_in_dict(to_builtin(self.data)))
 
     def deduplicate(self) -> ExtendedDict:
         """Return a copy with nested duplicate list values removed."""
-        return ExtendedDict(deduplicate_map(self.data))
+        from extended_data.containers.factory import extend_data, to_builtin
+
+        return extend_data(deduplicate_map(to_builtin(self.data)))
 
     def unhump(self, *, drop_without_prefix: str | None = None) -> ExtendedDict:
         """Return a copy with camelCase keys converted to snake_case."""
-        return ExtendedDict(unhump_map(self.data, drop_without_prefix=drop_without_prefix))
+        from extended_data.containers.factory import extend_data, to_builtin
+
+        return extend_data(unhump_map(to_builtin(self.data), drop_without_prefix=drop_without_prefix))
 
     def all_values(self) -> list[Any]:
         """Return all values from the nested mapping."""
-        return all_values_from_map(self.data)
+        from extended_data.containers.factory import to_builtin
+
+        return all_values_from_map(to_builtin(self.data))
 
     def first_non_empty_value(self, *keys: str) -> Any:
         """Return the first non-empty value for the provided keys."""
-        return first_non_empty_value_from_map(self.data, *keys)
+        from extended_data.containers.factory import to_builtin
+
+        return first_non_empty_value_from_map(to_builtin(self.data), *keys)

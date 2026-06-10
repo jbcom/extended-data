@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import extended_data
 
-from extended_data.containers import ExtendedDict, ExtendedList, ExtendedSet, ExtendedString
+from extended_data.containers import ExtendedDict, ExtendedList, ExtendedSet, ExtendedString, extend_data, to_builtin
 
 
 def test_extended_string_chains_primitive_transforms() -> None:
@@ -54,9 +54,47 @@ def test_extended_set_composes_set_operations() -> None:
     assert value.difference({1, None}).to_set() == {2, 3}
 
 
+def test_extend_data_recursively_wraps_builtin_containers() -> None:
+    """The container factory promotes plain values into the Tier 2 surface."""
+    wrapped = extend_data(
+        {
+            "service": {"name": "api"},
+            "ports": [8080, 8081],
+            "tags": {"prod", "api"},
+        }
+    )
+
+    assert isinstance(wrapped, ExtendedDict)
+    assert isinstance(wrapped["service"], ExtendedDict)
+    assert isinstance(wrapped["service"]["name"], ExtendedString)
+    assert isinstance(wrapped["ports"], ExtendedList)
+    assert isinstance(wrapped["tags"], ExtendedSet)
+    assert wrapped["service"]["name"].upper_first() == "Api"
+
+
+def test_to_builtin_recursively_unwraps_extended_containers() -> None:
+    """Extended containers can be lowered back to normal Python data."""
+    wrapped = ExtendedDict(
+        {
+            "service": ExtendedDict({"name": ExtendedString("api")}),
+            "ports": ExtendedList([8080, 8081]),
+            "tags": ExtendedSet({"prod", "api"}),
+        }
+    )
+
+    plain = to_builtin(wrapped)
+
+    assert isinstance(plain, dict)
+    assert plain["service"] == {"name": "api"}
+    assert plain["ports"] == [8080, 8081]
+    assert plain["tags"] == {"prod", "api"}
+
+
 def test_container_classes_are_root_exports() -> None:
     """Tier 2 containers are root-level convenience exports."""
     assert extended_data.ExtendedString is ExtendedString
     assert extended_data.ExtendedDict is ExtendedDict
     assert extended_data.ExtendedList is ExtendedList
     assert extended_data.ExtendedSet is ExtendedSet
+    assert extended_data.extend_data is extend_data
+    assert extended_data.to_builtin is to_builtin

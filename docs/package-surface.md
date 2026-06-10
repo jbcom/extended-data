@@ -13,8 +13,10 @@ from extended_data import (
     InputProvider,
     Logging,
     decode_json,
+    extend_data,
     encode_yaml,
     flatten_map,
+    to_builtin,
 )
 ```
 
@@ -36,11 +38,25 @@ items = ExtendedList([1, [2, [3]]]).flatten()
 tags = ExtendedSet({"prod", "prod", ""}).compact()
 ```
 
+Tier 3 decode surfaces can promote plain decoded values into Tier 2 containers:
+
+```python
+from extended_data import decode_file
+
+payload = decode_file('{"service": {"name": "api"}}', suffix="json", as_extended=True)
+assert payload["service"]["name"].upper_first() == "Api"
+```
+
+Use `extend_data(value)` to promote existing plain data and `to_builtin(value)`
+to lower extended containers back to standard Python data.
+
 `InputProvider` loads input data from explicit mappings, environment variables,
-and stdin, then decodes or coerces values through the primitive layer. `Logging`
-provides structured lifecycle logging for applications and connector workflows.
-`ConnectorFabric` caches and coordinates vendor connectors while sharing input
-loading, logging, data normalization, retry behavior, and serialization.
+and stdin, then decodes or coerces values through the primitive layer. Its
+`decode_input(..., as_extended=True)` path gives input-driven workflows the same
+container bridge as file and Base64 decoding. `Logging` provides structured
+lifecycle logging for applications and connector workflows. `ConnectorFabric`
+caches and coordinates vendor connectors while sharing input loading, logging,
+data normalization, retry behavior, and serialization.
 
 ## Connector Fabric
 

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import pytest
 
+from extended_data.containers import ExtendedDict, ExtendedList, ExtendedString
 from extended_data.io.importers import unwrap_raw_data_from_import
 
 
@@ -35,3 +36,25 @@ def test_unwrap_raw_data_from_import_rejects_unsupported_encoding() -> None:
     """Reject unsupported import encodings."""
     with pytest.raises(ValueError, match="Unsupported encoding format: xml"):
         unwrap_raw_data_from_import("<key>value</key>", "xml")
+
+
+def test_unwrap_raw_data_from_import_can_return_extended_containers() -> None:
+    """Decoded imports can opt into the Tier 2 container layer."""
+    result = unwrap_raw_data_from_import(
+        '{"service": {"name": "api"}, "ports": [8080]}',
+        encoding="json",
+        as_extended=True,
+    )
+
+    assert isinstance(result, ExtendedDict)
+    assert isinstance(result["service"], ExtendedDict)
+    assert isinstance(result["service"]["name"], ExtendedString)
+    assert isinstance(result["ports"], ExtendedList)
+
+
+def test_unwrap_raw_data_from_import_can_return_extended_raw_strings() -> None:
+    """Raw imports can opt into ExtendedString."""
+    result = unwrap_raw_data_from_import("plain text", encoding="raw", as_extended=True)
+
+    assert isinstance(result, ExtendedString)
+    assert result.upper_first() == "Plain text"

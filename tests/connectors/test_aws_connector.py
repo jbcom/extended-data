@@ -1,3 +1,4 @@
+# ruff: noqa: I001
 """Tests for AWSConnector."""
 
 from __future__ import annotations
@@ -5,6 +6,9 @@ from __future__ import annotations
 from unittest.mock import MagicMock, Mock, call, patch
 
 import pytest
+
+pytest.importorskip("boto3")
+pytest.importorskip("botocore")
 
 from botocore.exceptions import ClientError
 

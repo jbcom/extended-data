@@ -24,6 +24,7 @@ import pytest
 
 from git import GitCommandError, InvalidGitRepositoryError, NoSuchPathError, Repo
 
+from extended_data.containers import ExtendedDict, ExtendedList, ExtendedString
 from extended_data.io.files import (
     FilePath,
     clone_repository_to_temp,
@@ -504,6 +505,20 @@ def test_decode_file_accepts_bytes_payload() -> None:
     """Decode bytes-like payloads through the same file helper."""
     result = decode_file(b'{"key":"value"}', file_path="/path/to/file.json")
     assert result == {"key": "value"}
+
+
+def test_decode_file_can_return_extended_containers() -> None:
+    """File decoding can opt into the Tier 2 container layer."""
+    result = decode_file(
+        '{"service": {"name": "api"}, "ports": [8080]}',
+        file_path="/path/to/file.json",
+        as_extended=True,
+    )
+
+    assert isinstance(result, ExtendedDict)
+    assert isinstance(result["service"], ExtendedDict)
+    assert isinstance(result["service"]["name"], ExtendedString)
+    assert isinstance(result["ports"], ExtendedList)
 
 
 def test_write_file_json(tmp_path: Path) -> None:

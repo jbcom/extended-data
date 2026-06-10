@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import pytest
 
+from extended_data.containers import ExtendedDict, ExtendedString
 from extended_data.inputs import directed_inputs, input_config
 
 
@@ -21,6 +22,10 @@ class ExampleService:
     @input_config("config", decode_from_json=True)
     def parse_config(self, config: dict[str, str]) -> dict[str, str]:
         return config
+
+    @input_config("extended_config", decode_from_json=True, as_extended=True)
+    def parse_extended_config(self, extended_config: ExtendedDict) -> ExtendedDict:
+        return extended_config
 
     def greet(self, prefix: str = "hello") -> str:
         return prefix
@@ -50,6 +55,14 @@ def test_missing_required_input_raises_error() -> None:
 def test_decode_from_json_input_config() -> None:
     service = ExampleService(_input_provider_config={"inputs": {"config": '{"enabled": true}'}})
     assert service.parse_config() == {"enabled": True}
+
+
+def test_decode_from_json_input_config_can_return_extended_containers() -> None:
+    service = ExampleService(_input_provider_config={"inputs": {"extended_config": '{"name": "api"}'}})
+    parsed = service.parse_extended_config()
+
+    assert isinstance(parsed, ExtendedDict)
+    assert isinstance(parsed["name"], ExtendedString)
 
 
 def test_method_default_used_when_input_missing() -> None:

@@ -1,3 +1,4 @@
+# ruff: noqa: I001
 """Tests for AWS Organizations helper mixin."""
 
 from __future__ import annotations
@@ -5,6 +6,9 @@ from __future__ import annotations
 from typing import Any
 
 import pytest
+
+pytest.importorskip("boto3")
+pytest.importorskip("botocore")
 
 from extended_data.connectors.aws.organizations import AWSOrganizationsMixin
 

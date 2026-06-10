@@ -1,3 +1,4 @@
+# ruff: noqa: I001
 """Tests for GitHub AI tools."""
 
 from __future__ import annotations
@@ -5,6 +6,8 @@ from __future__ import annotations
 from unittest.mock import MagicMock, patch
 
 import pytest
+
+pytest.importorskip("github")
 
 
 # Patch target for GitHubConnector - patch at source since tools.py imports lazily inside functions

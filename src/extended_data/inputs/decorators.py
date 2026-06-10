@@ -59,6 +59,7 @@ class InputConfig:
     decode_from_yaml: bool = False
     decode_from_base64: bool = False
     allow_none: bool = True
+    as_extended: bool = False
     is_bool: bool = False
     is_integer: bool = False
     is_float: bool = False
@@ -80,6 +81,7 @@ class InputConfig:
                 decode_from_yaml=self.decode_from_yaml,
                 decode_from_base64=self.decode_from_base64,
                 allow_none=self.allow_none,
+                as_extended=self.as_extended,
             )
         else:
             value = provider.get_input(

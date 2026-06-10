@@ -1,8 +1,13 @@
+# ruff: noqa: I001
 """Tests for SlackConnector."""
 
 from __future__ import annotations
 
 from unittest.mock import MagicMock, patch
+
+import pytest
+
+pytest.importorskip("slack_sdk")
 
 from extended_data.connectors.slack import SlackConnector
 

@@ -20,17 +20,12 @@ from case_insensitive_dict import CaseInsensitiveDict
 from deepmerge import Merger  # type: ignore[attr-defined]
 from yaml import YAMLError
 
-from extended_data import (
-    base64_decode,
-    decode_json,
-    decode_yaml,
-    is_nothing,
-    strtobool,
-    strtodatetime,
-    strtofloat,
-    strtoint,
-    strtopath,
-)
+from extended_data.containers.factory import extend_data
+from extended_data.io.base64 import base64_decode
+from extended_data.primitives.formats.json import decode_json
+from extended_data.primitives.formats.yaml import decode_yaml
+from extended_data.primitives.state import is_nothing
+from extended_data.primitives.types import strtobool, strtodatetime, strtofloat, strtoint, strtopath
 
 
 if TYPE_CHECKING:
@@ -229,6 +224,7 @@ class InputProvider:
         decode_from_yaml: bool = False,
         decode_from_base64: bool = False,
         allow_none: bool = True,
+        as_extended: bool = False,
     ) -> Any:
         """Decodes an input value, optionally from Base64, JSON, or YAML.
 
@@ -241,6 +237,7 @@ class InputProvider:
             decode_from_yaml (bool): Whether to decode the input from YAML format.
             decode_from_base64 (bool): Whether to decode the input from Base64.
             allow_none (bool): Whether to allow None as a valid return value.
+            as_extended (bool): Wrap decoded container values in Tier 2 Extended Data containers.
 
         Returns:
             Any: The decoded input, potentially converted or defaulted.
@@ -253,7 +250,7 @@ class InputProvider:
         conf = self._coerce_text(conf)
 
         if not isinstance(conf, str):
-            return conf
+            return extend_data(conf) if as_extended else conf
 
         if decode_from_base64:
             try:
@@ -265,6 +262,11 @@ class InputProvider:
             except binascii.Error as exc:
                 message = f"Failed to decode {conf} from base64"
                 raise RuntimeError(message) from exc
+
+            if not isinstance(conf, str):
+                if conf is None and not allow_none:
+                    return default
+                return extend_data(conf) if as_extended else conf
 
         if decode_from_yaml:
             try:
@@ -281,6 +283,9 @@ class InputProvider:
 
         if conf is None and not allow_none:
             return default
+
+        if as_extended:
+            return extend_data(conf)
 
         return conf
 

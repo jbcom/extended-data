@@ -1,3 +1,4 @@
+# ruff: noqa: I001
 """Tests for the AWS CodeDeploy helper module."""
 
 from __future__ import annotations
@@ -5,6 +6,8 @@ from __future__ import annotations
 from unittest.mock import MagicMock
 
 import pytest
+
+pytest.importorskip("botocore")
 
 from botocore.exceptions import ClientError, WaiterError
 

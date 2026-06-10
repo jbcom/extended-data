@@ -38,10 +38,10 @@ def main() -> None:
     )
 
     # JSON decoding
-    inputs.decode_input("json_config", decode_from_json=True)
+    inputs.decode_input("json_config", decode_from_json=True, as_extended=True)
 
     # YAML decoding
-    inputs.decode_input("yaml_config", decode_from_yaml=True)
+    inputs.decode_input("yaml_config", decode_from_yaml=True, as_extended=True)
 
     # Base64 + JSON decoding
     inputs.decode_input(

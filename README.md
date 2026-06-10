@@ -26,15 +26,17 @@ pip install "extended-data[secrets]"
 ## Usage
 
 ```python
-from extended_data import ConnectorFabric, ExtendedDict, InputProvider, Logging, decode_json, encode_yaml
+from extended_data import ConnectorFabric, ExtendedDict, InputProvider, Logging, decode_file, decode_json, encode_yaml
 
 logger = Logging(logger_name="example")
 inputs = InputProvider(inputs={"GITHUB_OWNER": "jbcom"}, from_environment=False)
 connectors = ConnectorFabric(inputs=inputs.inputs, logger=logger)
 data = decode_json('{"status": "ok"}')
 payload = ExtendedDict(data).deep_merge({"source": "example"})
+decoded_file = decode_file('{"service": {"name": "api"}}', suffix="json", as_extended=True)
 
 print(encode_yaml(payload.data))
+print(decoded_file["service"]["name"].upper_first())
 ```
 
 The fabric can also instantiate any registered connector by name:
@@ -91,6 +93,10 @@ The package is intentionally tiered:
   methods over Tier 1 functions.
 - Tier 3 processors use the first two tiers to handle files, inputs, API data,
   vendor integrations, and workflows.
+
+Tier 3 decoders can opt into Tier 2 containers with `as_extended=True`, so
+decoded files, Base64 payloads, and directed inputs can immediately use
+`ExtendedDict`, `ExtendedList`, `ExtendedSet`, and `ExtendedString` methods.
 
 More detail lives in [`docs/package-surface.md`](docs/package-surface.md).
 

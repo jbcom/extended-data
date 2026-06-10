@@ -11,7 +11,7 @@ import importlib
 from typing import TYPE_CHECKING
 
 from extended_data._version import __version__
-from extended_data.containers import ExtendedDict, ExtendedList, ExtendedSet, ExtendedString
+from extended_data.containers import ExtendedDict, ExtendedList, ExtendedSet, ExtendedString, extend_data, to_builtin
 from extended_data.io.base64 import base64_decode, base64_encode
 from extended_data.io.exporters import (
     make_raw_data_export_safe,
@@ -198,6 +198,7 @@ __all__ = [
     "encode_json",
     "encode_toml",
     "encode_yaml",
+    "extend_data",
     "file_path_depth",
     "file_path_rel_to_root",
     "filter_list",
@@ -255,6 +256,7 @@ __all__ = [
     "strtotime",
     "titleize",
     "titleize_name",
+    "to_builtin",
     "to_camel_case",
     "to_kebab_case",
     "to_pascal_case",

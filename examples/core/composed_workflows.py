@@ -11,16 +11,14 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 
 from extended_data import (
+    ExtendedDict,
     base64_decode,
     base64_encode,
     decode_file,
     decode_hcl2,
-    deduplicate_map,
-    deep_merge,
     encode_hcl2,
     filter_list,
     read_file,
-    to_snake_case,
     write_file,
 )
 from extended_data.primitives.formats.yaml import YamlTagged
@@ -49,9 +47,9 @@ def demonstrate_layered_config_workflow() -> None:
         base_text = read_file("config/base.yaml", tld=tld)
         env_text = read_file("config/dev.yaml", tld=tld)
 
-        base_data = decode_file(base_text, file_path="config/base.yaml")
-        env_data = decode_file(env_text, file_path="config/dev.yaml")
-        merged = deep_merge(base_data, env_data)
+        base_data = decode_file(base_text, file_path="config/base.yaml", as_extended=True)
+        env_data = decode_file(env_text, file_path="config/dev.yaml", as_extended=True)
+        merged = base_data.deep_merge(env_data)
 
         write_file("build/config.yaml", merged, tld=tld)
         merged_text = read_file("build/config.yaml", tld=tld)
@@ -91,13 +89,15 @@ def demonstrate_api_payload_workflow() -> None:
     """Normalize and serialize an API-style payload."""
     print("\n=== API Payload Workflow ===\n")
 
-    payload = {
-        "HTTPResponseCode": 200,
-        "SelectedServices": filter_list(["api", "worker", "db"], denylist=["db"]),
-        "Tags": ["api", "api", "docs"],
-    }
+    payload = ExtendedDict(
+        {
+            "HTTPResponseCode": 200,
+            "SelectedServices": filter_list(["api", "worker", "db"], denylist=["db"]),
+            "Tags": ["api", "api", "docs"],
+        }
+    )
 
-    normalized = {to_snake_case(key): value for key, value in deduplicate_map(payload).items()}
+    normalized = payload.deduplicate().unhump()
 
     with TemporaryDirectory() as tmpdir:
         tld = Path(tmpdir)
@@ -120,7 +120,7 @@ def demonstrate_yaml_native_workflow() -> None:
         tld = Path(tmpdir)
         write_file("template.yaml", template, tld=tld)
         rendered = read_file("template.yaml", tld=tld)
-        decoded = decode_file(rendered, file_path="template.yaml")
+        decoded = decode_file(rendered, file_path="template.yaml", as_extended=True)
 
     print(rendered)
     print(f"\nDecoded tag: {decoded['bucket_name'].tag}")

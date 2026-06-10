@@ -1,3 +1,4 @@
+# ruff: noqa: I001
 """Tests for Google Billing mixin helpers."""
 
 from __future__ import annotations
@@ -5,6 +6,11 @@ from __future__ import annotations
 from collections import deque
 from collections.abc import Iterable
 from typing import Any
+
+import pytest
+
+pytest.importorskip("google.oauth2.service_account")
+pytest.importorskip("googleapiclient")
 
 from extended_data.connectors.google.billing import GoogleBillingMixin
 

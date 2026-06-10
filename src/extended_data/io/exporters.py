@@ -8,6 +8,7 @@ import pathlib
 from collections.abc import Mapping
 from typing import Any
 
+from extended_data.containers.factory import to_builtin
 from extended_data.primitives.formats.hcl import encode_hcl2
 from extended_data.primitives.formats.json import encode_json
 from extended_data.primitives.formats.toml import encode_toml
@@ -40,14 +41,15 @@ def wrap_raw_data_for_export(
     Raises:
         ValueError: If an invalid or unsupported encoding is provided.
     """
-    contains_yaml_data = is_yaml_data(raw_data)
-    converted_data = convert_special_types(raw_data)
+    export_data = to_builtin(raw_data)
+    contains_yaml_data = is_yaml_data(export_data)
+    converted_data = convert_special_types(export_data)
 
     # Check if allow_encoding is a string specifying the format
     if isinstance(allow_encoding, str):
         allow_encoding_lower = normalize_data_encoding(allow_encoding)
         if allow_encoding_lower == "yaml":
-            return encode_yaml(make_raw_data_export_safe(raw_data, export_to_yaml=True))
+            return encode_yaml(make_raw_data_export_safe(export_data, export_to_yaml=True))
         if allow_encoding_lower == "json":
             return encode_json(converted_data, **format_opts)
         if allow_encoding_lower == "toml":
@@ -67,7 +69,7 @@ def wrap_raw_data_for_export(
     # Determine the encoding based on boolean allow_encoding and YAML data check
     if allow_encoding:
         if contains_yaml_data:
-            return encode_yaml(make_raw_data_export_safe(raw_data, export_to_yaml=True))
+            return encode_yaml(make_raw_data_export_safe(export_data, export_to_yaml=True))
         # Call encode_json with options unpacked to ensure they are correctly passed
         return encode_json(converted_data, **format_opts)
 
@@ -103,6 +105,8 @@ def make_raw_data_export_safe(raw_data: Any, export_to_yaml: bool = False) -> An
         >>> type(result["script"]).__name__
         'LiteralScalarString'
     """
+    raw_data = to_builtin(raw_data)
+
     if export_to_yaml and isinstance(raw_data, YamlTagged):
         return YamlTagged(
             raw_data.tag,

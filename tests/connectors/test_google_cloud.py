@@ -1,3 +1,4 @@
+# ruff: noqa: I001
 """Tests for Google Cloud Platform resource management operations."""
 
 from __future__ import annotations
@@ -5,6 +6,9 @@ from __future__ import annotations
 from unittest.mock import MagicMock, patch
 
 import pytest
+
+pytest.importorskip("google.oauth2.service_account")
+pytest.importorskip("googleapiclient")
 
 from extended_data.connectors.google import GoogleConnectorFull
 

@@ -299,6 +299,8 @@ def decode_file(
     file_data: str | memoryview | bytes | bytearray,
     file_path: FilePath | None = None,
     suffix: str | None = None,
+    *,
+    as_extended: bool = False,
 ) -> Any:
     """Decodes file data based on file extension or explicit suffix.
 
@@ -310,6 +312,7 @@ def decode_file(
         file_path (FilePath | None): Optional file path to infer format from extension.
         suffix (str | None): Explicit format suffix (e.g., "yaml", "json", "toml", "hcl").
             Takes precedence over file_path extension.
+        as_extended (bool): Wrap decoded container values in Tier 2 Extended Data containers.
 
     Returns:
         Any: The decoded data structure, or the original string if format is unknown.
@@ -323,7 +326,7 @@ def decode_file(
         suffix = normalize_data_encoding(suffix)
 
     if suffix is not None and suffix in {"yaml", "json", "toml", "hcl", "raw"}:
-        return unwrap_raw_data_from_import(file_data, encoding=suffix)
+        return unwrap_raw_data_from_import(file_data, encoding=suffix, as_extended=as_extended)
     return file_data
 
 

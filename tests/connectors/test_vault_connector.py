@@ -1,3 +1,4 @@
+# ruff: noqa: I001
 """Tests for VaultConnector."""
 
 from __future__ import annotations
@@ -6,6 +7,8 @@ from datetime import datetime, timezone
 from unittest.mock import MagicMock, patch
 
 import pytest
+
+pytest.importorskip("hvac")
 
 from hvac.exceptions import VaultError
 

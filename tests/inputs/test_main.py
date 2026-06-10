@@ -28,6 +28,7 @@ Tests:
 
 from __future__ import annotations
 
+import base64
 import json
 import os
 
@@ -36,6 +37,7 @@ from pathlib import Path
 import pytest
 
 from extended_data import base64_encode
+from extended_data.containers import ExtendedDict, ExtendedString
 from extended_data.inputs.__main__ import InputProvider
 
 
@@ -184,6 +186,27 @@ def test_decode_input_base64_from_bytes():
     decoded = dic.decode_input("base64_key", decode_from_base64=True, decode_from_json=True)
 
     assert decoded == {"name": "test"}
+
+
+def test_decode_input_json_can_return_extended_containers():
+    """Decoded input payloads can opt into the Tier 2 container layer."""
+    dic = InputProvider(inputs={"json_key": '{"name": "test"}'})
+    decoded = dic.decode_input("json_key", decode_from_json=True, as_extended=True)
+
+    assert isinstance(decoded, ExtendedDict)
+    assert isinstance(decoded["name"], ExtendedString)
+    assert decoded["name"].upper_first() == "Test"
+
+
+def test_decode_input_base64_external_json_can_return_extended_containers():
+    """Externally produced Base64 JSON should decode once and then be extended."""
+    encoded_value = base64.b64encode(b'{"name": "test"}').decode("utf-8")
+    dic = InputProvider(inputs={"base64_key": encoded_value})
+    decoded = dic.decode_input("base64_key", decode_from_base64=True, decode_from_json=True, as_extended=True)
+
+    assert isinstance(decoded, ExtendedDict)
+    assert isinstance(decoded["name"], ExtendedString)
+    assert decoded["name"].upper_first() == "Test"
 
 
 def test_freeze_inputs():
