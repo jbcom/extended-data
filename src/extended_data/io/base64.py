@@ -9,8 +9,8 @@ from __future__ import annotations
 from base64 import b64decode, b64encode
 from typing import Any
 
-from extended_data.export_utils import wrap_raw_data_for_export
-from extended_data.import_utils import unwrap_raw_data_from_import
+from extended_data.io.exporters import wrap_raw_data_for_export
+from extended_data.io.importers import unwrap_raw_data_from_import
 
 
 def base64_encode(raw_data: str | bytes, wrap_raw_data: bool = True) -> str:

@@ -1,4 +1,4 @@
-"""Test suite for extended_data.type_utils module.
+"""Test suite for extended_data.primitives.types module.
 
 This module contains unit tests for various utility functions provided by
 the type_utils module, ensuring correct functionality of type conversions,
@@ -14,7 +14,8 @@ from typing import Any
 
 import pytest
 
-from extended_data.type_utils import (
+from extended_data.primitives.formats.yaml import YamlPairs, YamlTagged
+from extended_data.primitives.types import (
     ConversionError,
     convert_special_type,
     convert_special_types,
@@ -32,7 +33,6 @@ from extended_data.type_utils import (
     strtotime,
     typeof,
 )
-from extended_data.yaml_utils import YamlPairs, YamlTagged
 
 
 # Constants for expected test values
@@ -246,7 +246,7 @@ def test_strtoint(strtoint_data: tuple[str, int | None]) -> None:
 def test_strtoint_wraps_nested_conversion_errors(mocker) -> None:
     """Map nested float conversion failures to integer conversion failures."""
     mocker.patch(
-        "extended_data.type_utils.strtofloat",
+        "extended_data.primitives.types.strtofloat",
         side_effect=ConversionError(float, "3.14"),
     )
 
@@ -257,7 +257,7 @@ def test_strtoint_wraps_nested_conversion_errors(mocker) -> None:
 def test_strtoint_swallows_nested_conversion_errors_when_not_requested(mocker) -> None:
     """Return None when nested conversion fails and raise_on_error is disabled."""
     mocker.patch(
-        "extended_data.type_utils.strtofloat",
+        "extended_data.primitives.types.strtofloat",
         side_effect=ConversionError(float, "3.14"),
     )
 
@@ -266,7 +266,7 @@ def test_strtoint_swallows_nested_conversion_errors_when_not_requested(mocker) -
 
 def test_strtoint_raises_when_nested_conversion_returns_none(mocker) -> None:
     """Raise an integer conversion error when nested conversion returns no value."""
-    mocker.patch("extended_data.type_utils.strtofloat", return_value=None)
+    mocker.patch("extended_data.primitives.types.strtofloat", return_value=None)
 
     with pytest.raises(ConversionError, match=r"Invalid <class 'int'> value: '3.14'"):
         strtoint("3.14", raise_on_error=True)

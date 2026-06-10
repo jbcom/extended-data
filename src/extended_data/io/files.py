@@ -14,7 +14,7 @@ import validators
 
 from git import GitCommandError, InvalidGitRepositoryError, NoSuchPathError, Repo
 
-from extended_data.serialization_utils import normalize_data_encoding
+from extended_data.primitives.serialization import normalize_data_encoding
 
 
 FilePath: TypeAlias = str | os.PathLike[str]
@@ -315,7 +315,7 @@ def decode_file(
         Any: The decoded data structure, or the original string if format is unknown.
     """
     # Lazy imports to avoid circular dependencies
-    from extended_data.import_utils import unwrap_raw_data_from_import
+    from extended_data.io.importers import unwrap_raw_data_from_import
 
     if suffix is None and file_path is not None:
         suffix = get_encoding_for_file_path(file_path)
@@ -349,8 +349,8 @@ def write_file(
     Returns:
         Path | None: The path that was written to, or None if data was empty and not allowed.
     """
-    from extended_data.export_utils import wrap_raw_data_for_export
-    from extended_data.state_utils import is_nothing
+    from extended_data.io.exporters import wrap_raw_data_for_export
+    from extended_data.primitives.state import is_nothing
 
     if is_nothing(data) and not allow_empty:
         return None

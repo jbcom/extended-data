@@ -6,8 +6,8 @@ import pytest
 
 from lark.exceptions import ParseError, UnexpectedToken
 
-from extended_data import hcl2_utils
-from extended_data.hcl2_utils import decode_hcl2, encode_hcl2
+from extended_data.primitives.formats import hcl as hcl2_utils
+from extended_data.primitives.formats.hcl import decode_hcl2, encode_hcl2
 
 
 @pytest.fixture

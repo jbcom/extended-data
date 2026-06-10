@@ -24,7 +24,7 @@ import pytest
 
 from git import GitCommandError, InvalidGitRepositoryError, NoSuchPathError, Repo
 
-from extended_data.file_data_type import (
+from extended_data.io.files import (
     FilePath,
     clone_repository_to_temp,
     decode_file,
@@ -80,7 +80,7 @@ def test_get_parent_repository(mocker) -> None:
         The result of get_parent_repository is either a valid Repo object or None if invalid.
     """
     # Mock the Repo constructor to return a mock Repo instance
-    mock_repo_constructor = mocker.patch("extended_data.file_data_type.Repo")
+    mock_repo_constructor = mocker.patch("extended_data.io.files.Repo")
     mock_repo_instance = mocker.Mock(spec=Repo)
     mock_repo_constructor.return_value = mock_repo_instance
 
@@ -124,7 +124,7 @@ def test_clone_repository_to_temp(mocker, valid_repo_data: dict) -> None:
         valid_repo_data: Dictionary containing valid repository data.
     """
     # Mock the Repo.clone_from method to return a mock Repo instance
-    mock_clone_from = mocker.patch("extended_data.file_data_type.Repo.clone_from")
+    mock_clone_from = mocker.patch("extended_data.io.files.Repo.clone_from")
     mock_repo_instance = mocker.Mock(spec=Repo)
     mock_clone_from.return_value = mock_repo_instance
 
@@ -156,7 +156,7 @@ def test_clone_repository_to_temp_additional_errors(
     mocker, valid_repo_data: dict, side_effect: Exception, message: str
 ) -> None:
     """Map additional git clone failures to consistent OSError messages."""
-    mocker.patch("extended_data.file_data_type.Repo.clone_from", side_effect=side_effect)
+    mocker.patch("extended_data.io.files.Repo.clone_from", side_effect=side_effect)
 
     with pytest.raises(OSError, match=message):
         clone_repository_to_temp(**valid_repo_data)
@@ -171,7 +171,7 @@ def test_get_tld(mocker) -> None:
         The result of get_tld matches the expected top-level directory or None if not a repository.
     """
     # Mock get_parent_repository to return a mock Repo instance
-    mock_get_parent_repo = mocker.patch("extended_data.file_data_type.get_parent_repository")
+    mock_get_parent_repo = mocker.patch("extended_data.io.files.get_parent_repository")
     mock_repo_instance = mocker.Mock(spec=Repo)
     mock_repo_instance.working_tree_dir = "/valid/repo"
     mock_get_parent_repo.return_value = mock_repo_instance
@@ -341,7 +341,7 @@ def test_resolve_local_path_relative_no_tld(mocker) -> None:
     Asserts:
         RuntimeError is raised when no tld is available.
     """
-    mocker.patch("extended_data.file_data_type.get_tld", return_value=None)
+    mocker.patch("extended_data.io.files.get_tld", return_value=None)
     with pytest.raises(RuntimeError, match="Cannot resolve relative path"):
         resolve_local_path("relative/file.txt")
 
@@ -392,7 +392,7 @@ def test_read_file_url_decoded(mocker) -> None:
             return b"hello from url"
 
     mock_urlopen = mocker.patch(
-        "extended_data.file_data_type.urllib.request.urlopen",
+        "extended_data.io.files.urllib.request.urlopen",
         return_value=MockResponse(),
     )
 
@@ -418,7 +418,7 @@ def test_read_file_url_bytes(mocker) -> None:
             return b"\x00\x01\x02"
 
     mocker.patch(
-        "extended_data.file_data_type.urllib.request.urlopen",
+        "extended_data.io.files.urllib.request.urlopen",
         return_value=MockResponse(),
     )
 

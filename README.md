@@ -26,14 +26,15 @@ pip install "extended-data[secrets]"
 ## Usage
 
 ```python
-from extended_data import ConnectorFabric, InputProvider, Logging, decode_json, encode_yaml
+from extended_data import ConnectorFabric, ExtendedDict, InputProvider, Logging, decode_json, encode_yaml
 
 logger = Logging(logger_name="example")
 inputs = InputProvider(inputs={"GITHUB_OWNER": "jbcom"}, from_environment=False)
 connectors = ConnectorFabric(inputs=inputs.inputs, logger=logger)
 data = decode_json('{"status": "ok"}')
+payload = ExtendedDict(data).deep_merge({"source": "example"})
 
-print(encode_yaml(data))
+print(encode_yaml(payload.data))
 ```
 
 The fabric can also instantiate any registered connector by name:
@@ -68,18 +69,28 @@ extended-data info github --json
 
 ```text
 extended_data/
-  core serialization, files, types, transforms
+  primitives/   Tier 1 pure functions and codecs
+  containers/   Tier 2 ExtendedString/Dict/List/Set wrappers
+  io/           Tier 3 file, import, export, and base64 processors
   inputs/       InputProvider and decorator-based input injection
   logging/      structured lifecycle logging
-  connectors/   ConnectorFabric and vendor adapters
+  connectors/   Tier 3 ConnectorFabric and vendor adapters
   secrets/      Python access to secret sync primitives
-  workflows/    higher-order workflow composition
+  workflows/    Tier 3 higher-order workflow composition
 ```
 
 Vendor connectors are first-class adapters in the data fabric. `ConnectorFabric`
 uses the registry to resolve connectors by name, injects shared input/logging
 context, caches connector instances, and lets specialized helpers coexist with
 generic vendor lookup.
+
+The package is intentionally tiered:
+
+- Tier 1 functions stay stateless and composable.
+- Tier 2 containers inherit Python's user container types and expose ergonomic
+  methods over Tier 1 functions.
+- Tier 3 processors use the first two tiers to handle files, inputs, API data,
+  vendor integrations, and workflows.
 
 More detail lives in [`docs/package-surface.md`](docs/package-surface.md).
 

@@ -9,7 +9,7 @@ from typing import Any
 
 from yaml import MappingNode, SafeLoader, ScalarNode, SequenceNode
 
-from extended_data.yaml_utils.tag_classes import YamlPairs, YamlTagged
+from extended_data.primitives.formats.yaml.tag_classes import YamlPairs, YamlTagged
 
 
 def yaml_construct_undefined(

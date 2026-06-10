@@ -15,7 +15,7 @@ from typing import Any
 
 import pytest
 
-from extended_data.splitter_utils import split_dict_by_type, split_list_by_type
+from extended_data.primitives.splitting import split_dict_by_type, split_list_by_type
 
 
 @pytest.mark.parametrize(

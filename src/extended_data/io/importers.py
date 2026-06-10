@@ -4,12 +4,12 @@ from __future__ import annotations
 
 from typing import Any
 
-from extended_data.hcl2_utils import decode_hcl2
-from extended_data.json_utils import decode_json
-from extended_data.serialization_utils import normalize_data_encoding
-from extended_data.string_data_type import bytestostr
-from extended_data.toml_utils import decode_toml
-from extended_data.yaml_utils import decode_yaml
+from extended_data.primitives.formats.hcl import decode_hcl2
+from extended_data.primitives.formats.json import decode_json
+from extended_data.primitives.formats.toml import decode_toml
+from extended_data.primitives.formats.yaml import decode_yaml
+from extended_data.primitives.serialization import normalize_data_encoding
+from extended_data.primitives.strings import bytestostr
 
 
 def unwrap_raw_data_from_import(

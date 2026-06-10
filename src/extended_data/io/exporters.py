@@ -8,18 +8,18 @@ import pathlib
 from collections.abc import Mapping
 from typing import Any
 
-from extended_data.hcl2_utils import encode_hcl2
-from extended_data.json_utils import encode_json
-from extended_data.serialization_utils import normalize_data_encoding
-from extended_data.toml_utils import encode_toml
-from extended_data.type_utils import convert_special_types, strtobool
-from extended_data.yaml_utils import (
+from extended_data.primitives.formats.hcl import encode_hcl2
+from extended_data.primitives.formats.json import encode_json
+from extended_data.primitives.formats.toml import encode_toml
+from extended_data.primitives.formats.yaml import (
     LiteralScalarString,
     YamlPairs,
     YamlTagged,
     encode_yaml,
     is_yaml_data,
 )
+from extended_data.primitives.serialization import normalize_data_encoding
+from extended_data.primitives.types import convert_special_types, strtobool
 
 
 def wrap_raw_data_for_export(

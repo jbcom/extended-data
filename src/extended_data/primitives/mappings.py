@@ -7,6 +7,7 @@ dictionaries, and to convert keys from camelCase to snake_case.
 from __future__ import annotations
 
 import builtins
+import copy
 
 from collections import defaultdict
 from collections.abc import Callable, Mapping, MutableMapping
@@ -17,7 +18,7 @@ import inflection
 from deepmerge.merger import Merger
 from sortedcontainers import SortedDict
 
-from extended_data.type_utils import convert_special_types
+from extended_data.primitives.types import convert_special_types
 
 
 # Default merger configuration:
@@ -59,7 +60,7 @@ def deep_merge(*mappings: Mapping[str, Any]) -> dict[str, Any]:
     result: dict[str, Any] = {}
     for mapping in mappings:
         if mapping:
-            result = _DEFAULT_MERGER.merge(result, dict(mapping))
+            result = _DEFAULT_MERGER.merge(result, copy.deepcopy(dict(mapping)))
     return result
 
 

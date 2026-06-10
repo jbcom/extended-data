@@ -10,10 +10,10 @@ from typing import Any
 
 import yaml
 
-from extended_data.string_data_type import bytestostr
-from extended_data.yaml_utils.dumpers import PureDumper
-from extended_data.yaml_utils.loaders import PureLoader
-from extended_data.yaml_utils.tag_classes import YamlPairs, YamlTagged
+from extended_data.primitives.formats.yaml.dumpers import PureDumper
+from extended_data.primitives.formats.yaml.loaders import PureLoader
+from extended_data.primitives.formats.yaml.tag_classes import YamlPairs, YamlTagged
+from extended_data.primitives.strings import bytestostr
 
 
 def decode_yaml(yaml_data: str | memoryview | bytes | bytearray) -> Any:

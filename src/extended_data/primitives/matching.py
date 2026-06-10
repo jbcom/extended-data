@@ -9,8 +9,8 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
-from extended_data.state_utils import is_nothing
-from extended_data.type_utils import make_hashable
+from extended_data.primitives.state import is_nothing
+from extended_data.primitives.types import make_hashable
 
 
 def is_partial_match(

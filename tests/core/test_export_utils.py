@@ -21,11 +21,11 @@ from collections import defaultdict
 
 import pytest
 
-from extended_data.export_utils import (
+from extended_data.io.exporters import (
     make_raw_data_export_safe,
     wrap_raw_data_for_export,
 )
-from extended_data.yaml_utils import (
+from extended_data.primitives.formats.yaml import (
     LiteralScalarString,
     YamlPairs,
     YamlTagged,

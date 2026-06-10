@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from extended_data.import_utils import unwrap_raw_data_from_import
+from extended_data.io.importers import unwrap_raw_data_from_import
 
 
 @pytest.mark.parametrize(

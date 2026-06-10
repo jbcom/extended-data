@@ -17,7 +17,7 @@ from pathlib import Path
 import pytest
 import tomlkit
 
-from extended_data.toml_utils import decode_toml, encode_toml
+from extended_data.primitives.formats.toml import decode_toml, encode_toml
 
 
 def test_decode_toml_invalid_format() -> None:

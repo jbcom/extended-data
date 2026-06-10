@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import pytest
 
-from extended_data.transformations.numbers import words as words_module
-from extended_data.transformations.numbers.words import (
+from extended_data.primitives.transformations.numbers import words as words_module
+from extended_data.primitives.transformations.numbers.words import (
     fraction_to_words,
     number_to_words,
     ordinal_to_words,

@@ -22,7 +22,7 @@ from __future__ import annotations
 
 import pytest
 
-from extended_data.list_data_type import filter_list, flatten_list
+from extended_data.primitives.sequences import filter_list, flatten_list
 
 
 @pytest.fixture

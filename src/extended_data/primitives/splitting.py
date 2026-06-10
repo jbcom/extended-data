@@ -15,7 +15,7 @@ import builtins
 from collections import defaultdict
 from typing import Any
 
-from extended_data.type_utils import typeof
+from extended_data.primitives.types import typeof
 
 
 def split_list_by_type(

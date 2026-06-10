@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from yaml import MappingNode, Node, SafeDumper, ScalarNode
 
-from extended_data.yaml_utils.tag_classes import (
+from extended_data.primitives.formats.yaml.tag_classes import (
     LiteralScalarString,
     YamlPairs,
     YamlTagged,

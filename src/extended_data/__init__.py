@@ -11,12 +11,13 @@ import importlib
 from typing import TYPE_CHECKING
 
 from extended_data._version import __version__
-from extended_data.base64_utils import base64_decode, base64_encode
-from extended_data.export_utils import (
+from extended_data.containers import ExtendedDict, ExtendedList, ExtendedSet, ExtendedString
+from extended_data.io.base64 import base64_decode, base64_encode
+from extended_data.io.exporters import (
     make_raw_data_export_safe,
     wrap_raw_data_for_export,
 )
-from extended_data.file_data_type import (
+from extended_data.io.files import (
     FilePath,
     clone_repository_to_temp,
     decode_file,
@@ -33,11 +34,20 @@ from extended_data.file_data_type import (
     resolve_local_path,
     write_file,
 )
-from extended_data.hcl2_utils import decode_hcl2, encode_hcl2
-from extended_data.import_utils import unwrap_raw_data_from_import
-from extended_data.json_utils import decode_json, encode_json
-from extended_data.list_data_type import filter_list, flatten_list
-from extended_data.map_data_type import (
+from extended_data.io.importers import unwrap_raw_data_from_import
+from extended_data.primitives.formats.hcl import decode_hcl2, encode_hcl2
+from extended_data.primitives.formats.json import decode_json, encode_json
+from extended_data.primitives.formats.toml import decode_toml, encode_toml
+from extended_data.primitives.formats.yaml import decode_yaml, encode_yaml, is_yaml_data
+from extended_data.primitives.introspection import (
+    filter_methods,
+    get_available_methods,
+    get_caller,
+    get_inputs_from_docstring,
+    get_unique_signature,
+    update_docstring,
+)
+from extended_data.primitives.mappings import (
     SortedDefaultDict,
     all_values_from_map,
     create_merger,
@@ -50,17 +60,10 @@ from extended_data.map_data_type import (
     unhump_map,
     zipmap,
 )
-from extended_data.matcher_utils import is_non_empty_match, is_partial_match
-from extended_data.splitter_utils import split_dict_by_type, split_list_by_type
-from extended_data.stack_utils import (
-    filter_methods,
-    get_available_methods,
-    get_caller,
-    get_inputs_from_docstring,
-    get_unique_signature,
-    update_docstring,
-)
-from extended_data.state_utils import (
+from extended_data.primitives.matching import is_non_empty_match, is_partial_match
+from extended_data.primitives.sequences import filter_list, flatten_list
+from extended_data.primitives.splitting import split_dict_by_type, split_list_by_type
+from extended_data.primitives.state import (
     all_non_empty,
     all_non_empty_in_dict,
     all_non_empty_in_list,
@@ -70,17 +73,7 @@ from extended_data.state_utils import (
     is_nothing,
     yield_non_empty,
 )
-from extended_data.string_data_type import (
-    bytestostr,
-    lower_first_char,
-    removeprefix,
-    removesuffix,
-    sanitize_key,
-    titleize_name,
-    truncate,
-    upper_first_char,
-)
-from extended_data.string_transformations import (
+from extended_data.primitives.string_transforms import (
     humanize,
     ordinalize,
     pluralize,
@@ -91,8 +84,17 @@ from extended_data.string_transformations import (
     to_pascal_case,
     to_snake_case,
 )
-from extended_data.toml_utils import decode_toml, encode_toml
-from extended_data.type_utils import (
+from extended_data.primitives.strings import (
+    bytestostr,
+    lower_first_char,
+    removeprefix,
+    removesuffix,
+    sanitize_key,
+    titleize_name,
+    truncate,
+    upper_first_char,
+)
+from extended_data.primitives.types import (
     convert_special_type,
     convert_special_types,
     get_default_value_for_type,
@@ -109,7 +111,6 @@ from extended_data.type_utils import (
     strtotime,
     typeof,
 )
-from extended_data.yaml_utils import decode_yaml, encode_yaml, is_yaml_data
 
 
 if TYPE_CHECKING:
@@ -160,6 +161,10 @@ __all__ = [
     "ConnectorFabric",
     "ConnectorInfo",
     "ExitRunError",
+    "ExtendedDict",
+    "ExtendedList",
+    "ExtendedSet",
+    "ExtendedString",
     "FilePath",
     "InputProvider",
     "KeyTransform",

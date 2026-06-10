@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from extended_data.string_transformations import (
+from extended_data.primitives.string_transforms import (
     humanize,
     ordinalize,
     pluralize,

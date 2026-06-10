@@ -6,6 +6,10 @@ namespace. The root package exposes the primitives users need most often:
 ```python
 from extended_data import (
     ConnectorFabric,
+    ExtendedDict,
+    ExtendedList,
+    ExtendedSet,
+    ExtendedString,
     InputProvider,
     Logging,
     decode_json,
@@ -14,17 +18,29 @@ from extended_data import (
 )
 ```
 
-## Layers
+## Tiers
 
-- Core data primitives handle serialization, file decoding, type coercion,
-  string transforms, map/list transforms, and export-safe values.
-- `InputProvider` loads input data from explicit mappings, environment
-  variables, and stdin, then decodes or coerces values through the same core
-  primitives.
-- `Logging` provides structured lifecycle logging for applications and
-  connector workflows.
-- `ConnectorFabric` caches and coordinates vendor connectors while sharing
-  input loading, logging, data normalization, retry behavior, and serialization.
+- Tier 1 `extended_data.primitives` modules are pure functions and codecs for
+  strings, numbers, maps, lists, matching, state, type coercion, and structured
+  formats.
+- Tier 2 `extended_data.containers` classes wrap Python user containers as
+  `ExtendedString`, `ExtendedDict`, `ExtendedList`, and `ExtendedSet` with
+  ergonomic methods over Tier 1 primitives.
+- Tier 3 processors use the first two tiers to handle files, imports, exports,
+  inputs, API data, vendor integrations, and workflows.
+
+```python
+name = ExtendedString("API Response Value").to_snake_case()
+payload = ExtendedDict({"outer": {"inner": 1}}).flatten()
+items = ExtendedList([1, [2, [3]]]).flatten()
+tags = ExtendedSet({"prod", "prod", ""}).compact()
+```
+
+`InputProvider` loads input data from explicit mappings, environment variables,
+and stdin, then decodes or coerces values through the primitive layer. `Logging`
+provides structured lifecycle logging for applications and connector workflows.
+`ConnectorFabric` caches and coordinates vendor connectors while sharing input
+loading, logging, data normalization, retry behavior, and serialization.
 
 ## Connector Fabric
 

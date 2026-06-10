@@ -1,0 +1,62 @@
+"""Tests for Tier 2 extended containers."""
+
+from __future__ import annotations
+
+import extended_data
+
+from extended_data.containers import ExtendedDict, ExtendedList, ExtendedSet, ExtendedString
+
+
+def test_extended_string_chains_primitive_transforms() -> None:
+    """ExtendedString composes Tier 1 string primitives."""
+    value = ExtendedString("API Response Value")
+
+    assert value.to_snake_case().remove_suffix("_value") == "api_response"
+    assert value.to_kebab_case() == "api-response-value"
+    assert ExtendedString("1").ordinalize() == "1st"
+    assert ExtendedString("yes").to_bool() is True
+
+
+def test_extended_dict_composes_mapping_primitives() -> None:
+    """ExtendedDict composes Tier 1 mapping primitives."""
+    value = ExtendedDict({"outer": {"inner": 1}, "items": [1, 1, 2], "empty": ""})
+
+    merged = value.deep_merge({"outer": {"other": 2}})
+    accepted, rejected = merged.filter(allowlist=["outer"])
+
+    assert merged["outer"] == {"inner": 1, "other": 2}
+    assert value["outer"] == {"inner": 1}
+    assert value.flatten() == {"outer.inner": 1, "items.0": 1, "items.1": 1, "items.2": 2, "empty": ""}
+    assert value.deduplicate()["items"] == [1, 2]
+    assert value.compact() == {"outer": {"inner": 1}, "items": [1, 1, 2]}
+    assert accepted == {"outer": {"inner": 1, "other": 2}}
+    assert "items" in rejected
+
+
+def test_extended_list_composes_sequence_primitives() -> None:
+    """ExtendedList composes Tier 1 sequence primitives."""
+    value = ExtendedList([1, [2, [3]], "", 2])
+
+    assert value.flatten() == [1, 2, 3, "", 2]
+    assert value.compact() == [1, [2, [3]], 2]
+    assert value.unique() == [1, [2, [3]], "", 2]
+    assert value.filter(lambda item: isinstance(item, int)) == [1, 2]
+    assert ExtendedList([1, 2]).map(lambda item: item * 2) == [2, 4]
+
+
+def test_extended_set_composes_set_operations() -> None:
+    """ExtendedSet provides chainable set operations."""
+    value = ExtendedSet({1, 2, 3, None})
+
+    assert value.compact().to_set() == {1, 2, 3}
+    assert value.union({4}).to_set() == {1, 2, 3, 4, None}
+    assert value.intersection({2, 3, 5}).to_set() == {2, 3}
+    assert value.difference({1, None}).to_set() == {2, 3}
+
+
+def test_container_classes_are_root_exports() -> None:
+    """Tier 2 containers are root-level convenience exports."""
+    assert extended_data.ExtendedString is ExtendedString
+    assert extended_data.ExtendedDict is ExtendedDict
+    assert extended_data.ExtendedList is ExtendedList
+    assert extended_data.ExtendedSet is ExtendedSet

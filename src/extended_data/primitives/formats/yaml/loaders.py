@@ -9,7 +9,7 @@ from typing import Any
 
 from yaml import SafeLoader
 
-from extended_data.yaml_utils.constructors import (
+from extended_data.primitives.formats.yaml.constructors import (
     yaml_construct_pairs,
     yaml_construct_undefined,
 )

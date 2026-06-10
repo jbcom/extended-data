@@ -23,7 +23,7 @@ import yaml
 
 from yaml import MappingNode, ScalarNode, SequenceNode
 
-from extended_data.yaml_utils import (
+from extended_data.primitives.formats.yaml import (
     LiteralScalarString,
     YamlPairs,
     YamlTagged,

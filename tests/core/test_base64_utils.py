@@ -22,8 +22,8 @@ import base64
 
 import pytest
 
-from extended_data.base64_utils import base64_decode, base64_encode
-from extended_data.export_utils import wrap_raw_data_for_export
+from extended_data.io.base64 import base64_decode, base64_encode
+from extended_data.io.exporters import wrap_raw_data_for_export
 
 
 def test_base64_encode_string() -> None:

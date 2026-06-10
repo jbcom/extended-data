@@ -23,7 +23,7 @@ from extended_data import (
     to_snake_case,
     write_file,
 )
-from extended_data.yaml_utils import YamlTagged
+from extended_data.primitives.formats.yaml import YamlTagged
 
 
 def demonstrate_layered_config_workflow() -> None:

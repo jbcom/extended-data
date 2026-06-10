@@ -1,0 +1,112 @@
+"""Extended sequence containers built on Tier 1 primitives."""
+
+from __future__ import annotations
+
+from collections import UserList
+from collections.abc import Callable, Iterable, Iterator, MutableSet
+from typing import Any, TypeVar
+
+from extended_data.primitives.sequences import flatten_list
+from extended_data.primitives.state import is_nothing
+from extended_data.primitives.types import make_hashable
+
+
+T = TypeVar("T")
+U = TypeVar("U")
+
+
+class ExtendedList(UserList[T]):
+    """List wrapper with chainable primitive operations."""
+
+    def __init__(self, initlist: Iterable[T] | None = None) -> None:
+        """Initialize the extended list."""
+        super().__init__(list(initlist or []))
+
+    def flatten(self) -> ExtendedList[Any]:
+        """Return a recursively flattened copy."""
+        return ExtendedList(flatten_list(list(self.data)))
+
+    def compact(self) -> ExtendedList[T]:
+        """Return a copy without values considered empty."""
+        return ExtendedList(item for item in self.data if not is_nothing(item))
+
+    def map(self, func: Callable[[T], U]) -> ExtendedList[U]:
+        """Return a copy with a callable applied to each item."""
+        return ExtendedList(func(item) for item in self.data)
+
+    def filter(self, predicate: Callable[[T], bool]) -> ExtendedList[T]:
+        """Return a copy containing items accepted by a predicate."""
+        return ExtendedList(item for item in self.data if predicate(item))
+
+    def unique(self) -> ExtendedList[T]:
+        """Return a copy with duplicate values removed while preserving order."""
+        seen: set[Any] = set()
+        values: list[T] = []
+        for item in self.data:
+            marker = make_hashable(item)
+            if marker in seen:
+                continue
+            seen.add(marker)
+            values.append(item)
+        return ExtendedList(values)
+
+
+class ExtendedSet(MutableSet[T]):
+    """Set wrapper with explicit chainable operations."""
+
+    def __init__(self, values: Iterable[T] | None = None) -> None:
+        """Initialize the extended set."""
+        self._data: set[T] = set(values or [])
+
+    def __contains__(self, value: object) -> bool:
+        """Return whether the set contains a value."""
+        return value in self._data
+
+    def __iter__(self) -> Iterator[T]:
+        """Iterate over set values."""
+        return iter(self._data)
+
+    def __len__(self) -> int:
+        """Return the number of set values."""
+        return len(self._data)
+
+    def add(self, value: T) -> None:
+        """Add a value to the set."""
+        self._data.add(value)
+
+    def discard(self, value: T) -> None:
+        """Remove a value from the set if present."""
+        self._data.discard(value)
+
+    def copy(self) -> ExtendedSet[T]:
+        """Return a shallow copy."""
+        return ExtendedSet(self._data)
+
+    def compact(self) -> ExtendedSet[T]:
+        """Return a copy without values considered empty."""
+        return ExtendedSet(item for item in self._data if not is_nothing(item))
+
+    def union(self, *others: Iterable[T]) -> ExtendedSet[T]:
+        """Return a union with other iterables."""
+        result = set(self._data)
+        for other in others:
+            result.update(other)
+        return ExtendedSet(result)
+
+    def intersection(self, *others: Iterable[T]) -> ExtendedSet[T]:
+        """Return an intersection with other iterables."""
+        result = set(self._data)
+        for other in others:
+            result.intersection_update(other)
+        return ExtendedSet(result)
+
+    def difference(self, *others: Iterable[T]) -> ExtendedSet[T]:
+        """Return a difference against other iterables."""
+        result = set(self._data)
+        for other in others:
+            result.difference_update(other)
+        return ExtendedSet(result)
+
+    def to_set(self) -> set[T]:
+        """Return a plain set copy."""
+        return set(self._data)

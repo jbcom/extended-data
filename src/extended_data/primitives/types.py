@@ -44,9 +44,9 @@ from typing import Any
 from orjson import JSONDecodeError
 from yaml.error import YAMLError
 
-from extended_data.json_utils import decode_json
-from extended_data.string_data_type import removesuffix
-from extended_data.yaml_utils import YamlPairs, YamlTagged, decode_yaml
+from extended_data.primitives.formats.json import decode_json
+from extended_data.primitives.formats.yaml import YamlPairs, YamlTagged, decode_yaml
+from extended_data.primitives.strings import removesuffix
 
 
 # Patterns for matching date, datetime, and time strings

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from extended_data.number_transformations import (
+from extended_data.primitives.numbers import (
     from_roman,
     number_to_currency,
     number_to_ordinal,

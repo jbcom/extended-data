@@ -47,7 +47,7 @@ from typing import Any
 
 import pytest
 
-from extended_data.string_data_type import (
+from extended_data.primitives.strings import (
     bytestostr,
     is_url,
     lower_first_char,

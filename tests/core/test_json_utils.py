@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import pytest
 
-from extended_data.json_utils import decode_json, encode_json
+from extended_data.primitives.formats.json import decode_json, encode_json
 
 
 @pytest.fixture
