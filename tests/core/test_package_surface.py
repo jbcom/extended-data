@@ -6,6 +6,7 @@ from importlib.metadata import version
 
 import extended_data
 import extended_data.logging as lifecycle_logging
+import extended_data.secrets.tools as secrets_tools
 
 from extended_data import connectors, inputs, secrets
 from extended_data.connectors.connectors import ConnectorFabric
@@ -50,3 +51,9 @@ def test_root_exports_first_class_integrated_primitives() -> None:
     assert callable(extended_data.directed_inputs)
     assert callable(extended_data.get_connector)
     assert callable(extended_data.list_connector_info)
+
+
+def test_secrets_tools_alias_preserves_public_exports() -> None:
+    """The shorter secrets tool path mirrors the canonical connector module."""
+    assert "run_pipeline" in secrets_tools.__all__
+    assert callable(secrets_tools.run_pipeline)
