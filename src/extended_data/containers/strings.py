@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections import UserString
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping
 from typing import TYPE_CHECKING
 
 from extended_data.primitives.string_transforms import (
@@ -105,6 +105,14 @@ class ExtendedString(UserString):
     def ordinalize(self) -> ExtendedString:
         """Return an ordinalized copy."""
         return ExtendedString(ordinalize(self.data))
+
+    def format(self, *args: object, **kwargs: object) -> ExtendedString:  # type: ignore[override]
+        """Format values into an extended string."""
+        return ExtendedString(self.data.format(*args, **kwargs))
+
+    def format_map(self, mapping: Mapping[str, object]) -> ExtendedString:  # type: ignore[override]
+        """Format mapping values into an extended string."""
+        return ExtendedString(self.data.format_map(mapping))
 
     def split(self, sep: str | UserString | None = None, maxsplit: int = -1) -> ExtendedList[ExtendedString]:  # type: ignore[override]
         """Split into extended string parts."""

@@ -26,6 +26,10 @@ def test_extended_string_chains_primitive_transforms() -> None:
     right_split = ExtendedString("api,gateway,worker").rsplit(",", 1)
     lines = ExtendedString("api\ngateway").splitlines()
     joined = ExtendedString(",").join([ExtendedString("api"), "gateway"])
+    formatted = ExtendedString("{service}.{component}").format(service="api", component=ExtendedString("worker"))
+    formatted_map = ExtendedString("{service}.{component}").format_map(
+        {"service": ExtendedString("api"), "component": "worker"}
+    )
 
     assert value.to_snake_case().remove_suffix("_value") == "api_response"
     assert value.to_kebab_case() == "api-response-value"
@@ -46,6 +50,10 @@ def test_extended_string_chains_primitive_transforms() -> None:
     assert lines == ["api", "gateway"]
     assert isinstance(joined, ExtendedString)
     assert joined == "api,gateway"
+    assert isinstance(formatted, ExtendedString)
+    assert formatted == "api.worker"
+    assert isinstance(formatted_map, ExtendedString)
+    assert formatted_map == "api.worker"
 
 
 def test_extended_dict_composes_mapping_primitives() -> None:
@@ -155,6 +163,9 @@ def test_extended_set_composes_set_operations() -> None:
     """ExtendedSet provides chainable set operations."""
     value = ExtendedSet({1, 2, 3, None})
 
+    compact_repr = repr(value.compact())
+    assert compact_repr.startswith("ExtendedSet(")
+    assert "object at" not in compact_repr
     assert value.compact().to_set() == {1, 2, 3}
     assert value.union({4}).to_set() == {1, 2, 3, 4, None}
     assert value.intersection({2, 3, 5}).to_set() == {2, 3}

@@ -76,7 +76,8 @@ containers instead of leaking plain nested values.
 String tokenization and partitioning paths are covered too:
 `ExtendedString.split()`, `rsplit()`, and `splitlines()` return `ExtendedList`
 values containing `ExtendedString` parts, while `partition()` and
-`rpartition()` return `ExtendedTuple` values.
+`rpartition()` return `ExtendedTuple` values. String formatting paths
+`format()` and `format_map()` return `ExtendedString`.
 
 Container methods that return derived collections stay in Tier 2 as well:
 `ExtendedDict.filter()` returns an `ExtendedTuple` of accepted and rejected

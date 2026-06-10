@@ -223,6 +223,10 @@ class ExtendedSet(MutableSet[T]):
         """Return the number of set values."""
         return len(self._data)
 
+    def __repr__(self) -> str:
+        """Return a value-oriented representation."""
+        return f"{self.__class__.__name__}({self._data!r})"
+
     def add(self, value: T) -> None:
         """Add a value to the set."""
         self._data.add(self._wrap_item(value))
