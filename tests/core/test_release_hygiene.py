@@ -24,6 +24,7 @@ OLD_PACKAGE_NAMESPACES = (
     "lifecyclelogging",
     "vendor_connectors",
 )
+REMOVED_PUBLIC_KEYWORDS = ("unhump_results",)
 
 
 def test_workflow_actions_are_pinned_to_exact_shas() -> None:
@@ -81,5 +82,22 @@ def test_old_package_namespace_shims_do_not_exist() -> None:
             offenders.append(str(package_path.relative_to(REPO_ROOT)))
         if module_path.exists():
             offenders.append(str(module_path.relative_to(REPO_ROOT)))
+
+    assert offenders == []
+
+
+def test_public_guidance_does_not_use_removed_runtime_keywords() -> None:
+    """Docs and examples should not keep teaching removed compatibility keywords."""
+    offenders: list[str] = []
+    paths = [REPO_ROOT / "README.md"]
+    paths.extend(path for root in (REPO_ROOT / "docs", REPO_ROOT / "examples") for path in root.rglob("*"))
+
+    for path in sorted(path for path in paths if path.is_file()):
+        if path.suffix in {".pyc", ".png"}:
+            continue
+        text = path.read_text(encoding="utf-8")
+        for keyword in REMOVED_PUBLIC_KEYWORDS:
+            if keyword in text:
+                offenders.append(f"{path.relative_to(REPO_ROOT)}: {keyword}")
 
     assert offenders == []
