@@ -24,6 +24,7 @@ Constants:
     - DATETIME_PATTERN: Regex for matching ISO 8601 datetime strings.
     - TIME_PATTERN: Regex for matching time strings.
     - PATH_PATTERN: Regex for matching Unix and Windows-style paths.
+    - INTEGER_PATTERN: Regex for matching integer strings.
     - NUMBER_PATTERN: Regex for matching numeric strings.
     - TRUTHY_PATTERN: Regex for matching truthy strings.
     - FALSY_PATTERN: Regex for matching falsy strings.
@@ -56,6 +57,7 @@ DATETIME_PATTERN: re.Pattern[str] = re.compile(
 )  # Matches extended datetime formats like YYYY-MM-DDTHH:MM[:SS][.fff][Z|±hh:mm]
 TIME_PATTERN: re.Pattern[str] = re.compile(r"^\d{2}:\d{2}(:\d{2}(\.\d{1,6})?)?$")  # Matches HH:MM[:SS] and microseconds
 PATH_PATTERN: re.Pattern[str] = re.compile(r'^(?:[a-zA-Z]:)?[\\/](?:[^<>:"|?*\n]+[\\/])*[^<>:"|?*\n]*$')
+INTEGER_PATTERN: re.Pattern[str] = re.compile(r"^-?\d+$")
 NUMBER_PATTERN: re.Pattern[str] = re.compile(r"^-?\d+(\.\d+)?$")
 TRUTHY_PATTERN: re.Pattern[str] = re.compile(r"^(y|yes|t|true|on|1)$", re.IGNORECASE)
 FALSY_PATTERN: re.Pattern[str] = re.compile(r"^(n|no|f|false|off|0)$", re.IGNORECASE)
@@ -425,7 +427,7 @@ def reconstruct_special_type(converted_obj: str, fail_silently: bool = False) ->
         ConversionError: If reconstruction fails and fail_silently is False.
     """
     try:
-        if converted_obj == "None":
+        if converted_obj in {"None", "null"}:
             return None
         if DATETIME_PATTERN.match(converted_obj):
             return strtodatetime(converted_obj)
@@ -438,7 +440,7 @@ def reconstruct_special_type(converted_obj: str, fail_silently: bool = False) ->
         if TRUTHY_PATTERN.match(converted_obj) or FALSY_PATTERN.match(converted_obj):
             return strtobool(converted_obj)
         if NUMBER_PATTERN.match(converted_obj):
-            if converted_obj.isdigit():
+            if INTEGER_PATTERN.match(converted_obj):
                 return strtoint(converted_obj)
             return strtofloat(converted_obj)
 

@@ -586,10 +586,13 @@ def test_convert_special_types_handles_tuple_frozenset_and_yaml_pairs() -> None:
         ("/some/path", Path("/some/path")),  # Path string to Path
         ("simple string", "simple string"),  # Simple string remains unchanged
         ("123", 123),  # Numeric string to integer
+        ("-123", -123),  # Negative numeric string to integer
         ("3.14", 3.14),  # Numeric string to float
+        ("-3.14", -3.14),  # Negative numeric string to float
         ("true", True),  # Boolean string to bool
         ("false", False),
         ("None", None),  # "None" string to NoneType
+        ("null", None),  # JSON null string to NoneType
         ("", ""),  # Empty string remains unchanged
     ],
 )
