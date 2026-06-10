@@ -51,6 +51,17 @@ Both paths share the same input provider and lifecycle logger, and both cache
 instances by connector type and constructor inputs. Generic connector names are
 stripped and lowercased before lookup.
 
+Use the catalog helpers when a workflow needs to inspect which integrations can
+run in the current environment:
+
+```python
+catalog = fabric.list_connector_info()
+github_info = fabric.get_connector_info("github")
+```
+
+Each catalog entry includes availability, source, extra name, install command,
+required packages, missing packages, module, class, and description fields.
+
 ## Optional Integrations
 
 Install only the vendor or AI layers you need:

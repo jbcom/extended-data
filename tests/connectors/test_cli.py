@@ -8,21 +8,44 @@ from unittest.mock import patch
 
 import pytest
 
-from extended_data.connectors.cli import cmd_list, main
+from extended_data.connectors.cli import cmd_info, cmd_list, main
 
 
-@pytest.mark.xfail(reason="Pre-existing mock issue: cmd_list uses logging instead of print")
 def test_cli_list():
     """Test the list command."""
-    args = argparse.Namespace(json=False)
-    with patch("builtins.print") as mock_print:
+    args = argparse.Namespace(json=False, available_only=False)
+    with patch("sys.stdout.write") as mock_write:
         exit_code = cmd_list(args)
         assert exit_code == 0
-        mock_print.assert_called()
+        mock_write.assert_called()
         # Verify it lists some connectors
-        output = "\n".join(call.args[0] for call in mock_print.call_args_list if call.args)
+        output = "".join(call.args[0] for call in mock_write.call_args_list if call.args)
         assert "aws" in output
         assert "google" in output
+
+
+def test_cli_list_json():
+    """List command can emit machine-readable connector metadata."""
+    args = argparse.Namespace(json=True, available_only=False)
+    with patch("sys.stdout.write") as mock_write:
+        exit_code = cmd_list(args)
+
+    assert exit_code == 0
+    output = mock_write.call_args.args[0]
+    assert '"name": "github"' in output
+    assert '"available":' in output
+
+
+def test_cli_info():
+    """Info command prints connector metadata."""
+    args = argparse.Namespace(connector=" github ", json=False)
+    with patch("sys.stdout.write") as mock_write:
+        exit_code = cmd_info(args)
+
+    assert exit_code == 0
+    output = "".join(call.args[0] for call in mock_write.call_args_list if call.args)
+    assert "name: github" in output
+    assert "install: pip install extended-data[github]" in output
 
 
 def test_cli_main_help():

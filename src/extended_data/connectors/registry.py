@@ -35,6 +35,13 @@ import builtins
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, NoReturn
 
+from extended_data.connectors._optional import (
+    get_connector_install_command,
+    get_connector_requirements,
+    get_extra_for_connector,
+    get_missing_connector_requirements,
+)
+
 
 if TYPE_CHECKING:
     from extended_data.connectors.base import VendorConnectorBase
@@ -49,6 +56,43 @@ class BuiltinConnectorSpec:
     extra: str
 
 
+@dataclass(frozen=True)
+class ConnectorInfo:
+    """Registry metadata for a connector."""
+
+    name: str
+    available: bool
+    source: str
+    extra: str | None
+    install: str | None
+    requirements: tuple[str, ...]
+    missing: tuple[str, ...]
+    class_name: str | None
+    module: str | None
+    base_url: str | None
+    api_key_env: str | None
+    description: str | None
+    error: str | None
+
+    def as_dict(self) -> dict[str, Any]:
+        """Return JSON-friendly connector metadata."""
+        return {
+            "name": self.name,
+            "available": self.available,
+            "source": self.source,
+            "extra": self.extra,
+            "install": self.install,
+            "requirements": list(self.requirements),
+            "missing": list(self.missing),
+            "class": self.class_name,
+            "module": self.module,
+            "base_url": self.base_url,
+            "api_key_env": self.api_key_env,
+            "description": self.description,
+            "error": self.error,
+        }
+
+
 BUILTIN_CONNECTORS: dict[str, BuiltinConnectorSpec] = {
     # Google connectors
     "jules": BuiltinConnectorSpec("extended_data.connectors.google.jules", "JulesConnector", "google"),
@@ -60,6 +104,7 @@ BUILTIN_CONNECTORS: dict[str, BuiltinConnectorSpec] = {
     "cursor": BuiltinConnectorSpec("extended_data.connectors.cursor", "CursorConnector", "cursor"),
     "github": BuiltinConnectorSpec("extended_data.connectors.github", "GitHubConnector", "github"),
     "meshy": BuiltinConnectorSpec("extended_data.connectors.meshy", "MeshyConnector", "meshy"),
+    "secrets": BuiltinConnectorSpec("extended_data.connectors.secrets", "SecretsConnector", "secrets"),
     "anthropic": BuiltinConnectorSpec("extended_data.connectors.anthropic", "AnthropicConnector", "anthropic"),
     "aws": BuiltinConnectorSpec("extended_data.connectors.aws", "AWSConnector", "aws"),
     "slack": BuiltinConnectorSpec("extended_data.connectors.slack", "SlackConnector", "slack"),
@@ -93,8 +138,17 @@ def _discover_connectors() -> dict[str, builtins.type[VendorConnectorBase]]:
     eps = entry_points(group="extended_data.connectors")
 
     for ep in eps:
+        connector_name = _normalize_connector_name(ep.name)
         try:
-            connectors[ep.name] = ep.load()
+            connectors[connector_name] = ep.load()
+            _missing_builtin_connectors.pop(connector_name, None)
+        except ImportError as e:
+            if connector_name in BUILTIN_CONNECTORS:
+                _missing_builtin_connectors[connector_name] = e
+                continue
+            import warnings
+
+            warnings.warn(f"Failed to load connector '{ep.name}': {e}", stacklevel=2)
         except Exception as e:
             # Log but don't fail - allow partial loading
             import warnings
@@ -123,17 +177,24 @@ def _register_builtins(connectors: dict[str, builtins.type[VendorConnectorBase]]
             if cls is not None:
                 connectors[name] = cls
                 _missing_builtin_connectors.pop(name, None)
+            else:
+                _missing_builtin_connectors[name] = ImportError(
+                    f"Could not find {spec.class_name} in {spec.module_path}"
+                )
         except ImportError as e:
             _missing_builtin_connectors[name] = e  # Optional dependency not installed
 
 
 def _raise_missing_builtin_connector(name: str, error: ImportError) -> NoReturn:
     """Raise a clear install hint for a known built-in connector."""
-    spec = BUILTIN_CONNECTORS[name]
+    install = get_connector_install_command(name) or f"pip install extended-data[{BUILTIN_CONNECTORS[name].extra}]"
+    missing = get_missing_connector_requirements(name)
     msg = (
         f"The '{name}' connector is built in but its optional dependencies are not installed.\n"
-        f"Install with: pip install extended-data[{spec.extra}]"
+        f"Install with: {install}"
     )
+    if missing:
+        msg = f"{msg}\nMissing packages: {', '.join(missing)}"
     if str(error):
         msg = f"{msg}\nOriginal import error: {error}"
     raise ImportError(msg) from error
@@ -200,29 +261,93 @@ def clear_cache() -> None:
     _missing_builtin_connectors.clear()
 
 
+def _get_description(cls: builtins.type[VendorConnectorBase]) -> str | None:
+    """Get the first useful line from a connector docstring."""
+    if not cls.__doc__:
+        return None
+    for line in cls.__doc__.splitlines():
+        description = line.strip()
+        if description:
+            return description
+    return None
+
+
+def _available_connector_info(name: str, cls: builtins.type[VendorConnectorBase]) -> ConnectorInfo:
+    """Build metadata for a loadable connector."""
+    spec = BUILTIN_CONNECTORS.get(name)
+    source = "builtin" if spec else "entry_point"
+    extra = spec.extra if spec else get_extra_for_connector(name)
+    requirements = tuple(get_connector_requirements(name))
+    missing = tuple(get_missing_connector_requirements(name))
+
+    return ConnectorInfo(
+        name=name,
+        available=True,
+        source=source,
+        extra=extra,
+        install=get_connector_install_command(name),
+        requirements=requirements,
+        missing=missing,
+        class_name=cls.__name__,
+        module=cls.__module__,
+        base_url=getattr(cls, "BASE_URL", None),
+        api_key_env=getattr(cls, "API_KEY_ENV", None),
+        description=_get_description(cls),
+        error=None,
+    )
+
+
+def _missing_builtin_connector_info(name: str, error: ImportError | None) -> ConnectorInfo:
+    """Build metadata for a known built-in connector that cannot be loaded."""
+    spec = BUILTIN_CONNECTORS[name]
+
+    return ConnectorInfo(
+        name=name,
+        available=False,
+        source="builtin",
+        extra=spec.extra,
+        install=get_connector_install_command(name),
+        requirements=tuple(get_connector_requirements(name)),
+        missing=tuple(get_missing_connector_requirements(name)),
+        class_name=spec.class_name,
+        module=spec.module_path,
+        base_url=None,
+        api_key_env=None,
+        description=None,
+        error=str(error) if error else "Connector class could not be loaded.",
+    )
+
+
 # =============================================================================
 # Connector Info Helpers
 # =============================================================================
 
 
-def get_connector_info(name: str) -> dict[str, Any]:
-    """Get metadata about a connector.
+def get_connector_info(name: str, *, include_unavailable: bool = True) -> dict[str, Any]:
+    """Get registry metadata about a connector."""
+    connector_name = _normalize_connector_name(name)
+    connectors = _discover_connectors()
 
-    Returns:
-        Dict with name, module, env_vars, description, etc.
-    """
-    cls = get_connector_class(name)
+    if connector_name in connectors:
+        return _available_connector_info(connector_name, connectors[connector_name]).as_dict()
 
-    return {
-        "name": name,
-        "class": cls.__name__,
-        "module": cls.__module__,
-        "base_url": getattr(cls, "BASE_URL", None),
-        "api_key_env": getattr(cls, "API_KEY_ENV", None),
-        "description": cls.__doc__.split("\n")[0] if cls.__doc__ else None,
-    }
+    if connector_name in _missing_builtin_connectors:
+        if include_unavailable:
+            return _missing_builtin_connector_info(connector_name, _missing_builtin_connectors[connector_name]).as_dict()
+        _raise_missing_builtin_connector(connector_name, _missing_builtin_connectors[connector_name])
+
+    if include_unavailable and connector_name in BUILTIN_CONNECTORS:
+        return _missing_builtin_connector_info(connector_name, None).as_dict()
+
+    available = ", ".join(sorted(connectors.keys()))
+    raise ValueError(f"Unknown connector: {name}. Available: {available}")
 
 
-def list_connector_info() -> list[dict[str, Any]]:
-    """Get metadata for all connectors."""
-    return [get_connector_info(name) for name in sorted(list_connectors().keys())]
+def list_connector_info(*, include_unavailable: bool = True) -> list[dict[str, Any]]:
+    """Get registry metadata for known connectors."""
+    connectors = _discover_connectors()
+    names = set(connectors)
+    if include_unavailable:
+        names.update(BUILTIN_CONNECTORS)
+        names.update(_missing_builtin_connectors)
+    return [get_connector_info(name, include_unavailable=include_unavailable) for name in sorted(names)]

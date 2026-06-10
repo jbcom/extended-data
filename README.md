@@ -50,6 +50,20 @@ Connector names are normalized before lookup. If a known built-in connector is
 requested without its optional extra installed, the registry raises an
 `ImportError` with the matching `extended-data[...]` install target.
 
+Inspect connector availability before wiring vendor workflows:
+
+```python
+catalog = connectors.list_connector_info()
+github_info = connectors.get_connector_info("github")
+```
+
+The same catalog is available from the CLI:
+
+```bash
+extended-data list
+extended-data info github --json
+```
+
 ## Package Shape
 
 ```text

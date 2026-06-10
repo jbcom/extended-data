@@ -115,6 +115,7 @@ from extended_data.yaml_utils import decode_yaml, encode_yaml, is_yaml_data
 if TYPE_CHECKING:
     from extended_data.connectors import (
         ConnectorFabric,
+        ConnectorInfo,
         VendorConnectorBase,
         get_connector,
         get_connector_class,
@@ -128,6 +129,7 @@ if TYPE_CHECKING:
 
 _LAZY_EXPORTS = {
     "ConnectorFabric": ("extended_data.connectors", "ConnectorFabric"),
+    "ConnectorInfo": ("extended_data.connectors", "ConnectorInfo"),
     "ExitRunError": ("extended_data.logging", "ExitRunError"),
     "InputProvider": ("extended_data.inputs", "InputProvider"),
     "KeyTransform": ("extended_data.logging", "KeyTransform"),
@@ -156,6 +158,7 @@ def __getattr__(name: str):
 
 __all__ = [
     "ConnectorFabric",
+    "ConnectorInfo",
     "ExitRunError",
     "FilePath",
     "InputProvider",

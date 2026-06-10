@@ -133,6 +133,18 @@ class TestConnectorFabric:
         assert third is not first
         assert mock_get_connector_class.call_count == 2
 
+    def test_connector_fabric_exposes_catalog_info(self):
+        """ConnectorFabric exposes registry-backed catalog metadata."""
+        vc = ConnectorFabric(from_environment=False)
+
+        info = vc.list_connector_info()
+        names = {connector["name"] for connector in info}
+
+        assert "cursor" in names
+        assert "github" in names
+        assert vc.get_connector_info(" github ")["name"] == "github"
+        assert isinstance(vc.list_connectors(), dict)
+
     @requires_boto3
     @patch("extended_data.connectors.aws.AWSConnector")
     def test_get_aws_connector(self, mock_aws):
@@ -328,6 +340,23 @@ class TestConnectorFabric:
 
         with pytest.raises(ImportError, match=r"extended-data\[github\]"):
             registry.get_connector_class(" github ")
+
+    def test_get_connector_info_includes_known_missing_builtin(self, monkeypatch):
+        """Registry metadata includes unavailable known connectors."""
+        monkeypatch.setattr(registry, "_connector_cache", {})
+        monkeypatch.setitem(
+            registry._missing_builtin_connectors,
+            "github",
+            ImportError("No module named 'github'"),
+        )
+
+        info = registry.get_connector_info(" github ")
+
+        assert info["name"] == "github"
+        assert info["available"] is False
+        assert info["extra"] == "github"
+        assert info["install"] == "pip install extended-data[github]"
+        assert info["class"] == "GitHubConnector"
 
     def test_register_builtins_tracks_missing_optional_dependency(self, monkeypatch):
         """Built-in discovery remembers optional dependency import failures."""

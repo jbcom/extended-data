@@ -165,17 +165,67 @@ def get_available_ai_frameworks() -> list[str]:
 
 CONNECTOR_REQUIREMENTS: dict[str, list[str]] = {
     # Core-only connectors (always available)
-    "meshy": [],  # httpx, pydantic, tenacity are in core
-    "zoom": [],  # requests is in core
     "cursor": [],  # httpx is in core
+    "meshy": [],  # httpx, pydantic, tenacity are in core
+    "secrets": [],  # pyyaml is in core
+    "zoom": [],  # requests is in core
     # Connectors requiring extras
+    "anthropic": ["anthropic"],
     "aws": ["boto3"],
     "google": ["googleapiclient"],
+    "google_billing": ["googleapiclient"],
+    "google_cloud": ["googleapiclient"],
+    "google_workspace": ["googleapiclient"],
     "github": ["github"],
+    "jules": ["googleapiclient"],
     "slack": ["slack_sdk"],
     "vault": ["hvac"],
-    "anthropic": ["anthropic"],
 }
+
+CONNECTOR_EXTRAS: dict[str, str] = {
+    "anthropic": "anthropic",
+    "aws": "aws",
+    "cursor": "cursor",
+    "google": "google",
+    "google_billing": "google",
+    "google_cloud": "google",
+    "google_workspace": "google",
+    "github": "github",
+    "jules": "google",
+    "meshy": "meshy",
+    "secrets": "secrets",
+    "slack": "slack",
+    "vault": "vault",
+    "zoom": "zoom",
+}
+
+
+def _normalize_connector_name(connector: str) -> str:
+    """Normalize connector names for optional dependency lookup."""
+    return connector.strip().lower()
+
+
+def get_extra_for_connector(connector: str) -> str | None:
+    """Get the optional dependency extra for a connector."""
+    return CONNECTOR_EXTRAS.get(_normalize_connector_name(connector))
+
+
+def get_connector_requirements(connector: str) -> list[str]:
+    """Get package imports required by a connector."""
+    return list(CONNECTOR_REQUIREMENTS.get(_normalize_connector_name(connector), []))
+
+
+def get_missing_connector_requirements(connector: str) -> list[str]:
+    """Get missing package imports for a connector."""
+    return [pkg for pkg in get_connector_requirements(connector) if not is_available(pkg)]
+
+
+def get_connector_install_command(connector: str) -> str | None:
+    """Get the pip install command for a connector extra."""
+    extra = get_extra_for_connector(connector)
+    if extra is None:
+        return None
+    return f"pip install extended-data[{extra}]"
 
 
 def is_connector_available(connector: str) -> bool:
@@ -187,8 +237,7 @@ def is_connector_available(connector: str) -> bool:
     Returns:
         True if all required packages are available
     """
-    requirements = CONNECTOR_REQUIREMENTS.get(connector, [])
-    return all(is_available(pkg) for pkg in requirements)
+    return not get_missing_connector_requirements(connector)
 
 
 def get_available_connectors() -> list[str]:
@@ -209,12 +258,12 @@ def require_connector(connector: str) -> None:
     Raises:
         ImportError: With helpful message if dependencies missing
     """
-    requirements = CONNECTOR_REQUIREMENTS.get(connector, [])
-    missing = [pkg for pkg in requirements if not is_available(pkg)]
+    missing = get_missing_connector_requirements(connector)
 
     if missing:
+        extra = get_extra_for_connector(connector) or connector
         raise ImportError(
             f"The '{connector}' connector requires additional dependencies.\n"
             f"Missing packages: {', '.join(missing)}\n"
-            f"Install with: pip install extended-data[{connector}]"
+            f"Install with: pip install extended-data[{extra}]"
         )

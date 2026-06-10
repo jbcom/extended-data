@@ -137,6 +137,7 @@ __all__ = [
     "AWSSSOmixin",
     "AnthropicConnector",
     "ConnectorFabric",
+    "ConnectorInfo",
     "CursorConnector",
     "GitHubConnector",
     "GoogleBillingMixin",
@@ -163,6 +164,7 @@ __all__ = [
 
 # Registry - unified access to all connectors
 from extended_data.connectors.registry import (
+    ConnectorInfo,
     get_connector,
     get_connector_class,
     get_connector_info,

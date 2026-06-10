@@ -36,5 +36,7 @@ def test_root_exports_first_class_integrated_primitives() -> None:
     assert extended_data.InputProvider is InputProvider
     assert extended_data.Logging is Logging
     assert extended_data.ConnectorFabric is ConnectorFabric
+    assert extended_data.ConnectorInfo.__name__ == "ConnectorInfo"
     assert callable(extended_data.directed_inputs)
     assert callable(extended_data.get_connector)
+    assert callable(extended_data.list_connector_info)

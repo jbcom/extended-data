@@ -25,7 +25,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import sys
 
 from typing import Any
@@ -33,6 +32,7 @@ from typing import Any
 from extended_data.connectors.registry import (
     get_connector,
     get_connector_class,
+    get_connector_info,
     list_connector_info,
 )
 
@@ -73,21 +73,43 @@ def _parse_arg_value(value: str) -> Any:
     return value
 
 
+def _format_list(values: list[str] | tuple[str, ...] | None) -> str:
+    """Format a list-like metadata field for CLI output."""
+    if not values:
+        return "-"
+    return ", ".join(values)
+
+
+def _write_stdout(message: str) -> None:
+    """Write one CLI output line."""
+    sys.stdout.write(f"{message}\n")
+
+
+def _write_stderr(message: str) -> None:
+    """Write one CLI error line."""
+    sys.stderr.write(f"{message}\n")
+
+
 # =============================================================================
 # Commands
 # =============================================================================
 
 
 def cmd_list(args: argparse.Namespace) -> int:
-    """List available connectors."""
-    info = list_connector_info()
+    """List connector catalog entries."""
+    info = list_connector_info(include_unavailable=not getattr(args, "available_only", False))
 
     if args.json:
+        _write_stdout(_json_output(info))
         return 0
 
+    _write_stdout(f"{'name':<18} {'status':<11} {'extra':<10} {'class':<28} install")
     for c in info:
-        env = c.get("api_key_env") or "-"
-        "✓" if os.environ.get(env) else " "
+        status = "available" if c["available"] else "missing"
+        extra = c.get("extra") or "-"
+        class_name = c.get("class") or "-"
+        install = c.get("install") or "-"
+        _write_stdout(f"{c['name']:<18} {status:<11} {extra:<10} {class_name:<28} {install}")
 
     return 0
 
@@ -134,7 +156,8 @@ def cmd_methods(args: argparse.Namespace) -> int:
 
     try:
         cls = get_connector_class(connector_name)
-    except ValueError:
+    except (ImportError, ValueError) as e:
+        _write_stderr(str(e))
         return 1
 
     for name in sorted(dir(cls)):
@@ -160,12 +183,32 @@ def cmd_mcp(args: argparse.Namespace) -> int:
 
 def cmd_info(args: argparse.Namespace) -> int:
     """Show info about a specific connector."""
-    from extended_data.connectors.registry import get_connector_info
-
     try:
-        get_connector_info(args.connector)
+        info = get_connector_info(args.connector)
+        if args.json:
+            _write_stdout(_json_output(info))
+            return 0
+
+        for key in (
+            "name",
+            "available",
+            "source",
+            "extra",
+            "install",
+            "requirements",
+            "missing",
+            "class",
+            "module",
+            "description",
+            "error",
+        ):
+            value = info.get(key)
+            if isinstance(value, list):
+                value = _format_list(value)
+            _write_stdout(f"{key}: {value if value is not None else '-'}")
         return 0
-    except ValueError:
+    except (ImportError, ValueError) as e:
+        _write_stderr(str(e))
         return 1
 
 
@@ -194,6 +237,7 @@ Examples:
     # List command
     list_parser = subparsers.add_parser("list", help="List available connectors")
     list_parser.add_argument("--json", action="store_true", help="JSON output")
+    list_parser.add_argument("--available-only", action="store_true", help="Hide connectors with missing extras")
     list_parser.set_defaults(func=cmd_list)
 
     # Methods command
@@ -204,6 +248,7 @@ Examples:
     # Info command
     info_parser = subparsers.add_parser("info", help="Show connector info")
     info_parser.add_argument("connector", help="Connector name")
+    info_parser.add_argument("--json", action="store_true", help="JSON output")
     info_parser.set_defaults(func=cmd_info)
 
     # Call command
