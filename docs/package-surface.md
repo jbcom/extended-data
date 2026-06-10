@@ -1,7 +1,8 @@
 # Package Surface
 
 `extended-data` is one Python distribution with a single `extended_data`
-namespace. The root package exposes the primitives users need most often:
+namespace. The root package exposes the primitives and adapters users need most
+often.
 The old `extended_data_types`, `lifecyclelogging`,
 `directed_inputs_class`, and `vendor_connectors` import namespaces are not
 preserved in this major version.
@@ -16,9 +17,12 @@ from extended_data import (
     ExtendedSet,
     ExtendedString,
     ExtendedTuple,
+    GitHubConnector,
+    GoogleConnector,
     InputProvider,
     Logging,
     SecretsConnector,
+    SlackConnector,
     SyncOptions,
     decode_json,
     extend_data,
@@ -172,10 +176,10 @@ instances by connector type and constructor inputs. Generic connector names are
 stripped and lowercased before lookup.
 
 Every built-in connector class registered by name is also exported from
-`extended_data.connectors`. Those exports are real classes, not `None`
-sentinels. Vendor SDKs load when connector instances need them, so package
-import remains lightweight while missing optional extras still fail at the
-operation boundary with install guidance.
+`extended_data` and `extended_data.connectors`. Those exports are real classes,
+not `None` sentinels. Vendor SDKs load when connector instances need them, so
+package import remains lightweight while missing optional extras still fail at
+the operation boundary with install guidance.
 
 Connectors that inherit `VendorConnectorBase` can keep raw transport access with
 `request()` or use `request_data()`, `get_data()`, `post_data()`, and the other

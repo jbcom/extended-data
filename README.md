@@ -56,6 +56,13 @@ github = connectors.get_connector(
 )
 ```
 
+Built-in connector classes are also package-root exports when direct
+construction reads better:
+
+```python
+from extended_data import GitHubConnector, SlackConnector
+```
+
 Connector names are normalized before lookup. If a known built-in connector is
 requested without its optional extra installed, the registry raises an
 `ImportError` with the matching `extended-data[...]` install target.

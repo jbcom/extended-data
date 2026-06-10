@@ -11,7 +11,7 @@ in this library. It extends InputProvider and provides:
 ALL connectors should extend this class instead of InputProvider directly.
 
 Usage:
-    from extended_data.connectors.base import VendorConnectorBase
+    from extended_data import ExtendedDict, VendorConnectorBase
 
     class MyConnector(VendorConnectorBase):
         API_KEY_ENV = "MY_API_KEY"  # Required env var name
@@ -21,8 +21,8 @@ Usage:
             super().__init__(**kwargs)
             self._api_key = api_key or self.get_input(self.API_KEY_ENV, required=True)
 
-        def my_operation(self) -> dict:
-            return self.request("GET", "/endpoint")
+        def my_operation(self) -> ExtendedDict:
+            return self.request_data("GET", "/endpoint", suffix="json")
 """
 
 from __future__ import annotations

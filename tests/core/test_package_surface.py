@@ -126,6 +126,15 @@ def test_connectors_root_exports_builtin_connector_classes() -> None:
         assert value.__name__ == spec.class_name
 
 
+def test_package_root_exports_builtin_connector_classes() -> None:
+    """Built-in connector classes are first-class root package exports."""
+    for spec in BUILTIN_CONNECTORS.values():
+        root_value = getattr(extended_data, spec.class_name)
+        connector_value = getattr(connectors, spec.class_name)
+
+        assert root_value is connector_value
+
+
 def test_aws_full_connector_keeps_operation_mixins_without_aws_extra() -> None:
     """AWSConnectorFull should expose real operation mixins even before boto3 is installed."""
     assert callable(connectors.AWSConnectorFull.list_s3_buckets)
