@@ -6,12 +6,14 @@ permission sets, and account assignments through IAM Identity Center.
 
 from __future__ import annotations
 
+from collections.abc import Mapping, Sequence
 from copy import deepcopy
 from typing import TYPE_CHECKING, Any
 
 from deepmerge import always_merger
 
 from extended_data import is_nothing, unhump_map
+from extended_data.containers import ExtendedDict, ExtendedList, ExtendedString, to_builtin
 
 
 if TYPE_CHECKING:
@@ -45,7 +47,7 @@ class AWSSSOmixin:
     def get_identity_store_id(
         self,
         execution_role_arn: str | None = None,
-    ) -> str:
+    ) -> ExtendedString:
         """Get the IAM Identity Center identity store ID.
 
         Args:
@@ -79,7 +81,7 @@ class AWSSSOmixin:
     def get_sso_instance_arn(
         self,
         execution_role_arn: str | None = None,
-    ) -> str:
+    ) -> ExtendedString:
         """Get the IAM Identity Center instance ARN.
 
         Args:
@@ -121,7 +123,7 @@ class AWSSSOmixin:
         flatten_name: bool = True,
         sort_by_name: bool = False,
         execution_role_arn: str | None = None,
-    ) -> dict[str, dict[str, Any]]:
+    ) -> ExtendedDict:
         """List all users from IAM Identity Center.
 
         Args:
@@ -138,7 +140,7 @@ class AWSSSOmixin:
         role_arn = execution_role_arn or getattr(self, "execution_role_arn", None)
 
         if not identity_store_id:
-            identity_store_id = self.get_identity_store_id(execution_role_arn=role_arn)
+            identity_store_id = str(self.get_identity_store_id(execution_role_arn=role_arn))
 
         identitystore = self.get_aws_client(
             client_name="identitystore",
@@ -186,7 +188,7 @@ class AWSSSOmixin:
         user_id: str,
         identity_store_id: str | None = None,
         execution_role_arn: str | None = None,
-    ) -> dict[str, Any] | None:
+    ) -> ExtendedDict | None:
         """Get a specific SSO user by ID.
 
         Args:
@@ -202,7 +204,7 @@ class AWSSSOmixin:
         role_arn = execution_role_arn or getattr(self, "execution_role_arn", None)
 
         if not identity_store_id:
-            identity_store_id = self.get_identity_store_id(execution_role_arn=role_arn)
+            identity_store_id = str(self.get_identity_store_id(execution_role_arn=role_arn))
 
         identitystore = self.get_aws_client(
             client_name="identitystore",
@@ -227,10 +229,10 @@ class AWSSSOmixin:
         display_name: str,
         given_name: str | None = None,
         family_name: str | None = None,
-        emails: list[dict[str, Any]] | None = None,
+        emails: Sequence[Mapping[str, Any]] | None = None,
         identity_store_id: str | None = None,
         execution_role_arn: str | None = None,
-    ) -> dict[str, Any]:
+    ) -> ExtendedDict:
         """Create a user in IAM Identity Center.
 
         Args:
@@ -249,7 +251,7 @@ class AWSSSOmixin:
         role_arn = execution_role_arn or getattr(self, "execution_role_arn", None)
 
         if not identity_store_id:
-            identity_store_id = self.get_identity_store_id(execution_role_arn=role_arn)
+            identity_store_id = str(self.get_identity_store_id(execution_role_arn=role_arn))
 
         identitystore = self.get_aws_client(
             client_name="identitystore",
@@ -270,7 +272,7 @@ class AWSSSOmixin:
                 user_body["Name"]["FamilyName"] = family_name
 
         if emails:
-            user_body["Emails"] = emails
+            user_body["Emails"] = to_builtin(list(emails))
 
         result = identitystore.create_user(**user_body)
         self.logger.info(f"Created SSO user: {user_name} ({result.get('UserId')})")
@@ -293,7 +295,7 @@ class AWSSSOmixin:
         role_arn = execution_role_arn or getattr(self, "execution_role_arn", None)
 
         if not identity_store_id:
-            identity_store_id = self.get_identity_store_id(execution_role_arn=role_arn)
+            identity_store_id = str(self.get_identity_store_id(execution_role_arn=role_arn))
 
         identitystore = self.get_aws_client(
             client_name="identitystore",
@@ -315,10 +317,10 @@ class AWSSSOmixin:
         identity_store_id: str | None = None,
         unhump_groups: bool = True,
         expand_members: bool = False,
-        users: dict[str, dict[str, Any]] | None = None,
+        users: Mapping[str, Mapping[str, Any]] | None = None,
         sort_by_name: bool = False,
         execution_role_arn: str | None = None,
-    ) -> dict[str, dict[str, Any]]:
+    ) -> ExtendedDict:
         """List all groups from IAM Identity Center.
 
         Args:
@@ -336,7 +338,7 @@ class AWSSSOmixin:
         role_arn = execution_role_arn or getattr(self, "execution_role_arn", None)
 
         if not identity_store_id:
-            identity_store_id = self.get_identity_store_id(execution_role_arn=role_arn)
+            identity_store_id = str(self.get_identity_store_id(execution_role_arn=role_arn))
 
         # Pre-fetch users if expanding members
         if expand_members and not users:
@@ -397,8 +399,8 @@ class AWSSSOmixin:
         identity_store_id: str,
         identitystore: Any,
         expand_members: bool = False,
-        users: dict[str, dict[str, Any]] | None = None,
-    ) -> list[str] | dict[str, dict[str, Any]]:
+        users: Mapping[str, Mapping[str, Any]] | None = None,
+    ) -> list[str] | dict[str, Mapping[str, Any]]:
         """Get members of an SSO group.
 
         Args:
@@ -411,7 +413,7 @@ class AWSSSOmixin:
         Returns:
             List of user IDs or dict mapping user IDs to user data.
         """
-        members: list[str] | dict[str, dict[str, Any]] = {} if expand_members else []
+        members: list[str] | dict[str, Mapping[str, Any]] = {} if expand_members else []
         page_token: str | None = None
 
         while True:
@@ -447,7 +449,7 @@ class AWSSSOmixin:
         description: str = "",
         identity_store_id: str | None = None,
         execution_role_arn: str | None = None,
-    ) -> dict[str, Any]:
+    ) -> ExtendedDict:
         """Create a group in IAM Identity Center.
 
         Args:
@@ -463,7 +465,7 @@ class AWSSSOmixin:
         role_arn = execution_role_arn or getattr(self, "execution_role_arn", None)
 
         if not identity_store_id:
-            identity_store_id = self.get_identity_store_id(execution_role_arn=role_arn)
+            identity_store_id = str(self.get_identity_store_id(execution_role_arn=role_arn))
 
         identitystore = self.get_aws_client(
             client_name="identitystore",
@@ -495,7 +497,7 @@ class AWSSSOmixin:
         role_arn = execution_role_arn or getattr(self, "execution_role_arn", None)
 
         if not identity_store_id:
-            identity_store_id = self.get_identity_store_id(execution_role_arn=role_arn)
+            identity_store_id = str(self.get_identity_store_id(execution_role_arn=role_arn))
 
         identitystore = self.get_aws_client(
             client_name="identitystore",
@@ -514,7 +516,7 @@ class AWSSSOmixin:
         group_id: str,
         identity_store_id: str | None = None,
         execution_role_arn: str | None = None,
-    ) -> dict[str, Any]:
+    ) -> ExtendedDict:
         """Add a user to an SSO group.
 
         Args:
@@ -530,7 +532,7 @@ class AWSSSOmixin:
         role_arn = execution_role_arn or getattr(self, "execution_role_arn", None)
 
         if not identity_store_id:
-            identity_store_id = self.get_identity_store_id(execution_role_arn=role_arn)
+            identity_store_id = str(self.get_identity_store_id(execution_role_arn=role_arn))
 
         identitystore = self.get_aws_client(
             client_name="identitystore",
@@ -562,7 +564,7 @@ class AWSSSOmixin:
         role_arn = execution_role_arn or getattr(self, "execution_role_arn", None)
 
         if not identity_store_id:
-            identity_store_id = self.get_identity_store_id(execution_role_arn=role_arn)
+            identity_store_id = str(self.get_identity_store_id(execution_role_arn=role_arn))
 
         identitystore = self.get_aws_client(
             client_name="identitystore",
@@ -587,7 +589,7 @@ class AWSSSOmixin:
         unhump_sets: bool = True,
         sort_by_name: bool = False,
         execution_role_arn: str | None = None,
-    ) -> dict[str, dict[str, Any]]:
+    ) -> ExtendedDict:
         """List all permission sets from IAM Identity Center.
 
         Args:
@@ -605,7 +607,7 @@ class AWSSSOmixin:
         role_arn = execution_role_arn or getattr(self, "execution_role_arn", None)
 
         if not instance_arn:
-            instance_arn = self.get_sso_instance_arn(execution_role_arn=role_arn)
+            instance_arn = str(self.get_sso_instance_arn(execution_role_arn=role_arn))
 
         sso_admin = self.get_aws_client(
             client_name="sso-admin",
@@ -704,7 +706,7 @@ class AWSSSOmixin:
         instance_arn: str | None = None,
         unhump_assignments: bool = True,
         execution_role_arn: str | None = None,
-    ) -> list[dict[str, Any]]:
+    ) -> ExtendedList[ExtendedDict]:
         """List account assignments for a permission set.
 
         Args:
@@ -721,7 +723,7 @@ class AWSSSOmixin:
         role_arn = execution_role_arn or getattr(self, "execution_role_arn", None)
 
         if not instance_arn:
-            instance_arn = self.get_sso_instance_arn(execution_role_arn=role_arn)
+            instance_arn = str(self.get_sso_instance_arn(execution_role_arn=role_arn))
 
         sso_admin = self.get_aws_client(
             client_name="sso-admin",
@@ -761,7 +763,7 @@ class AWSSSOmixin:
         principal_type: str,
         instance_arn: str | None = None,
         execution_role_arn: str | None = None,
-    ) -> dict[str, Any]:
+    ) -> ExtendedDict:
         """Create an account assignment.
 
         Args:
@@ -779,7 +781,7 @@ class AWSSSOmixin:
         role_arn = execution_role_arn or getattr(self, "execution_role_arn", None)
 
         if not instance_arn:
-            instance_arn = self.get_sso_instance_arn(execution_role_arn=role_arn)
+            instance_arn = str(self.get_sso_instance_arn(execution_role_arn=role_arn))
 
         sso_admin = self.get_aws_client(
             client_name="sso-admin",
@@ -805,7 +807,7 @@ class AWSSSOmixin:
         principal_type: str,
         instance_arn: str | None = None,
         execution_role_arn: str | None = None,
-    ) -> dict[str, Any]:
+    ) -> ExtendedDict:
         """Delete an account assignment.
 
         Args:
@@ -823,7 +825,7 @@ class AWSSSOmixin:
         role_arn = execution_role_arn or getattr(self, "execution_role_arn", None)
 
         if not instance_arn:
-            instance_arn = self.get_sso_instance_arn(execution_role_arn=role_arn)
+            instance_arn = str(self.get_sso_instance_arn(execution_role_arn=role_arn))
 
         sso_admin = self.get_aws_client(
             client_name="sso-admin",

@@ -16,17 +16,17 @@ Usage:
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from typing import TYPE_CHECKING, Any
 
 from extended_data import is_nothing
 from extended_data.connectors._optional import require_extra
 from extended_data.connectors.base import VendorConnectorBase
-from extended_data.containers import extend_data, to_builtin
+from extended_data.containers import ExtendedDict, ExtendedList, ExtendedString, extend_data, to_builtin
 from extended_data.logging import Logging
 
 
-AWSSecretValue = str | dict[str, Any] | None
+AWSSecretValue = str | ExtendedString | Mapping[str, Any] | None
 
 
 if TYPE_CHECKING:
@@ -76,14 +76,14 @@ class AWSConnector(VendorConnectorBase):
         super().__init__(logger=logger, **kwargs)
         self._boto3 = _load_aws_sdk()
         self.execution_role_arn = execution_role_arn
-        self.aws_sessions: dict[str, dict[str, boto3.Session]] = {}
+        self.aws_sessions: dict[str, dict[str, Any]] = {}
         self.default_aws_session = self._boto3.Session()
 
     # =========================================================================
     # Session Management
     # =========================================================================
 
-    def assume_role(self, execution_role_arn: str, role_session_name: str) -> boto3.Session:
+    def assume_role(self, execution_role_arn: str, role_session_name: str) -> Any:
         """Assume an AWS IAM role and return a boto3 Session.
 
         Args:
@@ -116,7 +116,7 @@ class AWSConnector(VendorConnectorBase):
         self,
         execution_role_arn: str | None = None,
         role_session_name: str | None = None,
-    ) -> boto3.Session:
+    ) -> Any:
         """Get a boto3 Session, optionally assuming a role.
 
         Args:
@@ -147,7 +147,7 @@ class AWSConnector(VendorConnectorBase):
     # =========================================================================
 
     @staticmethod
-    def create_standard_retry_config(max_attempts: int = 5) -> Config:
+    def create_standard_retry_config(max_attempts: int = 5) -> Any:
         """Create a standard retry configuration.
 
         Args:
@@ -164,9 +164,9 @@ class AWSConnector(VendorConnectorBase):
         client_name: str,
         execution_role_arn: str | None = None,
         role_session_name: str | None = None,
-        config: Config | None = None,
+        config: Any | None = None,
         **client_args: Any,
-    ) -> boto3.client:
+    ) -> Any:
         """Get a boto3 client for the specified service.
 
         Args:
@@ -189,9 +189,9 @@ class AWSConnector(VendorConnectorBase):
         service_name: str,
         execution_role_arn: str | None = None,
         role_session_name: str | None = None,
-        config: Config | None = None,
+        config: Any | None = None,
         **resource_args: Any,
-    ) -> ServiceResource:
+    ) -> Any:
         """Get a boto3 resource for the specified service.
 
         Args:
@@ -221,7 +221,7 @@ class AWSConnector(VendorConnectorBase):
     # Identity Operations
     # =========================================================================
 
-    def get_caller_account_id(self) -> str:
+    def get_caller_account_id(self) -> ExtendedString:
         """Get the AWS account ID of the caller.
 
         Returns:
@@ -229,7 +229,7 @@ class AWSConnector(VendorConnectorBase):
         """
         sts = self.get_aws_client("sts")
         identity = sts.get_caller_identity()
-        return identity["Account"]
+        return self.extend_result(identity["Account"])
 
     # =========================================================================
     # Secrets Manager Operations
@@ -240,8 +240,8 @@ class AWSConnector(VendorConnectorBase):
         secret_id: str,
         execution_role_arn: str | None = None,
         role_session_name: str | None = None,
-        secretsmanager: boto3.client | None = None,
-    ) -> str | None:
+        secretsmanager: Any | None = None,
+    ) -> ExtendedString | None:
         """Get a single secret value from AWS Secrets Manager.
 
         Args:
@@ -279,14 +279,14 @@ class AWSConnector(VendorConnectorBase):
 
     def list_secrets(
         self,
-        filters: list[dict[str, Any]] | None = None,
+        filters: Sequence[Mapping[str, Any]] | None = None,
         prefix: str | None = None,
         get_secret_values: bool = False,
         skip_empty_secrets: bool = False,
         execution_role_arn: str | None = None,
         role_session_name: str | None = None,
         **kwargs: Any,
-    ) -> dict[str, AWSSecretValue]:
+    ) -> ExtendedDict:
         """List secrets from AWS Secrets Manager.
 
         Args:
@@ -327,7 +327,7 @@ class AWSConnector(VendorConnectorBase):
 
         effective_filters: list[dict[str, Any]] = []
         if filters:
-            effective_filters.extend(filters)
+            effective_filters.extend(dict(to_builtin(filter_item)) for filter_item in filters)
         if prefix:
             effective_filters.append({"Key": "name", "Values": [prefix]})
 
@@ -363,9 +363,9 @@ class AWSConnector(VendorConnectorBase):
         name: str,
         secret_value: str,
         description: str = "",
-        tags: dict[str, str] | None = None,
+        tags: Mapping[str, str] | None = None,
         execution_role_arn: str | None = None,
-    ) -> dict[str, Any]:
+    ) -> ExtendedDict:
         """Create a new secret in AWS Secrets Manager."""
         if not name:
             msg = "name is required to create a secret"
@@ -385,7 +385,7 @@ class AWSConnector(VendorConnectorBase):
         if description:
             create_kwargs["Description"] = description
         if tags:
-            create_kwargs["Tags"] = [{"Key": key, "Value": value} for key, value in tags.items()]
+            create_kwargs["Tags"] = [{"Key": str(key), "Value": str(value)} for key, value in tags.items()]
 
         try:
             response = secretsmanager.create_secret(**create_kwargs)
@@ -400,7 +400,7 @@ class AWSConnector(VendorConnectorBase):
         secret_id: str,
         secret_value: str,
         execution_role_arn: str | None = None,
-    ) -> dict[str, Any]:
+    ) -> ExtendedDict:
         """Update an existing secret value."""
         if not secret_id:
             msg = "secret_id is required to update a secret"
@@ -431,7 +431,7 @@ class AWSConnector(VendorConnectorBase):
         force_delete: bool = False,
         recovery_window_days: int = 30,
         execution_role_arn: str | None = None,
-    ) -> dict[str, Any]:
+    ) -> ExtendedDict:
         """Delete a secret from AWS Secrets Manager."""
         if not secret_id:
             msg = "secret_id is required to delete a secret"
@@ -470,7 +470,7 @@ class AWSConnector(VendorConnectorBase):
         dry_run: bool = True,
         execution_role_arn: str | None = None,
         **kwargs: Any,
-    ) -> list[str]:
+    ) -> ExtendedList[ExtendedString]:
         """Delete all secrets that match the provided name prefix."""
         prefix = prefix or kwargs.get("name_prefix")
         if not prefix:
@@ -518,12 +518,12 @@ class AWSConnector(VendorConnectorBase):
 
     def copy_secrets_to_s3(
         self,
-        secrets: dict[str, AWSSecretValue],
+        secrets: Mapping[str, AWSSecretValue],
         bucket: str,
         key: str,
         execution_role_arn: str | None = None,
         role_session_name: str | None = None,
-    ) -> str:
+    ) -> ExtendedString:
         """Copy secrets dictionary to S3 as JSON.
 
         Args:
@@ -559,7 +559,7 @@ class AWSConnector(VendorConnectorBase):
         return self.extend_result(s3_uri)
 
     @staticmethod
-    def load_vendors_from_asm(prefix: str = "/vendors/") -> dict[str, str]:
+    def load_vendors_from_asm(prefix: str = "/vendors/") -> ExtendedDict:
         """Load vendor secrets from AWS Secrets Manager.
 
         This is used in Lambda environments where vendor credentials are stored

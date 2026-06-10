@@ -45,9 +45,10 @@ def main() -> int:
     # List S3 buckets
     print("\n--- S3 Buckets ---")
     try:
-        buckets = full_connector.list_buckets()
-        for bucket in buckets[:5]:  # Show first 5
-            print(f"  Bucket: {bucket}")
+        buckets = full_connector.list_s3_buckets()
+        for bucket_name, bucket in list(buckets.items())[:5]:  # Show first 5
+            created = bucket.get("creation_date") or bucket.get("CreationDate")
+            print(f"  Bucket: {bucket_name} ({created})")
         if len(buckets) > 5:
             print(f"  ... and {len(buckets) - 5} more buckets")
     except Exception as e:
@@ -57,8 +58,9 @@ def main() -> int:
     print("\n--- Organization Accounts ---")
     try:
         accounts = full_connector.get_accounts()
-        for account in accounts[:5]:
-            print(f"  Account: {account}")
+        for account_id, account in list(accounts.items())[:5]:
+            name = account.get("name") or account.get("Name") or account_id
+            print(f"  Account: {account_id} ({name})")
         if len(accounts) > 5:
             print(f"  ... and {len(accounts) - 5} more accounts")
     except Exception as e:

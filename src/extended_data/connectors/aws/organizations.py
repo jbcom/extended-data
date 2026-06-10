@@ -9,14 +9,14 @@ from __future__ import annotations
 import re
 
 from collections import defaultdict
-from collections.abc import Iterator
+from collections.abc import Iterator, Mapping, Sequence
 from copy import deepcopy
 from typing import TYPE_CHECKING, Any
 
 from deepmerge import always_merger
 
 from extended_data import is_nothing, unhump_map
-from extended_data.containers import to_builtin
+from extended_data.containers import ExtendedDict, to_builtin
 
 
 if TYPE_CHECKING:
@@ -45,7 +45,7 @@ class AWSOrganizationsMixin:
             **client_args: Any,
         ) -> Any: ...
 
-        def get_caller_account_id(self) -> str: ...
+        def get_caller_account_id(self) -> Any: ...
 
         def extend_result(self, value: Any) -> Any: ...
 
@@ -54,7 +54,7 @@ class AWSOrganizationsMixin:
         unhump_accounts: bool = True,
         sort_by_name: bool = False,
         execution_role_arn: str | None = None,
-    ) -> dict[str, dict[str, Any]]:
+    ) -> ExtendedDict:
         """Get all AWS accounts from AWS Organizations.
 
         Recursively traverses the organization hierarchy to get all accounts
@@ -154,7 +154,7 @@ class AWSOrganizationsMixin:
         unhump_accounts: bool = True,
         sort_by_name: bool = False,
         execution_role_arn: str | None = None,
-    ) -> dict[str, dict[str, Any]]:
+    ) -> ExtendedDict:
         """Get all AWS accounts managed by AWS Control Tower.
 
         Retrieves accounts from the Control Tower Account Factory.
@@ -222,7 +222,7 @@ class AWSOrganizationsMixin:
         sort_by_name: bool = False,
         include_controltower: bool = True,
         execution_role_arn: str | None = None,
-    ) -> dict[str, dict[str, Any]]:
+    ) -> ExtendedDict:
         """Get all AWS accounts from Organizations and Control Tower.
 
         Combines accounts from AWS Organizations and Control Tower, marking
@@ -274,7 +274,7 @@ class AWSOrganizationsMixin:
         self,
         unhump_units: bool = True,
         execution_role_arn: str | None = None,
-    ) -> dict[str, dict[str, Any]]:
+    ) -> ExtendedDict:
         """Get all organizational units from AWS Organizations.
 
         Args:
@@ -461,7 +461,7 @@ class AWSOrganizationsMixin:
     def label_account(
         self,
         account_id: str,
-        labels: dict[str, str],
+        labels: Mapping[str, str],
         execution_role_arn: str | None = None,
     ) -> None:
         """Apply labels (tags) to an AWS account.
@@ -479,16 +479,16 @@ class AWSOrganizationsMixin:
             execution_role_arn=role_arn,
         )
 
-        tags = [{"Key": k, "Value": v} for k, v in labels.items()]
+        tags = [{"Key": str(k), "Value": str(v)} for k, v in labels.items()]
         orgs.tag_resource(ResourceId=account_id, Tags=tags)
         self.logger.info(f"Applied {len(labels)} tags to account {account_id}")
 
     def classify_accounts(
         self,
-        accounts: dict[str, dict[str, Any]] | None = None,
-        classification_rules: dict[str, list[str]] | None = None,
+        accounts: Mapping[str, Mapping[str, Any]] | None = None,
+        classification_rules: Mapping[str, Sequence[str]] | None = None,
         execution_role_arn: str | None = None,
-    ) -> dict[str, dict[str, Any]]:
+    ) -> ExtendedDict:
         """Classify AWS accounts based on OU paths or tags.
 
         Default classification rules:
@@ -513,6 +513,9 @@ class AWSOrganizationsMixin:
                 unhump_accounts=True,
                 execution_role_arn=execution_role_arn,
             )
+        account_map: dict[str, dict[str, Any]] = {
+            account_id: dict(to_builtin(account_data)) for account_id, account_data in accounts.items()
+        }
 
         default_rules = {
             "production": ["prod", "production"],
@@ -525,7 +528,7 @@ class AWSOrganizationsMixin:
         }
         rules = classification_rules or default_rules
 
-        for account_id, account_data in accounts.items():
+        for account_id, account_data in account_map.items():
             ou_name = account_data.get("ou_name", "").lower()
             ou_path = account_data.get("path", "").lower() if "path" in account_data else ""
             tags = account_data.get("tags", {})
@@ -544,10 +547,10 @@ class AWSOrganizationsMixin:
                 if classification != "unclassified":
                     break
 
-            accounts[account_id]["classification"] = classification
+            account_map[account_id]["classification"] = classification
 
-        self.logger.info(f"Classified {len(accounts)} accounts")
-        return self.extend_result(accounts)
+        self.logger.info(f"Classified {len(account_map)} accounts")
+        return self.extend_result(account_map)
 
     # --------------------------------------------------------------------- #
     # Terraform-migrated helpers                                           #
@@ -555,11 +558,11 @@ class AWSOrganizationsMixin:
 
     def label_aws_accounts(
         self,
-        domains: dict[str, str],
-        aws_organization_units: dict[str, dict[str, Any]] | None = None,
+        domains: Mapping[str, str],
+        aws_organization_units: Mapping[str, Mapping[str, Any]] | None = None,
         caller_account_id: str | None = None,
         execution_role_arn: str | None = None,
-    ) -> dict[str, dict[str, Any]]:
+    ) -> ExtendedDict:
         """Return normalized metadata for every AWS account.
 
         This mirrors the historical ``label_aws_account`` helper from terraform-modules.
@@ -579,8 +582,13 @@ class AWSOrganizationsMixin:
             raise ValueError(msg)
 
         role_arn = execution_role_arn or getattr(self, "execution_role_arn", None)
-        units_lookup = aws_organization_units or self._build_org_units_with_tags(role_arn=role_arn)
-        caller_account_id = caller_account_id or self.get_caller_account_id()
+        units_lookup = (
+            {unit_id: dict(to_builtin(unit)) for unit_id, unit in aws_organization_units.items()}
+            if aws_organization_units is not None
+            else self._build_org_units_with_tags(role_arn=role_arn)
+        )
+        domain_lookup = {str(key): str(value) for key, value in domains.items()}
+        caller_account_id = caller_account_id or str(self.get_caller_account_id())
 
         organization_accounts = self.get_organization_accounts(
             unhump_accounts=False,
@@ -602,7 +610,7 @@ class AWSOrganizationsMixin:
                 account_data=account_data,
                 controltower_data=controltower_data,
                 units_lookup=units_lookup,
-                domains=domains,
+                domains=domain_lookup,
                 caller_account_id=caller_account_id,
             )
 
@@ -615,7 +623,7 @@ class AWSOrganizationsMixin:
                 account_data=controltower_data,
                 controltower_data=controltower_data,
                 units_lookup=units_lookup,
-                domains=domains,
+                domains=domain_lookup,
                 caller_account_id=caller_account_id,
             )
 
@@ -624,11 +632,11 @@ class AWSOrganizationsMixin:
     def label_aws_account(
         self,
         account_id: str,
-        domains: dict[str, str],
-        aws_organization_units: dict[str, dict[str, Any]] | None = None,
+        domains: Mapping[str, str],
+        aws_organization_units: Mapping[str, Mapping[str, Any]] | None = None,
         caller_account_id: str | None = None,
         execution_role_arn: str | None = None,
-    ) -> dict[str, Any]:
+    ) -> ExtendedDict:
         """Return metadata for a single AWS account."""
         labeled_accounts = self.label_aws_accounts(
             domains=domains,
@@ -643,13 +651,13 @@ class AWSOrganizationsMixin:
 
     def classify_aws_accounts(
         self,
-        labeled_accounts: dict[str, dict[str, Any]] | None = None,
+        labeled_accounts: Mapping[str, Mapping[str, Any]] | None = None,
         suffix: str | None = None,
-        domains: dict[str, str] | None = None,
-        aws_organization_units: dict[str, dict[str, Any]] | None = None,
+        domains: Mapping[str, str] | None = None,
+        aws_organization_units: Mapping[str, Mapping[str, Any]] | None = None,
         caller_account_id: str | None = None,
         execution_role_arn: str | None = None,
-    ) -> dict[str, list[str]]:
+    ) -> ExtendedDict:
         """Group accounts by classification, matching terraform-modules output."""
         if labeled_accounts is None:
             if not domains:
@@ -675,12 +683,12 @@ class AWSOrganizationsMixin:
 
     def preprocess_aws_organization(
         self,
-        domains: dict[str, str],
+        domains: Mapping[str, str],
         suffix: str | None = None,
-        aws_organization_units: dict[str, dict[str, Any]] | None = None,
+        aws_organization_units: Mapping[str, Mapping[str, Any]] | None = None,
         caller_account_id: str | None = None,
         execution_role_arn: str | None = None,
-    ) -> dict[str, Any]:
+    ) -> ExtendedDict:
         """Build full organization context (accounts, units, lookups)."""
         role_arn = execution_role_arn or getattr(self, "execution_role_arn", None)
         units_lookup = aws_organization_units or self._build_org_units_with_tags(role_arn=role_arn)
@@ -735,7 +743,7 @@ class AWSOrganizationsMixin:
         include_tags: bool = True,
         include_classification: bool = True,
         execution_role_arn: str | None = None,
-    ) -> dict[str, Any]:
+    ) -> ExtendedDict:
         """Preprocess AWS Organization data for terraform consumption.
 
         Returns a structured dict suitable for terraform data sources.

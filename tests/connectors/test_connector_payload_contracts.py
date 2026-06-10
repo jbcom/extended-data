@@ -2,11 +2,16 @@
 
 from __future__ import annotations
 
-from typing import get_args, get_origin, get_type_hints
+from typing import Any, get_args, get_origin, get_type_hints
 
 import pytest
 
 from extended_data.connectors.anthropic import AnthropicConnector
+from extended_data.connectors.aws import AWSConnector
+from extended_data.connectors.aws.codedeploy import create_codedeploy_deployment, get_aws_codedeploy_deployments
+from extended_data.connectors.aws.organizations import AWSOrganizationsMixin
+from extended_data.connectors.aws.s3 import AWSS3Mixin
+from extended_data.connectors.aws.sso import AWSSSOmixin
 from extended_data.connectors.cursor import CursorConnector
 from extended_data.connectors.github import GitHubConnector
 from extended_data.connectors.google import GoogleConnector
@@ -25,6 +30,53 @@ PAYLOAD_METHODS = (
     (AnthropicConnector.create_message, ExtendedDict),
     (AnthropicConnector.list_models, ExtendedList[ExtendedDict]),
     (AnthropicConnector.get_model, ExtendedDict),
+    (AWSConnector.get_caller_account_id, ExtendedString),
+    (AWSConnector.get_secret, ExtendedString | None),
+    (AWSConnector.list_secrets, ExtendedDict),
+    (AWSConnector.create_secret, ExtendedDict),
+    (AWSConnector.update_secret, ExtendedDict),
+    (AWSConnector.delete_secret, ExtendedDict),
+    (AWSConnector.delete_secrets_matching, ExtendedList[ExtendedString]),
+    (AWSConnector.copy_secrets_to_s3, ExtendedString),
+    (AWSConnector.load_vendors_from_asm, ExtendedDict),
+    (AWSOrganizationsMixin.get_organization_accounts, ExtendedDict),
+    (AWSOrganizationsMixin.get_controltower_accounts, ExtendedDict),
+    (AWSOrganizationsMixin.get_accounts, ExtendedDict),
+    (AWSOrganizationsMixin.get_organization_units, ExtendedDict),
+    (AWSOrganizationsMixin.classify_accounts, ExtendedDict),
+    (AWSOrganizationsMixin.label_aws_accounts, ExtendedDict),
+    (AWSOrganizationsMixin.label_aws_account, ExtendedDict),
+    (AWSOrganizationsMixin.classify_aws_accounts, ExtendedDict),
+    (AWSOrganizationsMixin.preprocess_aws_organization, ExtendedDict),
+    (AWSOrganizationsMixin.preprocess_organization, ExtendedDict),
+    (AWSS3Mixin.list_s3_buckets, ExtendedDict),
+    (AWSS3Mixin.get_bucket_location, ExtendedString),
+    (AWSS3Mixin.get_object, ExtendedString | bytes | None),
+    (AWSS3Mixin.get_json_object, ExtendedDict | ExtendedList[Any] | None),
+    (AWSS3Mixin.put_object, ExtendedDict),
+    (AWSS3Mixin.put_json_object, ExtendedDict),
+    (AWSS3Mixin.delete_object, ExtendedDict),
+    (AWSS3Mixin.list_objects, ExtendedList[ExtendedDict]),
+    (AWSS3Mixin.copy_object, ExtendedDict),
+    (AWSS3Mixin.get_bucket_features, ExtendedDict),
+    (AWSS3Mixin.find_buckets_by_name, ExtendedDict),
+    (AWSS3Mixin.create_bucket, ExtendedDict),
+    (AWSS3Mixin.get_bucket_tags, ExtendedDict),
+    (AWSS3Mixin.get_bucket_sizes, ExtendedDict),
+    (AWSSSOmixin.get_identity_store_id, ExtendedString),
+    (AWSSSOmixin.get_sso_instance_arn, ExtendedString),
+    (AWSSSOmixin.list_sso_users, ExtendedDict),
+    (AWSSSOmixin.get_sso_user, ExtendedDict | None),
+    (AWSSSOmixin.create_sso_user, ExtendedDict),
+    (AWSSSOmixin.list_sso_groups, ExtendedDict),
+    (AWSSSOmixin.create_sso_group, ExtendedDict),
+    (AWSSSOmixin.add_user_to_group, ExtendedDict),
+    (AWSSSOmixin.list_permission_sets, ExtendedDict),
+    (AWSSSOmixin.list_account_assignments, ExtendedList[ExtendedDict]),
+    (AWSSSOmixin.create_account_assignment, ExtendedDict),
+    (AWSSSOmixin.delete_account_assignment, ExtendedDict),
+    (get_aws_codedeploy_deployments, ExtendedDict),
+    (create_codedeploy_deployment, ExtendedDict),
     (CursorConnector.list_agents, ExtendedList[ExtendedDict]),
     (CursorConnector.get_agent_status, ExtendedDict),
     (CursorConnector.get_agent_conversation, ExtendedDict),

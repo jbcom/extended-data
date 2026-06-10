@@ -7,12 +7,12 @@ workloads can rely on the same implementation.
 
 from __future__ import annotations
 
-from collections.abc import Iterable, Sequence
+from collections.abc import Iterable, Mapping, Sequence
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any
 
 from extended_data.connectors.aws import AWSConnector
-from extended_data.containers import extend_data
+from extended_data.containers import ExtendedDict, extend_data, to_builtin
 from extended_data.logging import Logging
 
 
@@ -21,6 +21,9 @@ if TYPE_CHECKING:
     from botocore.config import Config
     from botocore.exceptions import ClientError, WaiterError
 else:
+    BaseClient = Any
+    Config = Any
+
     try:
         from botocore.exceptions import ClientError, WaiterError
     except ImportError:
@@ -149,7 +152,7 @@ def get_aws_codedeploy_deployments(
     statuses: Sequence[str] | None = None,
     created_after: datetime | str | float | None = None,
     created_before: datetime | str | float | None = None,
-    tag_filters: Sequence[dict[str, Any]] | None = None,
+    tag_filters: Sequence[Mapping[str, Any]] | None = None,
     include_details: bool = True,
     limit: int | None = None,
     next_token: str | None = None,
@@ -161,7 +164,7 @@ def get_aws_codedeploy_deployments(
     region_name: str | None = None,
     config: Config | None = None,
     logging_adapter: Logging | None = None,
-) -> dict[str, Any]:
+) -> ExtendedDict:
     """List CodeDeploy deployments with optional detail hydration.
 
     Returns a dictionary with the deployment identifiers, optional deployment
@@ -198,7 +201,7 @@ def get_aws_codedeploy_deployments(
         if end:
             params["createTimeRange"]["end"] = end
     if tag_filters:
-        params["tagFilters"] = list(tag_filters)
+        params["tagFilters"] = [dict(to_builtin(tag_filter)) for tag_filter in tag_filters]
 
     deployment_ids: list[str] = []
     pages = 0
@@ -266,11 +269,11 @@ def get_aws_codedeploy_deployments(
 def create_codedeploy_deployment(
     application_name: str,
     deployment_group_name: str,
-    revision: dict[str, Any],
+    revision: Mapping[str, Any],
     description: str | None = None,
     ignore_application_stop_failures: bool | None = None,
     file_exists_behavior: str | None = None,
-    auto_rollback_configuration: dict[str, Any] | None = None,
+    auto_rollback_configuration: Mapping[str, Any] | None = None,
     update_outdated_instances_only: bool | None = None,
     wait: bool = False,
     waiter_delay: int = 15,
@@ -284,7 +287,7 @@ def create_codedeploy_deployment(
     config: Config | None = None,
     logging_adapter: Logging | None = None,
     **additional_params: Any,
-) -> dict[str, Any]:
+) -> ExtendedDict:
     """Create a CodeDeploy deployment and optionally wait for completion."""
     if not revision:
         msg = "The CodeDeploy revision payload is required."
@@ -313,7 +316,7 @@ def create_codedeploy_deployment(
     request: dict[str, Any] = {
         "applicationName": application_name,
         "deploymentGroupName": deployment_group_name,
-        "revision": revision,
+        "revision": dict(to_builtin(revision)),
     }
     if description:
         request["description"] = description
@@ -322,10 +325,10 @@ def create_codedeploy_deployment(
     if file_exists_behavior:
         request["fileExistsBehavior"] = file_exists_behavior
     if auto_rollback_configuration:
-        request["autoRollbackConfiguration"] = auto_rollback_configuration
+        request["autoRollbackConfiguration"] = dict(to_builtin(auto_rollback_configuration))
     if update_outdated_instances_only is not None:
         request["updateOutdatedInstancesOnly"] = update_outdated_instances_only
-    request.update(additional_params)
+    request.update(to_builtin(additional_params))
 
     try:
         response = client.create_deployment(**request)

@@ -7,10 +7,11 @@ from __future__ import annotations
 
 import json
 
+from collections.abc import Mapping, Sequence
 from typing import TYPE_CHECKING, Any
 
 from extended_data import unhump_map
-from extended_data.containers import to_builtin
+from extended_data.containers import ExtendedDict, ExtendedList, ExtendedString, to_builtin
 
 
 if TYPE_CHECKING:
@@ -63,7 +64,7 @@ class AWSS3Mixin:
         self,
         unhump_buckets: bool = True,
         execution_role_arn: str | None = None,
-    ) -> dict[str, dict[str, Any]]:
+    ) -> ExtendedDict:
         """List all S3 buckets.
 
         Args:
@@ -98,7 +99,7 @@ class AWSS3Mixin:
         self,
         bucket_name: str,
         execution_role_arn: str | None = None,
-    ) -> str:
+    ) -> ExtendedString:
         """Get the region of an S3 bucket.
 
         Args:
@@ -125,7 +126,7 @@ class AWSS3Mixin:
         key: str,
         decode: bool = True,
         execution_role_arn: str | None = None,
-    ) -> str | bytes | None:
+    ) -> ExtendedString | bytes | None:
         """Get an object from S3.
 
         Args:
@@ -163,7 +164,7 @@ class AWSS3Mixin:
         bucket: str,
         key: str,
         execution_role_arn: str | None = None,
-    ) -> dict[str, Any] | list[Any] | None:
+    ) -> ExtendedDict | ExtendedList[Any] | None:
         """Get a JSON object from S3.
 
         Args:
@@ -184,7 +185,7 @@ class AWSS3Mixin:
         if content is None:
             return None
 
-        return self.extend_result(json.loads(content))
+        return self.extend_result(json.loads(content if isinstance(content, bytes) else str(content)))
 
     def put_object(
         self,
@@ -192,9 +193,9 @@ class AWSS3Mixin:
         key: str,
         body: str | bytes,
         content_type: str | None = None,
-        metadata: dict[str, str] | None = None,
+        metadata: Mapping[str, str] | None = None,
         execution_role_arn: str | None = None,
-    ) -> dict[str, Any]:
+    ) -> ExtendedDict:
         """Put an object to S3.
 
         Args:
@@ -233,7 +234,7 @@ class AWSS3Mixin:
             put_args["ContentType"] = "text/yaml"
 
         if metadata:
-            put_args["Metadata"] = metadata
+            put_args["Metadata"] = {str(key): str(value) for key, value in metadata.items()}
 
         response = s3.put_object(**put_args)
         self.logger.debug(f"Put object to s3://{bucket}/{key}")
@@ -243,11 +244,11 @@ class AWSS3Mixin:
         self,
         bucket: str,
         key: str,
-        data: dict[str, Any] | list[Any],
+        data: Mapping[str, Any] | Sequence[Any],
         indent: int = 2,
-        metadata: dict[str, str] | None = None,
+        metadata: Mapping[str, str] | None = None,
         execution_role_arn: str | None = None,
-    ) -> dict[str, Any]:
+    ) -> ExtendedDict:
         """Put a JSON object to S3.
 
         Args:
@@ -276,7 +277,7 @@ class AWSS3Mixin:
         bucket: str,
         key: str,
         execution_role_arn: str | None = None,
-    ) -> dict[str, Any]:
+    ) -> ExtendedDict:
         """Delete an object from S3.
 
         Args:
@@ -307,7 +308,7 @@ class AWSS3Mixin:
         max_keys: int | None = None,
         unhump_objects: bool = True,
         execution_role_arn: str | None = None,
-    ) -> list[dict[str, Any]]:
+    ) -> ExtendedList[ExtendedDict]:
         """List objects in an S3 bucket.
 
         Args:
@@ -361,7 +362,7 @@ class AWSS3Mixin:
         dest_bucket: str,
         dest_key: str,
         execution_role_arn: str | None = None,
-    ) -> dict[str, Any]:
+    ) -> ExtendedDict:
         """Copy an object within S3.
 
         Args:
@@ -398,7 +399,7 @@ class AWSS3Mixin:
         self,
         bucket_name: str,
         execution_role_arn: str | None = None,
-    ) -> dict[str, Any]:
+    ) -> ExtendedDict:
         """Get bucket configuration features (logging, versioning, lifecycle, policy).
 
         Args:
@@ -464,7 +465,7 @@ class AWSS3Mixin:
         name_contains: str,
         include_features: bool = False,
         execution_role_arn: str | None = None,
-    ) -> dict[str, dict[str, Any]]:
+    ) -> ExtendedDict:
         """Find S3 buckets with names containing a string.
 
         Args:
@@ -490,9 +491,11 @@ class AWSS3Mixin:
                 self.logger.debug(f"Found matching bucket: {bucket.name}")
 
                 if include_features:
-                    buckets[bucket.name] = self.get_bucket_features(
-                        bucket_name=bucket.name,
-                        execution_role_arn=role_arn,
+                    buckets[bucket.name] = to_builtin(
+                        self.get_bucket_features(
+                            bucket_name=bucket.name,
+                            execution_role_arn=role_arn,
+                        )
                     )
                 else:
                     buckets[bucket.name] = {
@@ -509,9 +512,9 @@ class AWSS3Mixin:
         region: str | None = None,
         acl: str = "private",
         enable_versioning: bool = False,
-        tags: dict[str, str] | None = None,
+        tags: Mapping[str, str] | None = None,
         execution_role_arn: str | None = None,
-    ) -> dict[str, Any]:
+    ) -> ExtendedDict:
         """Create an S3 bucket.
 
         Args:
@@ -557,7 +560,7 @@ class AWSS3Mixin:
 
         # Apply tags if provided
         if tags:
-            tag_set = [{"Key": k, "Value": v} for k, v in tags.items()]
+            tag_set = [{"Key": str(k), "Value": str(v)} for k, v in tags.items()]
             s3.put_bucket_tagging(
                 Bucket=bucket_name,
                 Tagging={"TagSet": tag_set},
@@ -612,7 +615,7 @@ class AWSS3Mixin:
         self,
         bucket_name: str,
         execution_role_arn: str | None = None,
-    ) -> dict[str, str]:
+    ) -> ExtendedDict:
         """Get tags for an S3 bucket.
 
         Args:
@@ -640,7 +643,7 @@ class AWSS3Mixin:
     def set_bucket_tags(
         self,
         bucket_name: str,
-        tags: dict[str, str],
+        tags: Mapping[str, str],
         execution_role_arn: str | None = None,
     ) -> None:
         """Set tags for an S3 bucket.
@@ -658,7 +661,7 @@ class AWSS3Mixin:
             execution_role_arn=role_arn,
         )
 
-        tag_set = [{"Key": k, "Value": v} for k, v in tags.items()]
+        tag_set = [{"Key": str(k), "Value": str(v)} for k, v in tags.items()]
         s3.put_bucket_tagging(
             Bucket=bucket_name,
             Tagging={"TagSet": tag_set},
@@ -667,9 +670,9 @@ class AWSS3Mixin:
 
     def get_bucket_sizes(
         self,
-        bucket_names: list[str] | None = None,
+        bucket_names: Sequence[str] | None = None,
         execution_role_arn: str | None = None,
-    ) -> dict[str, dict[str, Any]]:
+    ) -> ExtendedDict:
         """Get sizes of S3 buckets using CloudWatch metrics.
 
         Args:
