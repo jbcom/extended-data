@@ -119,6 +119,24 @@ def test_publishing_checklist_matches_workflow_action_pins() -> None:
     assert _publishing_checklist_pins() == _workflow_action_pins()
 
 
+def test_release_workflow_uses_pypi_trusted_publishing() -> None:
+    """Publishing should use PyPI trusted publishing instead of repository tokens."""
+    release_workflow = (WORKFLOW_ROOT / "release.yml").read_text(encoding="utf-8")
+    forbidden_token_markers = (
+        "PYPI_API_TOKEN",
+        "PYPI_TOKEN",
+        "pypi-token",
+        "pypi_token",
+        "__token__",
+        "secrets.PYPI",
+    )
+
+    assert "id-token: write" in release_workflow
+    assert "uv publish --trusted-publishing always" in release_workflow
+    assert "uv publish" in release_workflow
+    assert all(marker not in release_workflow for marker in forbidden_token_markers)
+
+
 def test_public_text_does_not_reference_old_project_origins() -> None:
     """Public code/docs should describe current Extended Data surfaces, not origin packages."""
     offenders: list[str] = []
