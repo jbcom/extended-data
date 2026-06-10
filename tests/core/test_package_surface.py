@@ -81,6 +81,19 @@ def test_clean_major_version_public_names() -> None:
     assert not hasattr(connectors, "VendorConnectors")
 
 
+def test_old_monorepo_import_namespaces_are_not_preserved() -> None:
+    """Old package import namespaces should remain absent in the clean major version."""
+    old_namespaces = (
+        "directed_inputs_class",
+        "extended_data_types",
+        "lifecyclelogging",
+        "vendor_connectors",
+    )
+
+    for namespace in old_namespaces:
+        assert util.find_spec(namespace) is None
+
+
 def test_root_exports_first_class_integrated_primitives() -> None:
     """Inputs, logging, and connector fabric are available from the root package."""
     assert extended_data.DataDecodeError.__name__ == "DataDecodeError"

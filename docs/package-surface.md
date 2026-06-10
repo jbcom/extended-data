@@ -2,6 +2,9 @@
 
 `extended-data` is one Python distribution with a single `extended_data`
 namespace. The root package exposes the primitives users need most often:
+The old `extended_data_types`, `lifecyclelogging`,
+`directed_inputs_class`, and `vendor_connectors` import namespaces are not
+preserved in this major version.
 
 ```python
 from extended_data import (
