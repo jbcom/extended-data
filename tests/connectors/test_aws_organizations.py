@@ -10,6 +10,7 @@ import pytest
 pytest.importorskip("boto3")
 pytest.importorskip("botocore")
 
+from extended_data.containers import ExtendedDict, ExtendedList, ExtendedString, extend_data
 from extended_data.connectors.aws.organizations import AWSOrganizationsMixin
 
 
@@ -47,6 +48,9 @@ class _TestAWSOrganizations(AWSOrganizationsMixin):
     def get_aws_client(self, client_name: str, execution_role_arn=None):
         return self._clients[client_name]
 
+    def extend_result(self, value: Any) -> Any:
+        return extend_data(value)
+
 
 @pytest.fixture
 def organizations_connector() -> _TestAWSOrganizations:
@@ -71,6 +75,9 @@ def test_classify_accounts_applies_rules(organizations_connector: _TestAWSOrgani
         },
     )
 
+    assert isinstance(result, ExtendedDict)
+    assert isinstance(result["111111111111"], ExtendedDict)
+    assert isinstance(result["111111111111"]["classification"], ExtendedString)
     assert result["111111111111"]["classification"] == "production"
     assert result["222222222222"]["classification"] == "development"
     assert result["333333333333"]["classification"] == "sandbox"
@@ -83,6 +90,7 @@ def test_classify_accounts_fetches_when_missing(mocker, organizations_connector:
     output = organizations_connector.classify_accounts()
 
     mock_get.assert_called_once()
+    assert isinstance(output, ExtendedDict)
     assert output["999999999999"]["classification"] == "shared"
 
 
@@ -125,6 +133,8 @@ def test_preprocess_organization_compiles_sections(mocker, organizations_connect
     mock_classify.assert_called_once()
     mock_get_units.assert_called_once()
 
+    assert isinstance(result, ExtendedDict)
+    assert isinstance(result["accounts"], ExtendedDict)
     assert result["root_id"] == "r-root"
     assert result["account_count"] == 1
     assert result["ou_count"] == 1
@@ -155,6 +165,9 @@ def test_get_accounts_merges_controltower_data(mocker, organizations_connector: 
     mock_org.assert_called_once()
     mock_ctrl.assert_called_once()
 
+    assert isinstance(result, ExtendedDict)
+    assert isinstance(result["100"], ExtendedDict)
+    assert isinstance(result["100"]["name"], ExtendedString)
     assert list(result.keys()) == ["100", "200", "300"]
     assert result["200"]["managed"] is True
     assert result["100"]["name"] == "Alpha"
@@ -191,6 +204,9 @@ def test_label_aws_accounts_builds_metadata(mocker, organizations_connector: _Te
     labeled = organizations_connector.label_aws_accounts(domains={"prod": "example.com"})
     account = labeled["123456789012"]
 
+    assert isinstance(labeled, ExtendedDict)
+    assert isinstance(account, ExtendedDict)
+    assert isinstance(account["execution_role_arn"], ExtendedString)
     assert account["json_key"] == "ProdAccount"
     assert account["execution_role_arn"].endswith("role/CustomRole")
     assert account["environment"] == "prod"
@@ -206,6 +222,9 @@ def test_classify_aws_accounts_generates_suffix(organizations_connector: _TestAW
 
     result = organizations_connector.classify_aws_accounts(labeled_accounts=labeled, suffix="_east")
 
+    assert isinstance(result, ExtendedDict)
+    assert isinstance(result["production_accounts_east"], ExtendedList)
+    assert isinstance(result["production_accounts_east"][0], ExtendedString)
     assert result["production_accounts_east"] == ["123"]
     assert result["development_accounts_east"] == ["456"]
 
@@ -247,6 +266,9 @@ def test_preprocess_aws_organization_uses_helpers(mocker, organizations_connecto
 
     context = organizations_connector.preprocess_aws_organization(domains={"prod": "example.com"})
 
+    assert isinstance(context, ExtendedDict)
+    assert isinstance(context["accounts_by_name"], ExtendedDict)
+    assert isinstance(context["organization"], ExtendedDict)
     assert context["organization"]["root_id"] == "r-root"
     assert context["accounts_by_name"]["Prod Account"]["email"] == "prod@example.com"
     assert context["accounts_by_classification"]["production_accounts"] == ["123"]

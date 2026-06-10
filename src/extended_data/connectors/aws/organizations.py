@@ -16,6 +16,7 @@ from typing import TYPE_CHECKING, Any
 from deepmerge import always_merger
 
 from extended_data import is_nothing, unhump_map
+from extended_data.containers import to_builtin
 
 
 if TYPE_CHECKING:
@@ -45,6 +46,8 @@ class AWSOrganizationsMixin:
         ) -> Any: ...
 
         def get_caller_account_id(self) -> str: ...
+
+        def extend_result(self, value: Any) -> Any: ...
 
     def get_organization_accounts(
         self,
@@ -144,7 +147,7 @@ class AWSOrganizationsMixin:
             aws_accounts = dict(sorted(aws_accounts.items(), key=lambda x: x[1].get(key_field, "")))
 
         self.logger.info(f"Retrieved {len(aws_accounts)} organization accounts")
-        return aws_accounts
+        return self.extend_result(aws_accounts)
 
     def get_controltower_accounts(
         self,
@@ -211,7 +214,7 @@ class AWSOrganizationsMixin:
             accounts = dict(sorted(accounts.items(), key=lambda x: x[1].get(key_field, "")))
 
         self.logger.info(f"Retrieved {len(accounts)} Control Tower accounts")
-        return accounts
+        return self.extend_result(accounts)
 
     def get_accounts(
         self,
@@ -237,18 +240,22 @@ class AWSOrganizationsMixin:
         self.logger.info("Getting all AWS accounts")
 
         # Get organization accounts
-        aws_accounts = self.get_organization_accounts(
-            unhump_accounts=False,
-            sort_by_name=False,
-            execution_role_arn=execution_role_arn,
+        aws_accounts = to_builtin(
+            self.get_organization_accounts(
+                unhump_accounts=False,
+                sort_by_name=False,
+                execution_role_arn=execution_role_arn,
+            )
         )
 
         # Merge with Control Tower accounts
         if include_controltower:
-            controltower_accounts = self.get_controltower_accounts(
-                unhump_accounts=False,
-                sort_by_name=False,
-                execution_role_arn=execution_role_arn,
+            controltower_accounts = to_builtin(
+                self.get_controltower_accounts(
+                    unhump_accounts=False,
+                    sort_by_name=False,
+                    execution_role_arn=execution_role_arn,
+                )
             )
             aws_accounts = always_merger.merge(aws_accounts, controltower_accounts)
 
@@ -261,7 +268,7 @@ class AWSOrganizationsMixin:
             aws_accounts = dict(sorted(aws_accounts.items(), key=lambda x: x[1].get(key_field, "")))
 
         self.logger.info(f"Retrieved {len(aws_accounts)} total AWS accounts")
-        return aws_accounts
+        return self.extend_result(aws_accounts)
 
     def get_organization_units(
         self,
@@ -306,7 +313,7 @@ class AWSOrganizationsMixin:
             org_units = {k: unhump_map(v) for k, v in org_units.items()}
 
         self.logger.info(f"Retrieved {len(org_units)} organizational units")
-        return org_units
+        return self.extend_result(org_units)
 
     # ------------------------------------------------------------------ #
     # Internal helpers                                                   #
@@ -540,7 +547,7 @@ class AWSOrganizationsMixin:
             accounts[account_id]["classification"] = classification
 
         self.logger.info(f"Classified {len(accounts)} accounts")
-        return accounts
+        return self.extend_result(accounts)
 
     # --------------------------------------------------------------------- #
     # Terraform-migrated helpers                                           #
@@ -612,7 +619,7 @@ class AWSOrganizationsMixin:
                 caller_account_id=caller_account_id,
             )
 
-        return labeled_accounts
+        return self.extend_result(labeled_accounts)
 
     def label_aws_account(
         self,
@@ -630,7 +637,7 @@ class AWSOrganizationsMixin:
             execution_role_arn=execution_role_arn,
         )
         try:
-            return labeled_accounts[account_id]
+            return self.extend_result(labeled_accounts[account_id])
         except KeyError as exc:  # pragma: no cover - defensive guard
             raise KeyError(f"AWS account {account_id} not found") from exc
 
@@ -664,7 +671,7 @@ class AWSOrganizationsMixin:
                     continue
                 classified_accounts[f"{classification}{suffix_value}"].append(account_key)
 
-        return dict(classified_accounts)
+        return self.extend_result(dict(classified_accounts))
 
     def preprocess_aws_organization(
         self,
@@ -703,23 +710,25 @@ class AWSOrganizationsMixin:
 
         units_by_name = {unit["name"]: unit for unit in units_lookup.values() if unit.get("name")}
 
-        return {
-            "accounts": labeled_accounts,
-            "units": units_lookup,
-            "unit_classifications_by_name": {
-                name: unit.get("classifications", []) for name, unit in units_by_name.items()
-            },
-            "accounts_by_classification": classification_lookup,
-            "accounts_by_name": accounts_by_name,
-            "accounts_by_email": accounts_by_email,
-            "accounts_by_key": accounts_by_key,
-            "organization": {
-                "root_id": root_id,
-                "organizational_units": units_lookup,
-                "account_count": len(labeled_accounts),
-                "ou_count": len(units_lookup),
-            },
-        }
+        return self.extend_result(
+            {
+                "accounts": labeled_accounts,
+                "units": units_lookup,
+                "unit_classifications_by_name": {
+                    name: unit.get("classifications", []) for name, unit in units_by_name.items()
+                },
+                "accounts_by_classification": classification_lookup,
+                "accounts_by_name": accounts_by_name,
+                "accounts_by_email": accounts_by_email,
+                "accounts_by_key": accounts_by_key,
+                "organization": {
+                    "root_id": root_id,
+                    "organizational_units": units_lookup,
+                    "account_count": len(labeled_accounts),
+                    "ou_count": len(units_lookup),
+                },
+            }
+        )
 
     def preprocess_organization(
         self,
@@ -776,4 +785,4 @@ class AWSOrganizationsMixin:
         }
 
         self.logger.info(f"Preprocessed org: {len(accounts)} accounts, {len(org_units)} OUs")
-        return result
+        return self.extend_result(result)
