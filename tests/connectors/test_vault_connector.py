@@ -58,6 +58,60 @@ class TestVaultConnector:
         assert client == mock_client
         mock_hvac_class.assert_called()
 
+    @patch("extended_data.connectors.vault.hvac.Client")
+    def test_vault_client_token_failure_redacts_without_traceback(self, mock_hvac_class, base_connector_kwargs):
+        """Token client initialization failures should avoid traceback diagnostics."""
+        mock_hvac_class.side_effect = VaultError("token failure test-token Authorization: Bearer raw_token")
+        connector = VaultConnector(
+            vault_url="https://vault.example.com", vault_token="test-token", **base_connector_kwargs
+        )
+
+        with pytest.raises(RuntimeError, match="Vault authentication failed"):
+            _ = connector.vault_client
+
+        logs = _logged_text(connector.logger)
+        assert "test-token" not in logs
+        assert "raw_token" not in logs
+        assert "[REDACTED]" in logs
+        connector.logger.exception.assert_not_called()
+        assert all("exc_info" not in logged_call.kwargs for logged_call in connector.logger.method_calls)
+
+    @patch("extended_data.connectors.vault.hvac.Client")
+    def test_vault_client_approle_failure_redacts_without_raw_cause(self, mock_hvac_class, base_connector_kwargs):
+        """AppRole authentication failures should raise a redacted RuntimeError."""
+        mock_client = MagicMock()
+        mock_client.is_authenticated.return_value = False
+        mock_client.auth.approle.login.side_effect = VaultError(
+            "approle failed role-raw secret-raw token=raw-token"
+        )
+        mock_hvac_class.return_value = mock_client
+
+        connector = VaultConnector(vault_url="https://vault.example.com", **base_connector_kwargs)
+
+        def get_input(name, **kwargs):
+            values = {
+                "VAULT_NAMESPACE": None,
+                "VAULT_TOKEN": None,
+                "VAULT_APPROLE_PATH": "approle",
+                "VAULT_ROLE_ID": "role-raw",
+                "VAULT_SECRET_ID": "secret-raw",
+            }
+            return values.get(name, kwargs.get("default"))
+
+        connector.get_input = MagicMock(side_effect=get_input)
+
+        with pytest.raises(RuntimeError) as exc_info:
+            _ = connector.vault_client
+
+        diagnostics = _logged_text(connector.logger) + str(exc_info.value)
+        assert "role-raw" not in diagnostics
+        assert "secret-raw" not in diagnostics
+        assert "raw-token" not in diagnostics
+        assert "[REDACTED]" in diagnostics
+        assert exc_info.value.__cause__ is None
+        connector.logger.exception.assert_not_called()
+        assert all("exc_info" not in logged_call.kwargs for logged_call in connector.logger.method_calls)
+
     def test_is_token_valid(self, base_connector_kwargs):
         """Test token validity check."""
         connector = VaultConnector(
@@ -336,6 +390,29 @@ class TestVaultConnector:
         with pytest.raises(RuntimeError):
             connector.generate_aws_credentials(role_name="prod")
 
+    def test_write_secret_failure_redacts_without_traceback(self, base_connector_kwargs):
+        """Vault write failures should not expose paths, values, or tracebacks."""
+        connector = VaultConnector(
+            vault_url="https://vault.example.com", vault_token="test-token", **base_connector_kwargs
+        )
+
+        mock_client = MagicMock()
+        connector._vault_client = mock_client
+        connector._vault_token_expiration = datetime(2099, 1, 1, tzinfo=timezone.utc)
+        mock_client.secrets.kv.v2.create_or_update_secret.side_effect = VaultError(
+            "write failed at prod/db password=hunter2 token=raw-token"
+        )
+
+        assert connector.write_secret("prod/db", {"password": "hunter2"}) is False
+
+        logs = _logged_text(connector.logger)
+        assert "prod/db" not in logs
+        assert "hunter2" not in logs
+        assert "raw-token" not in logs
+        assert "[REDACTED]" in logs
+        connector.logger.exception.assert_not_called()
+        assert all("exc_info" not in logged_call.kwargs for logged_call in connector.logger.method_calls)
+
     def test_generate_aws_credentials_redacts_error_diagnostics(self, base_connector_kwargs):
         """Vault credential failures should redact role names and exception payloads."""
         connector = VaultConnector(
@@ -360,3 +437,6 @@ class TestVaultConnector:
         assert "hunter2" not in message
         assert "[REDACTED]" in logs
         assert "[REDACTED]" in message
+        assert exc_info.value.__cause__ is None
+        connector.logger.exception.assert_not_called()
+        assert all("exc_info" not in logged_call.kwargs for logged_call in connector.logger.method_calls)

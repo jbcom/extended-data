@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections import deque
+from collections.abc import Iterable, Mapping
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any
 
@@ -45,12 +46,27 @@ VAULT_APPROLE_PATH_ENV_VAR = "VAULT_APPROLE_PATH"
 
 def _safe_log_text(value: Any, *sensitive_values: Any) -> str:
     """Return a redacted string for Vault diagnostic output."""
-    return redact_sensitive_text(value, values=sensitive_values)
+    return redact_sensitive_text(value, values=_iter_diagnostic_values(sensitive_values))
 
 
 def _safe_ref_text(value: Any) -> str:
     """Return a redacted string for sensitive Vault resource references."""
-    return redact_sensitive_text(value, values=[value])
+    return _safe_log_text(value, value)
+
+
+def _iter_diagnostic_values(values: Iterable[Any]) -> Iterable[Any]:
+    """Yield scalar values from nested diagnostic context."""
+    for value in values:
+        if value is None:
+            continue
+        if isinstance(value, Mapping):
+            yield from _iter_diagnostic_values(value.values())
+        elif isinstance(value, (str, bytes)):
+            yield value
+        elif isinstance(value, Iterable):
+            yield from _iter_diagnostic_values(value)
+        else:
+            yield value
 
 
 class VaultConnector(VendorConnectorBase):
@@ -102,7 +118,10 @@ class VaultConnector(VendorConnectorBase):
                 return self._vault_client
 
         except VaultError as e:
-            self.logger.exception(f"Error initializing Vault client with token: {_safe_log_text(e)}")
+            self.logger.error(  # noqa: TRY400 - traceback can expose raw Vault credentials.
+                f"Error initializing Vault client with token: "
+                f"{_safe_log_text(e, vault_url, vault_namespace, vault_token)}"
+            )
 
         # Fallback to AppRole authentication
         self.logger.info("Attempting AppRole authentication")
@@ -131,8 +150,9 @@ class VaultConnector(VendorConnectorBase):
                     return self._vault_client
 
         except VaultError as e:
-            self.logger.exception(f"Error during AppRole authentication: {_safe_log_text(e)}")
-            raise
+            msg = f"Error during AppRole authentication: {_safe_log_text(e, app_role_path, role_id, secret_id)}"
+            self.logger.error(msg)  # noqa: TRY400 - traceback can expose raw Vault credentials.
+            raise RuntimeError(msg) from None
 
         msg = "Vault authentication failed: no valid token or AppRole credentials provided"
         raise RuntimeError(msg)
@@ -153,7 +173,7 @@ class VaultConnector(VendorConnectorBase):
                 # No need to manually set tzinfo if running on Python 3.7 or newer.
                 # If supporting Python <3.7, manual tzinfo assignment is required.
         except VaultError as e:
-            self.logger.exception(f"Failed to lookup Vault token expiration: {_safe_log_text(e)}")
+            self.logger.warning(f"Failed to lookup Vault token expiration: {_safe_log_text(e)}")
 
     def _is_token_valid(self) -> bool:
         """Check if the current Vault token is still valid."""
@@ -415,7 +435,9 @@ class VaultConnector(VendorConnectorBase):
             self.logger.info(f"Wrote secret to {_safe_ref_text(path)}")
             return True
         except VaultError as e:
-            self.logger.exception(f"Failed to write secret {_safe_ref_text(path)}: {_safe_log_text(e, path)}")
+            self.logger.error(  # noqa: TRY400 - traceback can expose raw Vault secret paths.
+                f"Failed to write secret {_safe_ref_text(path)}: {_safe_log_text(e, path, data)}"
+            )
             return False
 
     # ---------------------------------------------------------------------
@@ -529,10 +551,11 @@ class VaultConnector(VendorConnectorBase):
             response = aws_secrets.generate_credentials(name=role_name, mount_point=mount_point, **generate_kwargs)
         except VaultError as e:
             safe_role_name = _safe_ref_text(role_name)
-            self.logger.exception(
-                f"Failed to generate AWS credentials for role {safe_role_name}: {_safe_log_text(e, role_name)}"
+            self.logger.error(  # noqa: TRY400 - traceback can expose raw Vault role names.
+                f"Failed to generate AWS credentials for role {safe_role_name}: "
+                f"{_safe_log_text(e, role_name, mount_point, generate_kwargs)}"
             )
-            raise RuntimeError(f"Failed to generate AWS credentials for role {safe_role_name}") from e
+            raise RuntimeError(f"Failed to generate AWS credentials for role {safe_role_name}") from None
 
         credentials = response.get("data") or {}
         if not credentials:
