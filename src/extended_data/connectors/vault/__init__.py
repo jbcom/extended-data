@@ -43,9 +43,14 @@ VAULT_SECRET_ID_ENV_VAR = "VAULT_SECRET_ID"
 VAULT_APPROLE_PATH_ENV_VAR = "VAULT_APPROLE_PATH"
 
 
-def _safe_log_text(value: Any) -> str:
+def _safe_log_text(value: Any, *sensitive_values: Any) -> str:
     """Return a redacted string for Vault diagnostic output."""
-    return redact_sensitive_text(value)
+    return redact_sensitive_text(value, values=sensitive_values)
+
+
+def _safe_ref_text(value: Any) -> str:
+    """Return a redacted string for sensitive Vault resource references."""
+    return redact_sensitive_text(value, values=[value])
 
 
 class VaultConnector(VendorConnectorBase):
@@ -200,7 +205,7 @@ class VaultConnector(VendorConnectorBase):
             raise ValueError(msg)
 
         display_root = root_path if root_path not in (None, "", "/") else "/"
-        self.logger.info(f"Listing Vault secrets from {_safe_log_text(mount_point)}{_safe_log_text(display_root)}")
+        self.logger.info(f"Listing Vault secrets from {_safe_ref_text(mount_point)}{_safe_ref_text(display_root)}")
 
         secrets: dict[str, dict[str, Any]] = {}
         client = self.vault_client
@@ -220,7 +225,7 @@ class VaultConnector(VendorConnectorBase):
                 for key in root_result.get("data", {}).get("keys", [])
             ]
         except VaultError as e:
-            self.logger.warning(f"Invalid root path {_safe_log_text(display_root)}: {_safe_log_text(e)}")
+            self.logger.warning(f"Invalid root path {_safe_ref_text(display_root)}: {_safe_log_text(e, display_root)}")
             return self.extend_result(secrets)
 
         stack: deque[tuple[str, int]] = deque(initial_paths)
@@ -236,9 +241,11 @@ class VaultConnector(VendorConnectorBase):
                         mount_point=mount_point,
                     )["data"]["data"]
                     secrets[current_path] = secret_data
-                    self.logger.debug(f"Retrieved secret: {_safe_log_text(current_path)}")
+                    self.logger.debug(f"Retrieved secret: {_safe_ref_text(current_path)}")
                 except VaultError as e:
-                    self.logger.warning(f"Failed to read secret {_safe_log_text(current_path)}: {_safe_log_text(e)}")
+                    self.logger.warning(
+                        f"Failed to read secret {_safe_ref_text(current_path)}: {_safe_log_text(e, current_path)}"
+                    )
             # It's a directory, list its contents if within max_depth
             elif max_depth is None or depth < max_depth:
                 try:
@@ -251,7 +258,9 @@ class VaultConnector(VendorConnectorBase):
                         new_path = f"{current_path}{key}"  # current_path already ends with /
                         stack.append((new_path, depth + 1))
                 except VaultError as e:
-                    self.logger.warning(f"Failed to list path {_safe_log_text(current_path)}: {_safe_log_text(e)}")
+                    self.logger.warning(
+                        f"Failed to list path {_safe_ref_text(current_path)}: {_safe_log_text(e, current_path)}"
+                    )
 
         self.logger.info(f"Listed {len(secrets)} Vault secrets")
         return self.extend_result(secrets)
@@ -280,7 +289,7 @@ class VaultConnector(VendorConnectorBase):
                 return None
             return self.extend_result(data)
         except VaultError as e:
-            self.logger.warning(f"Failed to read secret {_safe_log_text(path)}: {_safe_log_text(e)}")
+            self.logger.warning(f"Failed to read secret {_safe_ref_text(path)}: {_safe_log_text(e, path)}")
             return None
 
     def get_secret(
@@ -307,7 +316,7 @@ class VaultConnector(VendorConnectorBase):
             Secret data dict, or None if not found.
         """
         self.logger.debug(
-            f"Getting Vault secret: path={_safe_log_text(path)}, secret_name={_safe_log_text(secret_name)}"
+            f"Getting Vault secret: path={_safe_ref_text(path)}, secret_name={_safe_ref_text(secret_name)}"
         )
 
         client = self.vault_client
@@ -317,29 +326,29 @@ class VaultConnector(VendorConnectorBase):
         if not is_nothing(secret_name):
             # Build the full path: path/secret_name or just secret_name if path is "/"
             secret_path = f"{path}/{secret_name}" if path and path != "/" else secret_name
-            self.logger.debug(f"Resolved secret path: {_safe_log_text(secret_path)}")
+            self.logger.debug(f"Resolved secret path: {_safe_ref_text(secret_path)}")
 
             try:
                 secret_data = client.secrets.kv.v2.read_secret_version(path=secret_path, mount_point=mount_point)[
                     "data"
                 ]["data"]
-                self.logger.debug(f"Retrieved secret data for {_safe_log_text(secret_path)}")
+                self.logger.debug(f"Retrieved secret data for {_safe_ref_text(secret_path)}")
             except VaultError as e:
                 self.logger.warning(
-                    f"Failed to find secret at {_safe_log_text(path)}"
-                    + (f"/{_safe_log_text(secret_name)}" if not is_nothing(secret_name) else "")
-                    + f": {_safe_log_text(e)}"
+                    f"Failed to find secret at {_safe_ref_text(path)}"
+                    + (f"/{_safe_ref_text(secret_name)}" if not is_nothing(secret_name) else "")
+                    + f": {_safe_log_text(e, path, secret_name, secret_path)}"
                 )
             return self.extend_result(secret_data) if secret_data is not None else None
 
         # No secret_name provided - search under path
-        self.logger.info(f"Finding secrets under {_safe_log_text(path)}")
+        self.logger.info(f"Finding secrets under {_safe_ref_text(path)}")
 
         matching_secret_paths = self.list_secrets(root_path=path, mount_point=mount_point)
         self.logger.debug(f"Found {len(matching_secret_paths)} potential secrets")
 
         if is_nothing(matching_secret_paths):
-            self.logger.warning(f"No secrets found matching {_safe_log_text(path)}")
+            self.logger.warning(f"No secrets found matching {_safe_ref_text(path)}")
             return None
 
         # Convert to deque for efficient popleft iteration
@@ -347,7 +356,7 @@ class VaultConnector(VendorConnectorBase):
 
         while path_queue and secret_data is None:
             secret_path = path_queue.popleft()
-            safe_secret_path = _safe_log_text(secret_path)
+            safe_secret_path = _safe_ref_text(secret_path)
             self.logger.debug(f"Checking secret path: {safe_secret_path}")
 
             try:
@@ -403,10 +412,10 @@ class VaultConnector(VendorConnectorBase):
                 secret=data,
                 mount_point=mount_point,
             )
-            self.logger.info(f"Wrote secret to {_safe_log_text(path)}")
+            self.logger.info(f"Wrote secret to {_safe_ref_text(path)}")
             return True
         except VaultError as e:
-            self.logger.exception(f"Failed to write secret {_safe_log_text(path)}: {_safe_log_text(e)}")
+            self.logger.exception(f"Failed to write secret {_safe_ref_text(path)}: {_safe_log_text(e, path)}")
             return False
 
     # ---------------------------------------------------------------------
@@ -436,7 +445,8 @@ class VaultConnector(VendorConnectorBase):
             response = aws_secrets.list_roles(mount_point=mount_point)
         except VaultError as e:
             self.logger.warning(
-                f"Failed to list AWS IAM roles from mount {_safe_log_text(mount_point)}: {_safe_log_text(e)}"
+                f"Failed to list AWS IAM roles from mount {_safe_ref_text(mount_point)}: "
+                f"{_safe_log_text(e, mount_point)}"
             )
             return self.extend_result([])
 
@@ -444,7 +454,7 @@ class VaultConnector(VendorConnectorBase):
         if prefix:
             role_names = [role for role in role_names if role.startswith(prefix)]
 
-        self.logger.info(f"Found {len(role_names)} AWS IAM roles under mount {_safe_log_text(mount_point)}")
+        self.logger.info(f"Found {len(role_names)} AWS IAM roles under mount {_safe_ref_text(mount_point)}")
         return self.extend_result(role_names)
 
     def get_aws_iam_role(
@@ -470,12 +480,12 @@ class VaultConnector(VendorConnectorBase):
         try:
             response = self.vault_client.secrets.aws.read_role(name=role_name, mount_point=mount_point)
         except VaultError as e:
-            self.logger.warning(f"Failed to read AWS IAM role {_safe_log_text(role_name)}: {_safe_log_text(e)}")
+            self.logger.warning(f"Failed to read AWS IAM role {_safe_ref_text(role_name)}: {_safe_log_text(e, role_name)}")
             return None
 
         role_data = response.get("data")
         if is_nothing(role_data):
-            self.logger.warning(f"AWS IAM role {_safe_log_text(role_name)} exists but returned no data")
+            self.logger.warning(f"AWS IAM role {_safe_ref_text(role_name)} exists but returned no data")
             return None
 
         return self.extend_result(role_data)
@@ -518,15 +528,17 @@ class VaultConnector(VendorConnectorBase):
         try:
             response = aws_secrets.generate_credentials(name=role_name, mount_point=mount_point, **generate_kwargs)
         except VaultError as e:
-            safe_role_name = _safe_log_text(role_name)
-            self.logger.exception(f"Failed to generate AWS credentials for role {safe_role_name}: {_safe_log_text(e)}")
+            safe_role_name = _safe_ref_text(role_name)
+            self.logger.exception(
+                f"Failed to generate AWS credentials for role {safe_role_name}: {_safe_log_text(e, role_name)}"
+            )
             raise RuntimeError(f"Failed to generate AWS credentials for role {safe_role_name}") from e
 
         credentials = response.get("data") or {}
         if not credentials:
-            raise RuntimeError(f"Vault returned empty credentials for role {_safe_log_text(role_name)}")
+            raise RuntimeError(f"Vault returned empty credentials for role {_safe_ref_text(role_name)}")
 
-        self.logger.info(f"Generated AWS credentials for role {_safe_log_text(role_name)}")
+        self.logger.info(f"Generated AWS credentials for role {_safe_ref_text(role_name)}")
         return self.extend_result(credentials)
 
 

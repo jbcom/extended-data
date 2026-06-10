@@ -173,6 +173,7 @@ class TestVaultConnector:
 
         logs = _logged_text(connector.logger)
         assert secrets == {}
+        assert "does/not/exist" not in logs
         assert "hunter2" not in logs
         assert "raw_token" not in logs
         assert "[REDACTED]" in logs
@@ -290,8 +291,9 @@ class TestVaultConnector:
 
         logs = _logged_text(connector.logger)
         assert secret == {"password": "hunter2", "username": "admin"}
+        assert "prod/db" not in logs
         assert "hunter2" not in logs
-        assert "Matched prod/db on matcher password" in logs
+        assert "Matched [REDACTED] on matcher password" in logs
 
     def test_generate_aws_credentials_success(self, base_connector_kwargs):
         """generate_aws_credentials should return the generated credential payload."""
