@@ -619,4 +619,4 @@ class CursorConnector(VendorConnectorBase):
         if not data:
             return []
 
-        return data.get("models", [])
+        return self.extend_result(data.get("models", []))

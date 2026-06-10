@@ -22,6 +22,7 @@ from extended_data.connectors.cursor import (
     validate_repository,
     validate_webhook_url,
 )
+from extended_data.containers import ExtendedList, ExtendedString
 
 
 class TestValidators:
@@ -246,3 +247,24 @@ class TestCursorConnector:
 
         with pytest.raises(CursorValidationError, match="format"):
             connector.launch_agent(prompt_text="Hello", repository="invalid")
+
+    @patch("extended_data.connectors.cursor.httpx.Client")
+    def test_list_models_returns_extended_list(self, mock_client_class):
+        """list_models should expose model names as an extended container."""
+        mock_client = MagicMock()
+        mock_client_class.return_value = mock_client
+
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.is_success = True
+        mock_response.headers = {"content-type": "application/json"}
+        mock_response.text = '{"models": ["cursor-small", "cursor-large"]}'
+        mock_response.json.return_value = {"models": ["cursor-small", "cursor-large"]}
+        mock_client.request.return_value = mock_response
+
+        connector = CursorConnector(api_key="test-key")
+        models = connector.list_models()
+
+        assert isinstance(models, ExtendedList)
+        assert isinstance(models[0], ExtendedString)
+        assert models[0].to_snake_case() == "cursor_small"

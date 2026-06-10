@@ -10,6 +10,13 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
+from extended_data.containers import extend_data
+
+
+def _state_value(state: Any) -> Any:
+    """Return enum values for tool payloads while preserving plain strings."""
+    return getattr(state, "value", state)
+
 
 class LaunchAgentSchema(BaseModel):
     """Pydantic schema for the cursor_launch_agent tool."""
@@ -53,11 +60,13 @@ def cursor_launch_agent(
         branch_name=branch_name,
     )
 
-    return {
-        "agent_id": agent.id,
-        "state": agent.state,
-        "repository": agent.repository,
-    }
+    return extend_data(
+        {
+            "agent_id": agent.id,
+            "state": _state_value(agent.state),
+            "repository": agent.repository,
+        }
+    )
 
 
 def cursor_get_agent_status(agent_id: str) -> dict[str, Any]:
@@ -74,12 +83,14 @@ def cursor_get_agent_status(agent_id: str) -> dict[str, Any]:
     connector = CursorConnector()
     agent = connector.get_agent_status(agent_id)
 
-    return {
-        "agent_id": agent.id,
-        "state": agent.state,
-        "error": agent.error,
-        "pr_url": agent.pr_url,
-    }
+    return extend_data(
+        {
+            "agent_id": agent.id,
+            "state": _state_value(agent.state),
+            "error": agent.error,
+            "pr_url": agent.pr_url,
+        }
+    )
 
 
 TOOL_DEFINITIONS = [
