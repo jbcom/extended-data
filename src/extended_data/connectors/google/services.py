@@ -11,6 +11,7 @@ import datetime as dt
 from collections.abc import Mapping, MutableMapping
 from typing import TYPE_CHECKING, Any
 
+from extended_data.connectors.google._diagnostics import safe_google_ref, safe_google_text
 from extended_data.containers import ExtendedDict, ExtendedList
 from extended_data.primitives import unhump_map
 
@@ -135,7 +136,8 @@ class GoogleServicesMixin:
         Returns:
             List of instance dictionaries.
         """
-        self.logger.info(f"Listing Compute Engine instances in {project_id}")
+        safe_project = safe_google_ref(project_id)
+        self.logger.info(f"Listing Compute Engine instances in {safe_project}")
         service = self.get_compute_service()
 
         instances: list[dict[str, Any]] = []
@@ -197,7 +199,8 @@ class GoogleServicesMixin:
         Returns:
             List of cluster dictionaries.
         """
-        self.logger.info(f"Listing GKE clusters in {project_id}")
+        safe_project = safe_google_ref(project_id)
+        self.logger.info(f"Listing GKE clusters in {safe_project}")
         service = self.get_container_service()
 
         parent = f"projects/{project_id}/locations/{location}"
@@ -236,7 +239,7 @@ class GoogleServicesMixin:
             return self.extend_result(service.projects().locations().clusters().get(name=name).execute())
         except HttpError as e:
             if e.resp.status == 404:
-                self.logger.warning(f"GKE cluster not found: {cluster_id}")
+                self.logger.warning(f"GKE cluster not found: {safe_google_ref(cluster_id)}")
                 return None
             raise
 
@@ -258,7 +261,8 @@ class GoogleServicesMixin:
         Returns:
             List of bucket dictionaries.
         """
-        self.logger.info(f"Listing Cloud Storage buckets in {project_id}")
+        safe_project = safe_google_ref(project_id)
+        self.logger.info(f"Listing Cloud Storage buckets in {safe_project}")
         service = self.get_storage_service()
 
         buckets: list[dict[str, Any]] = []
@@ -301,7 +305,8 @@ class GoogleServicesMixin:
         Returns:
             List of SQL instance dictionaries.
         """
-        self.logger.info(f"Listing Cloud SQL instances in {project_id}")
+        safe_project = safe_google_ref(project_id)
+        self.logger.info(f"Listing Cloud SQL instances in {safe_project}")
         service = self.get_sqladmin_service()
 
         instances: list[dict[str, Any]] = []
@@ -344,7 +349,8 @@ class GoogleServicesMixin:
         Returns:
             List of topic dictionaries.
         """
-        self.logger.info(f"Listing Pub/Sub topics in {project_id}")
+        safe_project = safe_google_ref(project_id)
+        self.logger.info(f"Listing Pub/Sub topics in {safe_project}")
         service = self.get_pubsub_service()
 
         topics: list[dict[str, Any]] = []
@@ -383,7 +389,8 @@ class GoogleServicesMixin:
         Returns:
             List of subscription dictionaries.
         """
-        self.logger.info(f"Listing Pub/Sub subscriptions in {project_id}")
+        safe_project = safe_google_ref(project_id)
+        self.logger.info(f"Listing Pub/Sub subscriptions in {safe_project}")
         service = self.get_pubsub_service()
 
         subscriptions: list[dict[str, Any]] = []
@@ -426,7 +433,8 @@ class GoogleServicesMixin:
         Returns:
             List of service dictionaries.
         """
-        self.logger.info(f"Listing enabled services in {project_id}")
+        safe_project = safe_google_ref(project_id)
+        self.logger.info(f"Listing enabled services in {safe_project}")
         service = self.get_serviceusage_service()
 
         services: list[dict[str, Any]] = []
@@ -468,13 +476,15 @@ class GoogleServicesMixin:
         Returns:
             Operation response dictionary.
         """
-        self.logger.info(f"Enabling service {service_name} in {project_id}")
+        safe_project = safe_google_ref(project_id)
+        safe_service_name = safe_google_ref(service_name)
+        self.logger.info(f"Enabling service {safe_service_name} in {safe_project}")
         service = self.get_serviceusage_service()
 
         name = f"projects/{project_id}/services/{service_name}"
         result = service.services().enable(name=name).execute()
 
-        self.logger.info(f"Enabled service {service_name}")
+        self.logger.info(f"Enabled service {safe_service_name}")
         return self.extend_result(result)
 
     def disable_service(
@@ -493,7 +503,9 @@ class GoogleServicesMixin:
         Returns:
             Operation response dictionary.
         """
-        self.logger.info(f"Disabling service {service_name} in {project_id}")
+        safe_project = safe_google_ref(project_id)
+        safe_service_name = safe_google_ref(service_name)
+        self.logger.info(f"Disabling service {safe_service_name} in {safe_project}")
         service = self.get_serviceusage_service()
 
         name = f"projects/{project_id}/services/{service_name}"
@@ -503,7 +515,7 @@ class GoogleServicesMixin:
 
         result = service.services().disable(name=name, body=body).execute()
 
-        self.logger.info(f"Disabled service {service_name}")
+        self.logger.info(f"Disabled service {safe_service_name}")
         return self.extend_result(result)
 
     def batch_enable_services(
@@ -520,7 +532,8 @@ class GoogleServicesMixin:
         Returns:
             Operation response dictionary.
         """
-        self.logger.info(f"Batch enabling {len(service_names)} services in {project_id}")
+        safe_project = safe_google_ref(project_id)
+        self.logger.info(f"Batch enabling {len(service_names)} services in {safe_project}")
         service = self.get_serviceusage_service()
 
         parent = f"projects/{project_id}"
@@ -556,7 +569,8 @@ class GoogleServicesMixin:
         Returns:
             List of key ring dictionaries.
         """
-        self.logger.info(f"Listing KMS key rings in {project_id}/{location}")
+        safe_parent = safe_google_text(f"{project_id}/{location}", project_id, location)
+        self.logger.info(f"Listing KMS key rings in {safe_parent}")
         service = self.get_cloudkms_service()
 
         keyrings: list[dict[str, Any]] = []
@@ -598,7 +612,9 @@ class GoogleServicesMixin:
         Returns:
             Created key ring dictionary.
         """
-        self.logger.info(f"Creating KMS key ring {keyring_id} in {project_id}/{location}")
+        safe_parent = safe_google_text(f"{project_id}/{location}", project_id, location)
+        safe_keyring = safe_google_ref(keyring_id)
+        self.logger.info(f"Creating KMS key ring {safe_keyring} in {safe_parent}")
         service = self.get_cloudkms_service()
 
         parent = f"projects/{project_id}/locations/{location}"
@@ -614,7 +630,7 @@ class GoogleServicesMixin:
             .execute()
         )
 
-        self.logger.info(f"Created key ring {keyring_id}")
+        self.logger.info(f"Created key ring {safe_keyring}")
         return self.extend_result(result)
 
     def create_kms_key(
@@ -639,7 +655,9 @@ class GoogleServicesMixin:
         Returns:
             Created crypto key dictionary.
         """
-        self.logger.info(f"Creating KMS key {key_id} in {keyring_id}")
+        safe_key = safe_google_ref(key_id)
+        safe_keyring = safe_google_ref(keyring_id)
+        self.logger.info(f"Creating KMS key {safe_key} in {safe_keyring}")
         service = self.get_cloudkms_service()
 
         parent = f"projects/{project_id}/locations/{location}/keyRings/{keyring_id}"
@@ -661,7 +679,7 @@ class GoogleServicesMixin:
             .execute()
         )
 
-        self.logger.info(f"Created crypto key {key_id}")
+        self.logger.info(f"Created crypto key {safe_key}")
         return self.extend_result(result)
 
     # =========================================================================
@@ -690,47 +708,48 @@ class GoogleServicesMixin:
         Returns:
             True if the project has no resources.
         """
-        self.logger.info(f"Checking if project {project_id} is empty")
+        safe_project = safe_google_ref(project_id)
+        self.logger.info(f"Checking if project {safe_project} is empty")
 
         try:
             if check_compute:
                 instances = self.list_compute_instances(project_id)
                 if instances:
-                    self.logger.info(f"Project {project_id} has {len(instances)} compute instances")
+                    self.logger.info(f"Project {safe_project} has {len(instances)} compute instances")
                     return False
 
             if check_gke:
                 clusters = self.list_gke_clusters(project_id)
                 if clusters:
-                    self.logger.info(f"Project {project_id} has {len(clusters)} GKE clusters")
+                    self.logger.info(f"Project {safe_project} has {len(clusters)} GKE clusters")
                     return False
 
             if check_storage:
                 buckets = self.list_storage_buckets(project_id)
                 if buckets:
-                    self.logger.info(f"Project {project_id} has {len(buckets)} storage buckets")
+                    self.logger.info(f"Project {safe_project} has {len(buckets)} storage buckets")
                     return False
 
             if check_sql:
                 sql_instances = self.list_sql_instances(project_id)
                 if sql_instances:
-                    self.logger.info(f"Project {project_id} has {len(sql_instances)} SQL instances")
+                    self.logger.info(f"Project {safe_project} has {len(sql_instances)} SQL instances")
                     return False
 
             if check_pubsub:
                 topics = self.list_pubsub_topics(project_id)
                 if topics:
-                    self.logger.info(f"Project {project_id} has {len(topics)} Pub/Sub topics")
+                    self.logger.info(f"Project {safe_project} has {len(topics)} Pub/Sub topics")
                     return False
 
         except Exception as e:
             # API might not be enabled, treat as empty for that service
             if _has_http_status(e, 403):
-                self.logger.debug(f"API access denied, skipping check: {e}")
+                self.logger.debug(f"API access denied, skipping check: {safe_google_text(e, project_id)}")
             else:
                 raise
 
-        self.logger.info(f"Project {project_id} appears to be empty")
+        self.logger.info(f"Project {safe_project} appears to be empty")
         return True
 
     def get_project_iam_users(
@@ -745,7 +764,8 @@ class GoogleServicesMixin:
         Returns:
             Dictionary mapping member identifiers to their roles.
         """
-        self.logger.info(f"Getting IAM users for project {project_id}")
+        safe_project = safe_google_ref(project_id)
+        self.logger.info(f"Getting IAM users for project {safe_project}")
         service = self.get_cloud_resource_manager_service()
 
         response = service.projects().getIamPolicy(resource=f"projects/{project_id}", body={}).execute()
@@ -758,7 +778,7 @@ class GoogleServicesMixin:
                     users[member] = {"roles": [], "member_type": member.split(":")[0]}
                 users[member]["roles"].append(role)
 
-        self.logger.info(f"Found {len(users)} IAM members for project {project_id}")
+        self.logger.info(f"Found {len(users)} IAM members for project {safe_project}")
         return self.extend_result(users)
 
     def get_pubsub_resources_for_project(
@@ -777,7 +797,7 @@ class GoogleServicesMixin:
         Returns:
             Dictionary with 'topics' and 'subscriptions' lists.
         """
-        self.logger.info(f"Getting Pub/Sub resources for project {project_id}")
+        self.logger.info(f"Getting Pub/Sub resources for project {safe_google_ref(project_id)}")
 
         topics = self.list_pubsub_topics(project_id)
         result: dict[str, Any] = {
@@ -868,7 +888,10 @@ class GoogleServicesMixin:
                 except Exception as e:
                     if _has_http_status(e, 403):
                         # Can't check, skip
-                        self.logger.debug(f"Cannot check resources for {project_id}: {e}")
+                        self.logger.debug(
+                            f"Cannot check resources for {safe_google_ref(project_id)}: "
+                            f"{safe_google_text(e, project_id)}"
+                        )
                     else:
                         raise
 

@@ -6,8 +6,6 @@ from __future__ import annotations
 from unittest.mock import MagicMock, patch
 
 import pytest
-import json
-
 pytest.importorskip("google.oauth2.service_account")
 pytest.importorskip("googleapiclient")
 
@@ -95,13 +93,16 @@ class TestGoogleConnector:
         """Invalid service-account JSON diagnostics should not expose key material."""
         invalid_service_account = '{"private_key": "-----BEGIN RSA PRIVATE KEY-----\\nMIIE...test"'
 
-        with pytest.raises(json.JSONDecodeError):
+        with pytest.raises(ValueError) as exc_info:
             GoogleConnector(service_account_info=invalid_service_account, **base_connector_kwargs)
 
         logs = _logged_text(base_connector_kwargs["logger"].logger)
-        assert "MIIE...test" not in logs
-        assert "BEGIN RSA PRIVATE KEY" not in logs
-        assert "[REDACTED]" in logs
+        diagnostics = logs + str(exc_info.value)
+        assert "MIIE...test" not in diagnostics
+        assert "BEGIN RSA PRIVATE KEY" not in diagnostics
+        assert "[REDACTED]" in diagnostics
+        assert exc_info.value.__cause__ is None
+        assert all("exc_info" not in logged_call.kwargs for logged_call in base_connector_kwargs["logger"].logger.method_calls)
 
     @patch("extended_data.connectors.google.service_account.Credentials.from_service_account_info")
     def test_credentials_property(self, mock_from_sa, base_connector_kwargs):

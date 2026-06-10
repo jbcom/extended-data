@@ -102,11 +102,12 @@ class GoogleConnector(
                 service_account_info = json.loads(service_account_info)
             except json.JSONDecodeError as e:
                 safe_payload = redact_sensitive_text(service_account_info, values=[service_account_info])
-                self.logger.exception(
+                error_message = (
                     "Failed to parse GOOGLE_SERVICE_ACCOUNT JSON: "
-                    f"{redact_sensitive_text(e)}. Payload: {safe_payload}"
+                    f"{redact_sensitive_text(e, values=[service_account_info])}. Payload: {safe_payload}"
                 )
-                raise
+                self.logger.error(error_message)  # noqa: TRY400 - traceback can expose raw service-account payloads.
+                raise ValueError(error_message) from None
 
         if not isinstance(service_account_info, dict):
             msg = "Google service account info must be a JSON object"

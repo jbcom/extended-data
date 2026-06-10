@@ -14,6 +14,11 @@ from extended_data.containers import ExtendedDict, ExtendedList, ExtendedString,
 from extended_data.connectors.google import GoogleConnector
 
 
+def _logged_text(logger: MagicMock) -> str:
+    """Return concatenated mock logger messages."""
+    return "\n".join(str(arg) for call in logger.method_calls for arg in call.args)
+
+
 @pytest.fixture
 def google_connector():
     """Create Google connector with mocked services."""
@@ -172,6 +177,23 @@ class TestWorkspaceUsers:
         assert isinstance(body, dict)
         assert isinstance(body["customSchemas"], dict)
 
+    def test_update_user_logs_redact_identifier_but_preserve_call_args(self, google_connector):
+        """Workspace user mutation logs should not expose user keys."""
+        mock_service = MagicMock()
+        mock_users = mock_service.users.return_value
+        mock_users.update.return_value.execute.return_value = {
+            "primaryEmail": "sensitive.user@example.com",
+            "suspended": True,
+        }
+        google_connector.get_admin_directory_service = MagicMock(return_value=mock_service)
+
+        google_connector.update_user("sensitive.user@example.com", suspended=True)
+
+        assert mock_users.update.call_args.kwargs["userKey"] == "sensitive.user@example.com"
+        logs = _logged_text(google_connector.logger)
+        assert "[REDACTED]" in logs
+        assert "sensitive.user@example.com" not in logs
+
     def test_delete_user(self, google_connector):
         """Test deleting a user."""
         mock_service = MagicMock()
@@ -310,6 +332,25 @@ class TestWorkspaceGroups:
         assert isinstance(result, ExtendedDict)
         assert isinstance(result["email"], ExtendedString)
         assert result["email"] == "user1@example.com"
+
+    def test_add_group_member_logs_redact_identifiers_but_preserve_call_args(self, google_connector):
+        """Workspace membership logs should not expose member or group keys."""
+        mock_service = MagicMock()
+        mock_members = mock_service.members.return_value
+        mock_members.insert.return_value.execute.return_value = {
+            "email": "sensitive.user@example.com",
+            "role": "MEMBER",
+        }
+        google_connector.get_admin_directory_service = MagicMock(return_value=mock_service)
+
+        google_connector.add_group_member("private-group@example.com", "sensitive.user@example.com")
+
+        assert mock_members.insert.call_args.kwargs["groupKey"] == "private-group@example.com"
+        assert mock_members.insert.call_args.kwargs["body"]["email"] == "sensitive.user@example.com"
+        logs = _logged_text(google_connector.logger)
+        assert "[REDACTED]" in logs
+        assert "private-group@example.com" not in logs
+        assert "sensitive.user@example.com" not in logs
 
     def test_remove_group_member(self, google_connector):
         """Test removing a member from a group."""

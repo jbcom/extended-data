@@ -6,6 +6,7 @@ from __future__ import annotations
 from collections import deque
 from collections.abc import Iterable
 from typing import Any
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -16,12 +17,9 @@ from extended_data.containers import ExtendedDict, ExtendedList, ExtendedString,
 from extended_data.connectors.google.billing import GoogleBillingMixin
 
 
-class _StubLogger:
-    def info(self, *args, **kwargs):  # pragma: no cover - pass-through logger stub
-        pass
-
-    def warning(self, *args, **kwargs):  # pragma: no cover
-        pass
+def _logged_text(logger: MagicMock) -> str:
+    """Return concatenated mock logger messages."""
+    return "\n".join(str(arg) for call in logger.method_calls for arg in call.args)
 
 
 class _ImmediateResponse:
@@ -87,7 +85,7 @@ class _StubBillingService:
 
 class _TestGoogleBilling(GoogleBillingMixin):
     def __init__(self, service: _StubBillingService):
-        self.logger = _StubLogger()
+        self.logger = MagicMock()
         self._service = service
 
     def get_billing_service(self):
@@ -145,6 +143,24 @@ def test_update_project_billing_info_prefixes_account_name():
             "body": {"billingAccountName": "billingAccounts/1234-ABCD"},
         }
     ]
+
+
+def test_update_project_billing_info_logs_redact_identifiers_but_preserve_call_args():
+    service = _StubBillingService(account_responses=[], project_responses=[])
+    connector = _TestGoogleBilling(service)
+
+    connector.update_project_billing_info("sensitive-project", "1234-PRIVATE")
+
+    assert service.projects().update_calls == [
+        {
+            "name": "projects/sensitive-project",
+            "body": {"billingAccountName": "billingAccounts/1234-PRIVATE"},
+        }
+    ]
+    logs = _logged_text(connector.logger)
+    assert "[REDACTED]" in logs
+    assert "sensitive-project" not in logs
+    assert "1234-PRIVATE" not in logs
 
 
 def test_disable_project_billing_sets_empty_account():

@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, cast
 
+from extended_data.connectors.google._diagnostics import safe_google_ref, safe_google_text
 from extended_data.containers import ExtendedDict, ExtendedList, to_builtin
 from extended_data.primitives import unhump_map
 
@@ -89,7 +90,7 @@ class GoogleBillingMixin:
             return self.extend_result(service.billingAccounts().get(name=name).execute())
         except HttpError as e:
             if e.resp.status == 404:
-                self.logger.warning(f"Billing account not found: {billing_account_id}")
+                self.logger.warning(f"Billing account not found: {safe_google_ref(billing_account_id)}")
                 return None
             raise
 
@@ -110,7 +111,7 @@ class GoogleBillingMixin:
             return self.extend_result(service.projects().getBillingInfo(name=f"projects/{project_id}").execute())
         except HttpError as e:
             if e.resp.status == 404:
-                self.logger.warning(f"Project billing info not found: {project_id}")
+                self.logger.warning(f"Project billing info not found: {safe_google_ref(project_id)}")
                 return None
             raise
 
@@ -128,7 +129,9 @@ class GoogleBillingMixin:
         Returns:
             Updated billing info dictionary.
         """
-        self.logger.info(f"Linking project {project_id} to {billing_account_name}")
+        safe_project = safe_google_ref(project_id)
+        safe_billing_account = safe_google_ref(billing_account_name)
+        self.logger.info(f"Linking project {safe_project} to {safe_billing_account}")
         service = self.get_billing_service()
 
         if not billing_account_name.startswith("billingAccounts/"):
@@ -143,7 +146,7 @@ class GoogleBillingMixin:
             .execute()
         )
 
-        self.logger.info(f"Linked project {project_id} to billing account")
+        self.logger.info(f"Linked project {safe_project} to billing account")
         return self.extend_result(result)
 
     def disable_project_billing(self, project_id: str) -> ExtendedDict:
@@ -155,7 +158,8 @@ class GoogleBillingMixin:
         Returns:
             Updated billing info dictionary.
         """
-        self.logger.info(f"Disabling billing for project {project_id}")
+        safe_project = safe_google_ref(project_id)
+        self.logger.info(f"Disabling billing for project {safe_project}")
         service = self.get_billing_service()
 
         result = (
@@ -167,7 +171,7 @@ class GoogleBillingMixin:
             .execute()
         )
 
-        self.logger.info(f"Disabled billing for project {project_id}")
+        self.logger.info(f"Disabled billing for project {safe_project}")
         return self.extend_result(result)
 
     def list_billing_account_projects(
@@ -184,7 +188,7 @@ class GoogleBillingMixin:
         Returns:
             List of project billing info dictionaries.
         """
-        self.logger.info(f"Listing projects for billing account {billing_account_id}")
+        self.logger.info(f"Listing projects for billing account {safe_google_ref(billing_account_id)}")
         service = self.get_billing_service()
 
         name = billing_account_id
@@ -247,7 +251,7 @@ class GoogleBillingMixin:
         Returns:
             Updated IAM policy dictionary.
         """
-        self.logger.info(f"Setting IAM policy on billing account {billing_account_id}")
+        self.logger.info(f"Setting IAM policy on billing account {safe_google_ref(billing_account_id)}")
         service = self.get_billing_service()
 
         name = billing_account_id
@@ -279,7 +283,8 @@ class GoogleBillingMixin:
         """
         from googleapiclient.errors import HttpError
 
-        self.logger.info(f"Getting BigQuery billing dataset {project_id}.{dataset_id}")
+        safe_dataset_ref = safe_google_text(f"{project_id}.{dataset_id}", project_id, dataset_id)
+        self.logger.info(f"Getting BigQuery billing dataset {safe_dataset_ref}")
 
         # Build BigQuery client
         from google.oauth2 import service_account
@@ -316,7 +321,7 @@ class GoogleBillingMixin:
 
         except HttpError as e:
             if e.resp.status == 404:
-                self.logger.warning(f"Billing dataset not found: {project_id}.{dataset_id}")
+                self.logger.warning(f"Billing dataset not found: {safe_dataset_ref}")
                 return None
             raise
 
@@ -342,7 +347,9 @@ class GoogleBillingMixin:
         """
         from googleapiclient.errors import HttpError
 
-        self.logger.info(f"Setting up billing export for {billing_account_id}")
+        safe_billing_account = safe_google_ref(billing_account_id)
+        safe_dataset = safe_google_ref(dataset_id)
+        self.logger.info(f"Setting up billing export for {safe_billing_account}")
 
         # Build BigQuery client
         from google.oauth2 import service_account
@@ -359,7 +366,7 @@ class GoogleBillingMixin:
         # Check if dataset exists
         try:
             dataset = service.datasets().get(projectId=project_id, datasetId=dataset_id).execute()
-            self.logger.info(f"Dataset {dataset_id} already exists")
+            self.logger.info(f"Dataset {safe_dataset} already exists")
         except HttpError as e:
             if e.resp.status != 404:
                 raise
@@ -379,7 +386,7 @@ class GoogleBillingMixin:
             }
 
             dataset = service.datasets().insert(projectId=project_id, body=dataset_body).execute()
-            self.logger.info(f"Created billing export dataset: {dataset_id}")
+            self.logger.info(f"Created billing export dataset: {safe_dataset}")
 
         return self.extend_result(
             {

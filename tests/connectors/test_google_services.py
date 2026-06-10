@@ -14,6 +14,11 @@ from extended_data.containers import ExtendedDict, ExtendedList, ExtendedString,
 from extended_data.connectors.google import GoogleConnector
 
 
+def _logged_text(logger: MagicMock) -> str:
+    """Return concatenated mock logger messages."""
+    return "\n".join(str(arg) for call in logger.method_calls for arg in call.args)
+
+
 @pytest.fixture
 def google_connector():
     """Create Google connector with mocked services."""
@@ -323,6 +328,30 @@ class TestCloudKMS:
         assert isinstance(result["name"], ExtendedString)
         assert "new-key" in result["name"]
 
+    def test_create_kms_key_logs_redact_identifiers_but_preserve_call_args(self, google_connector):
+        """KMS mutation logs should not expose project/key resource identifiers."""
+        mock_service = MagicMock()
+        mock_projects = mock_service.projects.return_value
+        mock_locations = mock_projects.locations.return_value
+        mock_keyrings = mock_locations.keyRings.return_value
+        mock_keys = mock_keyrings.cryptoKeys.return_value
+        mock_keys.create.return_value.execute.return_value = {
+            "name": "projects/sensitive-project/locations/us/keyRings/private-ring/cryptoKeys/private-key"
+        }
+        google_connector.get_cloudkms_service = MagicMock(return_value=mock_service)
+
+        google_connector.create_kms_key("sensitive-project", "us", "private-ring", "private-key")
+
+        assert mock_keys.create.call_args.kwargs["parent"] == (
+            "projects/sensitive-project/locations/us/keyRings/private-ring"
+        )
+        assert mock_keys.create.call_args.kwargs["cryptoKeyId"] == "private-key"
+        logs = _logged_text(google_connector.logger)
+        assert "[REDACTED]" in logs
+        assert "sensitive-project" not in logs
+        assert "private-ring" not in logs
+        assert "private-key" not in logs
+
 
 class TestServiceUsage:
     """Tests for Service Usage operations."""
@@ -358,6 +387,23 @@ class TestServiceUsage:
         assert isinstance(result, ExtendedDict)
         assert isinstance(result["name"], ExtendedString)
         assert result["name"] == "operations/enable-compute"
+
+    def test_enable_service_logs_redact_identifiers_but_preserve_call_args(self, google_connector):
+        """Service Usage logs should not expose project or service names."""
+        mock_service = MagicMock()
+        mock_services = mock_service.services.return_value
+        mock_services.enable.return_value.execute.return_value = {"name": "operations/enable-private"}
+        google_connector.get_serviceusage_service = MagicMock(return_value=mock_service)
+
+        google_connector.enable_service("sensitive-project", "private.googleapis.com")
+
+        assert mock_services.enable.call_args.kwargs["name"] == (
+            "projects/sensitive-project/services/private.googleapis.com"
+        )
+        logs = _logged_text(google_connector.logger)
+        assert "[REDACTED]" in logs
+        assert "sensitive-project" not in logs
+        assert "private.googleapis.com" not in logs
 
     def test_disable_service(self, google_connector):
         """Test disabling an API."""
@@ -395,6 +441,26 @@ class TestServiceUsage:
 
 class TestProjectResourceSummary:
     """Tests for derived project resource operations."""
+
+    def test_is_project_empty_denied_check_logs_redact_project_and_error(self, google_connector):
+        """Denied resource checks should not expose project IDs or raw provider details."""
+        denied = RuntimeError("denied sensitive-project token=raw-token")
+        denied.resp = MagicMock(status=403)  # type: ignore[attr-defined]
+        google_connector.list_compute_instances = MagicMock(side_effect=denied)
+
+        result = google_connector.is_project_empty(
+            "sensitive-project",
+            check_gke=False,
+            check_storage=False,
+            check_sql=False,
+            check_pubsub=False,
+        )
+
+        assert result is True
+        logs = _logged_text(google_connector.logger)
+        assert "[REDACTED]" in logs
+        assert "sensitive-project" not in logs
+        assert "raw-token" not in logs
 
     def test_get_project_iam_users(self, google_connector):
         """Test deriving IAM members from a project policy."""

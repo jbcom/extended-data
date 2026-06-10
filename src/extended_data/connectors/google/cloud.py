@@ -9,6 +9,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import TYPE_CHECKING, Any
 
+from extended_data.connectors.google._diagnostics import safe_google_ref, safe_google_text
 from extended_data.containers import ExtendedDict, ExtendedList, ExtendedString, to_builtin
 from extended_data.primitives import unhump_map
 
@@ -52,7 +53,7 @@ class GoogleCloudMixin:
 
         org_name = organizations[0]["name"]
         org_id = org_name.split("/")[-1]
-        self.logger.info(f"Organization ID: {org_id}")
+        self.logger.info(f"Organization ID: {safe_google_ref(org_id)}")
         return self.extend_result(org_id)
 
     def get_organization(self) -> ExtendedDict:
@@ -138,7 +139,7 @@ class GoogleCloudMixin:
             return self.extend_result(service.projects().get(name=f"projects/{project_id}").execute())
         except HttpError as e:
             if e.resp.status == 404:
-                self.logger.warning(f"Project not found: {project_id}")
+                self.logger.warning(f"Project not found: {safe_google_ref(project_id)}")
                 return None
             raise
 
@@ -160,7 +161,8 @@ class GoogleCloudMixin:
         Returns:
             Operation response dictionary.
         """
-        self.logger.info(f"Creating project: {project_id}")
+        safe_project = safe_google_ref(project_id)
+        self.logger.info(f"Creating project: {safe_project}")
         service = self.get_cloud_resource_manager_service()
 
         project_body: dict[str, Any] = {
@@ -174,7 +176,7 @@ class GoogleCloudMixin:
             project_body["labels"] = to_builtin(labels)
 
         result = service.projects().create(body=project_body).execute()
-        self.logger.info(f"Created project: {project_id}")
+        self.logger.info(f"Created project: {safe_project}")
         return self.extend_result(result)
 
     def delete_project(self, project_id: str) -> ExtendedDict:
@@ -186,11 +188,12 @@ class GoogleCloudMixin:
         Returns:
             Operation response dictionary.
         """
-        self.logger.info(f"Deleting project: {project_id}")
+        safe_project = safe_google_ref(project_id)
+        self.logger.info(f"Deleting project: {safe_project}")
         service = self.get_cloud_resource_manager_service()
 
         result = service.projects().delete(name=f"projects/{project_id}").execute()
-        self.logger.info(f"Deleted project: {project_id}")
+        self.logger.info(f"Deleted project: {safe_project}")
         return self.extend_result(result)
 
     def move_project(
@@ -207,7 +210,9 @@ class GoogleCloudMixin:
         Returns:
             Operation response dictionary.
         """
-        self.logger.info(f"Moving project {project_id} to {destination_parent}")
+        safe_project = safe_google_ref(project_id)
+        safe_destination = safe_google_ref(destination_parent)
+        self.logger.info(f"Moving project {safe_project} to {safe_destination}")
         service = self.get_cloud_resource_manager_service()
 
         result = (
@@ -218,7 +223,7 @@ class GoogleCloudMixin:
             )
             .execute()
         )
-        self.logger.info(f"Moved project {project_id}")
+        self.logger.info(f"Moved project {safe_project}")
         return self.extend_result(result)
 
     def list_folders(
@@ -235,7 +240,7 @@ class GoogleCloudMixin:
         Returns:
             List of folder dictionaries.
         """
-        self.logger.info(f"Listing folders under {parent}")
+        self.logger.info(f"Listing folders under {safe_google_ref(parent)}")
         service = self.get_cloud_resource_manager_service()
 
         folders: list[dict[str, Any]] = []
@@ -306,7 +311,7 @@ class GoogleCloudMixin:
         Returns:
             Updated policy dictionary.
         """
-        self.logger.info(f"Setting org policy on {resource}")
+        self.logger.info(f"Setting org policy on {safe_google_ref(resource)}")
         service = self.get_cloud_resource_manager_service()
 
         return self.extend_result(
@@ -380,7 +385,8 @@ class GoogleCloudMixin:
         Returns:
             Updated IAM policy dictionary.
         """
-        self.logger.info(f"Setting IAM policy on {resource_type}/{resource}")
+        safe_resource = safe_google_text(f"{resource_type}/{resource}", resource)
+        self.logger.info(f"Setting IAM policy on {safe_resource}")
         service = self.get_cloud_resource_manager_service()
 
         body = {"policy": to_builtin(policy)}
@@ -413,7 +419,7 @@ class GoogleCloudMixin:
                 .execute()
             )
 
-        self.logger.info(f"Set IAM policy on {resource_type}/{resource}")
+        self.logger.info(f"Set IAM policy on {safe_resource}")
         return self.extend_result(result)
 
     def add_iam_binding(
@@ -434,7 +440,9 @@ class GoogleCloudMixin:
         Returns:
             Updated IAM policy dictionary.
         """
-        self.logger.info(f"Adding IAM binding: {role} -> {member} on {resource}")
+        self.logger.info(
+            f"Adding IAM binding: {role} -> {safe_google_ref(member)} on {safe_google_ref(resource)}"
+        )
 
         policy = self.get_iam_policy(resource, resource_type)
         bindings = policy.get("bindings", [])
@@ -469,7 +477,7 @@ class GoogleCloudMixin:
         Returns:
             List of service account dictionaries.
         """
-        self.logger.info(f"Listing service accounts in {project_id}")
+        self.logger.info(f"Listing service accounts in {safe_google_ref(project_id)}")
         service = self.get_iam_service()
 
         accounts: list[dict[str, Any]] = []
@@ -512,7 +520,9 @@ class GoogleCloudMixin:
         Returns:
             Created service account dictionary.
         """
-        self.logger.info(f"Creating service account: {account_id} in {project_id}")
+        safe_account = safe_google_ref(account_id)
+        safe_project = safe_google_ref(project_id)
+        self.logger.info(f"Creating service account: {safe_account} in {safe_project}")
         service = self.get_iam_service()
 
         result = (
@@ -531,5 +541,5 @@ class GoogleCloudMixin:
             .execute()
         )
 
-        self.logger.info(f"Created service account: {result.get('email')}")
+        self.logger.info(f"Created service account: {safe_google_ref(result.get('email'))}")
         return self.extend_result(result)

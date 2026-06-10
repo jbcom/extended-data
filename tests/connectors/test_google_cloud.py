@@ -14,6 +14,11 @@ from extended_data.containers import ExtendedDict, ExtendedList, ExtendedString,
 from extended_data.connectors.google import GoogleConnector
 
 
+def _logged_text(logger: MagicMock) -> str:
+    """Return concatenated mock logger messages."""
+    return "\n".join(str(arg) for call in logger.method_calls for arg in call.args)
+
+
 @pytest.fixture
 def google_connector():
     """Create Google connector with mocked services."""
@@ -193,6 +198,23 @@ class TestProjects:
         assert isinstance(result["projectId"], ExtendedString)
         assert result["projectId"] == "new-project"
 
+    def test_create_project_logs_redact_identifier_but_preserve_body(self, google_connector):
+        """Project creation logs should not expose project IDs."""
+        mock_service = MagicMock()
+        mock_projects = mock_service.projects.return_value
+        mock_projects.create.return_value.execute.return_value = {
+            "projectId": "sensitive-project",
+            "name": "Sensitive Project",
+        }
+        google_connector.get_cloud_resource_manager_service = MagicMock(return_value=mock_service)
+
+        google_connector.create_project("sensitive-project", "Sensitive Project")
+
+        assert mock_projects.create.call_args.kwargs["body"]["projectId"] == "sensitive-project"
+        logs = _logged_text(google_connector.logger)
+        assert "[REDACTED]" in logs
+        assert "sensitive-project" not in logs
+
     def test_delete_project(self, google_connector):
         """Test deleting a project."""
         mock_service = MagicMock()
@@ -285,6 +307,25 @@ class TestIAM:
         assert result["bindings"][0]["role"] == "roles/viewer"
         call_body = mock_projects.setIamPolicy.call_args.kwargs["body"]
         assert isinstance(call_body["policy"], dict)
+
+    def test_add_iam_binding_logs_redact_member_and_resource_but_preserve_policy(self, google_connector):
+        """IAM binding logs should redact member/resource identifiers without changing policy."""
+        google_connector.get_iam_policy = MagicMock(return_value=extend_data({"bindings": []}))
+        google_connector.set_iam_policy = MagicMock(return_value=extend_data({"bindings": []}))
+
+        google_connector.add_iam_binding(
+            "sensitive-project",
+            "roles/viewer",
+            "user:sensitive.user@example.com",
+        )
+
+        policy = google_connector.set_iam_policy.call_args.args[1]
+        assert policy["bindings"][0]["members"] == ["user:sensitive.user@example.com"]
+        logs = _logged_text(google_connector.logger)
+        assert "[REDACTED]" in logs
+        assert "sensitive-project" not in logs
+        assert "sensitive.user@example.com" not in logs
+        assert "roles/viewer" in logs
 
     def test_list_service_accounts(self, google_connector):
         """Test listing service accounts."""
