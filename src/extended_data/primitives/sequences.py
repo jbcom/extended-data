@@ -66,21 +66,18 @@ def filter_list(
         items = []
 
     allowlist_provided = allowlist is not None
-    allowlist = allowlist or []
-    denylist = denylist or []
+    allowlist = list(allowlist or [])
+    denylist = list(denylist or [])
 
-    allowed_set = set(allowlist)
-    denied_set = set(denylist)
-
-    enforce_allowlist = allowlist_provided and bool(allowed_set)
+    enforce_allowlist = allowlist_provided and bool(allowlist)
 
     filtered = []
 
     for elem in items:
-        if enforce_allowlist and elem not in allowed_set:
+        if enforce_allowlist and elem not in allowlist:
             continue
 
-        if elem in denied_set:
+        if elem in denylist:
             continue
 
         filtered.append(elem)

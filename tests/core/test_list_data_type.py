@@ -122,9 +122,19 @@ def test_filter_list_empty_allowlist_behaves_like_no_filter(
 
 
 def test_filter_list_handles_non_string_values() -> None:
-    """Filtering is generic across hashable value types."""
+    """Filtering is generic across value types."""
     result = filter_list([1, 2, 3, 4], allowlist={1, 2, 4}, denylist={4})
     assert result == [1, 2]
+
+
+def test_filter_list_handles_unhashable_values() -> None:
+    """Filtering should not require set-compatible values."""
+    api = {"name": "api"}
+    worker = {"name": "worker"}
+    db = {"name": "db"}
+
+    result = filter_list([api, worker, db], allowlist=[api, worker], denylist=[worker])
+    assert result == [api]
 
 
 def test_filter_list_denylist(test_list: list[str], denylist: list[str]) -> None:
