@@ -6,9 +6,73 @@ services like GKE, Compute Engine, Cloud Storage, Cloud SQL, Pub/Sub, etc.
 
 from __future__ import annotations
 
+import datetime as dt
+
 from typing import TYPE_CHECKING, Any
 
 from extended_data import unhump_map
+
+
+_PROJECT_ACTIVITY_TIME_FIELDS = (
+    "lastActivityTime",
+    "lastActiveTime",
+    "last_activity_time",
+    "last_active_time",
+    "updateTime",
+    "createTime",
+)
+
+
+def _has_http_status(exc: BaseException, status: int) -> bool:
+    """Return whether an exception exposes a Google-style HTTP response status."""
+    return getattr(getattr(exc, "resp", None), "status", None) == status
+
+
+def _parse_project_activity_time(value: Any) -> dt.datetime | None:
+    """Parse a Google-style timestamp into an aware UTC datetime."""
+    if not isinstance(value, str) or not value.strip():
+        return None
+
+    normalized = value.strip()
+    if normalized.endswith("Z"):
+        normalized = f"{normalized[:-1]}+00:00"
+
+    try:
+        parsed = dt.datetime.fromisoformat(normalized)
+    except ValueError:
+        return None
+
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=dt.timezone.utc)
+    return parsed.astimezone(dt.timezone.utc)
+
+
+def _latest_project_activity_time(project_data: dict[str, Any]) -> dt.datetime | None:
+    """Return the latest activity timestamp available on project metadata."""
+    timestamps = [
+        parsed
+        for field in _PROJECT_ACTIVITY_TIME_FIELDS
+        if (parsed := _parse_project_activity_time(project_data.get(field))) is not None
+    ]
+    return max(timestamps) if timestamps else None
+
+
+def _project_activity_is_stale(
+    project_data: dict[str, Any],
+    *,
+    days_since_activity: int,
+    now: dt.datetime | None = None,
+) -> bool:
+    """Return whether project metadata indicates activity older than the threshold."""
+    activity_time = _latest_project_activity_time(project_data)
+    if activity_time is None:
+        return True
+
+    reference_time = now or dt.datetime.now(dt.timezone.utc)
+    if reference_time.tzinfo is None:
+        reference_time = reference_time.replace(tzinfo=dt.timezone.utc)
+    cutoff = reference_time.astimezone(dt.timezone.utc) - dt.timedelta(days=days_since_activity)
+    return activity_time <= cutoff
 
 
 class GoogleServicesMixin:
@@ -621,8 +685,6 @@ class GoogleServicesMixin:
         """
         self.logger.info(f"Checking if project {project_id} is empty")
 
-        from googleapiclient.errors import HttpError
-
         try:
             if check_compute:
                 instances = self.list_compute_instances(project_id)
@@ -654,9 +716,9 @@ class GoogleServicesMixin:
                     self.logger.info(f"Project {project_id} has {len(topics)} Pub/Sub topics")
                     return False
 
-        except HttpError as e:
+        except Exception as e:
             # API might not be enabled, treat as empty for that service
-            if e.resp.status == 403:
+            if _has_http_status(e, 403):
                 self.logger.debug(f"API access denied, skipping check: {e}")
             else:
                 raise
@@ -742,20 +804,25 @@ class GoogleServicesMixin:
         """Find projects that appear to be inactive or dead.
 
         A project is considered inactive if:
-        - It has no resources (compute, GKE, storage, etc.)
         - Its lifecycle state is not ACTIVE
+        - It has no resources and no recent activity timestamp
 
         Args:
             projects: Pre-fetched projects dict. Fetched if not provided.
             check_resources: Check if projects have resources. Defaults to True.
-            days_since_activity: Days threshold for activity (not implemented yet).
+            days_since_activity: Days threshold for available project activity
+                timestamps. Empty projects with recent timestamps are not marked
+                inactive. Empty projects without activity timestamps are treated
+                as inactive.
 
         Returns:
             List of inactive project dictionaries.
         """
-        from googleapiclient.errors import HttpError
-
         self.logger.info("Finding inactive projects")
+
+        if days_since_activity < 0:
+            msg = "days_since_activity must be greater than or equal to 0."
+            raise ValueError(msg)
 
         if projects is None:
             # Get projects from cloud module - requires GoogleCloudMixin
@@ -780,11 +847,19 @@ class GoogleServicesMixin:
             if check_resources:
                 try:
                     is_empty = self.is_project_empty(project_id)
-                    if is_empty:
-                        project_data["inactive_reason"] = "no_resources"
+                    if is_empty and _project_activity_is_stale(
+                        project_data,
+                        days_since_activity=days_since_activity,
+                    ):
+                        activity_time = _latest_project_activity_time(project_data)
+                        project_data["inactive_reason"] = (
+                            f"no_resources_since={activity_time.date().isoformat()}"
+                            if activity_time is not None
+                            else "no_resources"
+                        )
                         inactive.append(project_data)
-                except HttpError as e:
-                    if e.resp.status == 403:
+                except Exception as e:
+                    if _has_http_status(e, 403):
                         # Can't check, skip
                         self.logger.debug(f"Cannot check resources for {project_id}: {e}")
                     else:
