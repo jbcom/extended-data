@@ -36,6 +36,16 @@ data = decode_json('{"status": "ok"}')
 print(encode_yaml(data))
 ```
 
+The fabric can also instantiate any registered connector by name:
+
+```python
+github = connectors.get_connector(
+    "github",
+    github_owner="jbcom",
+    github_token="...",
+)
+```
+
 ## Package Shape
 
 ```text
@@ -48,9 +58,10 @@ extended_data/
   workflows/    higher-order workflow composition
 ```
 
-Vendor connectors are first-class adapters in the data fabric. They share the
-same primitives for input loading, structured logging, data normalization,
-retry behavior, and serialization.
+Vendor connectors are first-class adapters in the data fabric. `ConnectorFabric`
+uses the registry to resolve connectors by name, injects shared input/logging
+context, caches connector instances, and lets specialized helpers coexist with
+generic vendor lookup.
 
 More detail lives in [`docs/package-surface.md`](docs/package-surface.md).
 

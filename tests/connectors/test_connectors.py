@@ -72,6 +72,46 @@ class TestConnectorFabric:
         cached = vc._get_cached_client("test_type", param="different")
         assert cached is None
 
+    @patch("extended_data.connectors.connectors.get_connector_class")
+    def test_get_connector_uses_registry_with_shared_context(self, mock_get_connector_class):
+        """Generic connector lookup injects shared fabric inputs and logging."""
+
+        class DummyConnector:
+            def __init__(self, *, logger, inputs, token):
+                self.logger = logger
+                self.inputs = inputs
+                self.token = token
+
+        vc = ConnectorFabric(inputs={"TOKEN": "from-inputs"}, from_environment=False)
+        mock_get_connector_class.return_value = DummyConnector
+
+        connector = vc.get_connector("dummy", token="direct-token")
+
+        assert isinstance(connector, DummyConnector)
+        assert connector.logger is vc.logging
+        assert connector.inputs is vc.inputs
+        assert connector.token == "direct-token"
+        mock_get_connector_class.assert_called_once_with("dummy")
+
+    @patch("extended_data.connectors.connectors.get_connector_class")
+    def test_get_connector_caches_by_name_and_kwargs(self, mock_get_connector_class):
+        """Generic connectors are cached independently by name and constructor args."""
+
+        class DummyConnector:
+            def __init__(self, **kwargs):
+                self.kwargs = kwargs
+
+        vc = ConnectorFabric(from_environment=False)
+        mock_get_connector_class.return_value = DummyConnector
+
+        first = vc.get_connector("dummy", token="one")
+        second = vc.get_connector("DUMMY", token="one")
+        third = vc.get_connector("dummy", token="two")
+
+        assert first is second
+        assert third is not first
+        assert mock_get_connector_class.call_count == 2
+
     @requires_boto3
     @patch("extended_data.connectors.aws.AWSConnector")
     def test_get_aws_connector(self, mock_aws):

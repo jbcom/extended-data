@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, Any
 from extended_data import get_default_dict, get_unique_signature, make_hashable
 
 # Import zoom directly (no extra deps)
+from extended_data.connectors.registry import get_connector_class
 from extended_data.connectors.zoom import ZoomConnector
 from extended_data.inputs import InputProvider
 from extended_data.logging import Logging
@@ -77,6 +78,30 @@ class ConnectorFabric(InputProvider):
         """Store a client in cache."""
         cache_key = self._get_cache_key(**kwargs)
         self._client_cache[client_type][cache_key] = client
+
+    def get_connector(self, name: str, **kwargs: Any) -> Any:
+        """Get a cached connector instance by registry name.
+
+        The connector receives the fabric's shared inputs and logger unless
+        explicit values are passed in ``kwargs``. This is the generic path for
+        vendor adapters that are registered through entry points or built-ins.
+        """
+        connector_name = name.lower()
+        cache_kwargs = {"name": connector_name, **kwargs}
+
+        cached = self._get_cached_client("connector", **cache_kwargs)
+        if cached:
+            return cached
+
+        connector_cls = get_connector_class(connector_name)
+        connector_kwargs = {
+            "logger": self.logging,
+            "inputs": self.inputs,
+            **kwargs,
+        }
+        connector = connector_cls(**connector_kwargs)
+        self._set_cached_client("connector", connector, **cache_kwargs)
+        return connector
 
     # -------------------------------------------------------------------------
     # AWS
