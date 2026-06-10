@@ -9,14 +9,27 @@ from __future__ import annotations
 
 from collections.abc import Iterable, Sequence
 from datetime import datetime, timezone
-from typing import Any
-
-from botocore.client import BaseClient
-from botocore.config import Config
-from botocore.exceptions import ClientError, WaiterError
+from typing import TYPE_CHECKING, Any
 
 from extended_data.connectors.aws import AWSConnector
 from extended_data.logging import Logging
+
+
+if TYPE_CHECKING:
+    from botocore.client import BaseClient
+    from botocore.config import Config
+    from botocore.exceptions import ClientError, WaiterError
+else:
+    try:
+        from botocore.exceptions import ClientError, WaiterError
+    except ImportError:
+
+        class ClientError(Exception):
+            """Fallback exception used until botocore is imported."""
+
+
+        class WaiterError(Exception):
+            """Fallback exception used until botocore is imported."""
 
 
 _BATCH_GET_LIMIT = 25

@@ -9,13 +9,19 @@ import json
 
 from typing import TYPE_CHECKING, Any
 
-from botocore.exceptions import ClientError
-
 from extended_data import unhump_map
 
 
 if TYPE_CHECKING:
     from boto3.resources.base import ServiceResource
+    from botocore.exceptions import ClientError
+else:
+    try:
+        from botocore.exceptions import ClientError
+    except ImportError:
+
+        class ClientError(Exception):
+            """Fallback exception used until botocore is imported."""
 
 
 class AWSS3Mixin:

@@ -53,8 +53,16 @@ from __future__ import annotations
 
 from extended_data._version import __version__
 
-# Core imports (always available)
+# Core package primitives
 from extended_data.connectors import meshy
+from extended_data.connectors.anthropic import AnthropicConnector
+from extended_data.connectors.aws import (
+    AWSConnector,
+    AWSConnectorFull,
+    AWSOrganizationsMixin,
+    AWSS3Mixin,
+    AWSSSOmixin,
+)
 from extended_data.connectors.base import VendorConnectorBase
 from extended_data.connectors.cloud_params import (
     get_aws_call_params,
@@ -63,71 +71,27 @@ from extended_data.connectors.cloud_params import (
 )
 from extended_data.connectors.connectors import ConnectorFabric
 
-# Connectors with no extra dependencies (always available)
+# Built-in connector classes; vendor SDKs are loaded by connector instances.
 from extended_data.connectors.cursor import CursorConnector
+from extended_data.connectors.github import GitHubConnector
+from extended_data.connectors.google import (
+    GoogleBillingConnector,
+    GoogleBillingMixin,
+    GoogleCloudConnector,
+    GoogleCloudMixin,
+    GoogleConnector,
+    GoogleConnectorFull,
+    GoogleServicesMixin,
+    GoogleWorkspaceConnector,
+    GoogleWorkspaceMixin,
+    JulesConnector,
+)
+from extended_data.connectors.meshy import MeshyConnector
+from extended_data.connectors.secrets import SecretsConnector
+from extended_data.connectors.slack import SlackConnector
+from extended_data.connectors.vault import VaultConnector
 from extended_data.connectors.zoom import ZoomConnector
 
-
-# Optional connectors - wrapped in try/except for graceful degradation
-# These require optional dependencies: pip install extended-data[<extra>]
-
-# Anthropic connector (requires: pip install extended-data[anthropic])
-try:
-    from extended_data.connectors.anthropic import AnthropicConnector
-except ImportError:
-    AnthropicConnector = None  # type: ignore[misc, assignment]
-
-# AWS connector (requires: pip install extended-data[aws])
-try:
-    from extended_data.connectors.aws import (
-        AWSConnector,
-        AWSConnectorFull,
-        AWSOrganizationsMixin,
-        AWSS3Mixin,
-        AWSSSOmixin,
-    )
-except ImportError:
-    AWSConnector = None  # type: ignore[misc, assignment]
-    AWSConnectorFull = None  # type: ignore[misc, assignment]
-    AWSOrganizationsMixin = None  # type: ignore[misc, assignment]
-    AWSS3Mixin = None  # type: ignore[misc, assignment]
-    AWSSSOmixin = None  # type: ignore[misc, assignment]
-
-# GitHub connector (requires: pip install extended-data[github])
-try:
-    from extended_data.connectors.github import GitHubConnector
-except ImportError:
-    GitHubConnector = None  # type: ignore[misc, assignment]
-
-# Google connector (requires: pip install extended-data[google])
-try:
-    from extended_data.connectors.google import (
-        GoogleBillingMixin,
-        GoogleCloudMixin,
-        GoogleConnector,
-        GoogleConnectorFull,
-        GoogleServicesMixin,
-        GoogleWorkspaceMixin,
-    )
-except ImportError:
-    GoogleConnector = None  # type: ignore[misc, assignment]
-    GoogleConnectorFull = None  # type: ignore[misc, assignment]
-    GoogleWorkspaceMixin = None  # type: ignore[misc, assignment]
-    GoogleCloudMixin = None  # type: ignore[misc, assignment]
-    GoogleBillingMixin = None  # type: ignore[misc, assignment]
-    GoogleServicesMixin = None  # type: ignore[misc, assignment]
-
-# Slack connector (requires: pip install extended-data[slack])
-try:
-    from extended_data.connectors.slack import SlackConnector
-except ImportError:
-    SlackConnector = None  # type: ignore[misc, assignment]
-
-# Vault connector (requires: pip install extended-data[vault])
-try:
-    from extended_data.connectors.vault import VaultConnector
-except ImportError:
-    VaultConnector = None  # type: ignore[misc, assignment]
 
 __all__ = [
     "AWSConnector",
@@ -140,12 +104,18 @@ __all__ = [
     "ConnectorInfo",
     "CursorConnector",
     "GitHubConnector",
+    "GoogleBillingConnector",
     "GoogleBillingMixin",
+    "GoogleCloudConnector",
     "GoogleCloudMixin",
     "GoogleConnector",
     "GoogleConnectorFull",
     "GoogleServicesMixin",
+    "GoogleWorkspaceConnector",
     "GoogleWorkspaceMixin",
+    "JulesConnector",
+    "MeshyConnector",
+    "SecretsConnector",
     "SlackConnector",
     "VaultConnector",
     "VendorConnectorBase",

@@ -19,7 +19,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 from extended_data import is_nothing
-from extended_data.connectors._optional import is_connector_available, require_extra
+from extended_data.connectors._optional import require_extra
 from extended_data.connectors.base import VendorConnectorBase
 from extended_data.logging import Logging
 
@@ -602,42 +602,10 @@ class AWSConnector(VendorConnectorBase):
         return vendors
 
 
-if TYPE_CHECKING:
-    from extended_data.connectors.aws.codedeploy import (
-        create_codedeploy_deployment,
-        get_aws_codedeploy_deployments,
-    )
-    from extended_data.connectors.aws.organizations import AWSOrganizationsMixin
-    from extended_data.connectors.aws.s3 import AWSS3Mixin
-    from extended_data.connectors.aws.sso import AWSSSOmixin
-elif is_connector_available("aws"):
-    # Import submodule operations to make them available when the AWS SDK is present.
-    from extended_data.connectors.aws.codedeploy import create_codedeploy_deployment, get_aws_codedeploy_deployments
-    from extended_data.connectors.aws.organizations import AWSOrganizationsMixin
-    from extended_data.connectors.aws.s3 import AWSS3Mixin
-    from extended_data.connectors.aws.sso import AWSSSOmixin
-else:
-
-    class AWSOrganizationsMixin:
-        """Placeholder mixin used when the aws extra is not installed."""
-
-
-    class AWSS3Mixin:
-        """Placeholder mixin used when the aws extra is not installed."""
-
-
-    class AWSSSOmixin:
-        """Placeholder mixin used when the aws extra is not installed."""
-
-
-    def create_codedeploy_deployment(*args: Any, **kwargs: Any) -> Any:
-        """Require the aws extra before creating CodeDeploy deployments."""
-        _load_aws_sdk()
-
-
-    def get_aws_codedeploy_deployments(*args: Any, **kwargs: Any) -> Any:
-        """Require the aws extra before listing CodeDeploy deployments."""
-        _load_aws_sdk()
+from extended_data.connectors.aws.codedeploy import create_codedeploy_deployment, get_aws_codedeploy_deployments
+from extended_data.connectors.aws.organizations import AWSOrganizationsMixin
+from extended_data.connectors.aws.s3 import AWSS3Mixin
+from extended_data.connectors.aws.sso import AWSSSOmixin
 
 
 class AWSConnectorFull(AWSConnector, AWSOrganizationsMixin, AWSSSOmixin, AWSS3Mixin):

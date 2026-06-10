@@ -10,6 +10,7 @@ import extended_data.secrets.tools as secrets_tools
 
 from extended_data import connectors, inputs, secrets
 from extended_data.connectors.connectors import ConnectorFabric
+from extended_data.connectors.registry import BUILTIN_CONNECTORS
 from extended_data.inputs import InputProvider
 from extended_data.logging import Logging
 
@@ -51,6 +52,22 @@ def test_root_exports_first_class_integrated_primitives() -> None:
     assert callable(extended_data.directed_inputs)
     assert callable(extended_data.get_connector)
     assert callable(extended_data.list_connector_info)
+
+
+def test_connectors_root_exports_builtin_connector_classes() -> None:
+    """Every built-in registry connector class is exported from the connector package root."""
+    for spec in BUILTIN_CONNECTORS.values():
+        value = getattr(connectors, spec.class_name)
+
+        assert isinstance(value, type)
+        assert value.__name__ == spec.class_name
+
+
+def test_aws_full_connector_keeps_operation_mixins_without_aws_extra() -> None:
+    """AWSConnectorFull should expose real operation mixins even before boto3 is installed."""
+    assert callable(connectors.AWSConnectorFull.list_s3_buckets)
+    assert callable(connectors.AWSConnectorFull.get_organization_accounts)
+    assert callable(connectors.AWSConnectorFull.list_sso_users)
 
 
 def test_secrets_tools_alias_preserves_public_exports() -> None:
