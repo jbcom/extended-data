@@ -27,7 +27,7 @@ from extended_data.connectors.base import VendorConnectorBase
 from extended_data.containers import ExtendedDict, ExtendedList, ExtendedString, to_builtin
 from extended_data.logging import Logging
 from extended_data.primitives import is_nothing
-from extended_data.primitives.redaction import REDACTED, redact_sensitive_text
+from extended_data.primitives.redaction import redact_sensitive_text
 
 
 AWSSecretValue = str | ExtendedString | Mapping[str, Any] | None
@@ -35,14 +35,7 @@ AWSSecretValue = str | ExtendedString | Mapping[str, Any] | None
 
 def _safe_aws_text(value: Any, *sensitive_values: Any) -> str:
     """Redact secrets and resource identifiers from AWS diagnostics."""
-    text = redact_sensitive_text(value)
-    for sensitive_value in sensitive_values:
-        if sensitive_value is None:
-            continue
-        raw_value = str(sensitive_value)
-        if raw_value:
-            text = text.replace(raw_value, REDACTED)
-    return text
+    return redact_sensitive_text(value, values=sensitive_values)
 
 
 def _aws_secret_error(action: str, exc: BaseException, *sensitive_values: Any) -> str:

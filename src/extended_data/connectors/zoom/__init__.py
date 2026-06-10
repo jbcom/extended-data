@@ -5,14 +5,13 @@ from __future__ import annotations
 import base64
 
 from typing import Any
-from urllib.parse import quote
 
 import requests
 
 from extended_data.connectors.base import VendorConnectorBase
 from extended_data.containers import ExtendedDict, ExtendedList
 from extended_data.logging import Logging
-from extended_data.primitives.redaction import REDACTED, redact_sensitive_text
+from extended_data.primitives.redaction import redact_sensitive_text
 
 
 # Default timeout for HTTP requests in seconds
@@ -21,16 +20,7 @@ DEFAULT_REQUEST_TIMEOUT = 30
 
 def _safe_zoom_text(value: Any, *sensitive_values: Any) -> str:
     """Redact secrets and request identifiers from Zoom diagnostics."""
-    text = redact_sensitive_text(value)
-    for sensitive_value in sensitive_values:
-        if sensitive_value is None:
-            continue
-        raw_value = str(sensitive_value)
-        if not raw_value:
-            continue
-        for candidate in {raw_value, quote(raw_value, safe="")}:
-            text = text.replace(candidate, REDACTED)
-    return text
+    return redact_sensitive_text(value, values=sensitive_values)
 
 
 def _zoom_error(action: str, exc: BaseException, *sensitive_values: Any) -> str:
