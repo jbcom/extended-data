@@ -6,7 +6,7 @@ import sys
 
 from collections.abc import Iterator, Mapping, Sequence
 from time import sleep
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 
 # batched was added in Python 3.12
@@ -22,12 +22,33 @@ else:
             yield batch
 
 
-from slack_sdk.errors import SlackApiError
-from slack_sdk.web import WebClient
-
 from extended_data import is_nothing, wrap_raw_data_for_export
+from extended_data.connectors._optional import require_extra
 from extended_data.connectors.base import VendorConnectorBase
 from extended_data.logging import Logging
+
+
+if TYPE_CHECKING:
+    from slack_sdk.errors import SlackApiError
+    from slack_sdk.web import WebClient
+else:
+    WebClient = None
+
+    class SlackApiError(Exception):
+        """Fallback exception used until slack-sdk is imported."""
+
+
+def _load_slack_sdk() -> None:
+    """Load slack-sdk lazily so tool metadata can import without the slack extra."""
+    global SlackApiError, WebClient
+
+    if WebClient is None:
+        try:
+            SlackApiError = require_extra("slack_sdk.errors", "slack").SlackApiError
+            WebClient = require_extra("slack_sdk.web", "slack").WebClient
+        except ImportError as exc:
+            msg = "slack-sdk is required for SlackConnector. Install with: pip install extended-data[slack]"
+            raise ImportError(msg) from exc
 
 
 # Settings
@@ -172,6 +193,7 @@ class SlackConnector(VendorConnectorBase):
             **kwargs: Extra keyword arguments forwarded to VendorConnectorBase.
         """
         super().__init__(logger=logger, **kwargs)
+        _load_slack_sdk()
 
         self.token = token or self.get_input("SLACK_TOKEN", required=True)
         self.bot_token = bot_token or self.get_input("SLACK_BOT_TOKEN", required=True)

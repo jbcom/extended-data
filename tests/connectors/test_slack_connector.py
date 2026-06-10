@@ -1,15 +1,23 @@
-# ruff: noqa: I001
 """Tests for SlackConnector."""
 
 from __future__ import annotations
+
+import importlib.util
 
 from unittest.mock import MagicMock, patch
 
 import pytest
 
-pytest.importorskip("slack_sdk")
-
 from extended_data.connectors.slack import SlackConnector
+
+
+def test_slack_connector_requires_slack_sdk_when_constructed_without_extra():
+    """Slack tool metadata imports without slack-sdk, but the connector still requires the extra."""
+    if importlib.util.find_spec("slack_sdk") is not None:
+        pytest.skip("slack-sdk is installed")
+
+    with pytest.raises(ImportError, match=r"extended-data\[slack\]"):
+        SlackConnector(token="xoxp-test", bot_token="xoxb-test", from_environment=False)
 
 
 class TestSlackConnector:
