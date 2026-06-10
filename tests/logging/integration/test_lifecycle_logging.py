@@ -6,6 +6,7 @@ from pathlib import Path
 
 import pytest
 
+from extended_data.containers import ExtendedDict, ExtendedSet
 from extended_data.logging import Logging
 
 
@@ -59,6 +60,8 @@ def test_full_logging_lifecycle(temp_logger: Logging, tmp_path: Path) -> None:
         log_level="info",  # type: ignore[arg-type]
     )
     assert storage_result is not None
+    assert isinstance(temp_logger.stored_messages, ExtendedDict)
+    assert isinstance(temp_logger.stored_messages[storage_marker], ExtendedSet)
     assert storage_msg in temp_logger.stored_messages[storage_marker]
 
     # Verify file output exists at the location specified in fixture

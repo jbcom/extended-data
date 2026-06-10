@@ -125,6 +125,10 @@ input value should remain in Tier 2 form.
 
 `Logging` provides structured lifecycle logging for applications and connector
 workflows without creating log files unless file output is explicitly enabled.
+Stored log message collections are exposed as `ExtendedDict` values keyed by
+storage marker, with each marker containing an `ExtendedSet` of promoted
+messages.
+
 `ConnectorFabric` caches and coordinates vendor connectors while sharing input
 loading, logging, data normalization, retry behavior, and serialization.
 

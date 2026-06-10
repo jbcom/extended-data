@@ -7,6 +7,7 @@ from typing import Any
 
 import pytest
 
+from extended_data.containers import ExtendedDict, ExtendedSet, ExtendedString
 from extended_data.logging import Logging
 from extended_data.logging.log_types import LogLevel
 
@@ -70,8 +71,12 @@ def test_storage_marker(logger: Logging) -> None:
     )
 
     assert result == msg
+    assert isinstance(logger.stored_messages, ExtendedDict)
     assert storage_marker in logger.stored_messages
+    assert isinstance(logger.stored_messages[storage_marker], ExtendedSet)
     assert msg in logger.stored_messages[storage_marker]
+    stored_msg = next(iter(logger.stored_messages[storage_marker]))
+    assert isinstance(stored_msg, ExtendedString)
 
 
 def test_context_marker(logger: Logging) -> None:
@@ -184,6 +189,8 @@ def test_log_level_filtering(logger: Logging) -> None:
 
     # Allowed level should be stored
     logger.logged_statement(msg, log_level="info")  # type: ignore[arg-type]
+    assert isinstance(logger.stored_messages, ExtendedDict)
+    assert isinstance(logger.stored_messages[storage_marker], ExtendedSet)
     assert msg in logger.stored_messages[storage_marker]
 
     # Denied level should not be stored
@@ -230,7 +237,9 @@ def test_all_log_levels(logger: Logging, log_level: LogLevel) -> None:
 
     assert result == msg
     assert storage_marker in logger.stored_messages
+    assert isinstance(logger.stored_messages[storage_marker], ExtendedSet)
     stored_msg = next(iter(m for m in logger.stored_messages[storage_marker] if msg in m))
+    assert isinstance(stored_msg, ExtendedString)
 
     # Check for warning prefix on appropriate levels
     if log_level not in ["debug", "info"]:

@@ -18,7 +18,6 @@ import logging
 import os
 import sys
 
-from collections import defaultdict
 from collections.abc import Callable, Mapping, Sequence
 from copy import deepcopy
 from pathlib import Path
@@ -40,6 +39,7 @@ from extended_data import (
     to_snake_case,
     wrap_raw_data_for_export,
 )
+from extended_data.containers import ExtendedDict, ExtendedSet
 from extended_data.logging.const import VERBOSITY
 from extended_data.logging.handlers import add_console_handler, add_file_handler
 from extended_data.logging.log_types import LogLevel
@@ -118,7 +118,7 @@ class Logging:
         )
 
         # Message storage
-        self.stored_messages: defaultdict[str, set[str]] = defaultdict(set)
+        self.stored_messages: ExtendedDict = ExtendedDict()
         self.error_list: list[str] = []
         self.last_error_instance: Any = None
         self.last_error_text: str | None = None
@@ -281,9 +281,19 @@ class Logging:
             return
 
         if (not allowed_levels or log_level in allowed_levels) and log_level not in denied_levels:
-            self.stored_messages[storage_marker].add(
+            self._stored_messages_for(storage_marker).add(
                 f":warning: {msg}" if log_level not in ["debug", "info"] else msg,
             )
+
+    def _stored_messages_for(self, storage_marker: str) -> ExtendedSet[str]:
+        """Return the promoted message collection for a storage marker."""
+        stored_messages = self.stored_messages.get(storage_marker)
+        if isinstance(stored_messages, ExtendedSet):
+            return stored_messages
+
+        promoted_messages = ExtendedSet[str](stored_messages or [])
+        self.stored_messages[storage_marker] = promoted_messages
+        return promoted_messages
 
     def logged_statement(
         self,
