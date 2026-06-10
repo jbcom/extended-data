@@ -174,6 +174,7 @@ def cmd_methods(args: argparse.Namespace) -> int:
         _write_stderr(str(e))
         return 1
 
+    methods: list[dict[str, str]] = []
     for name in sorted(dir(cls)):
         if name.startswith("_"):
             continue
@@ -182,6 +183,15 @@ def cmd_methods(args: argparse.Namespace) -> int:
             continue
 
         doc = attr.__doc__.split("\n")[0].strip()[:50] if attr.__doc__ else "No description"
+        methods.append({"name": name, "description": doc})
+
+    if getattr(args, "json", False):
+        _write_stdout(_json_output(methods))
+        return 0
+
+    for method in methods:
+        name = method["name"]
+        doc = method["description"]
         _write_stdout(f"  {name:<30} {doc}")
 
     return 0
@@ -256,6 +266,7 @@ Examples:
     # Methods command
     methods_parser = subparsers.add_parser("methods", help="List methods for a connector")
     methods_parser.add_argument("connector", help="Connector name")
+    methods_parser.add_argument("--json", action="store_true", help="JSON output")
     methods_parser.set_defaults(func=cmd_methods)
 
     # Info command

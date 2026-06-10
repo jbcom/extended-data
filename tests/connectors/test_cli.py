@@ -63,6 +63,18 @@ def test_cli_methods_lists_public_methods():
     assert "Decode an HTTP response body" in output
 
 
+def test_cli_methods_json_lists_public_methods() -> None:
+    """Methods command can emit machine-readable method metadata."""
+    args = argparse.Namespace(connector="meshy", json=True)
+    with patch("sys.stdout.write") as mock_write:
+        exit_code = cmd_methods(args)
+
+    assert exit_code == 0
+    methods = json.loads(mock_write.call_args.args[0])
+    decode_response = next(method for method in methods if method["name"] == "decode_response")
+    assert decode_response["description"].startswith("Decode an HTTP response body")
+
+
 def test_cli_call_parses_dynamic_keyword_arguments() -> None:
     """Call command accepts documented --arg value pairs after the method."""
     connector = MagicMock()

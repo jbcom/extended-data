@@ -79,6 +79,7 @@ The same catalog is available from the CLI:
 ```bash
 extended-data list
 extended-data info github --json
+extended-data methods github --json
 ```
 
 ## Package Shape

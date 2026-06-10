@@ -232,6 +232,13 @@ github_info = fabric.get_connector_info("github")
 
 Each catalog entry includes availability, source, extra name, install command,
 required packages, missing packages, module, class, and description fields.
+The installed CLI exposes the same discovery layer for shell automation:
+
+```bash
+extended-data list --json
+extended-data info github --json
+extended-data methods github --json
+```
 
 ## Optional Integrations
 
