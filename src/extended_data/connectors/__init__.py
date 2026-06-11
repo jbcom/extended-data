@@ -66,7 +66,7 @@ from extended_data.connectors.cloud_params import (
 )
 from extended_data.connectors.connectors import ConnectorFabric
 
-# Built-in connector classes; vendor SDKs are loaded by connector instances.
+# Built-in connector classes; optional SDKs are loaded by connector instances.
 from extended_data.connectors.cursor import CursorConnector
 from extended_data.connectors.github import GitHubConnector
 from extended_data.connectors.google import (

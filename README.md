@@ -1,7 +1,7 @@
 # Extended Data
 
 Comprehensive Python data utilities for serialization, configuration inputs,
-structured logging, vendor data connectors, and workflow-oriented integrations.
+structured logging, external data connectors, and workflow-oriented integrations.
 
 This repository is the clean major-version consolidation of the previous
 `extended-data-library` Python packages. The old package namespaces are not
@@ -79,7 +79,7 @@ Connector names are normalized before lookup. If a known built-in connector is
 requested without its optional extra installed, the registry raises an
 `ImportError` with the matching `extended-data[...]` install target.
 
-Inspect connector availability before wiring vendor workflows:
+Inspect connector availability before wiring external data workflows:
 
 ```python
 names = connectors.list_connectors()
@@ -143,7 +143,7 @@ operations live on those connectors directly rather than on separate
 Google registry names are unified as well: use `google` for Workspace, Cloud,
 Billing, and service discovery rather than split `google_*` connector aliases.
 AWS Secrets Manager prefix loading is exposed as the generic
-`load_secrets_by_prefix()` data method rather than as a vendor-specific helper.
+`load_secrets_by_prefix()` data method rather than as a service-specific helper.
 AWS secret listing/deletion and Vault role filtering APIs use the canonical
 `prefix` keyword; the old `name_prefix` convenience keyword is intentionally not
 preserved.
@@ -178,10 +178,11 @@ redaction primitives for common secret-bearing keys and token-shaped strings.
 CLI and MCP connector calls pass method arguments through `values=[...]` as
 context-sensitive diagnostic data, and connectors can add their own
 operation-specific values for resource IDs, paths, URLs, emails, prompt text, or
-vendor handles. Connector data methods can return structured vendor payloads
-without making stdout, tool responses, logs, or raised transport errors a
-secret leak by default. Raw SDK/client objects and raw transport responses
-remain available from the methods that explicitly return them.
+external payload handles. Connector data methods can return structured
+connector payloads without making stdout, tool responses, logs, or raised
+transport errors a secret leak by default. Raw SDK/client objects and raw
+transport responses remain available from the methods that explicitly return
+them.
 
 The `secrets` connector integrates with the standalone SecretSync project
 (`jbcom/secrets-sync`) through the `secretsync` CLI. It expects
@@ -208,7 +209,7 @@ The package is intentionally tiered:
   `tuple`, or `MutableSet`-compatible primitives and expose ergonomic methods
   over Tier 1 functions.
 - Tier 3 processors use the first two tiers to handle files, inputs, API data,
-  vendor integrations, and workflows.
+  external integrations, and workflows.
 
 Tier 3 decoders return Tier 2 containers by default, so
 data files, Base64 payloads, and directed inputs can immediately use

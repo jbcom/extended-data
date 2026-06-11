@@ -33,6 +33,18 @@ OLD_PACKAGE_NAMESPACES = (
 REMOVED_PUBLIC_KEYWORDS = ("prefer_native", "unhump_results")
 FUTURE_API_PROMISES = ("will be available", "coming soon")
 BOOTSTRAP_TEXT_MARKERS = ("(NEW)",)
+IMPRECISE_VENDOR_FRAMING = (
+    "vendor data connectors",
+    "vendor workflows",
+    "vendor integrations",
+    "vendor-specific",
+    "vendor data payloads",
+    "vendor data operations",
+    "vendor payload handles",
+    "vendor resource",
+    "structured vendor payloads",
+    "vendor or AI layers",
+)
 SECRETSSYNC_PROJECT_PATTERNS = (
     re.compile(r"\bsecretssync\s+(?:Go\s+)?(?:project|library|repo|repository|CLI|connector|bindings?)\b", re.IGNORECASE),
     re.compile(r"\b(?:project|library|repo|repository|CLI|connector|bindings?)\s+secretssync\b", re.IGNORECASE),
@@ -333,6 +345,23 @@ def test_public_guidance_does_not_use_removed_runtime_keywords() -> None:
         for keyword in REMOVED_PUBLIC_KEYWORDS:
             if keyword in text:
                 offenders.append(f"{path.relative_to(REPO_ROOT)}: {keyword}")
+
+    assert offenders == []
+
+
+def test_public_guidance_uses_integrated_connector_framing() -> None:
+    """Public docs should frame connectors as integrated external-data surfaces."""
+    offenders: list[str] = []
+    paths = [REPO_ROOT / "README.md"]
+    paths.extend(path for root in (REPO_ROOT / "docs", REPO_ROOT / "examples", REPO_ROOT / "src") for path in root.rglob("*"))
+
+    for path in sorted(path for path in paths if path.is_file()):
+        if path.suffix in {".pyc", ".png"}:
+            continue
+        text = path.read_text(encoding="utf-8")
+        for phrase in IMPRECISE_VENDOR_FRAMING:
+            if phrase in text:
+                offenders.append(f"{path.relative_to(REPO_ROOT)}: {phrase}")
 
     assert offenders == []
 

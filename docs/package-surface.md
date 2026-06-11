@@ -49,7 +49,7 @@ from extended_data.primitives import (
   `UserString`, `UserDict`, `UserList`, immutable `tuple`, or
   `MutableSet`-compatible bases depending on the underlying data shape.
 - Tier 3 processors use the first two tiers to handle files, imports, exports,
-  inputs, API data, vendor integrations, and workflows.
+  inputs, API data, external integrations, and workflows.
 
 Clean major-version primitive names, including JSON/YAML/TOML/HCL codecs, live
 under `extended_data.primitives` and prefer explicit Python words over
@@ -65,7 +65,7 @@ internal sorted-default mapping helper class.
 Use `redact_sensitive_text()` and `redact_sensitive_data()` when diagnostics or
 JSON-like payloads need common secret-bearing keys and token-shaped strings
 removed before display. Pass `values=[...]` when a caller knows additional
-context-specific identifiers, such as emails, paths, URLs, or vendor resource
+context-specific identifiers, such as emails, paths, URLs, or external resource
 IDs, must be withheld as well; URL-encoded forms of those values are redacted
 too.
 
@@ -265,7 +265,7 @@ discovery operations. Split `google_cloud`, `google_workspace`, and
 `google_billing` connector aliases are intentionally not preserved.
 AWS Secrets Manager prefix loading is generic too: use
 `AWSConnector.load_secrets_by_prefix()` when a workflow needs a promoted mapping
-of secret names to values. The old vendor-specific ASM loader name is
+of secret names to values. The old service-specific ASM loader name is
 intentionally not preserved.
 AWS secret listing/deletion and Vault role filtering use the canonical `prefix`
 keyword. The old `name_prefix` convenience keyword is intentionally not
@@ -298,7 +298,7 @@ stripped and lowercased before lookup.
 
 Every built-in connector class registered by name is also exported from
 `extended_data` and `extended_data.connectors`. Those exports are real classes,
-not `None` sentinels. Vendor SDKs load when connector instances need them, so
+not `None` sentinels. Optional SDKs load when connector instances need them, so
 package import remains lightweight while missing optional extras still fail at
 the operation boundary with install guidance. `list_connectors()` reports the
 registered connectors whose runtime requirements are installed; use
@@ -318,7 +318,7 @@ validation or redaction boundaries. Use
 `request_data_file()` when an API workflow needs the decoded data plus
 non-secret response provenance such as source URL, HTTP status, content type,
 method, and endpoint in a `DataFile` artifact.
-Connector methods that return vendor data payloads should call
+Connector methods that return external data payloads should call
 `extend_result()` at the return boundary, making SDK-shaped dictionaries,
 lists, decoded repository files, GraphQL results, and workflow-builder output
 first-class `ExtendedDict`, `ExtendedList`, `ExtendedTuple`, and
@@ -351,7 +351,7 @@ such as `password`, `api_key`, `access_token`, `authorization`, and
 errors expose them. CLI and MCP connector calls pass method arguments through
 `values=[...]` as context-specific diagnostic data, and connectors can add their
 own operation-specific values for resource IDs, paths, URLs, emails, prompt
-text, or vendor payload handles that are sensitive only in that operation.
+text, or external payload handles that are sensitive only in that operation.
 LangChain, CrewAI, Strands, and auto-detection factory functions still return
 plain framework tool object lists.
 
@@ -400,7 +400,7 @@ extended-data methods github --json
 
 ## Optional Integrations
 
-Install only the vendor or AI layers you need:
+Install only the external service or AI layers you need:
 
 ```bash
 pip install "extended-data[aws,github,vault]"

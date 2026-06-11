@@ -61,7 +61,7 @@ def _load_aws_sdk() -> Any:
 
 
 class AWSConnector(AWSOrganizationsMixin, AWSSSOmixin, AWSS3Mixin, ConnectorBase):
-    """AWS connector for boto3 client, resource, and vendor data operations.
+    """AWS connector for boto3 client, resource, and external data operations.
 
     This first-class connector provides:
     - Session management and role assumption
