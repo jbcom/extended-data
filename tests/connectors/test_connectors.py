@@ -229,6 +229,27 @@ class TestConnectorFabric:
 
         assert result == mock_connector
 
+    @requires_google
+    @patch("extended_data.connectors.google.GoogleConnector")
+    def test_get_google_client_cache_separates_scopes(self, mock_google):
+        """Google connector cache keys include requested OAuth scopes."""
+        vc = ConnectorFabric(
+            inputs={"GOOGLE_SERVICE_ACCOUNT": '{"type": "service_account"}'},
+            from_environment=False,
+        )
+        first_connector = MagicMock()
+        second_connector = MagicMock()
+        mock_google.side_effect = [first_connector, second_connector]
+
+        first = vc.get_google_client(scopes=["scope-a"])
+        second = vc.get_google_client(scopes=["scope-b"])
+        third = vc.get_google_client(scopes=["scope-a"])
+
+        assert first is first_connector
+        assert second is second_connector
+        assert third is first_connector
+        assert mock_google.call_count == 2
+
     @requires_github
     @patch("extended_data.connectors.github.GitHubConnector")
     def test_get_github_client(self, mock_github):

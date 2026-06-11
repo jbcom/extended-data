@@ -344,9 +344,12 @@ class ConnectorFabric(InputProvider):
         # For caching, use a hash to avoid exposing sensitive data
         cache_sa = hashlib.sha256(str(service_account_info).encode()).hexdigest()[:16] if service_account_info else None
 
+        cache_scopes = tuple(scopes) if scopes else None
+
         cached = self._get_cached_client(
             "google",
             service_account=cache_sa,
+            scopes=cache_scopes,
             subject=subject,
         )
         if cached:
@@ -363,6 +366,7 @@ class ConnectorFabric(InputProvider):
             "google",
             connector,
             service_account=cache_sa,
+            scopes=cache_scopes,
             subject=subject,
         )
         return connector
