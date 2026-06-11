@@ -10,6 +10,7 @@ from typing import Any, cast
 
 from extended_data.io import DataFile
 from extended_data.primitives.redaction import redact_sensitive_text
+from extended_data.workflows import DataWorkflow, WorkflowAction, WorkflowResult
 
 
 CONNECTOR_COMMANDS = frozenset({"call", "info", "list", "mcp", "methods"})
@@ -44,10 +45,53 @@ def cmd_decode(args: argparse.Namespace) -> int:
     """Decode structured data and write it through the shared export boundary."""
     try:
         artifact = _decode_artifact(args)
-        format_opts: dict[str, Any] = {}
-        if args.output == "json" and not args.compact:
-            format_opts["indent_2"] = True
-        _write_stdout(artifact.wrap_for_export(allow_encoding=args.output, **format_opts))
+        _write_stdout(artifact.wrap_for_export(allow_encoding=args.output, **_json_format_opts(args)))
+        return 0
+    except Exception as e:
+        _write_stderr(str(e))
+        return 1
+
+
+def _json_format_opts(args: argparse.Namespace) -> dict[str, Any]:
+    """Return common JSON formatting options for CLI export commands."""
+    if args.output == "json" and not args.compact:
+        return {"indent_2": True}
+    return {}
+
+
+def _merge_workflow(args: argparse.Namespace) -> DataWorkflow:
+    """Build a layered merge workflow from CLI arguments."""
+    file_paths = args.file_paths
+    if len(file_paths) < 2:
+        raise ValueError("merge requires at least two files")
+
+    workflow = DataWorkflow.from_file(file_paths[0], suffix=args.suffix)
+    for file_path in file_paths[1:]:
+        artifact = DataFile.read(file_path, suffix=args.suffix)
+        merge_value = artifact.as_extended()
+        workflow = workflow.then((f"merge:{file_path}", _deep_merge_action(merge_value)))
+    return workflow
+
+
+def _deep_merge_action(value: Any) -> WorkflowAction:
+    """Return a typed workflow action that deep-merges one value."""
+
+    def merge(data: Any) -> Any:
+        return data.deep_merge(value)
+
+    return merge
+
+
+def cmd_merge(args: argparse.Namespace) -> int:
+    """Merge structured files through DataWorkflow and write or print the result."""
+    try:
+        workflow = _merge_workflow(args)
+        result: WorkflowResult
+        if args.write:
+            result = workflow.write(args.write, encoding=args.output, allow_empty=args.allow_empty)
+        else:
+            result = workflow.result()
+        _write_stdout(result.wrap_for_export(allow_encoding=args.output, **_json_format_opts(args)))
         return 0
     except Exception as e:
         _write_stderr(str(e))
@@ -64,6 +108,7 @@ def _build_parser() -> argparse.ArgumentParser:
 Examples:
   extended-data decode '{"service": {"name": "api"}}' --suffix json
   extended-data decode --file config.yaml --output json
+  extended-data merge base.yaml env.yaml --output yaml
   extended-data list --category cloud
   extended-data call github get_repository_file --path service.json --json
         """,
@@ -77,6 +122,15 @@ Examples:
     decode_parser.add_argument("--output", choices=OUTPUT_ENCODINGS, default="json", help="Output encoding")
     decode_parser.add_argument("--compact", action="store_true", help="Compact JSON output")
     decode_parser.set_defaults(func=cmd_decode)
+
+    merge_parser = subparsers.add_parser("merge", help="Deep merge structured files")
+    merge_parser.add_argument("file_paths", nargs="+", help="Structured files to merge in order")
+    merge_parser.add_argument("--suffix", help="Input format override for all files")
+    merge_parser.add_argument("--output", choices=OUTPUT_ENCODINGS, default="json", help="Output encoding")
+    merge_parser.add_argument("--compact", action="store_true", help="Compact JSON output")
+    merge_parser.add_argument("--write", help="Write merged output to this file")
+    merge_parser.add_argument("--allow-empty", action="store_true", help="Allow writing empty merged output")
+    merge_parser.set_defaults(func=cmd_merge)
 
     return parser
 

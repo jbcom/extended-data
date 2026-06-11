@@ -415,6 +415,7 @@ The installed CLI exposes the same discovery layer for shell automation:
 ```bash
 extended-data decode '{"service": {"name": "api"}}' --suffix json
 extended-data decode --file config.yaml --output json
+extended-data merge config/base.yaml config/dev.yaml --output yaml
 extended-data list --json
 extended-data list --category cloud
 extended-data list --capability repositories --json
@@ -423,9 +424,9 @@ extended-data methods github --json
 ```
 
 The `extended-data` console script is the package-level CLI. Data commands use
-`DataFile` and the shared export boundary directly; connector commands are
-delegated to the connector CLI so existing catalog, method, call, and MCP
-workflows stay on the same entrypoint.
+`DataFile`, `DataWorkflow`, and the shared export boundary directly; connector
+commands are delegated to the connector CLI so existing catalog, method, call,
+and MCP workflows stay on the same entrypoint.
 
 ## Optional Integrations
 

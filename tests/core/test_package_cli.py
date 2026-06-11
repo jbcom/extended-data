@@ -65,3 +65,49 @@ def test_connector_commands_delegate_to_connector_cli() -> None:
 
     assert exit_code == 7
     mock_main.assert_called_once_with(["list", "--json"])
+
+
+def test_merge_files_exports_deep_merged_workflow_result(tmp_path) -> None:
+    """The top-level CLI should expose a DataWorkflow-backed merge command."""
+    base = tmp_path / "base.yaml"
+    env = tmp_path / "env.yaml"
+    base.write_text("service:\n  name: api\n  debug: false\nports:\n  - 8080\n", encoding="utf-8")
+    env.write_text("service:\n  debug: true\nports:\n  - 8081\n", encoding="utf-8")
+
+    with patch("sys.stdout.write") as mock_write:
+        exit_code = cli_module.main(["merge", str(base), str(env), "--output", "json"])
+
+    assert exit_code == 0
+    assert json.loads(_stdout_text(mock_write)) == {
+        "service": {"name": "api", "debug": True},
+        "ports": [8080, 8081],
+    }
+
+
+def test_merge_files_can_write_output_artifact(tmp_path) -> None:
+    """Merged workflow output can be written through the shared file boundary."""
+    base = tmp_path / "base.json"
+    env = tmp_path / "env.json"
+    output = tmp_path / "build" / "service.yaml"
+    base.write_text('{"service": {"name": "api", "debug": false}}', encoding="utf-8")
+    env.write_text('{"service": {"debug": true}}', encoding="utf-8")
+
+    with patch("sys.stdout.write") as mock_write:
+        exit_code = cli_module.main(["merge", str(base), str(env), "--output", "yaml", "--write", str(output)])
+
+    assert exit_code == 0
+    output_text = output.read_text(encoding="utf-8")
+    assert _stdout_text(mock_write) == f"{output_text}\n"
+    assert "debug: true" in output_text
+
+
+def test_merge_requires_multiple_files(tmp_path) -> None:
+    """Merge should fail loudly instead of treating a single file as a workflow."""
+    base = tmp_path / "base.json"
+    base.write_text('{"service": "api"}', encoding="utf-8")
+
+    with patch("sys.stderr.write") as mock_write:
+        exit_code = cli_module.main(["merge", str(base)])
+
+    assert exit_code == 1
+    assert "merge requires at least two files" in _stdout_text(mock_write)
