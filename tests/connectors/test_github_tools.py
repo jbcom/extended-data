@@ -369,6 +369,27 @@ class TestGetRepositoryFile:
         assert isinstance(result, ExtendedDict)
         assert result["status"] == "empty"
 
+    @patch(GITHUB_CONNECTOR_PATCH)
+    def test_get_repository_file_single_payload(self, mock_connector_class):
+        """Test get_repository_file when the connector returns content without SHA metadata."""
+        from extended_data.connectors.github.tools import get_repository_file
+
+        mock_connector = MagicMock()
+        mock_connector.get_repository_file.return_value = "plain content"
+        mock_connector_class.return_value = mock_connector
+
+        result = get_repository_file(
+            github_owner="test-org",
+            github_token="test-token",
+            github_repo="test-repo",
+            file_path="README.md",
+        )
+
+        assert isinstance(result, ExtendedDict)
+        assert result["status"] == "retrieved"
+        assert result["content"] == "plain content"
+        assert result["sha"] is None
+
 
 class TestGetTools:
     """Test framework getters."""
@@ -395,6 +416,112 @@ class TestGetTools:
 
         with pytest.raises(ValueError, match="Unknown framework"):
             get_tools(framework="functions")
+
+    def test_get_langchain_tools_delegates_shared_builder(self, monkeypatch: pytest.MonkeyPatch):
+        """LangChain tool factory should pass the GitHub definitions to the shared builder."""
+        from extended_data.connectors import ai_tools
+        from extended_data.connectors.github import tools as github_tools
+
+        expected = [object()]
+        build_langchain_tools = MagicMock(return_value=expected)
+        monkeypatch.setattr(ai_tools, "build_langchain_tools", build_langchain_tools)
+
+        assert github_tools.get_langchain_tools() is expected
+        build_langchain_tools.assert_called_once_with(github_tools.TOOL_DEFINITIONS)
+
+    def test_get_crewai_tools_wraps_definitions(self, monkeypatch: pytest.MonkeyPatch):
+        """CrewAI tool factory should attach descriptions and schemas to wrapped functions."""
+        from extended_data.connectors import _optional
+        from extended_data.connectors.github import tools as github_tools
+
+        def fake_tool(name):
+            def decorate(func):
+                wrapped = MagicMock(wrapped_name=name)
+                wrapped.__name__ = func.__name__
+                return wrapped
+
+            return decorate
+
+        monkeypatch.setattr(_optional, "get_crewai_tool_decorator", lambda: fake_tool)
+
+        tools = github_tools.get_crewai_tools()
+
+        assert len(tools) == len(github_tools.TOOL_DEFINITIONS)
+        assert tools[0].description == github_tools.TOOL_DEFINITIONS[0]["description"]
+        assert tools[0].args_schema is github_tools.TOOL_DEFINITIONS[0]["schema"]
+
+    def test_get_crewai_tools_allows_schema_less_definitions(self, monkeypatch: pytest.MonkeyPatch):
+        """CrewAI tool factory should tolerate definitions without schema metadata."""
+        from extended_data.connectors import _optional
+        from extended_data.connectors.github import tools as github_tools
+
+        class WrappedTool:
+            pass
+
+        def fake_tool(name):
+            def decorate(func):
+                wrapped = WrappedTool()
+                wrapped.name = name
+                wrapped.func = func
+                return wrapped
+
+            return decorate
+
+        monkeypatch.setattr(_optional, "get_crewai_tool_decorator", lambda: fake_tool)
+        monkeypatch.setattr(
+            github_tools,
+            "TOOL_DEFINITIONS",
+            [{"name": "github_ping", "description": "Ping GitHub", "func": lambda: "pong"}],
+        )
+
+        tools = github_tools.get_crewai_tools()
+
+        assert len(tools) == 1
+        assert tools[0].description == "Ping GitHub"
+        assert not hasattr(tools[0], "args_schema")
+
+    def test_get_tools_auto_prefers_crewai_when_available(self, monkeypatch: pytest.MonkeyPatch):
+        """Auto-detection should prefer CrewAI tools when CrewAI is importable."""
+        from extended_data.connectors import _optional
+        from extended_data.connectors.github import tools as github_tools
+
+        expected = [object()]
+        monkeypatch.setattr(_optional, "is_available", lambda package: package == "crewai")
+        monkeypatch.setattr(github_tools, "get_crewai_tools", lambda: expected)
+
+        assert github_tools.get_tools("auto") is expected
+
+    def test_get_tools_auto_falls_back_to_langchain_then_strands(self, monkeypatch: pytest.MonkeyPatch):
+        """Auto-detection should use LangChain before plain Strands functions."""
+        from extended_data.connectors import _optional
+        from extended_data.connectors.github import tools as github_tools
+
+        langchain_tools = [object()]
+        strands_tools = [object()]
+        availability = {"langchain_core": True}
+        monkeypatch.setattr(_optional, "is_available", lambda package: availability.get(package, False))
+        monkeypatch.setattr(github_tools, "get_langchain_tools", lambda: langchain_tools)
+        monkeypatch.setattr(github_tools, "get_strands_tools", lambda: strands_tools)
+
+        assert github_tools.get_tools("auto") is langchain_tools
+
+        availability["langchain_core"] = False
+        assert github_tools.get_tools("auto") is strands_tools
+
+    def test_get_tools_explicit_frameworks(self, monkeypatch: pytest.MonkeyPatch):
+        """Explicit framework names should dispatch to their matching factories."""
+        from extended_data.connectors.github import tools as github_tools
+
+        langchain_tools = [object()]
+        crewai_tools = [object()]
+        strands_tools = [object()]
+        monkeypatch.setattr(github_tools, "get_langchain_tools", lambda: langchain_tools)
+        monkeypatch.setattr(github_tools, "get_crewai_tools", lambda: crewai_tools)
+        monkeypatch.setattr(github_tools, "get_strands_tools", lambda: strands_tools)
+
+        assert github_tools.get_tools("langchain") is langchain_tools
+        assert github_tools.get_tools("crewai") is crewai_tools
+        assert github_tools.get_tools("strands") is strands_tools
 
 
 class TestExports:
