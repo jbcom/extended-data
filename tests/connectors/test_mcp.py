@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import json
+
 from unittest.mock import patch
 
 import pytest
@@ -18,6 +20,14 @@ from extended_data.connectors.mcp import (
 )
 from extended_data.connectors.meshy.connector import MeshyConnector
 from extended_data.containers import ExtendedDict, ExtendedList, ExtendedSet
+
+
+class ExampleMCPConnector:
+    """Tiny connector shell for MCP handler tests."""
+
+    def fetch(self, enabled: bool = False, count: int = 0) -> ExtendedDict:
+        """Fetch example MCP data."""
+        return ExtendedDict({"enabled": enabled, "count": count, "password": "hunter2"})
 
 
 def test_create_server() -> None:
@@ -195,3 +205,92 @@ def test_unknown_tool_text_redacts_sensitive_tool_names() -> None:
     assert "hunter2" not in text
     assert "raw_token" not in text
     assert "[REDACTED]" in text
+
+
+@pytest.mark.asyncio
+async def test_create_server_registered_list_tools_handler_exposes_catalog_and_methods() -> None:
+    """The registered MCP list-tools handler should expose catalog and connector tools."""
+    mcp_types = pytest.importorskip("mcp.types")
+
+    with patch("extended_data.connectors.mcp._list_connector_classes", return_value={"example": ExampleMCPConnector}):
+        server = create_server()
+
+    result = await server.request_handlers[mcp_types.ListToolsRequest](mcp_types.ListToolsRequest())
+    tools = {tool.name: tool for tool in result.root.tools}
+
+    assert "extended_data_get_connector_info" in tools
+    assert tools["extended_data_get_connector_info"].inputSchema["required"] == ["name"]
+    assert "example_fetch" in tools
+    assert tools["example_fetch"].description == "Fetch example MCP data."
+    assert tools["example_fetch"].inputSchema["properties"]["enabled"]["type"] == "boolean"
+    assert tools["example_fetch"].inputSchema["properties"]["count"]["type"] == "integer"
+
+
+@pytest.mark.asyncio
+async def test_create_server_registered_catalog_call_handler_uses_shared_result_boundary() -> None:
+    """The registered MCP call handler should serialize catalog tool results."""
+    mcp_types = pytest.importorskip("mcp.types")
+    server = create_server()
+    await server.request_handlers[mcp_types.ListToolsRequest](mcp_types.ListToolsRequest())
+
+    result = await server.request_handlers[mcp_types.CallToolRequest](
+        mcp_types.CallToolRequest(
+            params=mcp_types.CallToolRequestParams(
+                name="extended_data_get_connector_info",
+                arguments={"name": "github"},
+            )
+        )
+    )
+
+    payload = json.loads(result.root.content[0].text)
+    assert payload["name"] == "github"
+    assert payload["category"] == "development"
+    assert "repositories" in payload["capabilities"]
+
+
+@pytest.mark.asyncio
+async def test_create_server_registered_connector_call_handler_redacts_payloads() -> None:
+    """The registered MCP call handler should dispatch connector methods and redact results."""
+    mcp_types = pytest.importorskip("mcp.types")
+    connector = ExampleMCPConnector()
+
+    with (
+        patch("extended_data.connectors.mcp._list_connector_classes", return_value={"example": ExampleMCPConnector}),
+        patch("extended_data.connectors.mcp.get_connector", return_value=connector) as mock_get_connector,
+    ):
+        server = create_server()
+        await server.request_handlers[mcp_types.ListToolsRequest](mcp_types.ListToolsRequest())
+        result = await server.request_handlers[mcp_types.CallToolRequest](
+            mcp_types.CallToolRequest(
+                params=mcp_types.CallToolRequestParams(
+                    name="example_fetch",
+                    arguments={"enabled": True, "count": 3},
+                )
+            )
+        )
+
+    mock_get_connector.assert_called_once_with("example")
+    payload = json.loads(result.root.content[0].text)
+    assert payload == {"enabled": True, "count": 3, "password": "[REDACTED]"}
+
+
+@pytest.mark.asyncio
+async def test_create_server_registered_call_handler_redacts_unknown_tools() -> None:
+    """The registered MCP call handler should sanitize unknown tool diagnostics."""
+    mcp_types = pytest.importorskip("mcp.types")
+    server = create_server()
+    await server.request_handlers[mcp_types.ListToolsRequest](mcp_types.ListToolsRequest())
+
+    result = await server.request_handlers[mcp_types.CallToolRequest](
+        mcp_types.CallToolRequest(
+            params=mcp_types.CallToolRequestParams(
+                name="password=hunter2 Authorization: Bearer raw_token",
+                arguments={},
+            )
+        )
+    )
+
+    text = result.root.content[0].text
+    assert "hunter2" not in text
+    assert "raw_token" not in text
+    assert "Unknown tool: password=[REDACTED]" in text

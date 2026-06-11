@@ -25,7 +25,7 @@ import inspect
 import sys
 
 from collections.abc import Callable, Iterable, Mapping
-from typing import Any, cast
+from typing import Any, cast, get_origin, get_type_hints
 
 from extended_data.connectors.registry import (
     _list_connector_classes,
@@ -58,6 +58,10 @@ def _check_mcp_installed() -> bool:
 def _get_method_schema(method: Callable[..., Any]) -> dict[str, Any]:
     """Generate JSON schema from method signature."""
     sig = inspect.signature(method)
+    try:
+        type_hints = get_type_hints(method)
+    except Exception:
+        type_hints = {}
     properties = {}
     required = []
 
@@ -68,17 +72,17 @@ def _get_method_schema(method: Callable[..., Any]) -> dict[str, Any]:
         prop: dict[str, Any] = {"type": "string"}  # Default
 
         # Try to get type from annotations
-        if param.annotation != inspect.Parameter.empty:
-            ann = param.annotation
+        ann = type_hints.get(name, param.annotation)
+        if ann != inspect.Parameter.empty:
             if ann is int:
                 prop = {"type": "integer"}
             elif ann is float:
                 prop = {"type": "number"}
             elif ann is bool:
                 prop = {"type": "boolean"}
-            elif ann is list or (hasattr(ann, "__origin__") and ann.__origin__ is list):
+            elif ann is list or get_origin(ann) is list:
                 prop = {"type": "array"}
-            elif ann is dict or (hasattr(ann, "__origin__") and ann.__origin__ is dict):
+            elif ann is dict or get_origin(ann) is dict:
                 prop = {"type": "object"}
 
         # Get description from docstring if available
