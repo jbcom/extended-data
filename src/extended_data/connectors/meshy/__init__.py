@@ -40,6 +40,7 @@ from __future__ import annotations
 from extended_data.connectors.meshy import animate, base, image3d, retexture, rigging, text3d
 from extended_data.connectors.meshy.base import MeshyAPIError, RateLimitError
 from extended_data.connectors.meshy.connector import MeshyConnector
+from extended_data.connectors.meshy.logging import MESHY_LOGGER_NAME, MESHY_STORAGE_MARKER, create_meshy_logger
 from extended_data.connectors.meshy.tools import (
     get_crewai_tools,
     get_langchain_tools,
@@ -49,18 +50,17 @@ from extended_data.connectors.meshy.tools import (
 
 
 __all__ = [
-    # Errors
+    "MESHY_LOGGER_NAME",
+    "MESHY_STORAGE_MARKER",
     "MeshyAPIError",
-    # Connector
     "MeshyConnector",
     "RateLimitError",
-    # API modules (functional interface)
     "animate",
     "base",
+    "create_meshy_logger",
     "get_crewai_tools",
     "get_langchain_tools",
     "get_strands_tools",
-    # Tools
     "get_tools",
     "image3d",
     "retexture",

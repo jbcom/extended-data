@@ -50,10 +50,16 @@ modules from `extended_data.connectors.meshy`.
 
 ```python
 from extended_data import ConnectorFabric
+from extended_data.connectors.meshy import create_meshy_logger
 
 fabric = ConnectorFabric(inputs={"MESHY_API_KEY": "..."}, from_environment=False)
 meshy = fabric.get_connector("meshy")
+logger = create_meshy_logger(default_storage_marker="asset-generation")
 ```
+
+Meshy logging helpers return the same `extended_data.logging.Logging` type as
+the rest of the package; they do not configure global Python logging at import
+time.
 
 ## Job Orchestration
 

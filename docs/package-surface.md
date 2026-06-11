@@ -377,6 +377,9 @@ same boundary, so connector-local reads do not grow private JSON parsers.
 AWS S3 JSON object writes and Meshy manifest writes go through the shared export
 boundary, so connector persistence uses the same Tier 3 data-file encoding path;
 Meshy vector-store metadata follows the same path.
+Meshy logging helpers return `extended_data.logging.Logging` instances with a
+Meshy storage marker instead of configuring global Python logging or importing a
+connector-local logging stack at module import time.
 CLI JSON output, MCP tool results, and SecretSync `results_json` are exported
 through the same path after redaction.
 GitHub workflow YAML generation and `Logging.exit_run()` stdout serialization
