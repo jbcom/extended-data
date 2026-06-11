@@ -315,6 +315,17 @@ def test_project_scripts_point_to_callables() -> None:
     assert offenders == []
 
 
+def test_project_scripts_preserve_package_cli_boundaries() -> None:
+    """The broad CLI entrypoint should not regress to a connector-only module."""
+    scripts = {str(name): str(target) for name, target in _pyproject()["project"]["scripts"].items()}
+
+    assert scripts == {
+        "extended-data": "extended_data.cli:main",
+        "extended-data-mcp": "extended_data.connectors.mcp:main",
+        "meshy-mcp": "extended_data.connectors.meshy.mcp:main",
+    }
+
+
 def test_readme_package_shape_matches_public_subpackages() -> None:
     """The documented tier layout should match the actual top-level package directories."""
     source_root = REPO_ROOT / "src" / "extended_data"
