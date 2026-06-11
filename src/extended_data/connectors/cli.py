@@ -17,7 +17,6 @@ Usage:
 from __future__ import annotations
 
 import argparse
-import json
 import sys
 
 from collections.abc import Mapping
@@ -32,6 +31,7 @@ from extended_data.connectors.registry import (
 from extended_data.connectors.surface import connector_data_methods, is_connector_data_method
 from extended_data.containers import ExtendedList
 from extended_data.containers.factory import to_builtin
+from extended_data.io import wrap_raw_data_for_export
 from extended_data.io.files import decode_file
 from extended_data.primitives.formats.errors import DataDecodeError
 from extended_data.primitives.redaction import redact_sensitive_text
@@ -46,7 +46,7 @@ def _json_output(data: Any) -> str:
         data = dict(data)
     elif hasattr(data, "__iter__") and not isinstance(data, (str, bytes, bytearray)):
         data = [d.model_dump() if hasattr(d, "model_dump") else d for d in data]
-    return json.dumps(data, indent=2, default=str)
+    return wrap_raw_data_for_export(data, allow_encoding="json", indent_2=True, default=str)
 
 
 def _parse_arg_value(value: str) -> Any:

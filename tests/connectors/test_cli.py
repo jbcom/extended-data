@@ -9,6 +9,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from extended_data.connectors import cli as cli_module
 from extended_data.connectors.cli import cmd_call, cmd_info, cmd_list, cmd_methods, main
 from extended_data.containers import ExtendedDict
 
@@ -143,12 +144,16 @@ def test_cli_call_serializes_extended_containers_as_data() -> None:
     with (
         patch("extended_data.connectors.cli.get_connector_class", return_value=ExampleConnector),
         patch("extended_data.connectors.cli.get_connector", return_value=connector),
+        patch("extended_data.connectors.cli.wrap_raw_data_for_export", wraps=cli_module.wrap_raw_data_for_export)
+        as mock_wrap_for_export,
         patch("sys.stdout.write") as mock_write,
     ):
         exit_code = cmd_call(args)
 
     assert exit_code == 0
     assert json.loads(mock_write.call_args.args[0]) == {"service": {"name": "api"}}
+    mock_wrap_for_export.assert_called_once()
+    assert mock_wrap_for_export.call_args.kwargs == {"allow_encoding": "json", "indent_2": True, "default": str}
 
 
 def test_cli_call_redacts_sensitive_json_output() -> None:
@@ -277,10 +282,9 @@ def test_cli_call_redacts_explicit_argument_values_from_errors() -> None:
     assert output.count("[REDACTED]") >= 3
 
 
-@patch("extended_data.connectors.cli.json.loads")
-def test_cli_call_decodes_json_arguments_through_data_boundary(mock_json_loads: MagicMock) -> None:
+@patch("extended_data.connectors.cli.decode_file", wraps=cli_module.decode_file)
+def test_cli_call_decodes_json_arguments_through_data_boundary(mock_decode_file: MagicMock) -> None:
     """Structured CLI method arguments should use the shared data decoder."""
-    mock_json_loads.side_effect = AssertionError("CLI arguments must be decoded through decode_file")
     args = argparse.Namespace(
         connector="example",
         method="fetch",
@@ -299,6 +303,7 @@ def test_cli_call_decodes_json_arguments_through_data_boundary(mock_json_loads: 
 
     assert exit_code == 0
     connector.fetch.assert_called_once_with(metadata={"service": {"name": "api"}})
+    mock_decode_file.assert_called_once_with('{"service": {"name": "api"}}', suffix="json", as_extended=False)
 
 
 def test_cli_main_help() -> None:

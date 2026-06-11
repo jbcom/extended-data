@@ -7,6 +7,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 import yaml
 
+from extended_data.connectors import secrets as secrets_module
 from extended_data.connectors.secrets import (
     ConfigInfo,
     OutputFormat,
@@ -248,25 +249,40 @@ def test_cli_run_pipeline_parses_result_envelope(mock_run: MagicMock, connector:
     assert result["diff_output"] == '{"summary":{"added":1}}'
 
 
-@patch("extended_data.connectors.secrets.json.loads")
+@patch("extended_data.connectors.secrets.decode_file", wraps=secrets_module.decode_file)
 @patch("subprocess.run")
 def test_cli_run_pipeline_decodes_result_envelope_through_data_boundary(
     mock_run: MagicMock,
-    mock_json_loads: MagicMock,
+    mock_decode_file: MagicMock,
     connector: SecretsConnector,
 ) -> None:
     """SecretSync JSON envelopes should use shared data decoding, not local json.loads."""
+    stdout = json.dumps({"success": True, "results": [{"target": "prod"}]})
     mock_run.return_value = MagicMock(
         returncode=0,
-        stdout=json.dumps({"success": True, "results": [{"target": "prod"}]}),
+        stdout=stdout,
         stderr="",
     )
-    mock_json_loads.side_effect = AssertionError("SecretSync CLI output must be decoded through decode_file")
 
     result = connector.run_pipeline("config.yaml")
 
     assert result["success"] is True
     assert '"target": "prod"' in result["results_json"]
+    mock_decode_file.assert_called_once_with(stdout, suffix="json", as_extended=True)
+
+
+def test_sync_result_results_json_uses_shared_export_boundary() -> None:
+    """SecretSync result details should serialize through the shared export boundary."""
+    output = {"success": True, "results": [{"target": "prod"}]}
+
+    with patch(
+        "extended_data.connectors.secrets.wrap_raw_data_for_export",
+        wraps=secrets_module.wrap_raw_data_for_export,
+    ) as mock_wrap_for_export:
+        result = SyncResult.from_cli_output(output)
+
+    assert '"target": "prod"' in result.results_json
+    mock_wrap_for_export.assert_called_once_with(output["results"], allow_encoding="json", indent_2=True)
 
 
 @patch("subprocess.run")

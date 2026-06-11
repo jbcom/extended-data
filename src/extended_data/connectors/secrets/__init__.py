@@ -30,7 +30,6 @@ Example usage:
 
 from __future__ import annotations
 
-import json
 import shutil
 import subprocess
 
@@ -41,7 +40,7 @@ from typing import Any
 
 from extended_data.connectors.base import VendorConnectorBase
 from extended_data.containers import ExtendedDict, extend_data, to_builtin
-from extended_data.io import DataFile
+from extended_data.io import DataFile, wrap_raw_data_for_export
 from extended_data.io.files import decode_file
 from extended_data.logging import Logging
 from extended_data.primitives.formats.errors import DataDecodeError
@@ -109,7 +108,11 @@ class SyncResult:
             secrets_unchanged=safe_output.get("secrets_unchanged", 0),
             duration_ms=safe_output.get("duration_ms", 0),
             error_message=safe_output.get("error_message", ""),
-            results_json=json.dumps(safe_output.get("results", [])),
+            results_json=wrap_raw_data_for_export(
+                safe_output.get("results", []),
+                allow_encoding="json",
+                indent_2=True,
+            ),
             diff_output=safe_output.get("diff_output", ""),
         )
 

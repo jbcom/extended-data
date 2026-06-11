@@ -29,12 +29,11 @@ Configure in Claude Desktop (~/Library/Application Support/Claude/claude_desktop
 
 from __future__ import annotations
 
-import json
-
 from collections.abc import Callable, Iterable, Mapping
 from typing import Any, cast
 
 from extended_data.containers import to_builtin
+from extended_data.io import wrap_raw_data_for_export
 from extended_data.primitives.redaction import redact_sensitive_data, redact_sensitive_text
 
 
@@ -274,6 +273,16 @@ def _tool_error_payload(error: object) -> dict[str, str]:
     return {"error": redact_sensitive_text(error)}
 
 
+def _tool_payload_text(payload: Any) -> str:
+    """Return a serialized MCP text payload through the shared export boundary."""
+    return wrap_raw_data_for_export(payload, allow_encoding="json", indent_2=True)
+
+
+def _tool_result_text(result: Any) -> str:
+    """Return a serialized Meshy MCP result through the shared export boundary."""
+    return _tool_payload_text(_jsonable_tool_result(result))
+
+
 def create_server() -> Any:
     """Create an MCP server with Meshy AI tools.
 
@@ -313,18 +322,18 @@ def create_server() -> Any:
             return [
                 TextContent(
                     type="text",
-                    text=json.dumps(_tool_error_payload(f"Unknown tool: {name}")),
+                    text=_tool_payload_text(_tool_error_payload(f"Unknown tool: {name}")),
                 )
             ]
 
         try:
             result = handler(**arguments)
-            return [TextContent(type="text", text=json.dumps(_jsonable_tool_result(result), indent=2))]
+            return [TextContent(type="text", text=_tool_result_text(result))]
         except Exception as e:
             return [
                 TextContent(
                     type="text",
-                    text=json.dumps(_tool_error_payload(e), indent=2),
+                    text=_tool_payload_text(_tool_error_payload(e)),
                 )
             ]
 

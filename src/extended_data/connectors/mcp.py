@@ -22,7 +22,6 @@ from __future__ import annotations
 
 import builtins
 import inspect
-import json
 import sys
 
 from collections.abc import Callable, Iterable, Mapping
@@ -31,6 +30,7 @@ from typing import Any, cast
 from extended_data.connectors.registry import _list_connector_classes, get_connector
 from extended_data.connectors.surface import connector_data_methods
 from extended_data.containers import to_builtin
+from extended_data.io import wrap_raw_data_for_export
 from extended_data.primitives.redaction import redact_sensitive_data, redact_sensitive_text
 
 
@@ -120,6 +120,11 @@ def _unknown_tool_text(name: str) -> str:
     return f"Unknown tool: {redact_sensitive_text(name)}"
 
 
+def _tool_result_text(result: Any) -> str:
+    """Return a serialized MCP tool result through the shared export boundary."""
+    return wrap_raw_data_for_export(_jsonable_tool_result(result), allow_encoding="json", indent_2=True, default=str)
+
+
 def create_server() -> Any:
     """Create the unified MCP server with all registered connectors."""
     try:
@@ -199,7 +204,7 @@ def create_server() -> Any:
             if inspect.iscoroutine(result):
                 result = await result
 
-            return [TextContent(type="text", text=json.dumps(_jsonable_tool_result(result), indent=2, default=str))]
+            return [TextContent(type="text", text=_tool_result_text(result))]
 
         except Exception as e:
             return [TextContent(type="text", text=_tool_error_text(e, arguments.values()))]

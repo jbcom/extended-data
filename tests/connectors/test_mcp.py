@@ -2,12 +2,16 @@
 
 from __future__ import annotations
 
+from unittest.mock import patch
+
 import pytest
 
+from extended_data.connectors import mcp as mcp_module
 from extended_data.connectors.mcp import (
     _get_public_methods,
     _jsonable_tool_result,
     _tool_error_text,
+    _tool_result_text,
     _unknown_tool_text,
     create_server,
 )
@@ -43,6 +47,25 @@ def test_jsonable_tool_result_lowers_extended_mapping_payloads() -> None:
     payload = ExtendedDict({"service": {"name": "api"}})
 
     assert _jsonable_tool_result(payload) == {"service": {"name": "api"}}
+
+
+def test_tool_result_text_uses_shared_export_boundary() -> None:
+    """MCP text payloads should serialize through the Tier 3 export boundary."""
+    payload = ExtendedDict({"service": {"name": "api"}})
+
+    with patch(
+        "extended_data.connectors.mcp.wrap_raw_data_for_export",
+        wraps=mcp_module.wrap_raw_data_for_export,
+    ) as mock_wrap_for_export:
+        text = _tool_result_text(payload)
+
+    assert '"service": {' in text
+    mock_wrap_for_export.assert_called_once_with(
+        {"service": {"name": "api"}},
+        allow_encoding="json",
+        indent_2=True,
+        default=str,
+    )
 
 
 def test_jsonable_tool_result_redacts_sensitive_mapping_payloads() -> None:
