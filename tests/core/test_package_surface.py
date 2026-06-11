@@ -156,6 +156,10 @@ def test_root_exports_first_class_integrated_surfaces() -> None:
     assert extended_data.ConnectorInfo.__name__ == "ConnectorInfo"
     assert extended_data.WorkflowResult.__name__ == "WorkflowResult"
     assert extended_data.WorkflowStep.__name__ == "WorkflowStep"
+    assert callable(extended_data.data_transform_action)
+    assert callable(extended_data.list_data_transform_steps)
+    assert "unhump" in extended_data.DATA_TRANSFORM_STEPS
+    assert "reconstruct" in extended_data.list_data_transform_steps()
     assert extended_data.SecretsConnector is secrets.SecretsConnector
     assert extended_data.SyncOptions is secrets.SyncOptions
     assert extended_data.SyncResult is secrets.SyncResult

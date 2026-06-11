@@ -19,6 +19,8 @@ from extended_data import (
     WorkflowStep,
     base64_decode,
     base64_encode,
+    data_transform_action,
+    list_data_transform_steps,
     read_data_file,
     write_file,
 )
@@ -86,6 +88,68 @@ def test_data_workflow_runs_named_value_transforms() -> None:
         "selected_services": ["api", "worker"],
         "tags": ["api", "docs"],
     }
+
+
+def test_data_workflow_applies_shared_named_transforms() -> None:
+    """DataWorkflow exposes common Tier 2 transforms without ad hoc lambdas."""
+    raw_payload = {
+        "HTTPResponseCode": "200",
+        "SelectedServices": ["api", "api", "worker"],
+        "EmptyValue": "",
+    }
+
+    workflow = DataWorkflow.from_value(raw_payload).transform(
+        "reconstruct",
+        "unhump",
+        "deduplicate",
+        "compact",
+    )
+    result = workflow.result()
+
+    assert workflow.steps == (
+        "value",
+        "transform:reconstruct",
+        "transform:unhump",
+        "transform:deduplicate",
+        "transform:compact",
+    )
+    assert result.as_builtin() == {
+        "http_response_code": 200,
+        "selected_services": ["api", "worker"],
+    }
+
+
+def test_data_workflow_reconstruct_transform_handles_scalars() -> None:
+    """Named reconstruct should use the scalar string primitive when needed."""
+    result = DataWorkflow.from_value("200").transform("reconstruct").result()
+
+    assert result.value == 200
+
+
+def test_data_transform_action_reports_unknown_steps() -> None:
+    """Unknown named transforms should fail at the workflow boundary."""
+    with pytest.raises(ValueError, match="unknown data transform 'missing'"):
+        data_transform_action("missing")
+
+
+def test_data_workflow_transform_requires_steps() -> None:
+    """Transform calls should not silently preserve the old workflow value."""
+    with pytest.raises(ValueError, match=r"DataWorkflow\.transform requires at least one step"):
+        DataWorkflow.from_value({"service": "api"}).transform()
+
+
+def test_data_workflow_transform_reports_shape_mismatch() -> None:
+    """Shape-specific named transforms should fail when applied to incompatible data."""
+    with pytest.raises(TypeError, match="transform 'unhump' is not available for ExtendedList"):
+        DataWorkflow.from_value(["api"]).transform("unhump")
+
+
+def test_list_data_transform_steps_is_sorted_catalog() -> None:
+    """The transform catalog should be deterministic for CLIs and docs."""
+    steps = list_data_transform_steps()
+
+    assert steps == tuple(sorted(steps))
+    assert {"compact", "reconstruct", "to-snake-case", "unhump"} <= set(steps)
 
 
 def test_data_workflow_starts_from_data_file_artifact() -> None:

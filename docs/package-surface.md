@@ -26,6 +26,7 @@ from extended_data import (
     SecretsConnector,
     SlackConnector,
     SyncOptions,
+    list_data_transform_steps,
     extend_data,
     to_builtin,
 )
@@ -180,14 +181,18 @@ metadata cannot override the sanitized core `source` and `path` fields.
 `DataWorkflow` is the Tier 3 composition surface for higher-order data
 processing. It reads or decodes structured data through the file and format
 processors, accepts `DataFile` artifacts with `from_data_file()`, promotes
-values into Tier 2 containers by default, applies named transformation steps,
-writes output artifacts, and returns a `WorkflowResult` with the completed
-value, output path, step trail, and promoted metadata. Workflow metadata is
-preserved across `then()`, `run()`, `as_builtin()`, `as_extended()`, and
-`write()`, so file and API provenance from `DataFile` artifacts remains attached
-to the result. `WorkflowResult.as_extended()` returns a detached promoted view
-of the completed value, and result-level `to_export_safe()` /
-`wrap_for_export()` expose the same export boundary used by Tier 2 containers.
+values into Tier 2 containers by default, applies reusable `WorkflowStep`
+functions or named transform steps, writes output artifacts, and returns a
+`WorkflowResult` with the completed value, output path, step trail, and
+promoted metadata. `DataWorkflow.transform()` applies the same named Tier 2
+transform catalog exposed by the CLI, including `reconstruct`, `unhump`,
+`deduplicate`, `compact`, and string case transforms. Workflow metadata is
+preserved across `then()`, `run()`, `transform()`, `as_builtin()`,
+`as_extended()`, and `write()`, so file and API provenance from `DataFile`
+artifacts remains attached to the result. `WorkflowResult.as_extended()` returns
+a detached promoted view of the completed value, and result-level
+`to_export_safe()` / `wrap_for_export()` expose the same export boundary used by
+Tier 2 containers.
 
 ```python
 from extended_data import DataWorkflow
@@ -196,17 +201,27 @@ env_data = DataWorkflow.from_file("config/dev.yaml").value
 result = (
     DataWorkflow.from_file("config/base.yaml")
     .then(("merge-env", lambda data: data.deep_merge(env_data)))
+    .transform("reconstruct", "unhump")
     .write("build/config.yaml")
 )
 
-assert result.steps == ("read:config/base.yaml", "merge-env", "write:build/config.yaml")
+assert result.steps == (
+    "read:config/base.yaml",
+    "merge-env",
+    "transform:reconstruct",
+    "transform:unhump",
+    "write:build/config.yaml",
+)
 assert result.metadata["source"] == "config/base.yaml"
 assert result.as_extended()["service"]["name"].upper_first() == "Api"
 assert result.to_export_safe()["service"]["name"] == "api"
+assert "unhump" in list_data_transform_steps()
 ```
 
 Missing workflow input files raise `FileNotFoundError`, and empty workflow
-writes raise `ValueError` unless `allow_empty=True` is passed.
+writes raise `ValueError` unless `allow_empty=True` is passed. Unknown transform
+names and transforms that do not match the current data shape raise instead of
+silently preserving stale workflow state.
 
 `InputProvider` loads input data from explicit mappings, environment variables,
 and stdin, then decodes or coerces values through the shared primitive and

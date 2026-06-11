@@ -6,6 +6,7 @@ from collections.abc import Callable, Iterable, Mapping
 from copy import deepcopy
 from dataclasses import dataclass, field
 from pathlib import Path
+from types import MappingProxyType
 from typing import Any, TypeAlias
 
 from extended_data.containers import ExtendedDict, extend_data, to_builtin
@@ -15,6 +16,51 @@ from extended_data.io.files import DataFile, FilePath, write_file
 
 WorkflowAction: TypeAlias = Callable[[Any], Any]
 StepLike: TypeAlias = "WorkflowStep | tuple[str, WorkflowAction] | WorkflowAction"
+DATA_TRANSFORM_STEPS: Mapping[str, str] = MappingProxyType(
+    {
+        "compact": "compact",
+        "deduplicate": "deduplicate",
+        "flatten": "flatten",
+        "humanize": "humanize",
+        "reconstruct": "reconstruct_special_types",
+        "titleize": "titleize",
+        "to-camel-case": "to_camel_case",
+        "to-kebab-case": "to_kebab_case",
+        "to-pascal-case": "to_pascal_case",
+        "to-snake-case": "to_snake_case",
+        "unhump": "unhump",
+        "unique": "unique",
+    }
+)
+
+
+def list_data_transform_steps() -> tuple[str, ...]:
+    """Return the named transform steps supported by DataWorkflow."""
+    return tuple(sorted(DATA_TRANSFORM_STEPS))
+
+
+def data_transform_action(step: str) -> WorkflowAction:
+    """Return a workflow action for one named Tier 2 transform step."""
+    try:
+        method_name = DATA_TRANSFORM_STEPS[step]
+    except KeyError as exc:
+        expected = ", ".join(list_data_transform_steps())
+        raise ValueError(f"unknown data transform {step!r}; expected one of: {expected}") from exc
+
+    def transform(data: Any) -> Any:
+        method = _data_transform_method(data, step, method_name)
+        if not callable(method):
+            raise TypeError(f"transform {step!r} is not available for {type(data).__name__}")
+        return method()
+
+    return transform
+
+
+def _data_transform_method(data: Any, step: str, method_name: str) -> Any:
+    """Return the best method for a transform step on the current data shape."""
+    if step == "reconstruct":
+        return getattr(data, "reconstruct_special_types", None) or getattr(data, "reconstruct_special_type", None)
+    return getattr(data, method_name, None)
 
 
 @dataclass(frozen=True, slots=True)
@@ -206,6 +252,16 @@ class DataWorkflow:
             workflow = workflow.then(step, as_extended=as_extended)
         return workflow
 
+    def transform(self, *steps: str, as_extended: bool | None = None) -> DataWorkflow:
+        """Apply named Tier 2 transform steps in order."""
+        if not steps:
+            raise ValueError("DataWorkflow.transform requires at least one step")
+
+        workflow = self
+        for step in steps:
+            workflow = workflow.then((f"transform:{step}", data_transform_action(step)), as_extended=as_extended)
+        return workflow
+
     def as_builtin(self) -> DataWorkflow:
         """Return the next workflow state with built-in Python containers."""
         return DataWorkflow(
@@ -287,9 +343,12 @@ def _decode_step_name(*, file_path: FilePath | None, suffix: str | None) -> str:
 
 
 __all__ = [
+    "DATA_TRANSFORM_STEPS",
     "DataWorkflow",
     "StepLike",
     "WorkflowAction",
     "WorkflowResult",
     "WorkflowStep",
+    "data_transform_action",
+    "list_data_transform_steps",
 ]

@@ -46,7 +46,16 @@ from extended_data.io.files import (
 )
 from extended_data.io.importers import unwrap_raw_data_from_import
 from extended_data.primitives.formats.errors import DataDecodeError
-from extended_data.workflows import DataWorkflow, StepLike, WorkflowAction, WorkflowResult, WorkflowStep
+from extended_data.workflows import (
+    DATA_TRANSFORM_STEPS,
+    DataWorkflow,
+    StepLike,
+    WorkflowAction,
+    WorkflowResult,
+    WorkflowStep,
+    data_transform_action,
+    list_data_transform_steps,
+)
 
 
 if TYPE_CHECKING:
@@ -130,6 +139,7 @@ def __getattr__(name: str) -> Any:
 
 
 __all__ = [
+    "DATA_TRANSFORM_STEPS",
     "AWSConnector",
     "AnthropicConnector",
     "ConnectorBase",
@@ -169,6 +179,7 @@ __all__ = [
     "base64_decode",
     "base64_encode",
     "clone_repository_to_temp",
+    "data_transform_action",
     "decode_file",
     "delete_file",
     "directed_inputs",
@@ -191,6 +202,7 @@ __all__ = [
     "list_connectors",
     "list_connectors_by_capability",
     "list_connectors_by_category",
+    "list_data_transform_steps",
     "make_raw_data_export_safe",
     "match_file_extensions",
     "read_data_file",

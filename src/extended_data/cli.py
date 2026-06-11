@@ -10,25 +10,11 @@ from typing import Any, cast
 
 from extended_data.io import DataFile
 from extended_data.primitives.redaction import redact_sensitive_text
-from extended_data.workflows import DataWorkflow, WorkflowAction, WorkflowResult
+from extended_data.workflows import DataWorkflow, WorkflowAction, WorkflowResult, list_data_transform_steps
 
 
 CONNECTOR_COMMANDS = frozenset({"call", "info", "list", "mcp", "methods"})
 OUTPUT_ENCODINGS = ("json", "yaml", "toml", "hcl", "raw")
-TRANSFORM_METHODS = {
-    "compact": "compact",
-    "deduplicate": "deduplicate",
-    "flatten": "flatten",
-    "humanize": "humanize",
-    "reconstruct": "reconstruct_special_types",
-    "titleize": "titleize",
-    "to-camel-case": "to_camel_case",
-    "to-kebab-case": "to_kebab_case",
-    "to-pascal-case": "to_pascal_case",
-    "to-snake-case": "to_snake_case",
-    "unhump": "unhump",
-    "unique": "unique",
-}
 
 
 def _write_stdout(message: str) -> None:
@@ -129,30 +115,7 @@ def _transform_workflow(args: argparse.Namespace) -> DataWorkflow:
     if not steps:
         raise ValueError("transform requires at least one --step")
 
-    workflow = _decode_artifact(args).workflow()
-    for step in steps:
-        workflow = workflow.then((f"transform:{step}", _transform_action(step)))
-    return workflow
-
-
-def _transform_action(step: str) -> WorkflowAction:
-    """Return a typed workflow action for one supported transform step."""
-    method_name = TRANSFORM_METHODS[step]
-
-    def transform(data: Any) -> Any:
-        method = _transform_method(data, step, method_name)
-        if not callable(method):
-            raise TypeError(f"transform {step!r} is not available for {type(data).__name__}")
-        return method()
-
-    return transform
-
-
-def _transform_method(data: Any, step: str, method_name: str) -> Any:
-    """Return the best method for a transform step on the current data shape."""
-    if step == "reconstruct":
-        return getattr(data, "reconstruct_special_types", None) or getattr(data, "reconstruct_special_type", None)
-    return getattr(data, method_name, None)
+    return _decode_artifact(args).workflow().transform(*steps)
 
 
 def cmd_transform(args: argparse.Namespace) -> int:
@@ -223,7 +186,7 @@ Examples:
         "--step",
         dest="steps",
         action="append",
-        choices=sorted(TRANSFORM_METHODS),
+        choices=list_data_transform_steps(),
         help="Transform step to apply in order",
     )
     transform_parser.add_argument("--output", choices=OUTPUT_ENCODINGS, default="json", help="Output encoding")
