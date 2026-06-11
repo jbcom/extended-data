@@ -21,7 +21,7 @@ from __future__ import annotations
 import argparse
 import sys
 
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from typing import Any
 
 from extended_data.connectors.registry import (
@@ -276,7 +276,7 @@ def cmd_info(args: argparse.Namespace) -> int:
 # =============================================================================
 
 
-def main() -> int:
+def main(argv: Sequence[str] | None = None) -> int:
     """Main CLI entry point."""
     parser = argparse.ArgumentParser(
         prog="extended-data",
@@ -328,7 +328,7 @@ Examples:
     mcp_parser.set_defaults(func=cmd_mcp)
 
     # Parse and execute
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
 
     if not args.command:
         parser.print_help()

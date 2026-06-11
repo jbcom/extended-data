@@ -101,9 +101,12 @@ description metadata. Use
 workflow needs to select integrations by data domain instead of hard-coding a
 single connector name.
 
-The same catalog is available from the CLI:
+The installed CLI exposes the package's Tier 3 data boundary plus the connector
+catalog and call surface:
 
 ```bash
+extended-data decode '{"service": {"name": "api"}}' --suffix json
+extended-data decode --file config.yaml --output json
 extended-data list
 extended-data list --category cloud
 extended-data list --capability repositories --json
