@@ -174,6 +174,11 @@ payload contract; framework factory functions still return framework tool
 objects.
 The generic CLI `call` command and MCP bridge expose only methods that
 advertise Extended Data payload returns.
+The MCP bridge also exposes credential-free catalog tools such as
+`extended_data_list_connector_info`,
+`extended_data_list_connectors_by_category`, and
+`extended_data_list_connectors_by_capability` so MCP clients can discover
+usable integrations before invoking connector methods.
 CLI `--arg` values that look like JSON are decoded through the same structured
 data boundary used by files, inputs, and connector payloads before method
 dispatch.

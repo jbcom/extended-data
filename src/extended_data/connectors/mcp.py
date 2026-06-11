@@ -27,7 +27,17 @@ import sys
 from collections.abc import Callable, Iterable, Mapping
 from typing import Any, cast
 
-from extended_data.connectors.registry import _list_connector_classes, get_connector
+from extended_data.connectors.registry import (
+    _list_connector_classes,
+    get_connector,
+    get_connector_info,
+    list_connector_capabilities,
+    list_connector_categories,
+    list_connector_info,
+    list_connectors,
+    list_connectors_by_capability,
+    list_connectors_by_category,
+)
 from extended_data.connectors.surface import connector_data_methods
 from extended_data.containers import to_builtin
 from extended_data.io import wrap_raw_data_for_export
@@ -98,6 +108,78 @@ def _get_public_methods(connector_class: builtins.type[Any]) -> list[tuple[str, 
     return connector_data_methods(connector_class)
 
 
+def _catalog_tool_definitions() -> dict[str, dict[str, Any]]:
+    """Build credential-free connector catalog MCP tools."""
+    empty_schema: dict[str, Any] = {"type": "object", "properties": {}, "required": []}
+    include_unavailable_schema: dict[str, Any] = {
+        "type": "object",
+        "properties": {"include_unavailable": {"type": "boolean", "default": True}},
+        "required": [],
+    }
+    name_schema: dict[str, Any] = {
+        "type": "object",
+        "properties": {
+            "name": {"type": "string"},
+            "include_unavailable": {"type": "boolean", "default": True},
+        },
+        "required": ["name"],
+    }
+    category_schema: dict[str, Any] = {
+        "type": "object",
+        "properties": {
+            "category": {"type": "string"},
+            "include_unavailable": {"type": "boolean", "default": True},
+        },
+        "required": ["category"],
+    }
+    capability_schema: dict[str, Any] = {
+        "type": "object",
+        "properties": {
+            "capability": {"type": "string"},
+            "include_unavailable": {"type": "boolean", "default": True},
+        },
+        "required": ["capability"],
+    }
+
+    return {
+        "extended_data_list_connectors": {
+            "description": "List available Extended Data connector names.",
+            "parameters": empty_schema,
+            "handler": list_connectors,
+        },
+        "extended_data_list_connector_info": {
+            "description": "List Extended Data connector catalog metadata.",
+            "parameters": include_unavailable_schema,
+            "handler": list_connector_info,
+        },
+        "extended_data_get_connector_info": {
+            "description": "Get Extended Data catalog metadata for one connector.",
+            "parameters": name_schema,
+            "handler": get_connector_info,
+        },
+        "extended_data_list_connector_categories": {
+            "description": "List Extended Data connector catalog categories.",
+            "parameters": include_unavailable_schema,
+            "handler": list_connector_categories,
+        },
+        "extended_data_list_connector_capabilities": {
+            "description": "List Extended Data connector catalog capabilities.",
+            "parameters": include_unavailable_schema,
+            "handler": list_connector_capabilities,
+        },
+        "extended_data_list_connectors_by_category": {
+            "description": "List Extended Data connector catalog entries for a category.",
+            "parameters": category_schema,
+            "handler": list_connectors_by_category,
+        },
+        "extended_data_list_connectors_by_capability": {
+            "description": "List Extended Data connector catalog entries for a capability.",
+            "parameters": capability_schema,
+            "handler": list_connectors_by_capability,
+        },
+    }
+
+
 def _jsonable_tool_result(result: Any) -> Any:
     """Lower connector tool results to JSON-compatible Python data."""
     if hasattr(result, "model_dump"):
@@ -138,6 +220,7 @@ def create_server() -> Any:
 
     # Build tool registry from all connectors
     tools: dict[str, dict[str, Any]] = {}
+    tools.update(_catalog_tool_definitions())
 
     # Discover all connectors
     connectors = _list_connector_classes()
@@ -189,6 +272,16 @@ def create_server() -> Any:
             return [TextContent(type="text", text=_unknown_tool_text(name))]
 
         tool = tools[name]
+        handler = tool.get("handler")
+        if callable(handler):
+            try:
+                result = handler(**arguments)
+                if inspect.iscoroutine(result):
+                    result = await result
+                return [TextContent(type="text", text=_tool_result_text(result))]
+            except Exception as e:
+                return [TextContent(type="text", text=_tool_error_text(e, arguments.values()))]
+
         connector_name = tool["connector"]
         method_name = tool["method"]
 

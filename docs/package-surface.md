@@ -337,6 +337,12 @@ their payload returns as `ExtendedDict` or `ExtendedList[ExtendedDict]`.
 The generic CLI `call` command and MCP bridge expose only connector methods
 that advertise Extended Data payload returns, so raw SDK client factories and
 low-level HTTP helpers do not leak into serialized tool catalogs.
+The MCP bridge also publishes credential-free catalog tools:
+`extended_data_list_connectors`, `extended_data_list_connector_info`,
+`extended_data_get_connector_info`, `extended_data_list_connector_categories`,
+`extended_data_list_connector_capabilities`,
+`extended_data_list_connectors_by_category`, and
+`extended_data_list_connectors_by_capability`.
 CLI `--arg` values that look like JSON are decoded through the shared
 structured data boundary before method dispatch, matching file, input, and
 connector payload decoding.

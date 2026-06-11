@@ -8,6 +8,7 @@ import pytest
 
 from extended_data.connectors import mcp as mcp_module
 from extended_data.connectors.mcp import (
+    _catalog_tool_definitions,
     _get_public_methods,
     _jsonable_tool_result,
     _tool_error_text,
@@ -40,6 +41,58 @@ def test_mcp_public_methods_only_include_extended_payload_boundaries() -> None:
     assert "freeze_inputs" not in method_names
     assert "merge_inputs" not in method_names
     assert "replace_inputs" not in method_names
+
+
+def test_catalog_tools_expose_connector_discovery_without_credentials() -> None:
+    """Generic MCP should expose connector catalog queries as first-class tools."""
+    tools = _catalog_tool_definitions()
+
+    expected = {
+        "extended_data_list_connectors",
+        "extended_data_list_connector_info",
+        "extended_data_get_connector_info",
+        "extended_data_list_connector_categories",
+        "extended_data_list_connector_capabilities",
+        "extended_data_list_connectors_by_category",
+        "extended_data_list_connectors_by_capability",
+    }
+
+    assert expected <= set(tools)
+    assert tools["extended_data_get_connector_info"]["parameters"]["required"] == ["name"]
+    assert tools["extended_data_list_connectors_by_category"]["parameters"]["required"] == ["category"]
+    assert tools["extended_data_list_connectors_by_capability"]["parameters"]["required"] == ["capability"]
+
+
+def test_catalog_tool_handlers_return_tier2_catalog_payloads() -> None:
+    """Catalog MCP handlers should reuse the registry's Tier 2 payload surface."""
+    tools = _catalog_tool_definitions()
+
+    names = tools["extended_data_list_connectors"]["handler"]()
+    github = tools["extended_data_get_connector_info"]["handler"](name="github")
+    categories = tools["extended_data_list_connector_categories"]["handler"]()
+    repositories = tools["extended_data_list_connectors_by_capability"]["handler"](capability="repositories")
+
+    assert isinstance(names, ExtendedList)
+    assert "github" in names
+    assert isinstance(github, ExtendedDict)
+    assert github["category"] == "development"
+    assert "repositories" in github["capabilities"]
+    assert isinstance(categories, ExtendedList)
+    assert "cloud" in categories
+    assert isinstance(repositories, ExtendedList)
+    assert "github" in {connector["name"] for connector in repositories}
+
+
+def test_catalog_tool_result_text_uses_shared_export_boundary() -> None:
+    """Catalog MCP tool output should serialize like connector method output."""
+    tools = _catalog_tool_definitions()
+    payload = tools["extended_data_get_connector_info"]["handler"](name="github")
+
+    text = _tool_result_text(payload)
+
+    assert '"name": "github"' in text
+    assert '"category": "development"' in text
+    assert '"capabilities": [' in text
 
 
 def test_jsonable_tool_result_lowers_extended_mapping_payloads() -> None:
