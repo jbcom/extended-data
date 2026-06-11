@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, call, patch
 
 import httpx
 import pytest
@@ -12,9 +12,11 @@ import pytest
 from extended_data.connectors.meshy import animate, image3d, retexture, rigging, text3d
 from extended_data.connectors.meshy.models import (
     AnimationRequest,
+    ArtStyle,
     Image3DRequest,
     RetextureRequest,
     RiggingRequest,
+    TaskStatus,
     Text3DRequest,
 )
 from extended_data.containers import ExtendedDict, ExtendedString
@@ -81,6 +83,200 @@ def test_retexture_task_id_is_extended_string() -> None:
 
     assert isinstance(created, ExtendedString)
     assert created == "retexture-task"
+
+
+def test_text3d_generate_builds_request_and_waits() -> None:
+    """Text generation should build the preview request and poll the created task."""
+    completed = ExtendedDict({"id": "text-task", "status": TaskStatus.SUCCEEDED})
+
+    with (
+        patch("extended_data.connectors.meshy.text3d.create", return_value=ExtendedString("text-task")) as create,
+        patch("extended_data.connectors.meshy.text3d.poll", return_value=completed) as poll,
+    ):
+        result = text3d.generate(
+            "a low-poly castle",
+            art_style="sculpture",
+            negative_prompt="blurry",
+            target_polycount=1234,
+            enable_pbr=False,
+        )
+
+    assert result is completed
+    create.assert_called_once()
+    request = create.call_args.args[0]
+    assert isinstance(request, Text3DRequest)
+    assert request.mode == "preview"
+    assert request.prompt == "a low-poly castle"
+    assert request.art_style == ArtStyle.SCULPTURE
+    assert request.negative_prompt == "blurry"
+    assert request.target_polycount == 1234
+    assert request.enable_pbr is False
+    poll.assert_called_once_with("text-task")
+
+
+def test_text3d_generate_without_wait_returns_task_id() -> None:
+    """Text generation should expose submitted task IDs without polling when wait is disabled."""
+    with (
+        patch("extended_data.connectors.meshy.text3d.create", return_value=ExtendedString("text-task")) as create,
+        patch("extended_data.connectors.meshy.text3d.poll") as poll,
+    ):
+        result = text3d.generate("a low-poly crate", wait=False)
+
+    assert isinstance(result, ExtendedString)
+    assert result == "text-task"
+    create.assert_called_once()
+    poll.assert_not_called()
+
+
+def test_image3d_generate_builds_request_and_waits() -> None:
+    """Image generation should build the preview request and poll the created task."""
+    completed = ExtendedDict({"id": "image-task", "status": TaskStatus.SUCCEEDED})
+
+    with (
+        patch("extended_data.connectors.meshy.image3d.create", return_value=ExtendedString("image-task")) as create,
+        patch("extended_data.connectors.meshy.image3d.poll", return_value=completed) as poll,
+    ):
+        result = image3d.generate(
+            "https://example.com/source.png",
+            topology="quad",
+            target_polycount=4321,
+            enable_pbr=False,
+        )
+
+    assert result is completed
+    create.assert_called_once()
+    request = create.call_args.args[0]
+    assert isinstance(request, Image3DRequest)
+    assert request.mode == "preview"
+    assert request.image_url == "https://example.com/source.png"
+    assert request.topology == "quad"
+    assert request.target_polycount == 4321
+    assert request.enable_pbr is False
+    poll.assert_called_once_with("image-task")
+
+
+def test_animation_apply_builds_request_and_waits() -> None:
+    """Animation application should build the animation request and poll the created task."""
+    completed = ExtendedDict({"id": "animation-task", "status": TaskStatus.SUCCEEDED})
+
+    with (
+        patch("extended_data.connectors.meshy.animate.create", return_value=ExtendedString("animation-task")) as create,
+        patch("extended_data.connectors.meshy.animate.poll", return_value=completed) as poll,
+    ):
+        result = animate.apply("rig-task", 42, loop=False, frame_rate=24)
+
+    assert result is completed
+    create.assert_called_once()
+    request = create.call_args.args[0]
+    assert isinstance(request, AnimationRequest)
+    assert request.rig_task_id == "rig-task"
+    assert request.action_id == 42
+    assert request.loop is False
+    assert request.frame_rate == 24
+    poll.assert_called_once_with("animation-task")
+
+
+def test_rigging_helpers_build_task_and_url_requests() -> None:
+    """Rigging helpers should build task-id and model-url request payloads."""
+    with (
+        patch("extended_data.connectors.meshy.rigging.create", return_value=ExtendedString("rig-task")) as create,
+        patch("extended_data.connectors.meshy.rigging.poll") as poll,
+    ):
+        task_result = rigging.rig("model-task", height_meters=1.9, wait=False)
+        url_result = rigging.rig_from_url(
+            "https://example.com/model.glb",
+            height_meters=1.8,
+            texture_url="https://example.com/texture.png",
+            wait=False,
+        )
+
+    assert task_result == "rig-task"
+    assert url_result == "rig-task"
+    task_request, url_request = [call.args[0] for call in create.call_args_list]
+    assert isinstance(task_request, RiggingRequest)
+    assert task_request.input_task_id == "model-task"
+    assert task_request.height_meters == 1.9
+    assert isinstance(url_request, RiggingRequest)
+    assert url_request.model_url == "https://example.com/model.glb"
+    assert url_request.texture_image_url == "https://example.com/texture.png"
+    assert url_request.height_meters == 1.8
+    poll.assert_not_called()
+
+
+def test_rigging_helpers_poll_when_wait_enabled() -> None:
+    """Rigging helpers should poll created task IDs when wait is enabled."""
+    task_completed = ExtendedDict({"id": "rig-task", "status": TaskStatus.SUCCEEDED})
+    url_completed = ExtendedDict({"id": "url-rig-task", "status": TaskStatus.SUCCEEDED})
+
+    with (
+        patch(
+            "extended_data.connectors.meshy.rigging.create",
+            side_effect=[ExtendedString("rig-task"), ExtendedString("url-rig-task")],
+        ),
+        patch("extended_data.connectors.meshy.rigging.poll", side_effect=[task_completed, url_completed]) as poll,
+    ):
+        task_result = rigging.rig("model-task")
+        url_result = rigging.rig_from_url("https://example.com/model.glb")
+
+    assert task_result is task_completed
+    assert url_result is url_completed
+    assert poll.call_args_list == [call("rig-task"), call("url-rig-task")]
+
+
+def test_retexture_helpers_build_text_and_image_style_requests() -> None:
+    """Retexture helpers should build text-prompt and image-reference request payloads."""
+    with (
+        patch("extended_data.connectors.meshy.retexture.create", return_value=ExtendedString("retexture-task")) as create,
+        patch("extended_data.connectors.meshy.retexture.poll") as poll,
+    ):
+        text_result = retexture.apply(
+            "model-task",
+            "gold leaf",
+            enable_original_uv=False,
+            enable_pbr=False,
+            wait=False,
+        )
+        image_result = retexture.apply_from_image(
+            "model-task",
+            "https://example.com/style.png",
+            enable_original_uv=True,
+            enable_pbr=True,
+            wait=False,
+        )
+
+    assert text_result == "retexture-task"
+    assert image_result == "retexture-task"
+    text_request, image_request = [call.args[0] for call in create.call_args_list]
+    assert isinstance(text_request, RetextureRequest)
+    assert text_request.input_task_id == "model-task"
+    assert text_request.text_style_prompt == "gold leaf"
+    assert text_request.enable_original_uv is False
+    assert text_request.enable_pbr is False
+    assert isinstance(image_request, RetextureRequest)
+    assert image_request.image_style_url == "https://example.com/style.png"
+    assert image_request.enable_original_uv is True
+    assert image_request.enable_pbr is True
+    poll.assert_not_called()
+
+
+def test_retexture_helpers_poll_when_wait_enabled() -> None:
+    """Retexture helpers should poll created task IDs when wait is enabled."""
+    text_completed = ExtendedDict({"id": "retexture-task", "status": TaskStatus.SUCCEEDED})
+    image_completed = ExtendedDict({"id": "image-retexture-task", "status": TaskStatus.SUCCEEDED})
+
+    with (
+        patch(
+            "extended_data.connectors.meshy.retexture.create",
+            side_effect=[ExtendedString("retexture-task"), ExtendedString("image-retexture-task")],
+        ),
+        patch("extended_data.connectors.meshy.retexture.poll", side_effect=[text_completed, image_completed]) as poll,
+    ):
+        text_result = retexture.apply("model-task", "gold leaf")
+        image_result = retexture.apply_from_image("model-task", "https://example.com/style.png")
+
+    assert text_result is text_completed
+    assert image_result is image_completed
+    assert poll.call_args_list == [call("retexture-task"), call("image-retexture-task")]
 
 
 @pytest.mark.parametrize(
@@ -242,6 +438,17 @@ def test_meshy_get_responses_redact_validation_failures(request_path: str, call)
 
 
 @pytest.mark.parametrize("module", [text3d, image3d, retexture, rigging, animate])
+def test_meshy_poll_returns_succeeded_tasks(monkeypatch: pytest.MonkeyPatch, module: object) -> None:
+    """All Meshy polling helpers should return succeeded task payloads directly."""
+    completed = ExtendedDict({"id": "task-123", "status": TaskStatus.SUCCEEDED})
+    monkeypatch.setattr(module, "get", lambda task_id: completed)
+
+    result = module.poll("task-123", interval=0, timeout=1)
+
+    assert result is completed
+
+
+@pytest.mark.parametrize("module", [text3d, image3d, retexture, rigging, animate])
 def test_meshy_poll_redacts_failed_task_errors(monkeypatch: pytest.MonkeyPatch, module: object) -> None:
     """All Meshy polling helpers should redact vendor task failure messages."""
     monkeypatch.setattr(
@@ -263,6 +470,27 @@ def test_meshy_poll_redacts_failed_task_errors(monkeypatch: pytest.MonkeyPatch, 
     assert "raw_token" not in message
     assert "key_123" not in message
     assert "[REDACTED]" in message
+
+
+@pytest.mark.parametrize("module", [text3d, image3d, retexture, rigging, animate])
+def test_meshy_poll_raises_for_expired_tasks(monkeypatch: pytest.MonkeyPatch, module: object) -> None:
+    """All Meshy polling helpers should fail loudly when tasks expire."""
+    monkeypatch.setattr(module, "get", lambda task_id: {"id": task_id, "status": TaskStatus.EXPIRED})
+
+    with pytest.raises(RuntimeError, match="Task expired"):
+        module.poll("task-expired", interval=0, timeout=1)
+
+
+@pytest.mark.parametrize("module", [text3d, image3d, retexture, rigging, animate])
+def test_meshy_poll_times_out_pending_tasks(monkeypatch: pytest.MonkeyPatch, module: object) -> None:
+    """All Meshy polling helpers should time out pending tasks."""
+    times = iter([0.0, 2.0])
+    monkeypatch.setattr(module, "get", lambda task_id: {"id": task_id, "status": TaskStatus.PENDING})
+    monkeypatch.setattr(module.time, "time", lambda: next(times))
+    monkeypatch.setattr(module.time, "sleep", MagicMock())
+
+    with pytest.raises(TimeoutError, match="Task timed out after 1s"):
+        module.poll("task-pending", interval=0, timeout=1)
 
 
 @pytest.mark.parametrize("payload", [{"result": ""}, {"result": 123}, ["not", "a", "mapping"]])
