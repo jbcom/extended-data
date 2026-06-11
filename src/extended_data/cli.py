@@ -52,6 +52,17 @@ def cmd_decode(args: argparse.Namespace) -> int:
         return 1
 
 
+def cmd_inspect(args: argparse.Namespace) -> int:
+    """Decode structured data and write its DataFile metadata."""
+    try:
+        artifact = _decode_artifact(args)
+        _write_stdout(artifact.metadata.wrap_for_export(allow_encoding=args.output, **_json_format_opts(args)))
+        return 0
+    except Exception as e:
+        _write_stderr(str(e))
+        return 1
+
+
 def _json_format_opts(args: argparse.Namespace) -> dict[str, Any]:
     """Return common JSON formatting options for CLI export commands."""
     if args.output == "json" and not args.compact:
@@ -108,6 +119,7 @@ def _build_parser() -> argparse.ArgumentParser:
 Examples:
   extended-data decode '{"service": {"name": "api"}}' --suffix json
   extended-data decode --file config.yaml --output json
+  extended-data inspect --file config.yaml
   extended-data merge base.yaml env.yaml --output yaml
   extended-data list --category cloud
   extended-data call github get_repository_file --path service.json --json
@@ -122,6 +134,14 @@ Examples:
     decode_parser.add_argument("--output", choices=OUTPUT_ENCODINGS, default="json", help="Output encoding")
     decode_parser.add_argument("--compact", action="store_true", help="Compact JSON output")
     decode_parser.set_defaults(func=cmd_decode)
+
+    inspect_parser = subparsers.add_parser("inspect", help="Decode data and print artifact metadata")
+    inspect_parser.add_argument("value", nargs="?", help="Inline payload to inspect")
+    inspect_parser.add_argument("--file", dest="file_path", help="File path or URL to inspect")
+    inspect_parser.add_argument("--suffix", help="Input format override")
+    inspect_parser.add_argument("--output", choices=OUTPUT_ENCODINGS, default="json", help="Output encoding")
+    inspect_parser.add_argument("--compact", action="store_true", help="Compact JSON output")
+    inspect_parser.set_defaults(func=cmd_inspect)
 
     merge_parser = subparsers.add_parser("merge", help="Deep merge structured files")
     merge_parser.add_argument("file_paths", nargs="+", help="Structured files to merge in order")

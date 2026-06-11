@@ -107,6 +107,7 @@ catalog and call surface:
 ```bash
 extended-data decode '{"service": {"name": "api"}}' --suffix json
 extended-data decode --file config.yaml --output json
+extended-data inspect --file config.yaml
 extended-data merge config/base.yaml config/dev.yaml --output yaml
 extended-data list
 extended-data list --category cloud

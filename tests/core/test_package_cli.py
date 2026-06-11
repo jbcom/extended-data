@@ -58,6 +58,48 @@ def test_decode_rejects_ambiguous_input_sources(tmp_path) -> None:
     assert "pass either VALUE or --file" in _stdout_text(mock_write)
 
 
+def test_inspect_file_exports_datafile_metadata(tmp_path) -> None:
+    """Inspect should expose the same promoted metadata DataFile carries."""
+    config = tmp_path / "service.yaml"
+    config.write_text("service:\n  name: api\n", encoding="utf-8")
+
+    with patch("sys.stdout.write") as mock_write:
+        exit_code = cli_module.main(["inspect", "--file", str(config)])
+
+    assert exit_code == 0
+    metadata = json.loads(_stdout_text(mock_write))
+    assert metadata["source"] == str(config)
+    assert metadata["encoding"] == "yaml"
+    assert metadata["path"] == str(config.resolve())
+    assert metadata["is_url"] is False
+    assert metadata["data_type"] == "ExtendedDict"
+
+
+def test_inspect_inline_payload_reports_memory_source() -> None:
+    """Inline inspect keeps in-memory payload provenance explicit."""
+    with patch("sys.stdout.write") as mock_write:
+        exit_code = cli_module.main(["inspect", '{"service": "api"}', "--suffix", "json"])
+
+    assert exit_code == 0
+    metadata = json.loads(_stdout_text(mock_write))
+    assert metadata["source"] == "memory"
+    assert metadata["encoding"] == "json"
+    assert metadata["path"] is None
+    assert metadata["data_type"] == "ExtendedDict"
+
+
+def test_inspect_rejects_ambiguous_input_sources(tmp_path) -> None:
+    """Inspect should share decode's explicit source selection behavior."""
+    config = tmp_path / "service.json"
+    config.write_text('{"service": "api"}', encoding="utf-8")
+
+    with patch("sys.stderr.write") as mock_write:
+        exit_code = cli_module.main(["inspect", "{}", "--file", str(config)])
+
+    assert exit_code == 1
+    assert "pass either VALUE or --file" in _stdout_text(mock_write)
+
+
 def test_connector_commands_delegate_to_connector_cli() -> None:
     """Existing connector commands remain available from the package entrypoint."""
     with patch("extended_data.connectors.cli.main", return_value=7) as mock_main:

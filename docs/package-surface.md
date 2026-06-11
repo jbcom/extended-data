@@ -415,6 +415,7 @@ The installed CLI exposes the same discovery layer for shell automation:
 ```bash
 extended-data decode '{"service": {"name": "api"}}' --suffix json
 extended-data decode --file config.yaml --output json
+extended-data inspect --file config.yaml
 extended-data merge config/base.yaml config/dev.yaml --output yaml
 extended-data list --json
 extended-data list --category cloud
