@@ -277,6 +277,30 @@ def test_cli_call_redacts_explicit_argument_values_from_errors() -> None:
     assert output.count("[REDACTED]") >= 3
 
 
+@patch("extended_data.connectors.cli.json.loads")
+def test_cli_call_decodes_json_arguments_through_data_boundary(mock_json_loads: MagicMock) -> None:
+    """Structured CLI method arguments should use the shared data decoder."""
+    mock_json_loads.side_effect = AssertionError("CLI arguments must be decoded through decode_file")
+    args = argparse.Namespace(
+        connector="example",
+        method="fetch",
+        extra=["--metadata", '{"service": {"name": "api"}}'],
+        json=False,
+    )
+    connector = MagicMock()
+    connector.fetch.return_value = {"ok": True}
+
+    with (
+        patch("extended_data.connectors.cli.get_connector_class", return_value=ExampleConnector),
+        patch("extended_data.connectors.cli.get_connector", return_value=connector),
+        patch("sys.stdout.write"),
+    ):
+        exit_code = cmd_call(args)
+
+    assert exit_code == 0
+    connector.fetch.assert_called_once_with(metadata={"service": {"name": "api"}})
+
+
 def test_cli_main_help() -> None:
     """Test main CLI entry point with help."""
     with patch("sys.argv", ["extended-data", "--help"]):

@@ -330,6 +330,9 @@ their payload returns as `ExtendedDict` or `ExtendedList[ExtendedDict]`.
 The generic CLI `call` command and MCP bridge expose only connector methods
 that advertise Extended Data payload returns, so raw SDK client factories and
 low-level HTTP helpers do not leak into serialized tool catalogs.
+CLI `--arg` values that look like JSON are decoded through the shared
+structured data boundary before method dispatch, matching file, input, and
+connector payload decoding.
 Serialized CLI/MCP boundaries apply Tier 1 redaction after Tier 2 containers
 are lowered to JSON-compatible data, and connector API error messages use the
 same redaction policy before exceptions are raised. Common secret-bearing keys

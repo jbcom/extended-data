@@ -161,6 +161,9 @@ payload contract; framework factory functions still return framework tool
 objects.
 The generic CLI `call` command and MCP bridge expose only methods that
 advertise Extended Data payload returns.
+CLI `--arg` values that look like JSON are decoded through the same structured
+data boundary used by files, inputs, and connector payloads before method
+dispatch.
 Serialized CLI/MCP boundaries and connector API error messages reuse the Tier 1
 redaction primitives for common secret-bearing keys and token-shaped strings.
 CLI and MCP connector calls pass method arguments through `values=[...]` as

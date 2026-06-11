@@ -32,6 +32,8 @@ from extended_data.connectors.registry import (
 from extended_data.connectors.surface import connector_data_methods, is_connector_data_method
 from extended_data.containers import ExtendedList
 from extended_data.containers.factory import to_builtin
+from extended_data.io.files import decode_file
+from extended_data.primitives.formats.errors import DataDecodeError
 from extended_data.primitives.redaction import redact_sensitive_text
 
 
@@ -51,8 +53,8 @@ def _parse_arg_value(value: str) -> Any:
     """Parse a CLI argument value, attempting JSON decode."""
     # Try JSON first
     try:
-        return json.loads(value)
-    except json.JSONDecodeError:
+        return decode_file(value, suffix="json", as_extended=False)
+    except DataDecodeError:
         pass
 
     # Try common conversions
