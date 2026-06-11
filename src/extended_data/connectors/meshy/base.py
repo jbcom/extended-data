@@ -21,6 +21,7 @@ import httpx
 
 from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
 
+from extended_data.containers import ExtendedString
 from extended_data.inputs import InputProvider
 from extended_data.primitives.redaction import redact_sensitive_text
 
@@ -125,6 +126,15 @@ def task_failure_message(error: Any) -> str:
 def unexpected_response_message(data: Any) -> str:
     """Return a public, redacted unexpected-response diagnostic."""
     return f"Unexpected API response: missing 'result' key. Response: {redact_sensitive_text(data)}"
+
+
+def task_id_from_response(response: httpx.Response) -> ExtendedString:
+    """Extract a non-empty Meshy task id from a create/refine response."""
+    data = response.json()
+    result = data.get("result") if isinstance(data, Mapping) else None
+    if not isinstance(result, str) or not result.strip():
+        raise RuntimeError(unexpected_response_message(data))
+    return ExtendedString(result)
 
 
 @retry(

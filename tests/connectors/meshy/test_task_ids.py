@@ -81,6 +81,53 @@ def test_retexture_task_id_is_extended_string() -> None:
     assert created == "retexture-task"
 
 
+@pytest.mark.parametrize(
+    ("request_path", "call"),
+    [
+        (
+            "extended_data.connectors.meshy.text3d.base.request",
+            lambda: text3d.create(Text3DRequest(prompt="a sword")),
+        ),
+        (
+            "extended_data.connectors.meshy.text3d.base.request",
+            lambda: text3d.refine("text-task"),
+        ),
+        (
+            "extended_data.connectors.meshy.image3d.base.request",
+            lambda: image3d.create(Image3DRequest(image_url="https://example.com/source.png")),
+        ),
+        (
+            "extended_data.connectors.meshy.image3d.base.request",
+            lambda: image3d.refine("image-task"),
+        ),
+        (
+            "extended_data.connectors.meshy.animate.base.request",
+            lambda: animate.create(AnimationRequest(rig_task_id="rig-task", action_id=42)),
+        ),
+        (
+            "extended_data.connectors.meshy.rigging.base.request",
+            lambda: rigging.create(RiggingRequest(input_task_id="model-task")),
+        ),
+        (
+            "extended_data.connectors.meshy.retexture.base.request",
+            lambda: retexture.create(RetextureRequest(input_task_id="model-task", text_style_prompt="gold")),
+        ),
+    ],
+)
+def test_meshy_task_id_responses_fail_loudly_without_string_result(request_path: str, call) -> None:
+    """Task creation/refinement must not convert malformed vendor payloads into None."""
+    response = _json_response({"password": "hunter2", "authorization": "Bearer raw_token", "result": None})
+
+    with patch(request_path, return_value=response):
+        with pytest.raises(RuntimeError, match="missing 'result' key") as exc_info:
+            call()
+
+    message = str(exc_info.value)
+    assert "hunter2" not in message
+    assert "raw_token" not in message
+    assert "[REDACTED]" in message
+
+
 def test_text3d_get_returns_extended_payload() -> None:
     payload = {
         "id": "text-task",
@@ -186,15 +233,12 @@ def test_meshy_poll_redacts_failed_task_errors(monkeypatch: pytest.MonkeyPatch, 
     assert "[REDACTED]" in message
 
 
-def test_image3d_create_redacts_unexpected_response() -> None:
-    """Image3D create diagnostics should not echo secret-bearing response payloads."""
-    response = _json_response({"password": "hunter2", "authorization": "Bearer raw_token"})
+@pytest.mark.parametrize("payload", [{"result": ""}, {"result": 123}, ["not", "a", "mapping"]])
+def test_meshy_task_id_response_requires_non_empty_string_result(payload: object) -> None:
+    """Task ids are string API handles, not arbitrary JSON payload values."""
+    response = MagicMock()
+    response.json.return_value = payload
 
     with patch("extended_data.connectors.meshy.image3d.base.request", return_value=response):
-        with pytest.raises(RuntimeError) as exc_info:
+        with pytest.raises(RuntimeError, match="missing 'result' key"):
             image3d.create(Image3DRequest(image_url="https://example.com/source.png"))
-
-    message = str(exc_info.value)
-    assert "hunter2" not in message
-    assert "raw_token" not in message
-    assert "[REDACTED]" in message

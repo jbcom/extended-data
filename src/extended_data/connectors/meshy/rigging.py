@@ -23,7 +23,7 @@ def create(request: RiggingRequest) -> ExtendedString:
         version="v1",
         json=request.model_dump(exclude_none=True),
     )
-    return extend_data(response.json().get("result"))
+    return base.task_id_from_response(response)
 
 
 def get(task_id: str) -> ExtendedDict:

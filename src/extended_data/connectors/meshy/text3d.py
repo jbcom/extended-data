@@ -24,7 +24,7 @@ def create(request: Text3DRequest) -> ExtendedString:
         version="v2",
         json=request.model_dump(exclude_none=True),
     )
-    return extend_data(response.json().get("result"))
+    return base.task_id_from_response(response)
 
 
 def get(task_id: str) -> ExtendedDict:
@@ -42,7 +42,7 @@ def refine(task_id: str) -> ExtendedString:
         version="v2",
         json={},
     )
-    return extend_data(response.json().get("result"))
+    return base.task_id_from_response(response)
 
 
 def poll(task_id: str, interval: float = 5.0, timeout: float = 600.0) -> ExtendedDict:
