@@ -156,6 +156,38 @@ def test_approve_plan_returns_updated_extended_session() -> None:
     connector.get_session.assert_called_once_with("sessions/123")
 
 
+def test_add_user_response_sends_prompt_and_returns_updated_session() -> None:
+    """Jules follow-up messages are sent through the required sendMessage prompt body."""
+    connector = JulesConnector(api_key="test-key")
+    connector.post = MagicMock(return_value=_response({}))
+    connector.get_session = MagicMock(return_value=ExtendedDict({"name": "sessions/123", "state": "RUNNING"}))
+
+    result = connector.add_user_response("123", "Please continue with the tests")
+
+    assert isinstance(result, ExtendedDict)
+    connector.post.assert_called_once_with("/sessions/123:sendMessage", json={"prompt": "Please continue with the tests"})
+    connector.get_session.assert_called_once_with("sessions/123")
+
+
+def test_add_user_response_requires_non_empty_prompt() -> None:
+    """The Jules sendMessage API requires a prompt, so empty local calls should fail."""
+    connector = JulesConnector(api_key="test-key")
+
+    with pytest.raises(ValueError, match="non-empty prompt"):
+        connector.add_user_response("123", "")
+
+
+def test_resume_session_sends_prompt_via_add_user_response() -> None:
+    """The resume helper should keep the same required prompt contract."""
+    connector = JulesConnector(api_key="test-key")
+    connector.add_user_response = MagicMock(return_value=ExtendedDict({"name": "sessions/123", "state": "RUNNING"}))
+
+    result = connector.resume_session("123", "Resume with the approved plan")
+
+    assert result["name"] == "sessions/123"
+    connector.add_user_response.assert_called_once_with("123", "Resume with the approved plan")
+
+
 def test_handle_response_raises_jules_error() -> None:
     """Jules API errors preserve vendor message and status details."""
     connector = JulesConnector(api_key="test-key")

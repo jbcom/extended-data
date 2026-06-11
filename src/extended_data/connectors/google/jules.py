@@ -398,11 +398,12 @@ class JulesConnector(VendorConnectorBase):
         # API returns empty on success, fetch updated session
         return self.get_session(session_name)
 
-    def add_user_response(self, session_name: str, message: str = "") -> ExtendedDict:
+    def add_user_response(self, session_name: str, message: str) -> ExtendedDict:
         """Add a follow-up message to a session or resume it.
 
-        Note: The Jules API uses :sendMessage endpoint. An empty body
-        resumes a paused session. A message can be included in certain states.
+        Note: The Jules API uses the :sendMessage endpoint with a required
+        prompt body. The response body is empty on success, so this method
+        fetches and returns the updated session.
 
         Args:
             session_name: Full resource name.
@@ -411,23 +412,28 @@ class JulesConnector(VendorConnectorBase):
         Returns:
             Updated Session object.
         """
+        if not isinstance(message, str) or not message.strip():
+            msg = "Jules sendMessage requires a non-empty prompt"
+            raise ValueError(msg)
+
         if not session_name.startswith("sessions/"):
             session_name = f"sessions/{session_name}"
 
-        # The API uses sendMessage, not addUserResponse
-        response = self.post(f"/{session_name}:sendMessage", json={})
-        self._handle_response(response, "add_user_response", session_name, message)
+        body = {"prompt": message}
+        response = self.post(f"/{session_name}:sendMessage", json=body)
+        self._handle_response(response, "add_user_response", session_name, body)
 
         # API returns empty on success, fetch updated session
         return self.get_session(session_name)
 
-    def resume_session(self, session_name: str) -> ExtendedDict:
-        """Resume a paused or awaiting session.
+    def resume_session(self, session_name: str, message: str) -> ExtendedDict:
+        """Resume a paused or awaiting session by sending a follow-up prompt.
 
         Args:
             session_name: Full resource name.
+            message: User prompt to send to the session.
 
         Returns:
             Updated Session object.
         """
-        return self.add_user_response(session_name)
+        return self.add_user_response(session_name, message)
