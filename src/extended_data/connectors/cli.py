@@ -4,7 +4,7 @@ This module provides a command-line interface to all extended data connectors
 using the central registry for discovery.
 
 Usage:
-    # List available connectors
+    # List connector catalog entries
     extended-data list
     extended-data list --category cloud
     extended-data list --capability repositories
@@ -284,7 +284,7 @@ def main() -> int:
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  extended-data list                    # List all connectors
+  extended-data list                    # List connector catalog entries
   extended-data list --category cloud   # List cloud connectors
   extended-data list --capability files # List connectors by capability
   extended-data methods jules           # List Jules data methods
@@ -296,7 +296,7 @@ Examples:
     subparsers = parser.add_subparsers(dest="command", help="Commands")
 
     # List command
-    list_parser = subparsers.add_parser("list", help="List available connectors")
+    list_parser = subparsers.add_parser("list", help="List connector catalog entries")
     list_parser.add_argument("--json", action="store_true", help="JSON output")
     list_parser.add_argument("--available-only", action="store_true", help="Hide connectors with missing extras")
     list_parser.add_argument("--category", help="Filter by catalog category")

@@ -9,10 +9,11 @@ using Python's entry points system. This allows:
 4. Same registry used by both MCP and CLI
 
 Usage:
-    from extended_data.connectors.registry import get_connector, list_connectors
+    from extended_data.connectors.registry import get_connector, list_available_connectors, list_connectors
 
-    # List available connectors
-    available = list_connectors()
+    # List catalog connectors or only runtime-ready connectors
+    catalog = list_connectors()
+    available = list_available_connectors()
     # ExtendedList(["anthropic", "aws", "cursor", ...])
 
     # Get a specific connector instance
@@ -269,19 +270,20 @@ def _list_connector_classes() -> dict[str, builtins.type[ConnectorBase]]:
     return _discover_connectors().copy()
 
 
-def list_connectors() -> ExtendedList[ExtendedString]:
-    """List registered connector names whose runtime requirements are installed.
+def list_connectors(*, include_unavailable: bool = True) -> ExtendedList[ExtendedString]:
+    """List connector catalog names.
 
     Returns:
-        ExtendedList of usable connector registry names.
+        ExtendedList of known connector registry names.
     """
     return extend_data(
-        sorted(
-            name
-            for name in _discover_connectors()
-            if not get_missing_connector_requirements(name)
-        ),
+        [str(connector["name"]) for connector in list_connector_info(include_unavailable=include_unavailable)],
     )
+
+
+def list_available_connectors() -> ExtendedList[ExtendedString]:
+    """List connector names whose runtime requirements are installed."""
+    return list_connectors(include_unavailable=False)
 
 
 def get_connector_class(name: str) -> builtins.type[ConnectorBase]:

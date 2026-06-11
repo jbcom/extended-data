@@ -188,6 +188,7 @@ class TestConnectorFabric:
         cloud_connectors = vc.list_connectors_by_category("cloud")
         repository_connectors = vc.list_connectors_by_capability("repositories")
         connector_names = vc.list_connectors()
+        available_connector_names = vc.list_available_connectors()
         assert isinstance(github_info, ExtendedDict)
         assert github_info["name"] == "github"
         assert github_info["category"] == "development"
@@ -209,7 +210,11 @@ class TestConnectorFabric:
         assert isinstance(connector_names, ExtendedList)
         assert isinstance(connector_names[0], ExtendedString)
         assert "cursor" in connector_names
-        assert ("github" in connector_names) is github_info["available"]
+        assert "github" in connector_names
+        assert isinstance(available_connector_names, ExtendedList)
+        assert "cursor" in available_connector_names
+        assert set(available_connector_names) <= set(connector_names)
+        assert ("github" in available_connector_names) is github_info["available"]
 
     def test_external_connector_metadata_uses_base_class_catalog_contract(self, monkeypatch):
         """Entry-point connectors can publish category and capability metadata."""
@@ -537,8 +542,8 @@ class TestConnectorFabric:
         assert isinstance(info, ExtendedList)
         assert all(connector["available"] for connector in info)
 
-    def test_list_connectors_filters_registered_connectors_with_missing_requirements(self, monkeypatch):
-        """Connector name lists only include registered connectors that can be used."""
+    def test_list_connectors_reports_catalog_names_and_available_names_explicitly(self, monkeypatch):
+        """Connector catalog names and runtime-available names are separate APIs."""
 
         class CursorConnector:
             pass
@@ -561,7 +566,11 @@ class TestConnectorFabric:
             lambda name: ExtendedList(["github"]) if name == "github" else ExtendedList(),
         )
 
-        names = registry.list_connectors()
+        catalog_names = registry.list_connectors()
+        available_names = registry.list_available_connectors()
 
-        assert isinstance(names, ExtendedList)
-        assert names == ["cursor"]
+        assert isinstance(catalog_names, ExtendedList)
+        assert "cursor" in catalog_names
+        assert "github" in catalog_names
+        assert isinstance(available_names, ExtendedList)
+        assert available_names == ["cursor"]

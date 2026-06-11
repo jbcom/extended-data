@@ -49,6 +49,7 @@ def test_catalog_tools_expose_connector_discovery_without_credentials() -> None:
 
     expected = {
         "extended_data_list_connectors",
+        "extended_data_list_available_connectors",
         "extended_data_list_connector_info",
         "extended_data_get_connector_info",
         "extended_data_list_connector_categories",
@@ -68,12 +69,16 @@ def test_catalog_tool_handlers_return_tier2_catalog_payloads() -> None:
     tools = _catalog_tool_definitions()
 
     names = tools["extended_data_list_connectors"]["handler"]()
+    available_names = tools["extended_data_list_available_connectors"]["handler"]()
     github = tools["extended_data_get_connector_info"]["handler"](name="github")
     categories = tools["extended_data_list_connector_categories"]["handler"]()
     repositories = tools["extended_data_list_connectors_by_capability"]["handler"](capability="repositories")
 
     assert isinstance(names, ExtendedList)
-    assert "cursor" in names
+    assert "github" in names
+    assert isinstance(available_names, ExtendedList)
+    assert "cursor" in available_names
+    assert set(available_names) <= set(names)
     assert isinstance(github, ExtendedDict)
     assert github["category"] == "development"
     assert "repositories" in github["capabilities"]

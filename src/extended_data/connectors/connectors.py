@@ -15,6 +15,9 @@ from extended_data.connectors.registry import (
     get_connector_info as get_registered_connector_info,
 )
 from extended_data.connectors.registry import (
+    list_available_connectors as list_registered_available_connectors,
+)
+from extended_data.connectors.registry import (
     list_connector_capabilities as list_registered_connector_capabilities,
 )
 from extended_data.connectors.registry import (
@@ -131,8 +134,12 @@ class ConnectorFabric(InputProvider):
         self._client_cache[client_type][cache_key] = client
 
     def list_connectors(self) -> ExtendedList[ExtendedString]:
-        """List connector names available in the current environment."""
+        """List connector catalog names."""
         return list_registered_connectors()
+
+    def list_available_connectors(self) -> ExtendedList[ExtendedString]:
+        """List connector names available in the current environment."""
+        return list_registered_available_connectors()
 
     def list_connector_info(self, *, include_unavailable: bool = True) -> ExtendedList[ExtendedDict]:
         """List connector catalog metadata."""

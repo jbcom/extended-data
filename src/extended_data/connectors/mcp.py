@@ -31,6 +31,7 @@ from extended_data.connectors.registry import (
     _list_connector_classes,
     get_connector,
     get_connector_info,
+    list_available_connectors,
     list_connector_capabilities,
     list_connector_categories,
     list_connector_info,
@@ -110,12 +111,12 @@ def _get_public_methods(connector_class: builtins.type[Any]) -> list[tuple[str, 
 
 def _catalog_tool_definitions() -> dict[str, dict[str, Any]]:
     """Build credential-free connector catalog MCP tools."""
-    empty_schema: dict[str, Any] = {"type": "object", "properties": {}, "required": []}
     include_unavailable_schema: dict[str, Any] = {
         "type": "object",
         "properties": {"include_unavailable": {"type": "boolean", "default": True}},
         "required": [],
     }
+    empty_schema: dict[str, Any] = {"type": "object", "properties": {}, "required": []}
     name_schema: dict[str, Any] = {
         "type": "object",
         "properties": {
@@ -143,9 +144,14 @@ def _catalog_tool_definitions() -> dict[str, dict[str, Any]]:
 
     return {
         "extended_data_list_connectors": {
-            "description": "List available Extended Data connector names.",
-            "parameters": empty_schema,
+            "description": "List Extended Data connector catalog names.",
+            "parameters": include_unavailable_schema,
             "handler": list_connectors,
+        },
+        "extended_data_list_available_connectors": {
+            "description": "List Extended Data connectors available in the current environment.",
+            "parameters": empty_schema,
+            "handler": list_available_connectors,
         },
         "extended_data_list_connector_info": {
             "description": "List Extended Data connector catalog metadata.",

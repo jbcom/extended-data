@@ -301,10 +301,12 @@ Every built-in connector class registered by name is also exported from
 not `None` sentinels. Optional SDKs load when connector instances need them, so
 package import remains lightweight while missing optional extras still fail at
 the operation boundary with install guidance. `list_connectors()` reports the
-registered connectors whose runtime requirements are installed; use
-`list_connector_info()` when tooling needs the complete catalog plus missing
-dependency and install guidance. Catalog entries include normalized categories
-and capabilities; `list_connector_categories()`,
+complete connector catalog, including known connectors whose optional SDK extras
+are not installed; use `list_available_connectors()` for only connectors whose
+runtime requirements are installed. Use `list_connector_info()` when tooling
+needs the complete catalog plus missing dependency and install guidance.
+Catalog entries include normalized categories and capabilities;
+`list_connector_categories()`,
 `list_connector_capabilities()`, `list_connectors_by_category()`, and
 `list_connectors_by_capability()` let workflows select integrations by data
 domain or supported operation without parsing class names. `ConnectorFabric`
@@ -338,9 +340,9 @@ The generic CLI `call` command and MCP bridge expose only connector methods
 that advertise Extended Data payload returns, so raw SDK client factories and
 low-level HTTP helpers do not leak into serialized tool catalogs.
 The MCP bridge also publishes credential-free catalog tools:
-`extended_data_list_connectors`, `extended_data_list_connector_info`,
-`extended_data_get_connector_info`, `extended_data_list_connector_categories`,
-`extended_data_list_connector_capabilities`,
+`extended_data_list_connectors`, `extended_data_list_available_connectors`,
+`extended_data_list_connector_info`, `extended_data_get_connector_info`,
+`extended_data_list_connector_categories`, `extended_data_list_connector_capabilities`,
 `extended_data_list_connectors_by_category`, and
 `extended_data_list_connectors_by_capability`.
 CLI `--arg` values that look like JSON are decoded through the shared
@@ -391,21 +393,23 @@ result = SecretsConnector().run_pipeline(
 )
 ```
 
-Use the catalog helpers when a workflow needs to inspect which integrations can
-run in the current environment:
+Use the catalog helpers when a workflow needs to inspect known integrations and
+which ones can run in the current environment:
 
 ```python
 names = fabric.list_connectors()
+available = fabric.list_available_connectors()
 catalog = fabric.list_connector_info()
 github_info = fabric.get_connector_info("github")
 cloud_connectors = fabric.list_connectors_by_category("cloud")
 repository_connectors = fabric.list_connectors_by_capability("repositories")
 ```
 
-`list_connectors()` returns an `ExtendedList` of available connector names.
-Each catalog entry includes availability, source, category, capabilities, extra
-name, install command, required packages, missing packages, module, class, and
-description fields.
+`list_connectors()` returns an `ExtendedList` of catalog connector names.
+`list_available_connectors()` returns the subset runnable in the current
+environment. Each catalog entry includes availability, source, category,
+capabilities, extra name, install command, required packages, missing packages,
+module, class, and description fields.
 The installed CLI exposes the same discovery layer for shell automation:
 
 ```bash

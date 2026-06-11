@@ -78,19 +78,24 @@ Connector names are normalized before lookup. If a known built-in connector is
 requested without its optional extra installed, the registry raises an
 `ImportError` with the matching `extended-data[...]` install target.
 
-Inspect connector availability before wiring external data workflows:
+Inspect the connector catalog and runtime availability before wiring external
+data workflows:
 
 ```python
 names = connectors.list_connectors()
+available = connectors.list_available_connectors()
 catalog = connectors.list_connector_info()
 github_info = connectors.get_connector_info("github")
 cloud_connectors = connectors.list_connectors_by_category("cloud")
 repository_connectors = connectors.list_connectors_by_capability("repositories")
 ```
 
-`list_connectors()` returns an `ExtendedList` of available connector names.
-Use `list_connector_info()` when a workflow needs availability, category,
-capability, extra, install, class, module, and description metadata. Use
+`list_connectors()` returns an `ExtendedList` of catalog connector names,
+including known built-ins whose optional SDK extras are not installed yet. Use
+`list_available_connectors()` when a workflow needs only connectors runnable in
+the current environment. Use `list_connector_info()` when a workflow needs
+availability, category, capability, extra, install, class, module, and
+description metadata. Use
 `list_connector_categories()`, `list_connector_capabilities()`,
 `list_connectors_by_category()`, and `list_connectors_by_capability()` when a
 workflow needs to select integrations by data domain instead of hard-coding a
@@ -138,9 +143,10 @@ nested or sorted default mappings instead of importing the internal helper class
 Connectors are first-class adapters in the data fabric. `ConnectorFabric`
 uses the registry to resolve connectors by name, injects shared input/logging
 context, caches connector instances, and lets specialized helpers coexist with
-generic connector lookup. `list_connectors()` returns registered connectors whose
-runtime requirements are installed; use `list_connector_info()` for the full
-catalog, including known connectors that need an `extended-data[...]` extra.
+generic connector lookup. `list_connectors()` returns the full connector
+catalog, including known connectors that need an `extended-data[...]` extra; use
+`list_available_connectors()` for registered connectors whose runtime
+requirements are installed.
 Catalog entries include normalized categories and capabilities so workflows can
 select cloud, AI, communications, development, media, or secrets integrations
 without string matching class names.
