@@ -150,8 +150,8 @@ class TestConnectorFabric:
         assert github_info["name"] == "github"
         assert isinstance(connector_names, ExtendedList)
         assert isinstance(connector_names[0], ExtendedString)
-        assert "github" in connector_names
         assert "cursor" in connector_names
+        assert ("github" in connector_names) is github_info["available"]
 
     @requires_boto3
     @patch("extended_data.connectors.aws.AWSConnector")

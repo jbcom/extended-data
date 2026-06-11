@@ -164,7 +164,7 @@ def test_root_exports_first_class_integrated_surfaces() -> None:
     assert isinstance(connector_names[0], ExtendedString)
     assert get_type_hints(connectors.list_connectors)["return"] == ExtendedList[ExtendedString]
     assert get_type_hints(ConnectorFabric.list_connectors)["return"] == ExtendedList[ExtendedString]
-    assert "github" in connector_names
+    assert "cursor" in connector_names
 
 
 def test_logging_exposes_stored_messages_as_detached_tier2_data() -> None:
@@ -265,7 +265,7 @@ def test_first_class_connectors_keep_operation_mixins_without_optional_extras() 
 
 def test_google_registry_uses_single_first_class_connector() -> None:
     """Google Workspace, Cloud, and Billing operations should not be split into connector aliases."""
-    connector_names = set(connectors.list_connectors())
+    connector_names = {connector["name"] for connector in connectors.list_connector_info()}
 
     assert "google" in connector_names
     assert "google_cloud" not in connector_names
