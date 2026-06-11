@@ -27,8 +27,6 @@ from typing import (
     cast,
 )
 
-import orjson
-
 from extended_data.containers import ExtendedDict, ExtendedSet, to_builtin
 from extended_data.io import wrap_raw_data_for_export
 from extended_data.logging.const import VERBOSITY
@@ -652,7 +650,7 @@ class Logging:
 
             if not isinstance(data, str):
                 self.logger.info("Dumping results to JSON")
-                data = orjson.dumps(data, default=str).decode("utf-8")
+                data = wrap_raw_data_for_export(data, allow_encoding="json", default=str)
 
             sys.stdout.write(data)
             sys.exit(0)

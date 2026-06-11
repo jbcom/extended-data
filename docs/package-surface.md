@@ -340,6 +340,8 @@ boundary, so connector persistence uses the same Tier 3 data-file encoding path;
 Meshy vector-store metadata follows the same path.
 CLI JSON output, MCP tool results, and SecretSync `results_json` are exported
 through the same path after redaction.
+GitHub workflow YAML generation and `Logging.exit_run()` stdout serialization
+also route through the shared exporter.
 Serialized CLI/MCP boundaries apply Tier 1 redaction after Tier 2 containers
 are lowered to JSON-compatible data, and connector API error messages use the
 same redaction policy before exceptions are raised. Common secret-bearing keys

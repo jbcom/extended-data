@@ -2,14 +2,11 @@
 
 from __future__ import annotations
 
-import io
 import os
 
 from collections.abc import Mapping, Sequence
 from copy import deepcopy
 from typing import Any
-
-from ruamel.yaml import YAML
 
 from extended_data.connectors._optional import require_extra
 from extended_data.connectors.base import VendorConnectorBase
@@ -1053,11 +1050,7 @@ def build_github_actions_workflow(
     if concurrency_group:
         workflow["concurrency"] = concurrency_group
 
-    yaml = YAML()
-    yaml.indent(mapping=2, sequence=4, offset=2)
-    buffer = io.StringIO()
-    yaml.dump(workflow, buffer)
-    return buffer.getvalue().strip()
+    return wrap_raw_data_for_export(workflow, allow_encoding="yaml").strip()
 
 
 from extended_data.connectors.github.tools import (

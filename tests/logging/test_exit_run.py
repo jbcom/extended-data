@@ -11,6 +11,8 @@ from unittest.mock import patch
 
 import pytest
 
+import extended_data.logging.logging as logging_module
+
 from extended_data.logging import ExitRunError, Logging
 
 
@@ -311,12 +313,17 @@ class TestExitRunWithExit:
         with (
             patch("sys.stdout.write") as mock_write,
             patch("sys.exit") as mock_exit,
+            patch(
+                "extended_data.logging.logging.wrap_raw_data_for_export",
+                wraps=logging_module.wrap_raw_data_for_export,
+            ) as mock_wrap_for_export,
         ):
             logger.exit_run(results)
             mock_write.assert_called_once()
             written = mock_write.call_args[0][0]
             assert json.loads(written) == results
             mock_exit.assert_called_once_with(0)
+            mock_wrap_for_export.assert_any_call(results, allow_encoding="json", default=str)
 
     def test_exit_run_wraps_in_key(self, logger: Logging, tmp_path: Path) -> None:
         """Test that exit_run wraps results in specified key."""

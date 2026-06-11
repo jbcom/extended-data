@@ -171,6 +171,8 @@ boundary as well, keeping connector persistence aligned with Tier 3 file data;
 Meshy vector-store metadata follows the same path.
 CLI JSON output, MCP tool results, and SecretSync `results_json` use that same
 export boundary after redaction.
+GitHub workflow YAML generation and `Logging.exit_run()` stdout serialization
+also route through the shared exporter.
 Serialized CLI/MCP boundaries and connector API error messages reuse the Tier 1
 redaction primitives for common secret-bearing keys and token-shaped strings.
 CLI and MCP connector calls pass method arguments through `values=[...]` as
