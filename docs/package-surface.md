@@ -442,8 +442,8 @@ incompatible CrewAI installs fail with the same user-managed install guidance.
 
 Optional dependency checks live in `extended_data.connectors._optional`; there
 are no old package compatibility shims in the public API. Missing old imports
-are intentional in this major version so unfinished migration work stays
-visible. When a known built-in connector is requested without its optional extra
+are intentional in this major version so incorrect callers fail loudly. When a
+known built-in connector is requested without its optional extra
 installed, the registry raises an `ImportError` with the exact
 `extended-data[...]` install target instead of reporting the connector as
 unknown. Built-in connectors must also be registered through the

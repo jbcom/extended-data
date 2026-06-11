@@ -3,9 +3,8 @@
 Comprehensive Python data utilities for serialization, configuration inputs,
 structured logging, external data connectors, and workflow-oriented integrations.
 
-This repository is the clean major-version consolidation of the previous
-`extended-data-library` Python packages. The old package namespaces are not
-preserved; the public API now lives under `extended_data`.
+The public API lives under one `extended_data` namespace with explicit tiers for
+pure primitives, extended containers, and higher-order data processors.
 
 ## Install
 
@@ -124,7 +123,7 @@ string conversion. Use `redact_sensitive_text()` and
 IDs, emails, paths, or URLs, must be withheld in addition to common secret
 fields. The old `bytestostr` and `strto*` helper names are not preserved. Old
 package import namespaces are not shimmed; missing imports are intentional so
-remaining migration work fails fast.
+incorrect imports fail fast.
 Tier 1 public exports stay function-oriented; use `get_default_dict()` for
 nested or sorted default mappings instead of importing the internal helper class.
 
