@@ -44,6 +44,7 @@ class DataFile:
         file_path: FilePath | None = None,
         suffix: str | None = None,
         as_extended: bool = True,
+        metadata: Mapping[str, Any] | None = None,
     ) -> DataFile:
         """Decode in-memory data into a first-class data file artifact."""
         encoding = _resolve_data_file_encoding(file_path=file_path, suffix=suffix)
@@ -53,7 +54,7 @@ class DataFile:
             source=ExtendedString(source),
             data=decoded,
             encoding=ExtendedString(encoding),
-            metadata=_data_file_metadata(source=source, encoding=encoding, path=None, data=decoded),
+            metadata=_data_file_metadata(source=source, encoding=encoding, path=None, data=decoded, extra=metadata),
         )
 
     @classmethod
@@ -156,9 +157,16 @@ def _resolve_data_file_encoding(*, file_path: FilePath | None = None, suffix: st
     return "raw"
 
 
-def _data_file_metadata(*, source: str, encoding: str, path: Path | None, data: Any) -> ExtendedDict:
+def _data_file_metadata(
+    *,
+    source: str,
+    encoding: str,
+    path: Path | None,
+    data: Any,
+    extra: Mapping[str, Any] | None = None,
+) -> ExtendedDict:
     """Return promoted artifact metadata for workflow and connector handoff."""
-    return ExtendedDict(
+    metadata = ExtendedDict(
         {
             "source": source,
             "encoding": encoding,
@@ -167,6 +175,9 @@ def _data_file_metadata(*, source: str, encoding: str, path: Path | None, data: 
             "data_type": type(data).__name__,
         }
     )
+    if extra:
+        metadata.update(extra)
+    return metadata
 
 
 def _github_auth_header_env(github_token: str) -> dict[str, str]:

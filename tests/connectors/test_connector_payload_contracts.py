@@ -213,6 +213,7 @@ RAW_CONNECTOR_BOUNDARIES = {
 
 RAW_DATA_SURFACE_METHOD_NAMES = {
     "close",
+    "decode_response_file",
     "delete",
     "delete_data",
     "download",
@@ -234,11 +235,13 @@ RAW_DATA_SURFACE_METHOD_NAMES = {
     "replace_inputs",
     "request",
     "request_data",
+    "request_data_file",
     "snapshot_inputs",
 }
 
 RAW_DATA_SURFACE_METHODS = (
     VendorConnectorBase.close,
+    VendorConnectorBase.decode_response_file,
     VendorConnectorBase.delete,
     VendorConnectorBase.delete_data,
     VendorConnectorBase.download,
@@ -256,6 +259,7 @@ RAW_DATA_SURFACE_METHODS = (
     VendorConnectorBase.put_data,
     VendorConnectorBase.request,
     VendorConnectorBase.request_data,
+    VendorConnectorBase.request_data_file,
     InputProvider.freeze_inputs,
     InputProvider.get_input,
     InputProvider.merge_inputs,

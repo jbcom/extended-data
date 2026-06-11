@@ -13,6 +13,7 @@ from pydantic import BaseModel, Field
 
 from extended_data.connectors.base import ConnectorAPIError, RateLimitError, VendorConnectorBase
 from extended_data.containers import ExtendedDict, ExtendedList, ExtendedString
+from extended_data.io import DataFile
 from extended_data.logging import Logging
 
 
@@ -115,6 +116,69 @@ def test_request_data_decodes_response_body() -> None:
     mock_client.request.assert_called_once()
     assert mock_client.request.call_args.args[0] == "GET"
     assert mock_client.request.call_args.args[1] == "https://api.example.com/status"
+
+
+def test_decode_response_file_returns_artifact_with_metadata() -> None:
+    """HTTP response artifacts retain decoded data and non-secret provenance."""
+    connector = _connector()
+    response = httpx.Response(
+        200,
+        content=b'{"service":{"name":"api"}}',
+        headers={"content-type": "application/json"},
+        request=httpx.Request("GET", "https://api.example.com/status"),
+    )
+
+    artifact = connector.decode_response_file(response)
+
+    assert isinstance(artifact, DataFile)
+    assert artifact.source == "https://api.example.com/status"
+    assert artifact.encoding == "json"
+    assert isinstance(artifact.data, ExtendedDict)
+    assert artifact.data["service"]["name"].upper_first() == "Api"
+    assert artifact.metadata["status_code"] == 200
+    assert artifact.metadata["content_type"] == "application/json"
+    assert artifact.metadata["method"] == "GET"
+
+
+def test_decode_response_file_preserves_unknown_binary_payload() -> None:
+    """Unknown binary API responses remain bytes inside the DataFile artifact."""
+    connector = _connector()
+    response = httpx.Response(
+        200,
+        content=b"\x00\x01\x02",
+        headers={"content-type": "application/octet-stream"},
+    )
+
+    artifact = connector.decode_response_file(response, source="https://api.example.com/blob")
+
+    assert isinstance(artifact, DataFile)
+    assert artifact.source == "https://api.example.com/blob"
+    assert artifact.encoding == "raw"
+    assert artifact.data == b"\x00\x01\x02"
+    assert artifact.metadata["data_type"] == "bytes"
+    assert artifact.metadata["status_code"] == 200
+
+
+def test_request_data_file_adds_request_provenance() -> None:
+    """request_data_file combines request, decoding, and artifact provenance."""
+    connector = _connector()
+    mock_client = MagicMock()
+    mock_client.request.return_value = httpx.Response(
+        200,
+        content=b'{"ok":true}',
+        headers={"content-type": "application/json"},
+    )
+    connector._client = mock_client
+
+    artifact = connector.request_data_file("GET", "/status")
+
+    assert isinstance(artifact, DataFile)
+    assert artifact.source == "https://api.example.com/status"
+    assert artifact.data == {"ok": True}
+    assert isinstance(artifact.data, ExtendedDict)
+    assert artifact.metadata["method"] == "GET"
+    assert artifact.metadata["endpoint"] == "/status"
+    mock_client.request.assert_called_once()
 
 
 def test_extend_result_promotes_connector_payloads() -> None:

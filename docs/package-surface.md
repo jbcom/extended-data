@@ -302,7 +302,10 @@ credential material.
 Connectors that inherit `VendorConnectorBase` can keep raw transport access with
 `request()` or use `request_data()`, `get_data()`, `post_data()`, and the other
 verb-specific helpers to decode HTTP JSON, YAML, TOML, HCL, or text responses
-through the same Tier 2 container bridge used by file and input decoding.
+through the same Tier 2 container bridge used by file and input decoding. Use
+`request_data_file()` when an API workflow needs the decoded data plus
+non-secret response provenance such as source URL, HTTP status, content type,
+method, and endpoint in a `DataFile` artifact.
 Connector methods that return vendor data payloads should call
 `extend_result()` at the return boundary, making SDK-shaped dictionaries,
 lists, decoded repository files, GraphQL results, and workflow-builder output

@@ -33,6 +33,8 @@ import threading
 import time
 
 from abc import ABC
+from collections.abc import Mapping
+from contextlib import suppress
 from typing import TYPE_CHECKING, Any, ClassVar
 
 import httpx
@@ -62,6 +64,7 @@ if TYPE_CHECKING:
     from pydantic import BaseModel
 
     from extended_data.containers import ExtendedDict, ExtendedList
+    from extended_data.io import DataFile
 
 
 class RateLimitError(Exception):
@@ -362,6 +365,88 @@ class VendorConnectorBase(InputProvider, ABC):
 
         return decode_file(response.content, suffix=resolved_suffix, as_extended=as_extended)
 
+    @staticmethod
+    def _response_source(response: httpx.Response, fallback: str | None = None) -> str:
+        """Return a stable source label for a response artifact."""
+        if fallback:
+            return fallback
+        try:
+            return str(response.request.url)
+        except RuntimeError:
+            return "response"
+
+    @staticmethod
+    def _response_metadata(response: httpx.Response, metadata: Mapping[str, Any] | None = None) -> dict[str, Any]:
+        """Return non-secret response provenance for a DataFile artifact."""
+        response_metadata: dict[str, Any] = {
+            "status_code": response.status_code,
+            "content_type": response.headers.get("content-type", ""),
+        }
+        with suppress(RuntimeError):
+            response_metadata["method"] = response.request.method
+        if metadata:
+            response_metadata.update(metadata)
+        return response_metadata
+
+    def decode_response_file(
+        self,
+        response: httpx.Response,
+        *,
+        source: str | None = None,
+        suffix: str | None = None,
+        as_extended: bool = True,
+        metadata: Mapping[str, Any] | None = None,
+    ) -> DataFile:
+        """Decode an HTTP response body into a DataFile artifact with provenance."""
+        from extended_data.containers import ExtendedDict, ExtendedString
+        from extended_data.io import DataFile
+
+        resolved_suffix = suffix or self._suffix_from_content_type(response.headers.get("content-type"))
+        artifact_source = self._response_source(response, fallback=source)
+        artifact_metadata = self._response_metadata(response, metadata=metadata)
+
+        if not response.content:
+            return DataFile(
+                source=ExtendedString(artifact_source),
+                data=None,
+                encoding=ExtendedString(resolved_suffix or "raw"),
+                metadata=ExtendedDict(
+                    {
+                        "source": artifact_source,
+                        "encoding": resolved_suffix or "raw",
+                        "path": None,
+                        "is_url": artifact_source.startswith(("http://", "https://")),
+                        "data_type": "NoneType",
+                        **artifact_metadata,
+                    }
+                ),
+            )
+
+        if resolved_suffix is None:
+            return DataFile(
+                source=ExtendedString(artifact_source),
+                data=response.content,
+                encoding=ExtendedString("raw"),
+                metadata=ExtendedDict(
+                    {
+                        "source": artifact_source,
+                        "encoding": "raw",
+                        "path": None,
+                        "is_url": artifact_source.startswith(("http://", "https://")),
+                        "data_type": type(response.content).__name__,
+                        **artifact_metadata,
+                    }
+                ),
+            )
+
+        return DataFile.decode(
+            response.content,
+            file_path=artifact_source,
+            suffix=resolved_suffix,
+            as_extended=as_extended,
+            metadata=artifact_metadata,
+        )
+
     def extend_result(self, value: Any) -> Any:
         """Promote connector data payloads into Tier 2 containers."""
         from extended_data.containers import extend_data
@@ -381,6 +466,26 @@ class VendorConnectorBase(InputProvider, ABC):
         """Make an HTTP request and return decoded response data."""
         response = self.request(method, endpoint, headers=headers, **kwargs)
         return self.decode_response(response, suffix=suffix, as_extended=as_extended)
+
+    def request_data_file(
+        self,
+        method: str,
+        endpoint: str,
+        *,
+        headers: dict[str, str] | None = None,
+        suffix: str | None = None,
+        as_extended: bool = True,
+        **kwargs: Any,
+    ) -> DataFile:
+        """Make an HTTP request and return a decoded DataFile response artifact."""
+        response = self.request(method, endpoint, headers=headers, **kwargs)
+        return self.decode_response_file(
+            response,
+            source=self._build_url(endpoint),
+            suffix=suffix,
+            as_extended=as_extended,
+            metadata={"method": method.upper(), "endpoint": endpoint},
+        )
 
     def get(self, endpoint: str, **kwargs: Any) -> httpx.Response:
         """HTTP GET request."""
