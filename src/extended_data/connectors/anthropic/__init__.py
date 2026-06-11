@@ -35,7 +35,7 @@ from typing import TYPE_CHECKING, Any
 
 import httpx
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from extended_data.connectors.base import VendorConnectorBase
 from extended_data.containers import ExtendedDict, ExtendedList, extend_data, to_builtin
@@ -302,6 +302,43 @@ class AnthropicConnector(VendorConnectorBase):
         return model.model_dump(mode="json")
 
     @staticmethod
+    def _unexpected_response_error(operation: str, data: Any, *, status_code: int | None = None) -> AnthropicAPIError:
+        """Build a redacted malformed-response error."""
+        return AnthropicAPIError(
+            f"Unexpected Anthropic response for {operation}: {redact_sensitive_text(data)}",
+            status_code=status_code,
+            error_type="unexpected_response",
+        )
+
+    def _response_json(self, response: httpx.Response, operation: str) -> Any:
+        """Parse a response body or raise a redacted malformed-response error."""
+        try:
+            return response.json()
+        except Exception as exc:
+            raise self._unexpected_response_error(
+                operation,
+                exc,
+                status_code=response.status_code,
+            ) from None
+
+    def _parse_model_response(
+        self,
+        response: httpx.Response,
+        model_type: type[BaseModel],
+        operation: str,
+    ) -> dict[str, Any]:
+        """Validate one Anthropic model response and return a JSON payload."""
+        data = self._response_json(response, operation)
+        try:
+            return self._model_payload(model_type.model_validate(data))
+        except ValidationError:
+            raise self._unexpected_response_error(
+                operation,
+                data,
+                status_code=response.status_code,
+            ) from None
+
+    @staticmethod
     def _message_text(message: Mapping[str, Any]) -> str:
         """Extract concatenated text blocks from an extended message payload."""
         return "".join(
@@ -379,7 +416,7 @@ class AnthropicConnector(VendorConnectorBase):
         if not response.is_success:
             self._handle_error(response)
 
-        return self.extend_result(self._model_payload(Message.model_validate(response.json())))
+        return self.extend_result(self._parse_model_response(response, Message, "create_message"))
 
     def count_tokens(
         self,
@@ -419,8 +456,14 @@ class AnthropicConnector(VendorConnectorBase):
         if not response.is_success:
             self._handle_error(response)
 
-        data = response.json()
-        return data.get("input_tokens", 0)
+        data = self._response_json(response, "count_tokens")
+        if not isinstance(data, Mapping) or not isinstance(data.get("input_tokens"), int):
+            raise self._unexpected_response_error(
+                "count_tokens",
+                data,
+                status_code=response.status_code,
+            )
+        return data["input_tokens"]
 
     # =========================================================================
     # Model Operations
@@ -442,9 +485,24 @@ class AnthropicConnector(VendorConnectorBase):
         if not response.is_success:
             self._handle_error(response)
 
-        data = response.json()
-        models_data = data.get("data", [])
-        return self.extend_result([self._model_payload(Model.model_validate(m)) for m in models_data])
+        data = self._response_json(response, "list_models")
+        models_data = data.get("data") if isinstance(data, Mapping) else None
+        if not isinstance(models_data, list):
+            raise self._unexpected_response_error(
+                "list_models",
+                data,
+                status_code=response.status_code,
+            )
+
+        try:
+            parsed_models = [self._model_payload(Model.model_validate(model_data)) for model_data in models_data]
+        except ValidationError:
+            raise self._unexpected_response_error(
+                "list_models",
+                data,
+                status_code=response.status_code,
+            ) from None
+        return self.extend_result(parsed_models)
 
     def get_model(self, model_id: str) -> ExtendedDict:
         """Get information about a specific model.
@@ -465,7 +523,7 @@ class AnthropicConnector(VendorConnectorBase):
         if not response.is_success:
             self._handle_error(response)
 
-        return self.extend_result(self._model_payload(Model.model_validate(response.json())))
+        return self.extend_result(self._parse_model_response(response, Model, "get_model"))
 
     # =========================================================================
     # Agent Execution (Sandbox Mode)

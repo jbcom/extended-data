@@ -10,6 +10,7 @@ import pytest
 
 from extended_data.connectors.anthropic import (
     CLAUDE_MODELS,
+    AnthropicAPIError,
     AnthropicAuthError,
     AnthropicConnector,
     AnthropicError,
@@ -260,6 +261,95 @@ class TestAnthropicConnector:
             assert isinstance(model, ExtendedDict)
             assert isinstance(model["display_name"], ExtendedString)
             assert model["display_name"] == "Claude Sonnet 4"
+
+    def test_count_tokens_returns_vendor_token_count(self):
+        """count_tokens should return the explicit Anthropic response value."""
+        import httpx
+
+        mock_client = MagicMock()
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.is_success = True
+        mock_response.json.return_value = {"input_tokens": 42}
+        mock_client.request.return_value = mock_response
+
+        with patch.object(httpx, "Client", return_value=mock_client):
+            connector = AnthropicConnector(api_key="test-key")
+            assert connector.count_tokens(model="claude-sonnet-4-20250514", messages=[]) == 42
+
+    @pytest.mark.parametrize(
+        ("method_name", "call", "payload"),
+        [
+            (
+                "create_message",
+                lambda connector: connector.create_message(
+                    model="claude-sonnet-4-20250514",
+                    max_tokens=1024,
+                    messages=[{"role": "user", "content": "Hi"}],
+                ),
+                {"role": "assistant", "password": "hunter2", "authorization": "Bearer raw_token"},
+            ),
+            (
+                "list_models",
+                lambda connector: connector.list_models(),
+                {"data": [{"id": "claude-sonnet-4-20250514", "api_key": "key_123"}]},
+            ),
+            (
+                "get_model",
+                lambda connector: connector.get_model("claude-sonnet-4-20250514"),
+                {"id": "claude-sonnet-4-20250514", "client_secret": "secret_123"},
+            ),
+            (
+                "count_tokens",
+                lambda connector: connector.count_tokens(model="claude-sonnet-4-20250514", messages=[]),
+                {"password": "hunter2", "authorization": "Bearer raw_token"},
+            ),
+        ],
+    )
+    def test_success_response_validation_errors_are_redacted(self, method_name, call, payload):
+        """Malformed success payloads should fail loudly without raw Pydantic details."""
+        import httpx
+
+        mock_client = MagicMock()
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.is_success = True
+        mock_response.json.return_value = payload
+        mock_client.request.return_value = mock_response
+
+        with patch.object(httpx, "Client", return_value=mock_client):
+            connector = AnthropicConnector(api_key="test-key")
+            with pytest.raises(AnthropicAPIError) as exc_info:
+                call(connector)
+
+        message = str(exc_info.value)
+        assert exc_info.value.error_type == "unexpected_response"
+        assert method_name in message
+        for raw_secret in ["hunter2", "raw_token", "key_123", "secret_123"]:
+            assert raw_secret not in message
+        assert "ValidationError" not in message
+        assert "[REDACTED]" in message
+
+    def test_success_response_json_errors_are_redacted(self):
+        """Malformed JSON diagnostics should not expose raw parser exception values."""
+        import httpx
+
+        mock_client = MagicMock()
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.is_success = True
+        mock_response.json.side_effect = ValueError("bad password=hunter2 Authorization: Bearer raw_token")
+        mock_client.request.return_value = mock_response
+
+        with patch.object(httpx, "Client", return_value=mock_client):
+            connector = AnthropicConnector(api_key="test-key")
+            with pytest.raises(AnthropicAPIError) as exc_info:
+                connector.get_model("claude-sonnet-4-20250514")
+
+        message = str(exc_info.value)
+        assert "hunter2" not in message
+        assert "raw_token" not in message
+        assert "[REDACTED]" in message
 
     def test_handle_error_redacts_sensitive_vendor_message(self):
         """Anthropic errors should preserve status metadata without leaking secrets."""
