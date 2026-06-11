@@ -26,6 +26,33 @@ from extended_data.logging import Logging
 from extended_data.primitives import get_default_dict, get_unique_signature, make_hashable
 
 
+_SENSITIVE_CACHE_KEY_PARTS = (
+    "api_key",
+    "authorization",
+    "client_secret",
+    "credential",
+    "password",
+    "secret",
+    "token",
+)
+
+
+def _is_sensitive_cache_field(name: str) -> bool:
+    """Return whether a cache-key field name usually carries secret material."""
+    normalized = name.lower().replace("-", "_")
+    return any(part in normalized for part in _SENSITIVE_CACHE_KEY_PARTS)
+
+
+def _cache_safe_value(name: str, value: Any) -> Any:
+    """Return cache-key material without storing raw secret values."""
+    hashable_value = make_hashable(value)
+    if value is None or not _is_sensitive_cache_field(name):
+        return hashable_value
+
+    digest = hashlib.sha256(repr(hashable_value).encode()).hexdigest()
+    return ("sha256", digest)
+
+
 # Optional connectors - imported lazily when methods are called
 # This allows the package to be imported without all vendor SDKs installed
 
@@ -77,7 +104,7 @@ class ConnectorFabric(InputProvider):
 
     def _get_cache_key(self, **kwargs: Any) -> frozenset[tuple[str, Any]]:
         """Generate a hashable cache key from kwargs."""
-        hashable_kwargs = {k: make_hashable(v) for k, v in kwargs.items()}
+        hashable_kwargs = {k: _cache_safe_value(k, v) for k, v in kwargs.items()}
         return frozenset(hashable_kwargs.items())
 
     def _get_cached_client(self, client_type: str, **kwargs: Any) -> Any | None:

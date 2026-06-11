@@ -132,6 +132,8 @@ context, caches connector instances, and lets specialized helpers coexist with
 generic vendor lookup. `list_connectors()` returns registered connectors whose
 runtime requirements are installed; use `list_connector_info()` for the full
 catalog, including known connectors that need an `extended-data[...]` extra.
+Secret-like cache key fields such as `token`, `api_key`, `password`, and
+`client_secret` are hashed before they are stored in the fabric cache.
 `AWSConnector` and `GoogleConnector` are unified first-class classes: S3,
 Organizations, SSO, Workspace, Cloud Resource Manager, Billing, and services
 operations live on those connectors directly rather than on separate

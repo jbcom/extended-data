@@ -57,6 +57,22 @@ class TestConnectorFabric:
         assert key1 == key2
         assert key1 != key3
 
+    def test_get_cache_key_hashes_sensitive_values(self):
+        """Sensitive cache-key fields should not expose raw credentials."""
+        vc = ConnectorFabric(from_environment=False)
+
+        key1 = vc._get_cache_key(github_token="ghp_raw_token", client_secret="zoom-secret", normal="public")
+        key2 = vc._get_cache_key(github_token="ghp_raw_token", client_secret="zoom-secret", normal="public")
+        key3 = vc._get_cache_key(github_token="ghp_other_token", client_secret="zoom-secret", normal="public")
+
+        assert key1 == key2
+        assert key1 != key3
+        rendered = repr(key1)
+        assert "ghp_raw_token" not in rendered
+        assert "zoom-secret" not in rendered
+        assert "sha256" in rendered
+        assert "public" in rendered
+
     def test_cache_client(self):
         """Test caching and retrieving clients."""
         vc = ConnectorFabric()
@@ -131,6 +147,27 @@ class TestConnectorFabric:
         assert first is second
         assert third is not first
         assert mock_get_connector_class.call_count == 2
+
+    @patch("extended_data.connectors.connectors.get_connector_class")
+    def test_get_connector_cache_does_not_store_raw_sensitive_kwargs(self, mock_get_connector_class):
+        """Generic connector caching hashes secret-like constructor arguments."""
+
+        class DummyConnector:
+            def __init__(self, **kwargs):
+                self.kwargs = kwargs
+
+        vc = ConnectorFabric(from_environment=False)
+        mock_get_connector_class.return_value = DummyConnector
+
+        first = vc.get_connector("dummy", api_key="key_123", password="hunter2")
+        second = vc.get_connector("dummy", api_key="key_123", password="hunter2")
+
+        assert first is second
+        assert mock_get_connector_class.call_count == 1
+        rendered_cache = repr(vc._client_cache)
+        assert "key_123" not in rendered_cache
+        assert "hunter2" not in rendered_cache
+        assert "sha256" in rendered_cache
 
     def test_connector_fabric_exposes_catalog_info(self):
         """ConnectorFabric exposes registry-backed catalog metadata."""

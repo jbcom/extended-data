@@ -285,7 +285,10 @@ package import remains lightweight while missing optional extras still fail at
 the operation boundary with install guidance. `list_connectors()` reports the
 registered connectors whose runtime requirements are installed; use
 `list_connector_info()` when tooling needs the complete catalog plus missing
-dependency and install guidance.
+dependency and install guidance. `ConnectorFabric` hashes secret-like cache-key
+fields such as `token`, `api_key`, `password`, and `client_secret` before
+storing cache entries, so cache inspection and debug output do not expose raw
+credential material.
 
 Connectors that inherit `VendorConnectorBase` can keep raw transport access with
 `request()` or use `request_data()`, `get_data()`, `post_data()`, and the other
