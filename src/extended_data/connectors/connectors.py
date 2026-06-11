@@ -15,10 +15,22 @@ from extended_data.connectors.registry import (
     get_connector_info as get_registered_connector_info,
 )
 from extended_data.connectors.registry import (
+    list_connector_capabilities as list_registered_connector_capabilities,
+)
+from extended_data.connectors.registry import (
+    list_connector_categories as list_registered_connector_categories,
+)
+from extended_data.connectors.registry import (
     list_connector_info as list_registered_connector_info,
 )
 from extended_data.connectors.registry import (
     list_connectors as list_registered_connectors,
+)
+from extended_data.connectors.registry import (
+    list_connectors_by_capability as list_registered_connectors_by_capability,
+)
+from extended_data.connectors.registry import (
+    list_connectors_by_category as list_registered_connectors_by_category,
 )
 from extended_data.connectors.zoom import ZoomConnector
 from extended_data.containers import ExtendedDict, ExtendedList, ExtendedString
@@ -125,6 +137,32 @@ class ConnectorFabric(InputProvider):
     def list_connector_info(self, *, include_unavailable: bool = True) -> ExtendedList[ExtendedDict]:
         """List connector catalog metadata."""
         return list_registered_connector_info(include_unavailable=include_unavailable)
+
+    def list_connector_categories(self, *, include_unavailable: bool = True) -> ExtendedList[ExtendedString]:
+        """List connector catalog categories."""
+        return list_registered_connector_categories(include_unavailable=include_unavailable)
+
+    def list_connector_capabilities(self, *, include_unavailable: bool = True) -> ExtendedList[ExtendedString]:
+        """List connector catalog capabilities."""
+        return list_registered_connector_capabilities(include_unavailable=include_unavailable)
+
+    def list_connectors_by_category(
+        self,
+        category: str,
+        *,
+        include_unavailable: bool = True,
+    ) -> ExtendedList[ExtendedDict]:
+        """List connector catalog metadata for a category."""
+        return list_registered_connectors_by_category(category, include_unavailable=include_unavailable)
+
+    def list_connectors_by_capability(
+        self,
+        capability: str,
+        *,
+        include_unavailable: bool = True,
+    ) -> ExtendedList[ExtendedDict]:
+        """List connector catalog metadata for a capability."""
+        return list_registered_connectors_by_capability(capability, include_unavailable=include_unavailable)
 
     def get_connector_info(self, name: str, *, include_unavailable: bool = True) -> ExtendedDict:
         """Get catalog metadata for one connector."""

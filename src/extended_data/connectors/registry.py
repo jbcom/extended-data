@@ -56,6 +56,8 @@ class BuiltinConnectorSpec:
     module_path: str
     class_name: str
     extra: str
+    category: str = "external"
+    capabilities: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -66,6 +68,8 @@ class ConnectorInfo:
     available: bool
     source: str
     extra: str | None
+    category: str
+    capabilities: tuple[str, ...]
     install: str | None
     requirements: tuple[str, ...]
     missing: tuple[str, ...]
@@ -82,6 +86,8 @@ class ConnectorInfo:
             "available": self.available,
             "source": self.source,
             "extra": self.extra,
+            "category": self.category,
+            "capabilities": list(self.capabilities),
             "install": self.install,
             "requirements": list(self.requirements),
             "missing": list(self.missing),
@@ -95,18 +101,84 @@ class ConnectorInfo:
 
 BUILTIN_CONNECTORS: dict[str, BuiltinConnectorSpec] = {
     # Google connectors
-    "jules": BuiltinConnectorSpec("extended_data.connectors.google.jules", "JulesConnector", "google"),
-    "google": BuiltinConnectorSpec("extended_data.connectors.google", "GoogleConnector", "google"),
+    "jules": BuiltinConnectorSpec(
+        "extended_data.connectors.google.jules",
+        "JulesConnector",
+        "google",
+        category="ai",
+        capabilities=("sources", "sessions"),
+    ),
+    "google": BuiltinConnectorSpec(
+        "extended_data.connectors.google",
+        "GoogleConnector",
+        "google",
+        category="cloud",
+        capabilities=("workspace", "cloud", "billing", "services", "iam"),
+    ),
     # Other connectors
-    "cursor": BuiltinConnectorSpec("extended_data.connectors.cursor", "CursorConnector", "cursor"),
-    "github": BuiltinConnectorSpec("extended_data.connectors.github", "GitHubConnector", "github"),
-    "meshy": BuiltinConnectorSpec("extended_data.connectors.meshy", "MeshyConnector", "meshy"),
-    "secrets": BuiltinConnectorSpec("extended_data.connectors.secrets", "SecretsConnector", "secrets"),
-    "anthropic": BuiltinConnectorSpec("extended_data.connectors.anthropic", "AnthropicConnector", "anthropic"),
-    "aws": BuiltinConnectorSpec("extended_data.connectors.aws", "AWSConnector", "aws"),
-    "slack": BuiltinConnectorSpec("extended_data.connectors.slack", "SlackConnector", "slack"),
-    "zoom": BuiltinConnectorSpec("extended_data.connectors.zoom", "ZoomConnector", "zoom"),
-    "vault": BuiltinConnectorSpec("extended_data.connectors.vault", "VaultConnector", "vault"),
+    "cursor": BuiltinConnectorSpec(
+        "extended_data.connectors.cursor",
+        "CursorConnector",
+        "cursor",
+        category="ai",
+        capabilities=("agents", "repositories", "models"),
+    ),
+    "github": BuiltinConnectorSpec(
+        "extended_data.connectors.github",
+        "GitHubConnector",
+        "github",
+        category="development",
+        capabilities=("repositories", "teams", "files", "graphql", "workflows"),
+    ),
+    "meshy": BuiltinConnectorSpec(
+        "extended_data.connectors.meshy",
+        "MeshyConnector",
+        "meshy",
+        category="media",
+        capabilities=("3d-generation", "animation", "rigging", "retexturing", "metadata"),
+    ),
+    "secrets": BuiltinConnectorSpec(
+        "extended_data.connectors.secrets",
+        "SecretsConnector",
+        "secrets",
+        category="secrets",
+        capabilities=("pipeline", "dry-run", "merge", "validation"),
+    ),
+    "anthropic": BuiltinConnectorSpec(
+        "extended_data.connectors.anthropic",
+        "AnthropicConnector",
+        "anthropic",
+        category="ai",
+        capabilities=("messages", "models", "tools"),
+    ),
+    "aws": BuiltinConnectorSpec(
+        "extended_data.connectors.aws",
+        "AWSConnector",
+        "aws",
+        category="cloud",
+        capabilities=("identity", "secrets", "storage", "organizations", "sso"),
+    ),
+    "slack": BuiltinConnectorSpec(
+        "extended_data.connectors.slack",
+        "SlackConnector",
+        "slack",
+        category="communications",
+        capabilities=("messages", "channels", "users", "usergroups"),
+    ),
+    "zoom": BuiltinConnectorSpec(
+        "extended_data.connectors.zoom",
+        "ZoomConnector",
+        "zoom",
+        category="communications",
+        capabilities=("users", "meetings"),
+    ),
+    "vault": BuiltinConnectorSpec(
+        "extended_data.connectors.vault",
+        "VaultConnector",
+        "vault",
+        category="secrets",
+        capabilities=("kv", "aws-iam", "leases"),
+    ),
 }
 
 
@@ -118,6 +190,11 @@ _missing_builtin_connectors: dict[str, ImportError] = {}
 def _normalize_connector_name(name: str) -> str:
     """Normalize connector registry names."""
     return name.strip().lower()
+
+
+def _normalize_catalog_token(value: object) -> str:
+    """Normalize connector catalog categories and capabilities."""
+    return str(value).strip().lower().replace("_", "-")
 
 
 def _discover_connectors() -> dict[str, builtins.type[ConnectorBase]]:
@@ -278,6 +355,23 @@ def _get_description(cls: builtins.type[ConnectorBase]) -> str | None:
     return None
 
 
+def _get_category(cls: builtins.type[ConnectorBase], spec: BuiltinConnectorSpec | None) -> str:
+    """Get normalized category metadata for a connector."""
+    raw_category = spec.category if spec else getattr(cls, "CONNECTOR_CATEGORY", "external")
+    return _normalize_catalog_token(raw_category) or "external"
+
+
+def _get_capabilities(cls: builtins.type[ConnectorBase], spec: BuiltinConnectorSpec | None) -> tuple[str, ...]:
+    """Get normalized capability metadata for a connector."""
+    raw_capabilities = spec.capabilities if spec else getattr(cls, "CONNECTOR_CAPABILITIES", ())
+    capabilities = (
+        _normalize_catalog_token(capability)
+        for capability in raw_capabilities
+        if _normalize_catalog_token(capability)
+    )
+    return tuple(dict.fromkeys(capabilities))
+
+
 def _available_connector_info(name: str, cls: builtins.type[ConnectorBase]) -> ConnectorInfo:
     """Build metadata for a loadable connector."""
     spec = BUILTIN_CONNECTORS.get(name)
@@ -293,6 +387,8 @@ def _available_connector_info(name: str, cls: builtins.type[ConnectorBase]) -> C
         available=not missing,
         source=source,
         extra=extra,
+        category=_get_category(cls, spec),
+        capabilities=_get_capabilities(cls, spec),
         install=str(install_value) if install_value is not None else None,
         requirements=requirements,
         missing=missing,
@@ -318,6 +414,8 @@ def _missing_builtin_connector_info(name: str, error: ImportError | None) -> Con
         available=False,
         source="builtin",
         extra=spec.extra,
+        category=spec.category,
+        capabilities=spec.capabilities,
         install=str(install) if (install := get_connector_install_command(name)) is not None else None,
         requirements=tuple(str(requirement) for requirement in get_connector_requirements(name)),
         missing=tuple(str(requirement) for requirement in get_missing_connector_requirements(name)),
@@ -365,3 +463,53 @@ def list_connector_info(*, include_unavailable: bool = True) -> ExtendedList[Ext
     if not include_unavailable:
         return extend_data([connector for connector in info if connector["available"]])
     return extend_data(info)
+
+
+def list_connector_categories(*, include_unavailable: bool = True) -> ExtendedList[ExtendedString]:
+    """List connector catalog categories."""
+    categories = {
+        str(connector["category"])
+        for connector in list_connector_info(include_unavailable=include_unavailable)
+        if connector["category"]
+    }
+    return extend_data(sorted(categories))
+
+
+def list_connector_capabilities(*, include_unavailable: bool = True) -> ExtendedList[ExtendedString]:
+    """List connector catalog capabilities."""
+    capabilities: set[str] = set()
+    for connector in list_connector_info(include_unavailable=include_unavailable):
+        capabilities.update(str(capability) for capability in connector["capabilities"])
+    return extend_data(sorted(capabilities))
+
+
+def list_connectors_by_category(
+    category: str,
+    *,
+    include_unavailable: bool = True,
+) -> ExtendedList[ExtendedDict]:
+    """List connector catalog entries for a category."""
+    normalized = _normalize_catalog_token(category)
+    return extend_data(
+        [
+            connector
+            for connector in list_connector_info(include_unavailable=include_unavailable)
+            if str(connector["category"]) == normalized
+        ],
+    )
+
+
+def list_connectors_by_capability(
+    capability: str,
+    *,
+    include_unavailable: bool = True,
+) -> ExtendedList[ExtendedDict]:
+    """List connector catalog entries for a capability."""
+    normalized = _normalize_catalog_token(capability)
+    return extend_data(
+        [
+            connector
+            for connector in list_connector_info(include_unavailable=include_unavailable)
+            if normalized in {str(value) for value in connector["capabilities"]}
+        ],
+    )

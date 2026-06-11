@@ -303,10 +303,14 @@ package import remains lightweight while missing optional extras still fail at
 the operation boundary with install guidance. `list_connectors()` reports the
 registered connectors whose runtime requirements are installed; use
 `list_connector_info()` when tooling needs the complete catalog plus missing
-dependency and install guidance. `ConnectorFabric` hashes secret-like cache-key
-fields such as `token`, `api_key`, `password`, and `client_secret` before
-storing cache entries, so cache inspection and debug output do not expose raw
-credential material.
+dependency and install guidance. Catalog entries include normalized categories
+and capabilities; `list_connector_categories()`,
+`list_connector_capabilities()`, `list_connectors_by_category()`, and
+`list_connectors_by_capability()` let workflows select integrations by data
+domain or supported operation without parsing class names. `ConnectorFabric`
+hashes secret-like cache-key fields such as `token`, `api_key`, `password`, and
+`client_secret` before storing cache entries, so cache inspection and debug
+output do not expose raw credential material.
 
 Connectors that inherit `ConnectorBase` can keep raw transport access with
 `request()` or use `request_data()`, `get_data()`, `post_data()`, and the other
@@ -385,11 +389,14 @@ run in the current environment:
 names = fabric.list_connectors()
 catalog = fabric.list_connector_info()
 github_info = fabric.get_connector_info("github")
+cloud_connectors = fabric.list_connectors_by_category("cloud")
+repository_connectors = fabric.list_connectors_by_capability("repositories")
 ```
 
 `list_connectors()` returns an `ExtendedList` of available connector names.
-Each catalog entry includes availability, source, extra name, install command,
-required packages, missing packages, module, class, and description fields.
+Each catalog entry includes availability, source, category, capabilities, extra
+name, install command, required packages, missing packages, module, class, and
+description fields.
 The installed CLI exposes the same discovery layer for shell automation:
 
 ```bash

@@ -113,8 +113,12 @@ __all__ = [
     "get_connector_class",
     "get_connector_info",
     "get_google_call_params",
+    "list_connector_capabilities",
+    "list_connector_categories",
     "list_connector_info",
     "list_connectors",
+    "list_connectors_by_capability",
+    "list_connectors_by_category",
     "meshy",
 ]
 
@@ -124,6 +128,10 @@ from extended_data.connectors.registry import (
     get_connector,
     get_connector_class,
     get_connector_info,
+    list_connector_capabilities,
+    list_connector_categories,
     list_connector_info,
     list_connectors,
+    list_connectors_by_capability,
+    list_connectors_by_category,
 )

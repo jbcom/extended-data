@@ -182,9 +182,29 @@ class TestConnectorFabric:
         assert "cursor" in names
         assert "github" in names
         github_info = vc.get_connector_info(" github ")
+        categories = vc.list_connector_categories()
+        capabilities = vc.list_connector_capabilities()
+        cloud_connectors = vc.list_connectors_by_category("cloud")
+        repository_connectors = vc.list_connectors_by_capability("repositories")
         connector_names = vc.list_connectors()
         assert isinstance(github_info, ExtendedDict)
         assert github_info["name"] == "github"
+        assert github_info["category"] == "development"
+        assert "repositories" in github_info["capabilities"]
+        assert isinstance(github_info["capabilities"], ExtendedList)
+        assert isinstance(github_info["capabilities"][0], ExtendedString)
+        assert isinstance(categories, ExtendedList)
+        assert isinstance(categories[0], ExtendedString)
+        assert "ai" in categories
+        assert "cloud" in categories
+        assert isinstance(capabilities, ExtendedList)
+        assert isinstance(capabilities[0], ExtendedString)
+        assert "repositories" in capabilities
+        assert isinstance(cloud_connectors, ExtendedList)
+        assert all(isinstance(connector, ExtendedDict) for connector in cloud_connectors)
+        assert {"aws", "google"} <= {connector["name"] for connector in cloud_connectors}
+        assert isinstance(repository_connectors, ExtendedList)
+        assert "github" in {connector["name"] for connector in repository_connectors}
         assert isinstance(connector_names, ExtendedList)
         assert isinstance(connector_names[0], ExtendedString)
         assert "cursor" in connector_names

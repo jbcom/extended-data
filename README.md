@@ -84,11 +84,17 @@ Inspect connector availability before wiring external data workflows:
 names = connectors.list_connectors()
 catalog = connectors.list_connector_info()
 github_info = connectors.get_connector_info("github")
+cloud_connectors = connectors.list_connectors_by_category("cloud")
+repository_connectors = connectors.list_connectors_by_capability("repositories")
 ```
 
 `list_connectors()` returns an `ExtendedList` of available connector names.
-Use `list_connector_info()` when a workflow needs availability, extra, install,
-class, module, and description metadata.
+Use `list_connector_info()` when a workflow needs availability, category,
+capability, extra, install, class, module, and description metadata. Use
+`list_connector_categories()`, `list_connector_capabilities()`,
+`list_connectors_by_category()`, and `list_connectors_by_capability()` when a
+workflow needs to select integrations by data domain instead of hard-coding a
+single connector name.
 
 The same catalog is available from the CLI:
 
@@ -133,6 +139,9 @@ context, caches connector instances, and lets specialized helpers coexist with
 generic connector lookup. `list_connectors()` returns registered connectors whose
 runtime requirements are installed; use `list_connector_info()` for the full
 catalog, including known connectors that need an `extended-data[...]` extra.
+Catalog entries include normalized categories and capabilities so workflows can
+select cloud, AI, communications, development, media, or secrets integrations
+without string matching class names.
 Secret-like cache key fields such as `token`, `api_key`, `password`, and
 `client_secret` are hashed before they are stored in the fabric cache.
 `AWSConnector` and `GoogleConnector` are unified first-class classes: S3,

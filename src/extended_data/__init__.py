@@ -67,8 +67,12 @@ if TYPE_CHECKING:
         get_connector,
         get_connector_class,
         get_connector_info,
+        list_connector_capabilities,
+        list_connector_categories,
         list_connector_info,
         list_connectors,
+        list_connectors_by_capability,
+        list_connectors_by_category,
     )
     from extended_data.inputs import InputProvider, directed_inputs, input_config
     from extended_data.logging import ExitRunError, KeyTransform, Logging
@@ -103,8 +107,12 @@ _LAZY_EXPORTS = {
     "get_connector_class": ("extended_data.connectors", "get_connector_class"),
     "get_connector_info": ("extended_data.connectors", "get_connector_info"),
     "input_config": ("extended_data.inputs", "input_config"),
+    "list_connector_capabilities": ("extended_data.connectors", "list_connector_capabilities"),
+    "list_connector_categories": ("extended_data.connectors", "list_connector_categories"),
     "list_connector_info": ("extended_data.connectors", "list_connector_info"),
     "list_connectors": ("extended_data.connectors", "list_connectors"),
+    "list_connectors_by_capability": ("extended_data.connectors", "list_connectors_by_capability"),
+    "list_connectors_by_category": ("extended_data.connectors", "list_connectors_by_category"),
 }
 
 
@@ -174,8 +182,12 @@ __all__ = [
     "get_tld",
     "input_config",
     "is_url",
+    "list_connector_capabilities",
+    "list_connector_categories",
     "list_connector_info",
     "list_connectors",
+    "list_connectors_by_capability",
+    "list_connectors_by_category",
     "make_raw_data_export_safe",
     "match_file_extensions",
     "read_data_file",

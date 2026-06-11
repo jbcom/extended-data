@@ -165,11 +165,35 @@ def test_root_exports_first_class_integrated_surfaces() -> None:
     assert callable(extended_data.read_data_file)
     assert callable(extended_data.get_connector)
     assert callable(extended_data.list_connector_info)
+    assert callable(extended_data.list_connector_categories)
+    assert callable(extended_data.list_connector_capabilities)
+    assert callable(extended_data.list_connectors_by_category)
+    assert callable(extended_data.list_connectors_by_capability)
     connector_names = extended_data.list_connectors()
+    connector_categories = extended_data.list_connector_categories()
+    connector_capabilities = extended_data.list_connector_capabilities()
+    cloud_connectors = extended_data.list_connectors_by_category("cloud")
+    repository_connectors = extended_data.list_connectors_by_capability("repositories")
     assert isinstance(connector_names, ExtendedList)
     assert isinstance(connector_names[0], ExtendedString)
+    assert isinstance(connector_categories, ExtendedList)
+    assert isinstance(connector_categories[0], ExtendedString)
+    assert "cloud" in connector_categories
+    assert isinstance(connector_capabilities, ExtendedList)
+    assert isinstance(connector_capabilities[0], ExtendedString)
+    assert "repositories" in connector_capabilities
+    assert isinstance(cloud_connectors, ExtendedList)
+    assert isinstance(cloud_connectors[0], ExtendedDict)
+    assert "aws" in {connector["name"] for connector in cloud_connectors}
+    assert isinstance(repository_connectors, ExtendedList)
+    assert isinstance(repository_connectors[0], ExtendedDict)
+    assert "github" in {connector["name"] for connector in repository_connectors}
     assert get_type_hints(connectors.list_connectors)["return"] == ExtendedList[ExtendedString]
+    assert get_type_hints(connectors.list_connector_categories)["return"] == ExtendedList[ExtendedString]
+    assert get_type_hints(connectors.list_connector_capabilities)["return"] == ExtendedList[ExtendedString]
     assert get_type_hints(ConnectorFabric.list_connectors)["return"] == ExtendedList[ExtendedString]
+    assert get_type_hints(ConnectorFabric.list_connector_categories)["return"] == ExtendedList[ExtendedString]
+    assert get_type_hints(ConnectorFabric.list_connector_capabilities)["return"] == ExtendedList[ExtendedString]
     assert get_type_hints(ConnectorFabric.get_connector)["return"] is connectors.ConnectorBase
     assert "cursor" in connector_names
 
