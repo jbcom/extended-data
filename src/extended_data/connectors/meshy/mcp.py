@@ -268,9 +268,9 @@ def _jsonable_tool_result(result: Any) -> Any:
     return redact_sensitive_data(result)
 
 
-def _tool_error_payload(error: object) -> dict[str, str]:
+def _tool_error_payload(error: object, *, values: Iterable[Any] | None = None) -> dict[str, str]:
     """Return an MCP-safe error payload without raw secret values."""
-    return {"error": redact_sensitive_text(error)}
+    return {"error": redact_sensitive_text(error, values=values)}
 
 
 def _tool_payload_text(payload: Any) -> str:
@@ -314,9 +314,10 @@ def create_server() -> Any:
 
     # Handle tool calls
     @call_decorator()
-    async def call_tool(name: str, arguments: dict[str, Any]) -> list[Any]:
+    async def call_tool(name: str, arguments: dict[str, Any] | None) -> list[Any]:
         from mcp.types import TextContent
 
+        tool_arguments = arguments or {}
         handler = tool_handlers.get(name)
         if not handler:
             return [
@@ -327,13 +328,13 @@ def create_server() -> Any:
             ]
 
         try:
-            result = handler(**arguments)
+            result = handler(**tool_arguments)
             return [TextContent(type="text", text=_tool_result_text(result))]
         except Exception as e:
             return [
                 TextContent(
                     type="text",
-                    text=_tool_payload_text(_tool_error_payload(e)),
+                    text=_tool_payload_text(_tool_error_payload(e, values=tool_arguments.values())),
                 )
             ]
 

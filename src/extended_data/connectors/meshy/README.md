@@ -11,6 +11,13 @@ adapters, and an MCP server.
 pip install "extended-data[meshy]"
 ```
 
+Install the MCP extra too when running `meshy-mcp` or wiring Meshy tools into an
+MCP client:
+
+```bash
+pip install "extended-data[meshy,mcp]"
+```
+
 Use the `vector` extra only when you need local vector search over generated
 asset metadata:
 
