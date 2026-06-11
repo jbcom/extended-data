@@ -8,10 +8,11 @@ from __future__ import annotations
 import json
 
 from collections.abc import Mapping, Sequence
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 from extended_data.connectors.aws._diagnostics import safe_aws_ref, safe_aws_text
 from extended_data.containers import ExtendedDict, ExtendedList, ExtendedString, to_builtin
+from extended_data.io.files import decode_file
 from extended_data.primitives import unhump_map
 
 
@@ -187,14 +188,15 @@ class AWSS3Mixin:
         content = self.get_object(
             bucket=bucket,
             key=key,
-            decode=True,
+            decode=False,
             execution_role_arn=execution_role_arn,
         )
 
         if content is None:
             return None
 
-        return self.extend_result(json.loads(content if isinstance(content, bytes) else str(content)))
+        file_data = str(content) if isinstance(content, ExtendedString) else content
+        return cast(ExtendedDict | ExtendedList[Any], decode_file(file_data, suffix="json", as_extended=True))
 
     def put_object(
         self,

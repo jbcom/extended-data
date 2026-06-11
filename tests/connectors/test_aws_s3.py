@@ -15,8 +15,9 @@ pytest.importorskip("botocore")
 
 from botocore.exceptions import ClientError
 
-from extended_data.containers import ExtendedDict, ExtendedList, ExtendedString, extend_data
 from extended_data.connectors.aws import AWSConnector
+from extended_data.connectors.aws import s3 as s3_module
+from extended_data.containers import ExtendedDict, ExtendedList, ExtendedString, extend_data
 
 
 def _logged_text(logger: MagicMock) -> str:
@@ -228,6 +229,30 @@ class TestS3ObjectOperations:
         assert isinstance(result, ExtendedDict)
         assert isinstance(result["key"], ExtendedString)
         assert result == test_data
+
+    def test_get_json_object_decodes_through_data_boundary(self, monkeypatch, aws_connector):
+        """S3 JSON reads should use the shared file decoder, not local json.loads."""
+
+        class NoLocalJsonLoads:
+            dumps = staticmethod(json.dumps)
+
+            @staticmethod
+            def loads(*args, **kwargs):
+                raise AssertionError("S3 JSON objects must be decoded through decode_file")
+
+        mock_s3 = MagicMock()
+        mock_body = MagicMock()
+        mock_body.read.return_value = b'{"items":[{"name":"one"}]}'
+        mock_s3.get_object.return_value = {"Body": mock_body}
+        aws_connector.get_aws_client = MagicMock(return_value=mock_s3)
+        monkeypatch.setattr(s3_module, "json", NoLocalJsonLoads)
+
+        result = aws_connector.get_json_object("bucket", "data.json")
+
+        assert isinstance(result, ExtendedDict)
+        assert isinstance(result["items"], ExtendedList)
+        assert isinstance(result["items"][0], ExtendedDict)
+        assert isinstance(result["items"][0]["name"], ExtendedString)
 
     def test_get_json_object_not_found(self, aws_connector):
         """Test getting a non-existent JSON object."""
