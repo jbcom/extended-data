@@ -65,9 +65,16 @@ class ExtendedDict(UserDict[str, Any]):
 
         if args:
             other = args[0]
-            items = other.items() if hasattr(other, "items") else other
-            for key, value in items:
-                self[key] = value
+            if hasattr(other, "items"):
+                for key, value in other.items():
+                    self[key] = value
+            elif hasattr(other, "keys") and hasattr(other, "__getitem__"):
+                keys = other.keys()
+                for key in keys:
+                    self[key] = other[key]
+            else:
+                for key, value in other:
+                    self[key] = value
 
         for key, value in kwargs.items():
             self[key] = value

@@ -227,6 +227,28 @@ def test_extended_dict_promotes_nested_values_on_mutation() -> None:
     assert value["service"]["name"].upper_first() == "Api"
 
 
+def test_extended_dict_update_accepts_keys_getitem_mappings() -> None:
+    """Mapping-like objects should route through __setitem__ promotion."""
+
+    class KeyedMapping:
+        def __init__(self) -> None:
+            self._data = {"service": {"name": "api"}}
+
+        def keys(self) -> list[str]:
+            return list(self._data)
+
+        def __getitem__(self, key: str) -> object:
+            return self._data[key]
+
+    value = ExtendedDict()
+
+    value.update(KeyedMapping())
+
+    assert isinstance(value["service"], ExtendedDict)
+    assert isinstance(value["service"]["name"], ExtendedString)
+    assert value["service"]["name"].upper_first() == "Api"
+
+
 def test_extended_list_composes_sequence_primitives() -> None:
     """ExtendedList composes Tier 1 sequence primitives."""
     value = ExtendedList([1, [2, [3]], "", 2])
