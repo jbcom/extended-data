@@ -404,6 +404,8 @@ The installed CLI exposes the same discovery layer for shell automation:
 
 ```bash
 extended-data list --json
+extended-data list --category cloud
+extended-data list --capability repositories --json
 extended-data info github --json
 extended-data methods github --json
 ```

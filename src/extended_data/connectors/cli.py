@@ -6,6 +6,8 @@ using the central registry for discovery.
 Usage:
     # List available connectors
     extended-data list
+    extended-data list --category cloud
+    extended-data list --capability repositories
 
     # Call any connector data method
     extended-data call <connector> <method> [--arg value ...]
@@ -27,6 +29,8 @@ from extended_data.connectors.registry import (
     get_connector_class,
     get_connector_info,
     list_connector_info,
+    list_connectors_by_capability,
+    list_connectors_by_category,
 )
 from extended_data.connectors.surface import connector_data_methods, is_connector_data_method
 from extended_data.containers import ExtendedList
@@ -93,6 +97,31 @@ def _write_stderr(message: str) -> None:
     sys.stderr.write(f"{redact_sensitive_text(message)}\n")
 
 
+def _filter_connector_info(args: argparse.Namespace) -> ExtendedList[Any]:
+    """Return connector catalog entries filtered by CLI flags."""
+    include_unavailable = not getattr(args, "available_only", False)
+    info = list_connector_info(include_unavailable=include_unavailable)
+    names: set[str] | None = None
+
+    if category := getattr(args, "category", None):
+        names = {
+            str(connector["name"])
+            for connector in list_connectors_by_category(category, include_unavailable=include_unavailable)
+        }
+
+    if capability := getattr(args, "capability", None):
+        capability_names = {
+            str(connector["name"])
+            for connector in list_connectors_by_capability(capability, include_unavailable=include_unavailable)
+        }
+        names = capability_names if names is None else names & capability_names
+
+    if names is None:
+        return info
+
+    return ExtendedList(connector for connector in info if str(connector["name"]) in names)
+
+
 # =============================================================================
 # Commands
 # =============================================================================
@@ -100,20 +129,21 @@ def _write_stderr(message: str) -> None:
 
 def cmd_list(args: argparse.Namespace) -> int:
     """List connector catalog entries."""
-    info = list_connector_info(include_unavailable=not getattr(args, "available_only", False))
+    info = _filter_connector_info(args)
 
     if args.json:
         _write_stdout(_json_output(info))
         return 0
 
-    _write_stdout(f"{'name':<18} {'status':<11} {'extra':<10} {'class':<28} install")
+    _write_stdout(f"{'name':<18} {'status':<11} {'category':<16} {'capabilities':<34} {'extra':<10} install")
     for c in info:
         status = "available" if c["available"] else "missing"
         name = str(c["name"])
+        category = str(c.get("category") or "-")
+        capabilities = _format_list(c.get("capabilities"))
         extra = str(c.get("extra") or "-")
-        class_name = str(c.get("class") or "-")
         install = str(c.get("install") or "-")
-        _write_stdout(f"{name:<18} {status:<11} {extra:<10} {class_name:<28} {install}")
+        _write_stdout(f"{name:<18} {status:<11} {category:<16} {capabilities:<34} {extra:<10} {install}")
 
     return 0
 
@@ -220,6 +250,8 @@ def cmd_info(args: argparse.Namespace) -> int:
             "name",
             "available",
             "source",
+            "category",
+            "capabilities",
             "extra",
             "install",
             "requirements",
@@ -253,6 +285,8 @@ def main() -> int:
         epilog="""
 Examples:
   extended-data list                    # List all connectors
+  extended-data list --category cloud   # List cloud connectors
+  extended-data list --capability files # List connectors by capability
   extended-data methods jules           # List Jules data methods
   extended-data call jules list_sources # Call a method
   extended-data call cursor list_agents
@@ -265,6 +299,8 @@ Examples:
     list_parser = subparsers.add_parser("list", help="List available connectors")
     list_parser.add_argument("--json", action="store_true", help="JSON output")
     list_parser.add_argument("--available-only", action="store_true", help="Hide connectors with missing extras")
+    list_parser.add_argument("--category", help="Filter by catalog category")
+    list_parser.add_argument("--capability", help="Filter by catalog capability")
     list_parser.set_defaults(func=cmd_list)
 
     # Methods command

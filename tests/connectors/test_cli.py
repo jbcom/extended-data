@@ -36,7 +36,7 @@ class ExampleConnector:
 
 def test_cli_list() -> None:
     """Test the list command."""
-    args = argparse.Namespace(json=False, available_only=False)
+    args = argparse.Namespace(json=False, available_only=False, category=None, capability=None)
     with patch("sys.stdout.write") as mock_write:
         exit_code = cmd_list(args)
         assert exit_code == 0
@@ -45,11 +45,14 @@ def test_cli_list() -> None:
         output = "".join(call.args[0] for call in mock_write.call_args_list if call.args)
         assert "aws" in output
         assert "google" in output
+        assert "category" in output
+        assert "capabilities" in output
+        assert "cloud" in output
 
 
 def test_cli_list_json() -> None:
     """List command can emit machine-readable connector metadata."""
-    args = argparse.Namespace(json=True, available_only=False)
+    args = argparse.Namespace(json=True, available_only=False, category=None, capability=None)
     with patch("sys.stdout.write") as mock_write:
         exit_code = cmd_list(args)
 
@@ -57,7 +60,47 @@ def test_cli_list_json() -> None:
     output = mock_write.call_args.args[0]
     assert '"name": "github"' in output
     assert '"available":' in output
+    assert '"category": "development"' in output
+    assert '"capabilities":' in output
     assert "api_key_env" not in output
+
+
+def test_cli_list_filters_by_category() -> None:
+    """List command can filter the connector catalog by category."""
+    args = argparse.Namespace(json=False, available_only=False, category="cloud", capability=None)
+    with patch("sys.stdout.write") as mock_write:
+        exit_code = cmd_list(args)
+
+    assert exit_code == 0
+    output = "".join(call.args[0] for call in mock_write.call_args_list if call.args)
+    assert "aws" in output
+    assert "google" in output
+    assert "github" not in output
+
+
+def test_cli_list_filters_by_capability_json() -> None:
+    """List command can emit capability-filtered connector metadata."""
+    args = argparse.Namespace(json=True, available_only=False, category=None, capability="repositories")
+    with patch("sys.stdout.write") as mock_write:
+        exit_code = cmd_list(args)
+
+    assert exit_code == 0
+    entries = json.loads(mock_write.call_args.args[0])
+    names = {entry["name"] for entry in entries}
+    assert "github" in names
+    assert "cursor" in names
+    assert "aws" not in names
+
+
+def test_cli_list_intersects_category_and_capability_filters() -> None:
+    """Category and capability filters should narrow the same catalog result."""
+    args = argparse.Namespace(json=True, available_only=False, category="ai", capability="repositories")
+    with patch("sys.stdout.write") as mock_write:
+        exit_code = cmd_list(args)
+
+    assert exit_code == 0
+    entries = json.loads(mock_write.call_args.args[0])
+    assert [entry["name"] for entry in entries] == ["cursor"]
 
 
 def test_cli_info() -> None:
@@ -69,6 +112,8 @@ def test_cli_info() -> None:
     assert exit_code == 0
     output = "".join(call.args[0] for call in mock_write.call_args_list if call.args)
     assert "name: github" in output
+    assert "category: development" in output
+    assert "capabilities: repositories, teams, files, graphql, workflows" in output
     assert "install: pip install extended-data[github]" in output
 
 

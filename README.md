@@ -100,6 +100,8 @@ The same catalog is available from the CLI:
 
 ```bash
 extended-data list
+extended-data list --category cloud
+extended-data list --capability repositories --json
 extended-data info github --json
 extended-data methods github --json
 ```
