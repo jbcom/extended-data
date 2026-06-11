@@ -153,3 +153,114 @@ def test_merge_requires_multiple_files(tmp_path) -> None:
 
     assert exit_code == 1
     assert "merge requires at least two files" in _stdout_text(mock_write)
+
+
+def test_transform_file_applies_ordered_tier2_steps(tmp_path) -> None:
+    """Transform should expose common Tier 2 operations through DataWorkflow."""
+    payload = tmp_path / "payload.json"
+    payload.write_text(
+        '{"HTTPResponseCode": "200", "SelectedServices": ["api", "api", "worker"], "EmptyValue": ""}',
+        encoding="utf-8",
+    )
+
+    with patch("sys.stdout.write") as mock_write:
+        exit_code = cli_module.main(
+            [
+                "transform",
+                "--file",
+                str(payload),
+                "--step",
+                "reconstruct",
+                "--step",
+                "unhump",
+                "--step",
+                "deduplicate",
+                "--step",
+                "compact",
+            ]
+        )
+
+    assert exit_code == 0
+    assert json.loads(_stdout_text(mock_write)) == {
+        "http_response_code": 200,
+        "selected_services": ["api", "worker"],
+    }
+
+
+def test_transform_inline_string_applies_string_primitives() -> None:
+    """String-specific transforms should be available from the package CLI."""
+    with patch("sys.stdout.write") as mock_write:
+        exit_code = cli_module.main(
+            [
+                "transform",
+                "API Response Value",
+                "--suffix",
+                "raw",
+                "--step",
+                "to-snake-case",
+                "--output",
+                "raw",
+            ]
+        )
+
+    assert exit_code == 0
+    assert _stdout_text(mock_write) == "api_response_value\n"
+
+
+def test_transform_inline_string_can_reconstruct_scalar() -> None:
+    """Scalar reconstruction should use the string primitive when needed."""
+    with patch("sys.stdout.write") as mock_write:
+        exit_code = cli_module.main(["transform", "200", "--suffix", "raw", "--step", "reconstruct"])
+
+    assert exit_code == 0
+    assert json.loads(_stdout_text(mock_write)) == 200
+
+
+def test_transform_requires_at_least_one_step(tmp_path) -> None:
+    """Transform should fail clearly when no primitive/container step is requested."""
+    payload = tmp_path / "payload.json"
+    payload.write_text('{"service": "api"}', encoding="utf-8")
+
+    with patch("sys.stderr.write") as mock_write:
+        exit_code = cli_module.main(["transform", "--file", str(payload)])
+
+    assert exit_code == 1
+    assert "transform requires at least one --step" in _stdout_text(mock_write)
+
+
+def test_transform_reports_step_that_does_not_match_data_shape() -> None:
+    """Shape-specific transforms should fail loudly instead of silently lowering data."""
+    with patch("sys.stderr.write") as mock_write:
+        exit_code = cli_module.main(["transform", '["api"]', "--suffix", "json", "--step", "unhump"])
+
+    assert exit_code == 1
+    assert "transform 'unhump' is not available for ExtendedList" in _stdout_text(mock_write)
+
+
+def test_transform_can_write_output_artifact(tmp_path) -> None:
+    """Transformed workflow output can be written through the shared file boundary."""
+    payload = tmp_path / "payload.json"
+    output = tmp_path / "build" / "payload.yaml"
+    payload.write_text('{"HTTPResponseCode": "200"}', encoding="utf-8")
+
+    with patch("sys.stdout.write") as mock_write:
+        exit_code = cli_module.main(
+            [
+                "transform",
+                "--file",
+                str(payload),
+                "--step",
+                "reconstruct",
+                "--step",
+                "unhump",
+                "--output",
+                "yaml",
+                "--write",
+                str(output),
+            ]
+        )
+
+    assert exit_code == 0
+    output_text = output.read_text(encoding="utf-8")
+    assert _stdout_text(mock_write) == f"{output_text}\n"
+    assert "http_response_code: 200" in output_text

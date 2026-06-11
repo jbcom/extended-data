@@ -109,6 +109,7 @@ extended-data decode '{"service": {"name": "api"}}' --suffix json
 extended-data decode --file config.yaml --output json
 extended-data inspect --file config.yaml
 extended-data merge config/base.yaml config/dev.yaml --output yaml
+extended-data transform --file payload.json --step reconstruct --step unhump
 extended-data list
 extended-data list --category cloud
 extended-data list --capability repositories --json

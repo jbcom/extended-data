@@ -15,6 +15,20 @@ from extended_data.workflows import DataWorkflow, WorkflowAction, WorkflowResult
 
 CONNECTOR_COMMANDS = frozenset({"call", "info", "list", "mcp", "methods"})
 OUTPUT_ENCODINGS = ("json", "yaml", "toml", "hcl", "raw")
+TRANSFORM_METHODS = {
+    "compact": "compact",
+    "deduplicate": "deduplicate",
+    "flatten": "flatten",
+    "humanize": "humanize",
+    "reconstruct": "reconstruct_special_types",
+    "titleize": "titleize",
+    "to-camel-case": "to_camel_case",
+    "to-kebab-case": "to_kebab_case",
+    "to-pascal-case": "to_pascal_case",
+    "to-snake-case": "to_snake_case",
+    "unhump": "unhump",
+    "unique": "unique",
+}
 
 
 def _write_stdout(message: str) -> None:
@@ -109,6 +123,54 @@ def cmd_merge(args: argparse.Namespace) -> int:
         return 1
 
 
+def _transform_workflow(args: argparse.Namespace) -> DataWorkflow:
+    """Build a workflow that applies named Tier 2 transforms."""
+    steps = args.steps or []
+    if not steps:
+        raise ValueError("transform requires at least one --step")
+
+    workflow = _decode_artifact(args).workflow()
+    for step in steps:
+        workflow = workflow.then((f"transform:{step}", _transform_action(step)))
+    return workflow
+
+
+def _transform_action(step: str) -> WorkflowAction:
+    """Return a typed workflow action for one supported transform step."""
+    method_name = TRANSFORM_METHODS[step]
+
+    def transform(data: Any) -> Any:
+        method = _transform_method(data, step, method_name)
+        if not callable(method):
+            raise TypeError(f"transform {step!r} is not available for {type(data).__name__}")
+        return method()
+
+    return transform
+
+
+def _transform_method(data: Any, step: str, method_name: str) -> Any:
+    """Return the best method for a transform step on the current data shape."""
+    if step == "reconstruct":
+        return getattr(data, "reconstruct_special_types", None) or getattr(data, "reconstruct_special_type", None)
+    return getattr(data, method_name, None)
+
+
+def cmd_transform(args: argparse.Namespace) -> int:
+    """Apply named Tier 2 transforms through DataWorkflow."""
+    try:
+        workflow = _transform_workflow(args)
+        result: WorkflowResult
+        if args.write:
+            result = workflow.write(args.write, encoding=args.output, allow_empty=args.allow_empty)
+        else:
+            result = workflow.result()
+        _write_stdout(result.wrap_for_export(allow_encoding=args.output, **_json_format_opts(args)))
+        return 0
+    except Exception as e:
+        _write_stderr(str(e))
+        return 1
+
+
 def _build_parser() -> argparse.ArgumentParser:
     """Build the top-level Extended Data argument parser."""
     parser = argparse.ArgumentParser(
@@ -121,6 +183,7 @@ Examples:
   extended-data decode --file config.yaml --output json
   extended-data inspect --file config.yaml
   extended-data merge base.yaml env.yaml --output yaml
+  extended-data transform --file payload.json --step reconstruct --step unhump
   extended-data list --category cloud
   extended-data call github get_repository_file --path service.json --json
         """,
@@ -151,6 +214,23 @@ Examples:
     merge_parser.add_argument("--write", help="Write merged output to this file")
     merge_parser.add_argument("--allow-empty", action="store_true", help="Allow writing empty merged output")
     merge_parser.set_defaults(func=cmd_merge)
+
+    transform_parser = subparsers.add_parser("transform", help="Apply named Extended Data transforms")
+    transform_parser.add_argument("value", nargs="?", help="Inline payload to transform")
+    transform_parser.add_argument("--file", dest="file_path", help="File path or URL to transform")
+    transform_parser.add_argument("--suffix", help="Input format override")
+    transform_parser.add_argument(
+        "--step",
+        dest="steps",
+        action="append",
+        choices=sorted(TRANSFORM_METHODS),
+        help="Transform step to apply in order",
+    )
+    transform_parser.add_argument("--output", choices=OUTPUT_ENCODINGS, default="json", help="Output encoding")
+    transform_parser.add_argument("--compact", action="store_true", help="Compact JSON output")
+    transform_parser.add_argument("--write", help="Write transformed output to this file")
+    transform_parser.add_argument("--allow-empty", action="store_true", help="Allow writing empty transformed output")
+    transform_parser.set_defaults(func=cmd_transform)
 
     return parser
 
