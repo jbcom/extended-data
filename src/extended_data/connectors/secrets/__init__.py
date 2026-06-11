@@ -40,8 +40,10 @@ from pathlib import Path
 from typing import Any
 
 from extended_data.connectors.base import VendorConnectorBase
-from extended_data.containers import ExtendedDict, extend_data
+from extended_data.containers import ExtendedDict, extend_data, to_builtin
+from extended_data.io.files import decode_file
 from extended_data.logging import Logging
+from extended_data.primitives.formats.errors import DataDecodeError
 from extended_data.primitives.redaction import redact_sensitive_data, redact_sensitive_text
 
 
@@ -338,8 +340,8 @@ class SecretsConnector(VendorConnectorBase):
             stdout = result.stdout.strip()
             if stdout:
                 try:
-                    output = json.loads(stdout)
-                except json.JSONDecodeError as e:
+                    output = to_builtin(decode_file(stdout, suffix="json", as_extended=True))
+                except DataDecodeError as e:
                     if result.returncode == 0:
                         return SyncResult(
                             success=False,
@@ -376,7 +378,7 @@ class SecretsConnector(VendorConnectorBase):
                 success=False,
                 error_message="Pipeline execution timed out",
             )
-        except json.JSONDecodeError as e:
+        except DataDecodeError as e:
             return SyncResult(
                 success=False,
                 error_message=f"Failed to parse output: {redact_sensitive_text(e)}",

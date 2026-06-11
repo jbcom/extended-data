@@ -175,6 +175,8 @@ The `secrets` connector integrates with the standalone SecretSync project
 (`jbcom/secrets-sync`) through the `secretsync` CLI. It expects
 `secretsync pipeline --output json` to return the stable pipeline result
 envelope used by this package.
+That JSON envelope is decoded through the same file/data primitives as other
+structured connector payloads before being lowered into the `SyncResult` model.
 
 ```python
 from extended_data import SecretsConnector, SyncOptions

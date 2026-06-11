@@ -25,6 +25,7 @@ from extended_data.connectors.secrets.tools import (
     validate_config,
 )
 from extended_data.containers import ExtendedDict, ExtendedList, ExtendedString, extend_data
+from extended_data.primitives.formats.errors import DataDecodeError
 
 
 @pytest.fixture
@@ -225,6 +226,27 @@ def test_cli_run_pipeline_parses_result_envelope(mock_run: MagicMock, connector:
     assert result["diff_output"] == '{"summary":{"added":1}}'
 
 
+@patch("extended_data.connectors.secrets.json.loads")
+@patch("subprocess.run")
+def test_cli_run_pipeline_decodes_result_envelope_through_data_boundary(
+    mock_run: MagicMock,
+    mock_json_loads: MagicMock,
+    connector: SecretsConnector,
+) -> None:
+    """SecretSync JSON envelopes should use shared data decoding, not local json.loads."""
+    mock_run.return_value = MagicMock(
+        returncode=0,
+        stdout=json.dumps({"success": True, "results": [{"target": "prod"}]}),
+        stderr="",
+    )
+    mock_json_loads.side_effect = AssertionError("SecretSync CLI output must be decoded through decode_file")
+
+    result = connector.run_pipeline("config.yaml")
+
+    assert result["success"] is True
+    assert '"target": "prod"' in result["results_json"]
+
+
 @patch("subprocess.run")
 def test_cli_run_pipeline_rejects_legacy_raw_diff_json(mock_run: MagicMock, connector: SecretsConnector) -> None:
     mock_run.return_value = MagicMock(
@@ -344,11 +366,11 @@ def test_cli_run_pipeline_success_without_json_is_error(mock_run: MagicMock, con
     assert "produced no JSON output" in result["error_message"]
 
 
-@patch("json.loads")
+@patch("extended_data.connectors.secrets.decode_file")
 @patch("subprocess.run")
 def test_cli_run_pipeline_success_parse_error_is_redacted(
     mock_run: MagicMock,
-    mock_json_loads: MagicMock,
+    mock_decode_file: MagicMock,
     connector: SecretsConnector,
 ) -> None:
     mock_run.return_value = MagicMock(
@@ -356,10 +378,9 @@ def test_cli_run_pipeline_success_parse_error_is_redacted(
         stdout="not json",
         stderr="",
     )
-    mock_json_loads.side_effect = json.JSONDecodeError(
-        "invalid password=hunter2 Authorization: Bearer raw_token",
-        "",
-        0,
+    mock_decode_file.side_effect = DataDecodeError(
+        "JSON",
+        reason="invalid password=hunter2 Authorization: Bearer raw_token",
     )
 
     result = connector.run_pipeline("config.yaml")
