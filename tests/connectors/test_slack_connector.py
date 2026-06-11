@@ -69,6 +69,58 @@ def test_slack_api_error_redacts_sensitive_response_text() -> None:
     assert error.response["authorization"] == "[REDACTED]"
 
 
+def test_slack_response_payload_normalizes_sdk_shapes() -> None:
+    """Slack response normalization should redact mapping, SDK-data, get/status, and fallback shapes."""
+
+    class DataResponse:
+        data = {"ok": False, "token": "raw-token"}
+        status_code = 403
+
+    class GetterResponse:
+        status_code = 429
+
+        def get(self, key):
+            return {"ok": False, "error": "ratelimited", "warning": None}.get(key)
+
+    mapping = slack_module._slack_response_payload({"ok": False, "password": "hunter2"})
+    data = slack_module._slack_response_payload(DataResponse())
+    getter = slack_module._slack_response_payload(GetterResponse())
+    fallback = slack_module._slack_response_payload("authorization: Bearer raw-token")
+
+    assert mapping["password"] == "[REDACTED]"
+    assert data["token"] == "[REDACTED]"
+    assert getter == {"ok": False, "error": "ratelimited", "status_code": 429}
+    assert "raw-token" not in fallback["response"]
+    assert "[REDACTED]" in fallback["response"]
+
+
+def test_slack_block_helpers_skip_empty_values_and_apply_styles() -> None:
+    """Slack block helpers should encode mappings, skip empty context values, and apply styles."""
+    context = get_field_context_message_blocks(
+        "deploy",
+        {
+            "service": "api",
+            "empty": "",
+            "details": {"region": "us-east-1"},
+            **{f"k{i}": i for i in range(11)},
+        },
+    )
+    key_value = get_key_value_blocks("count", 3)
+    rich = get_rich_text_blocks(["hello"], italic=True, strike=True)
+
+    context_text = "\n".join(
+        str(element["text"])
+        for block in context
+        if block["type"] == "context"
+        for element in block["elements"]
+    )
+    assert "empty:" not in context_text
+    assert "details:" in context_text
+    assert len([block for block in context if block["type"] == "context"]) == 2
+    assert key_value[0]["text"]["text"] == "*Count*: 3"
+    assert rich[0]["elements"][0]["style"] == {"italic": True, "strike": True}
+
+
 class TestSlackConnector:
     """Test suite for SlackConnector."""
 
@@ -120,6 +172,20 @@ class TestSlackConnector:
         assert isinstance(ts, ExtendedString)
         assert ts == "1234567890.123456"
         mock_bot_client.chat_postMessage.assert_called_once()
+
+    @patch("extended_data.connectors.slack.WebClient")
+    def test_send_message_includes_thread_id(self, mock_webclient_class, base_connector_kwargs):
+        """Thread replies should pass Slack's thread_ts option through to the SDK."""
+        mock_bot_client = MagicMock()
+        mock_bot_client.users_conversations.return_value = {"channels": [{"name": "general", "id": "C12345"}]}
+        mock_bot_client.chat_postMessage.return_value = {"ts": "1234567890.123456"}
+        mock_user_client = MagicMock()
+        mock_webclient_class.side_effect = [mock_user_client, mock_bot_client]
+        connector = SlackConnector(token="test-token", bot_token="bot-token", **base_connector_kwargs)
+
+        connector.send_message(channel_name="general", text="Reply", blocks=[], thread_id="1234567890.000001")
+
+        assert mock_bot_client.chat_postMessage.call_args.kwargs["thread_ts"] == "1234567890.000001"
 
     @patch("extended_data.connectors.slack.WebClient")
     def test_send_message_converts_extended_blocks_for_sdk(self, mock_webclient_class, base_connector_kwargs):
@@ -231,6 +297,23 @@ class TestSlackConnector:
         assert "[REDACTED]" in str(exc_info.value)
 
     @patch("extended_data.connectors.slack.WebClient")
+    def test_send_message_redacts_missing_channel_id(self, mock_webclient_class, base_connector_kwargs):
+        """Channels without IDs should fail without echoing caller-provided channel names."""
+        mock_bot_client = MagicMock()
+        mock_bot_client.users_conversations.return_value = {"channels": [{"name": "private-channel", "id": ""}]}
+
+        mock_user_client = MagicMock()
+        mock_webclient_class.side_effect = [mock_user_client, mock_bot_client]
+
+        connector = SlackConnector(token="test-token", bot_token="bot-token", **base_connector_kwargs)
+
+        with pytest.raises(RuntimeError) as exc_info:
+            connector.send_message(channel_name="private-channel", text="Test message", blocks=[])
+
+        assert "private-channel" not in str(exc_info.value)
+        assert "[REDACTED]" in str(exc_info.value)
+
+    @patch("extended_data.connectors.slack.WebClient")
     def test_get_bot_channels_api_error_redacts_response_without_raw_cause(
         self,
         mock_webclient_class,
@@ -314,6 +397,70 @@ class TestSlackConnector:
         assert "[REDACTED]" in diagnostics
         assert exc_info.value.__cause__ is None
 
+    @patch("extended_data.connectors.slack.WebClient")
+    def test_call_api_retries_rate_limits_and_groups_success(self, mock_webclient_class, base_connector_kwargs):
+        """Rate-limited Slack calls should sleep, retry, and group the successful response."""
+
+        class FakeSlackApiError(Exception):
+            def __init__(self, response):
+                self.response = response
+
+        class FakeSlackResponse(dict):
+            headers = {"Retry-After": "2"}
+
+        mock_user_client = MagicMock()
+        mock_user_client.users_list.side_effect = [
+            FakeSlackApiError(FakeSlackResponse(error="ratelimited")),
+            {"members": [{"id": "U1", "name": "alice"}]},
+        ]
+        mock_bot_client = MagicMock()
+        mock_webclient_class.side_effect = [mock_user_client, mock_bot_client]
+        connector = SlackConnector(token="test-token", bot_token="bot-token", **base_connector_kwargs)
+
+        with (
+            patch("extended_data.connectors.slack.SlackApiError", FakeSlackApiError),
+            patch("extended_data.connectors.slack.sleep") as sleep,
+        ):
+            result = connector._call_api("users_list", group_by="members")
+
+        assert result == {"U1": {"id": "U1", "name": "alice"}}
+        sleep.assert_called_once_with(2)
+        assert mock_user_client.users_list.call_count == 2
+
+    @patch("extended_data.connectors.slack.WebClient")
+    def test_call_api_rate_limit_timeout(self, mock_webclient_class, base_connector_kwargs):
+        """Repeated rate limits should raise TimeoutError once the retry budget is exceeded."""
+
+        class FakeSlackApiError(Exception):
+            def __init__(self, response):
+                self.response = response
+
+        class FakeSlackResponse(dict):
+            headers = {"Retry-After": "31"}
+
+        mock_user_client = MagicMock()
+        mock_user_client.users_list.side_effect = FakeSlackApiError(FakeSlackResponse(error="ratelimited"))
+        mock_bot_client = MagicMock()
+        mock_webclient_class.side_effect = [mock_user_client, mock_bot_client]
+        connector = SlackConnector(token="test-token", bot_token="bot-token", **base_connector_kwargs)
+
+        with (
+            patch("extended_data.connectors.slack.SlackApiError", FakeSlackApiError),
+            pytest.raises(TimeoutError, match="timed out after 31 seconds"),
+        ):
+            connector._call_api("users_list")
+
+    @patch("extended_data.connectors.slack.WebClient")
+    def test_call_api_rejects_unsupported_methods(self, mock_webclient_class, base_connector_kwargs):
+        """Unsupported WebClient methods should fail explicitly."""
+        mock_user_client = MagicMock(spec=[])
+        mock_bot_client = MagicMock()
+        mock_webclient_class.side_effect = [mock_user_client, mock_bot_client]
+        connector = SlackConnector(token="test-token", bot_token="bot-token", **base_connector_kwargs)
+
+        with pytest.raises(AttributeError, match="not supported"):
+            connector._call_api("users_list")
+
     @patch("extended_data.connectors.slack.SlackConnector._call_api")
     @patch("extended_data.connectors.slack.WebClient")
     def test_list_users_filters_deleted(
@@ -357,6 +504,36 @@ class TestSlackConnector:
 
     @patch("extended_data.connectors.slack.SlackConnector._call_api")
     @patch("extended_data.connectors.slack.WebClient")
+    def test_list_users_can_include_all_special_accounts(
+        self,
+        mock_webclient_class,
+        mock_call_api,
+        base_connector_kwargs,
+    ):
+        """Explicit inclusion flags should return deleted, bot, and app users unchanged."""
+        mock_call_api.return_value = {
+            "U1": {"id": "U1", "deleted": True},
+            "U2": {"id": "U2", "is_workflow_bot": True},
+            "U3": {"id": "U3", "is_app_user": True},
+        }
+        mock_user_client = MagicMock()
+        mock_bot_client = MagicMock()
+        mock_webclient_class.side_effect = [mock_user_client, mock_bot_client]
+        connector = SlackConnector(token="test-token", bot_token="bot-token", **base_connector_kwargs)
+
+        users = connector.list_users(
+            include_locale=False,
+            limit=100,
+            team_id="T123",
+            include_deleted=True,
+            include_bots=True,
+            include_app_users=True,
+        )
+
+        assert users == mock_call_api.return_value
+
+    @patch("extended_data.connectors.slack.SlackConnector._call_api")
+    @patch("extended_data.connectors.slack.WebClient")
     def test_list_usergroups_filters_ids(
         self,
         mock_webclient_class,
@@ -394,6 +571,30 @@ class TestSlackConnector:
             include_users=True,
             team_id="T123",
         )
+
+    @patch("extended_data.connectors.slack.SlackConnector._call_api")
+    @patch("extended_data.connectors.slack.WebClient")
+    def test_list_usergroups_returns_all_without_identifier_filter(
+        self,
+        mock_webclient_class,
+        mock_call_api,
+        base_connector_kwargs,
+    ):
+        """Usergroup listing should return all groups when no ID filter is supplied."""
+        mock_call_api.return_value = {
+            "S1": {"id": "S1", "name": "Ops"},
+            "S2": {"id": "S2", "name": "Eng"},
+        }
+        mock_user_client = MagicMock()
+        mock_bot_client = MagicMock()
+        mock_webclient_class.side_effect = [mock_user_client, mock_bot_client]
+        connector = SlackConnector(token="test-token", bot_token="bot-token", **base_connector_kwargs)
+
+        groups = connector.list_usergroups(usergroup_ids=[" ", ""])
+
+        assert groups == mock_call_api.return_value
+        assert SlackConnector._normalize_identifier_filter(["S1", " S2 ", "", "S1"]) == {"S1", "S2"}
+        assert SlackConnector._normalize_identifier_filter("") is None
 
     @patch("extended_data.connectors.slack.SlackConnector._call_api")
     @patch("extended_data.connectors.slack.WebClient")
@@ -436,3 +637,33 @@ class TestSlackConnector:
             types="private_channel,public_channel",
             cursor="cursor123",
         )
+
+    @patch("extended_data.connectors.slack.SlackConnector._call_api")
+    @patch("extended_data.connectors.slack.WebClient")
+    def test_list_conversations_returns_all_when_not_channels_only(
+        self,
+        mock_webclient_class,
+        mock_call_api,
+        base_connector_kwargs,
+    ):
+        """Conversation listing should preserve non-channel conversations unless filtered."""
+        mock_call_api.return_value = {
+            "C1": {"id": "C1", "is_channel": True},
+            "D1": {"id": "D1", "is_channel": False},
+        }
+        mock_user_client = MagicMock()
+        mock_bot_client = MagicMock()
+        mock_webclient_class.side_effect = [mock_user_client, mock_bot_client]
+        connector = SlackConnector(token="test-token", bot_token="bot-token", **base_connector_kwargs)
+
+        conversations = connector.list_conversations(
+            exclude_archived=False,
+            limit=100,
+            team_id="T123",
+            types="im",
+            get_members=False,
+            channels_only=False,
+        )
+
+        assert conversations == mock_call_api.return_value
+        assert mock_call_api.call_args.kwargs["types"] == "im"
