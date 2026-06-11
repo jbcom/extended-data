@@ -166,6 +166,8 @@ data boundary used by files, inputs, and connector payloads before method
 dispatch.
 Google service-account strings and Meshy persisted manifests/metadata follow
 that same decode path instead of parsing JSON in connector-local code.
+AWS S3 JSON object writes and Meshy manifest writes use the shared export
+boundary as well, keeping connector persistence aligned with Tier 3 file data.
 Serialized CLI/MCP boundaries and connector API error messages reuse the Tier 1
 redaction primitives for common secret-bearing keys and token-shaped strings.
 CLI and MCP connector calls pass method arguments through `values=[...]` as

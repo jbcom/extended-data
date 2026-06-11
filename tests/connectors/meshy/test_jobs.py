@@ -6,6 +6,7 @@ import json
 
 from unittest.mock import patch
 
+from extended_data.connectors.meshy import jobs as jobs_module
 from extended_data.connectors.meshy.jobs import (
     AssetGenerator,
     AssetManifest,
@@ -199,7 +200,11 @@ class TestAssetGenerator:
                 asset_id="barrel-001",
             )
 
-            generator.generate_model(spec, wait=True, poll_interval=0.01)
+            with patch(
+                "extended_data.connectors.meshy.jobs.wrap_raw_data_for_export",
+                wraps=jobs_module.wrap_raw_data_for_export,
+            ) as mock_wrap_for_export:
+                generator.generate_model(spec, wait=True, poll_interval=0.01)
 
             manifest_path = temp_dir / "models" / "props" / "barrel-001_manifest.json"
             assert manifest_path.exists()
@@ -207,6 +212,8 @@ class TestAssetGenerator:
             with open(manifest_path) as f:
                 saved_manifest = json.load(f)
             assert saved_manifest["asset_id"] == "barrel-001"
+            mock_wrap_for_export.assert_called_once()
+            assert mock_wrap_for_export.call_args.kwargs == {"allow_encoding": "json", "indent_2": True}
 
     def test_batch_generate(self, temp_dir):
         """Test batch generation of multiple assets."""

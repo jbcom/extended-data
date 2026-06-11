@@ -9,6 +9,7 @@ from unittest.mock import patch
 
 import pytest
 
+from extended_data.connectors.meshy.persistence import repository as repository_module
 from extended_data.connectors.meshy.persistence.repository import TaskRepository
 from extended_data.connectors.meshy.persistence.schemas import (
     ArtifactRecord,
@@ -86,12 +87,14 @@ class TestProjectManifest:
             )
         )
 
-        with patch("extended_data.connectors.meshy.persistence.repository.json.load") as mock_json_load:
-            mock_json_load.side_effect = AssertionError("manifests must be decoded through DataFile")
+        with patch(
+            "extended_data.connectors.meshy.persistence.repository.DataFile.read",
+            wraps=repository_module.DataFile.read,
+        ) as mock_read:
             manifest = task_repository.load_project_manifest("project2")
 
         assert manifest["project"] == "project2"
-        mock_json_load.assert_not_called()
+        mock_read.assert_called_once_with(manifest_path, as_extended=False)
 
     def test_save_and_load_manifest(self, task_repository):
         """Test saving and reloading manifest."""
@@ -113,6 +116,19 @@ class TestProjectManifest:
         assert isinstance(reloaded, ExtendedDict)
         assert "hash-123" in reloaded["asset_specs"]
         assert reloaded["asset_specs"]["hash-123"]["project"] == "project1"
+
+    def test_save_manifest_encodes_through_export_boundary(self, task_repository):
+        """Saved manifests should use the shared export boundary."""
+        manifest = ProjectManifest(project="project1")
+
+        with patch(
+            "extended_data.connectors.meshy.persistence.repository.wrap_raw_data_for_export",
+            wraps=repository_module.wrap_raw_data_for_export,
+        ) as mock_wrap_for_export:
+            task_repository.save_project_manifest(manifest)
+
+        assert mock_wrap_for_export.called
+        assert mock_wrap_for_export.call_args.kwargs == {"allow_encoding": "json", "indent_2": True}
 
 
 class TestAssetRecordOperations:

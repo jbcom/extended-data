@@ -5,13 +5,12 @@ This module provides operations for working with S3 buckets and objects.
 
 from __future__ import annotations
 
-import json
-
 from collections.abc import Mapping, Sequence
 from typing import TYPE_CHECKING, Any, cast
 
 from extended_data.connectors.aws._diagnostics import safe_aws_ref, safe_aws_text
 from extended_data.containers import ExtendedDict, ExtendedList, ExtendedString, to_builtin
+from extended_data.io import wrap_raw_data_for_export
 from extended_data.io.files import decode_file
 from extended_data.primitives import unhump_map
 
@@ -274,7 +273,7 @@ class AWSS3Mixin:
         Returns:
             The S3 put_object response.
         """
-        body = json.dumps(to_builtin(data), indent=indent, default=str)
+        body = wrap_raw_data_for_export(data, allow_encoding="json", indent_2=bool(indent))
         return self.put_object(
             bucket=bucket,
             key=key,

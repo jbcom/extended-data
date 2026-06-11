@@ -335,6 +335,8 @@ structured data boundary before method dispatch, matching file, input, and
 connector payload decoding.
 Google service-account strings and Meshy persisted manifests/metadata use that
 same boundary, so connector-local reads do not grow private JSON parsers.
+AWS S3 JSON object writes and Meshy manifest writes go through the shared export
+boundary, so connector persistence uses the same Tier 3 data-file encoding path.
 Serialized CLI/MCP boundaries apply Tier 1 redaction after Tier 2 containers
 are lowered to JSON-compatible data, and connector API error messages use the
 same redaction policy before exceptions are raised. Common secret-bearing keys

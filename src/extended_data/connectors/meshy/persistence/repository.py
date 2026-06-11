@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 import os
 import tempfile
 
@@ -20,6 +19,7 @@ from extended_data.connectors.meshy.persistence.schemas import (
 )
 from extended_data.connectors.meshy.persistence.utils import compute_spec_hash as util_compute_spec_hash
 from extended_data.containers import ExtendedDict, ExtendedList, extend_data
+from extended_data.io import wrap_raw_data_for_export
 from extended_data.io.files import DataFile
 from extended_data.primitives.redaction import redact_sensitive_text
 
@@ -89,7 +89,7 @@ class TaskRepository:
 
         # Atomic write: write to temp file, then rename
         with tempfile.NamedTemporaryFile(mode="w", dir=manifest_path.parent, delete=False, suffix=".tmp") as tmp_file:
-            json.dump(manifest_dict, tmp_file, indent=2)
+            tmp_file.write(wrap_raw_data_for_export(manifest_dict, allow_encoding="json", indent_2=True))
             tmp_path = tmp_file.name
 
         # Atomic rename

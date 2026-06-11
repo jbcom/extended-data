@@ -230,29 +230,22 @@ class TestS3ObjectOperations:
         assert isinstance(result["key"], ExtendedString)
         assert result == test_data
 
-    def test_get_json_object_decodes_through_data_boundary(self, monkeypatch, aws_connector):
+    def test_get_json_object_decodes_through_data_boundary(self, aws_connector):
         """S3 JSON reads should use the shared file decoder, not local json.loads."""
-
-        class NoLocalJsonLoads:
-            dumps = staticmethod(json.dumps)
-
-            @staticmethod
-            def loads(*args, **kwargs):
-                raise AssertionError("S3 JSON objects must be decoded through decode_file")
-
         mock_s3 = MagicMock()
         mock_body = MagicMock()
         mock_body.read.return_value = b'{"items":[{"name":"one"}]}'
         mock_s3.get_object.return_value = {"Body": mock_body}
         aws_connector.get_aws_client = MagicMock(return_value=mock_s3)
-        monkeypatch.setattr(s3_module, "json", NoLocalJsonLoads)
 
-        result = aws_connector.get_json_object("bucket", "data.json")
+        with patch("extended_data.connectors.aws.s3.decode_file", wraps=s3_module.decode_file) as mock_decode_file:
+            result = aws_connector.get_json_object("bucket", "data.json")
 
         assert isinstance(result, ExtendedDict)
         assert isinstance(result["items"], ExtendedList)
         assert isinstance(result["items"][0], ExtendedDict)
         assert isinstance(result["items"][0]["name"], ExtendedString)
+        mock_decode_file.assert_called_once_with(b'{"items":[{"name":"one"}]}', suffix="json", as_extended=True)
 
     def test_get_json_object_not_found(self, aws_connector):
         """Test getting a non-existent JSON object."""
@@ -340,7 +333,11 @@ class TestS3ObjectOperations:
         aws_connector.get_aws_client = MagicMock(return_value=mock_s3)
 
         data = extend_data({"key": "value", "number": 123})
-        result = aws_connector.put_json_object("bucket", "data.json", data)
+        with patch(
+            "extended_data.connectors.aws.s3.wrap_raw_data_for_export",
+            wraps=s3_module.wrap_raw_data_for_export,
+        ) as mock_wrap_for_export:
+            result = aws_connector.put_json_object("bucket", "data.json", data)
 
         assert isinstance(result, ExtendedDict)
         assert isinstance(result["ETag"], ExtendedString)
@@ -350,6 +347,7 @@ class TestS3ObjectOperations:
         # Verify JSON was serialized
         body_str = call_args["Body"].decode("utf-8")
         assert json.loads(body_str) == data
+        mock_wrap_for_export.assert_called_once_with(data, allow_encoding="json", indent_2=True)
 
     def test_delete_object(self, aws_connector):
         """Test deleting an object."""

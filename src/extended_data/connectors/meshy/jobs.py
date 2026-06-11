@@ -7,7 +7,6 @@ asset downloading and manifest generation.
 from __future__ import annotations
 
 import hashlib
-import json
 
 from dataclasses import asdict, dataclass
 from pathlib import Path
@@ -15,7 +14,8 @@ from typing import Any
 
 from extended_data.connectors.meshy import base, text3d
 from extended_data.connectors.meshy.models import ArtStyle, AssetIntent, AssetSpec, Text3DRequest
-from extended_data.containers import ExtendedDict, ExtendedList, extend_data, to_builtin
+from extended_data.containers import ExtendedDict, ExtendedList, extend_data
+from extended_data.io import wrap_raw_data_for_export
 
 
 @dataclass
@@ -125,7 +125,7 @@ class AssetGenerator:
         # Save manifest
         manifest_path = output_dir / f"{asset_id}_manifest.json"
         with open(manifest_path, "w") as f:
-            json.dump(to_builtin(manifest.to_dict()), f, indent=2)
+            f.write(wrap_raw_data_for_export(manifest.to_dict(), allow_encoding="json", indent_2=True))
 
         return manifest.to_dict()
 
