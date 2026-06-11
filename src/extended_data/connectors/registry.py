@@ -193,12 +193,18 @@ def _list_connector_classes() -> dict[str, builtins.type[VendorConnectorBase]]:
 
 
 def list_connectors() -> ExtendedList[ExtendedString]:
-    """List available connector names.
+    """List registered connector names whose runtime requirements are installed.
 
     Returns:
-        ExtendedList of connector registry names.
+        ExtendedList of usable connector registry names.
     """
-    return extend_data(sorted(_discover_connectors()))
+    return extend_data(
+        sorted(
+            name
+            for name in _discover_connectors()
+            if not get_missing_connector_requirements(name)
+        ),
+    )
 
 
 def get_connector_class(name: str) -> builtins.type[VendorConnectorBase]:

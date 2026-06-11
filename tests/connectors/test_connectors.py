@@ -454,3 +454,32 @@ class TestConnectorFabric:
 
         assert isinstance(info, ExtendedList)
         assert all(connector["available"] for connector in info)
+
+    def test_list_connectors_filters_registered_connectors_with_missing_requirements(self, monkeypatch):
+        """Connector name lists only include registered connectors that can be used."""
+
+        class CursorConnector:
+            pass
+
+        class GitHubConnector:
+            pass
+
+        monkeypatch.setattr(
+            registry,
+            "_connector_cache",
+            {
+                "cursor": CursorConnector,
+                "github": GitHubConnector,
+            },
+        )
+        monkeypatch.setattr(registry, "_missing_builtin_connectors", {})
+        monkeypatch.setattr(
+            registry,
+            "get_missing_connector_requirements",
+            lambda name: ExtendedList(["github"]) if name == "github" else ExtendedList(),
+        )
+
+        names = registry.list_connectors()
+
+        assert isinstance(names, ExtendedList)
+        assert names == ["cursor"]
