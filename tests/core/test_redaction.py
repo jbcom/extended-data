@@ -31,6 +31,21 @@ def test_redact_sensitive_text_accepts_known_diagnostic_values() -> None:
     assert redacted.count("[REDACTED]") == 3
 
 
+def test_redact_sensitive_text_flattens_nested_known_values() -> None:
+    """Caller-provided diagnostic context can be nested like CLI or MCP arguments."""
+    message = "failed for user@example.com at /tmp/private%2Fpath using prompt Fix login"
+
+    redacted = redact_sensitive_text(
+        message,
+        values=[{"email": "user@example.com", "paths": ["/tmp/private/path"], "prompt": "Fix login"}],
+    )
+
+    assert "user@example.com" not in redacted
+    assert "/tmp/private%2Fpath" not in redacted
+    assert "Fix login" not in redacted
+    assert redacted.count("[REDACTED]") == 3
+
+
 def test_redact_sensitive_data_recurses_through_json_like_payloads() -> None:
     """Structured redaction should handle nested JSON-like data."""
     payload = {

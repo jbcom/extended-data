@@ -150,9 +150,11 @@ objects.
 The generic CLI `call` command and MCP bridge expose only methods that
 advertise Extended Data payload returns.
 Serialized CLI/MCP boundaries and connector API error messages reuse the Tier 1
-redaction primitives for common secret-bearing keys and token-shaped strings,
-including connector-provided `values=[...]` for context-sensitive resource
-identifiers, so connector data methods can return structured vendor payloads
+redaction primitives for common secret-bearing keys and token-shaped strings.
+CLI and MCP connector calls pass method arguments through `values=[...]` as
+context-sensitive diagnostic data, and connectors can add their own
+operation-specific values for resource IDs, paths, URLs, emails, prompt text, or
+vendor handles. Connector data methods can return structured vendor payloads
 without making stdout, tool responses, logs, or raised transport errors a
 secret leak by default. Raw SDK/client objects and raw transport responses
 remain available from the methods that explicitly return them.

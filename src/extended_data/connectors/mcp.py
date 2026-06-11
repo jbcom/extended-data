@@ -110,9 +110,9 @@ def _jsonable_tool_result(result: Any) -> Any:
     return redact_sensitive_data(result)
 
 
-def _tool_error_text(error: Exception) -> str:
+def _tool_error_text(error: Exception, values: Iterable[Any] | None = None) -> str:
     """Return an MCP-safe error string without raw secret values."""
-    return f"Error: {type(error).__name__}: {redact_sensitive_text(error)}"
+    return f"Error: {type(error).__name__}: {redact_sensitive_text(error, values=values)}"
 
 
 def _unknown_tool_text(name: str) -> str:
@@ -202,7 +202,7 @@ def create_server() -> Any:
             return [TextContent(type="text", text=json.dumps(_jsonable_tool_result(result), indent=2, default=str))]
 
         except Exception as e:
-            return [TextContent(type="text", text=_tool_error_text(e))]
+            return [TextContent(type="text", text=_tool_error_text(e, arguments.values()))]
 
     return server
 

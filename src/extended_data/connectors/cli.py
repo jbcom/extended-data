@@ -168,7 +168,7 @@ def cmd_call(args: argparse.Namespace) -> int:
         return 0
 
     except Exception as e:
-        _write_stderr(str(e))
+        _write_stderr(redact_sensitive_text(e, values=kwargs.values()))
         return 1
 
 

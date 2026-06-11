@@ -39,17 +39,58 @@ def _redacted_field(match: re.Match[str]) -> str:
     return f"{prefix}{_redacted_value(value)}"
 
 
+def _iter_known_values(values: Iterable[Any]) -> Iterable[Any]:
+    """Yield scalar known-sensitive values from nested caller context."""
+    for value in values:
+        if value is None:
+            continue
+        if isinstance(value, Mapping):
+            yield from _iter_known_values(value.values())
+        elif isinstance(value, (str, bytes, bytearray)):
+            yield value
+        elif isinstance(value, Iterable):
+            yield from _iter_known_values(value)
+        else:
+            yield value
+
+
+def _slash_encoding_variants(value: str) -> set[str]:
+    """Return common variants where any slash positions are URL encoded."""
+    slash_count = value.count("/")
+    if slash_count == 0 or slash_count > 8:
+        return set()
+
+    variants: set[str] = set()
+    for mask in range(1, 1 << slash_count):
+        slash_index = 0
+        parts: list[str] = []
+        for char in value:
+            if char == "/":
+                parts.append("%2F" if mask & (1 << slash_index) else "/")
+                slash_index += 1
+            else:
+                parts.append(char)
+        variants.add("".join(parts))
+    return variants
+
+
 def _redact_known_values(text: str, values: Iterable[Any] | None) -> str:
     """Redact explicitly provided values and URL-encoded variants."""
     if values is None:
         return text
-    for value in values:
-        if value is None:
-            continue
+    for value in _iter_known_values(values):
         raw_value = str(value)
         if not raw_value:
             continue
-        for candidate in {raw_value, quote(raw_value, safe="")}:
+        slash_encoded = raw_value.replace("/", "%2F")
+        candidates = {
+            raw_value,
+            quote(raw_value, safe=""),
+            quote(raw_value, safe="/"),
+            slash_encoded,
+        }
+        candidates.update(_slash_encoding_variants(raw_value))
+        for candidate in set(candidates) | {candidate.replace("%2F", "%2f") for candidate in candidates}:
             text = text.replace(candidate, REDACTED)
     return text
 

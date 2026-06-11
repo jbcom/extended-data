@@ -306,9 +306,10 @@ same redaction policy before exceptions are raised. Common secret-bearing keys
 such as `password`, `api_key`, `access_token`, `authorization`, and
 `client_secret`, plus token-like strings in error text, are replaced with
 `[REDACTED]` before CLI stdout/stderr, MCP tool responses, or raised transport
-errors expose them. Connectors can also pass context-specific `values=[...]`
-for resource IDs, paths, URLs, emails, prompt text, or vendor payload handles
-that are sensitive only in that operation.
+errors expose them. CLI and MCP connector calls pass method arguments through
+`values=[...]` as context-specific diagnostic data, and connectors can add their
+own operation-specific values for resource IDs, paths, URLs, emails, prompt
+text, or vendor payload handles that are sensitive only in that operation.
 LangChain, CrewAI, Strands, and auto-detection factory functions still return
 plain framework tool object lists.
 

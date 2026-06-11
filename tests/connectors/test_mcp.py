@@ -87,6 +87,26 @@ def test_tool_error_text_redacts_sensitive_exception_values() -> None:
     assert "[REDACTED]" in text
 
 
+def test_tool_error_text_redacts_explicit_argument_values() -> None:
+    """Generic MCP errors should redact caller-provided resource context."""
+    error = RuntimeError("failed for private-user@example.com at /tmp/private%2Fpath while handling Fix login")
+
+    text = _tool_error_text(
+        error,
+        values=[
+            {
+                "email": "private-user@example.com",
+                "metadata": {"path": "/tmp/private/path", "prompt": "Fix login"},
+            }
+        ],
+    )
+
+    assert "private-user@example.com" not in text
+    assert "/tmp/private%2Fpath" not in text
+    assert "Fix login" not in text
+    assert text.count("[REDACTED]") >= 3
+
+
 def test_unknown_tool_text_redacts_sensitive_tool_names() -> None:
     """Generic MCP unknown-tool diagnostics should redact user-controlled names."""
     text = _unknown_tool_text("password=hunter2 Authorization: Bearer raw_token")

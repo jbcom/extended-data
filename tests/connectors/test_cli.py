@@ -240,6 +240,43 @@ def test_cli_call_redacts_sensitive_error_output() -> None:
     assert "Authorization: [REDACTED]" in output
 
 
+def test_cli_call_redacts_explicit_argument_values_from_errors() -> None:
+    """Call command should redact caller-provided resource context in stderr."""
+    args = argparse.Namespace(
+        connector="example",
+        method="fetch",
+        extra=[
+            "--email",
+            "private-user@example.com",
+            "--metadata",
+            '{"path": "/tmp/private/path", "prompt": "Fix login"}',
+        ],
+        json=False,
+    )
+    connector = MagicMock()
+    connector.fetch.side_effect = RuntimeError(
+        "failed for private-user@example.com at /tmp/private%2Fpath while handling Fix login"
+    )
+
+    with (
+        patch("extended_data.connectors.cli.get_connector_class", return_value=ExampleConnector),
+        patch("extended_data.connectors.cli.get_connector", return_value=connector),
+        patch("sys.stderr.write") as mock_write,
+    ):
+        exit_code = cmd_call(args)
+
+    assert exit_code == 1
+    connector.fetch.assert_called_once_with(
+        email="private-user@example.com",
+        metadata={"path": "/tmp/private/path", "prompt": "Fix login"},
+    )
+    output = mock_write.call_args.args[0]
+    assert "private-user@example.com" not in output
+    assert "/tmp/private%2Fpath" not in output
+    assert "Fix login" not in output
+    assert output.count("[REDACTED]") >= 3
+
+
 def test_cli_main_help() -> None:
     """Test main CLI entry point with help."""
     with patch("sys.argv", ["extended-data", "--help"]):
