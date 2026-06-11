@@ -339,7 +339,8 @@ Examples:
             return args.func(args)
         except KeyboardInterrupt:
             return 130
-        except Exception:
+        except Exception as e:
+            _write_stderr(str(e))
             return 1
 
     parser.print_help()

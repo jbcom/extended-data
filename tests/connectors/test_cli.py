@@ -357,3 +357,19 @@ def test_cli_main_help() -> None:
         with pytest.raises(SystemExit) as exc:
             main()
         assert exc.value.code == 0
+
+
+def test_cli_main_reports_unexpected_command_errors() -> None:
+    """Connector CLI entrypoint should not collapse unexpected failures silently."""
+    with (
+        patch("sys.argv", ["extended-data", "list"]),
+        patch("extended_data.connectors.cli.cmd_list", side_effect=RuntimeError("failed password=hunter2")),
+        patch("sys.stderr.write") as mock_write,
+    ):
+        exit_code = main()
+
+    assert exit_code == 1
+    output = mock_write.call_args.args[0]
+    assert "failed" in output
+    assert "hunter2" not in output
+    assert "password=[REDACTED]" in output
