@@ -12,7 +12,7 @@ import time
 
 from extended_data.connectors.meshy import base
 from extended_data.connectors.meshy.models import RetextureRequest, RetextureResult, TaskStatus
-from extended_data.containers import ExtendedDict, ExtendedString, extend_data
+from extended_data.containers import ExtendedDict, ExtendedString
 
 
 def create(request: RetextureRequest) -> ExtendedString:
@@ -29,8 +29,7 @@ def create(request: RetextureRequest) -> ExtendedString:
 def get(task_id: str) -> ExtendedDict:
     """Get task status."""
     response = base.request("GET", f"retexture/{task_id}", version="v1")
-    result = RetextureResult(**response.json())
-    return extend_data(result.model_dump(mode="json"))
+    return base.task_payload_from_response(response, RetextureResult, "retexture")
 
 
 def poll(task_id: str, interval: float = 5.0, timeout: float = 600.0) -> ExtendedDict:

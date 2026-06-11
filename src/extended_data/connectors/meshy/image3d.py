@@ -13,7 +13,7 @@ import time
 
 from extended_data.connectors.meshy import base
 from extended_data.connectors.meshy.models import Image3DRequest, Image3DResult, TaskStatus
-from extended_data.containers import ExtendedDict, ExtendedString, extend_data
+from extended_data.containers import ExtendedDict, ExtendedString
 
 
 def create(request: Image3DRequest) -> ExtendedString:
@@ -30,8 +30,7 @@ def create(request: Image3DRequest) -> ExtendedString:
 def get(task_id: str) -> ExtendedDict:
     """Get task status."""
     response = base.request("GET", f"image-to-3d/{task_id}", version="v2")
-    result = Image3DResult(**response.json())
-    return extend_data(result.model_dump(mode="json"))
+    return base.task_payload_from_response(response, Image3DResult, "image-to-3d")
 
 
 def refine(task_id: str) -> ExtendedString:

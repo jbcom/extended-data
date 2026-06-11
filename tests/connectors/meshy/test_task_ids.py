@@ -209,6 +209,36 @@ def test_retexture_get_returns_extended_payload() -> None:
     assert result["model_urls"]["glb"] == "https://example.com/retexture.glb"
 
 
+@pytest.mark.parametrize(
+    ("request_path", "call"),
+    [
+        ("extended_data.connectors.meshy.text3d.base.request", lambda: text3d.get("text-task")),
+        ("extended_data.connectors.meshy.image3d.base.request", lambda: image3d.get("image-task")),
+        ("extended_data.connectors.meshy.animate.base.request", lambda: animate.get("animation-task")),
+        ("extended_data.connectors.meshy.rigging.base.request", lambda: rigging.get("rig-task")),
+        ("extended_data.connectors.meshy.retexture.base.request", lambda: retexture.get("retexture-task")),
+    ],
+)
+def test_meshy_get_responses_redact_validation_failures(request_path: str, call) -> None:
+    """Malformed status payloads should not expose raw vendor data through Pydantic errors."""
+    response = _json_response({
+        "status": "SUCCEEDED",
+        "created_at": 1700000000,
+        "password": "hunter2",
+        "authorization": "Bearer raw_token",
+    })
+
+    with patch(request_path, return_value=response):
+        with pytest.raises(RuntimeError, match="Unexpected API response") as exc_info:
+            call()
+
+    message = str(exc_info.value)
+    assert "hunter2" not in message
+    assert "raw_token" not in message
+    assert "ValidationError" not in message
+    assert "[REDACTED]" in message
+
+
 @pytest.mark.parametrize("module", [text3d, image3d, retexture, rigging, animate])
 def test_meshy_poll_redacts_failed_task_errors(monkeypatch: pytest.MonkeyPatch, module: object) -> None:
     """All Meshy polling helpers should redact vendor task failure messages."""

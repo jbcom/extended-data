@@ -12,7 +12,7 @@ import time
 
 from extended_data.connectors.meshy import base
 from extended_data.connectors.meshy.models import RiggingRequest, RiggingResult, TaskStatus
-from extended_data.containers import ExtendedDict, ExtendedString, extend_data
+from extended_data.containers import ExtendedDict, ExtendedString
 
 
 def create(request: RiggingRequest) -> ExtendedString:
@@ -29,8 +29,7 @@ def create(request: RiggingRequest) -> ExtendedString:
 def get(task_id: str) -> ExtendedDict:
     """Get task status."""
     response = base.request("GET", f"rigging/{task_id}", version="v1")
-    result = RiggingResult(**response.json())
-    return extend_data(result.model_dump(mode="json"))
+    return base.task_payload_from_response(response, RiggingResult, "rigging")
 
 
 def poll(task_id: str, interval: float = 5.0, timeout: float = 600.0) -> ExtendedDict:

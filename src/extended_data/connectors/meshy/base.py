@@ -15,13 +15,14 @@ import threading
 import time
 
 from collections.abc import Mapping
-from typing import Any
+from typing import Any, cast
 
 import httpx
 
+from pydantic import BaseModel, ValidationError
 from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
 
-from extended_data.containers import ExtendedString
+from extended_data.containers import ExtendedDict, ExtendedString, extend_data
 from extended_data.inputs import InputProvider
 from extended_data.primitives.redaction import redact_sensitive_text
 
@@ -135,6 +136,16 @@ def task_id_from_response(response: httpx.Response) -> ExtendedString:
     if not isinstance(result, str) or not result.strip():
         raise RuntimeError(unexpected_response_message(data))
     return ExtendedString(result)
+
+
+def task_payload_from_response(response: httpx.Response, model_type: type[BaseModel], endpoint: str) -> ExtendedDict:
+    """Validate a Meshy task payload and return a promoted public mapping."""
+    data = response.json()
+    try:
+        result = model_type(**data)
+    except ValidationError:
+        raise RuntimeError(f"Unexpected API response for {endpoint}: {redact_sensitive_text(data)}") from None
+    return cast(ExtendedDict, extend_data(result.model_dump(mode="json")))
 
 
 @retry(
