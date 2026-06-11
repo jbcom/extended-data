@@ -182,7 +182,9 @@ Use `request_data_file()` when a connector workflow needs API response data and
 non-secret provenance such as source URL, HTTP status, content type, method,
 and endpoint in one `DataFile` artifact. Use `request_workflow()` when that
 decoded response should immediately enter a `DataWorkflow` for merging,
-transforming, writing, and provenance-preserving result handling.
+transforming, writing, and provenance-preserving result handling; the
+`get_workflow()`, `post_workflow()`, `put_workflow()`, `patch_workflow()`, and
+`delete_workflow()` helpers provide verb-specific shortcuts.
 Data-returning AI tool wrappers expose the same `ExtendedDict`/`ExtendedList`
 payload contract; framework factory functions still return framework tool
 objects.

@@ -208,6 +208,38 @@ def test_request_workflow_starts_from_response_artifact() -> None:
     mock_client.request.assert_called_once()
 
 
+@pytest.mark.parametrize(
+    ("helper_name", "expected_method"),
+    [
+        ("get_workflow", "GET"),
+        ("post_workflow", "POST"),
+        ("put_workflow", "PUT"),
+        ("patch_workflow", "PATCH"),
+        ("delete_workflow", "DELETE"),
+    ],
+)
+def test_http_verb_workflow_helpers_start_response_workflows(helper_name: str, expected_method: str) -> None:
+    """Verb-specific workflow helpers should mirror decoded data helpers."""
+    connector = _connector()
+    mock_client = MagicMock()
+    mock_client.request.return_value = httpx.Response(
+        200,
+        content=b'{"ok":true}',
+        headers={"content-type": "application/json"},
+    )
+    connector._client = mock_client
+
+    workflow = getattr(connector, helper_name)("/status")
+
+    assert isinstance(workflow, DataWorkflow)
+    assert workflow.metadata["method"] == expected_method
+    assert workflow.metadata["endpoint"] == "/status"
+    assert workflow.result().as_builtin() == {"ok": True}
+    mock_client.request.assert_called_once()
+    assert mock_client.request.call_args.args[0] == expected_method
+    assert mock_client.request.call_args.args[1] == "https://api.example.com/status"
+
+
 def test_extend_result_promotes_connector_payloads() -> None:
     """Connector data payloads cross into the Tier 2 container layer explicitly."""
     connector = _connector()

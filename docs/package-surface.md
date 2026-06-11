@@ -347,7 +347,10 @@ validation or redaction boundaries. Use
 non-secret response provenance such as source URL, HTTP status, content type,
 method, and endpoint in a `DataFile` artifact. Use `request_workflow()` when
 that response should immediately become a `DataWorkflow` with the same promoted
-metadata, named transforms, merge helpers, and export/write boundary.
+metadata, named transforms, merge helpers, and export/write boundary. The
+`get_workflow()`, `post_workflow()`, `put_workflow()`, `patch_workflow()`, and
+`delete_workflow()` helpers mirror the decoded-data verb helpers for common API
+workflows.
 Connector methods that return external data payloads should call
 `extend_result()` at the return boundary, making SDK-shaped dictionaries,
 lists, decoded repository files, GraphQL results, and workflow-builder output

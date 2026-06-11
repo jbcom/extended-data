@@ -520,6 +520,17 @@ class ConnectorBase(InputProvider, ABC):
         """HTTP GET request returning decoded response data."""
         return self.request_data("GET", endpoint, suffix=suffix, as_extended=as_extended, **kwargs)
 
+    def get_workflow(
+        self,
+        endpoint: str,
+        *,
+        suffix: str | None = None,
+        as_extended: bool = True,
+        **kwargs: Any,
+    ) -> DataWorkflow:
+        """HTTP GET request returning a workflow over decoded response data."""
+        return self.request_workflow("GET", endpoint, suffix=suffix, as_extended=as_extended, **kwargs)
+
     def post(self, endpoint: str, **kwargs: Any) -> httpx.Response:
         """HTTP POST request."""
         return self.request("POST", endpoint, **kwargs)
@@ -527,6 +538,17 @@ class ConnectorBase(InputProvider, ABC):
     def post_data(self, endpoint: str, *, suffix: str | None = None, as_extended: bool = True, **kwargs: Any) -> Any:
         """HTTP POST request returning decoded response data."""
         return self.request_data("POST", endpoint, suffix=suffix, as_extended=as_extended, **kwargs)
+
+    def post_workflow(
+        self,
+        endpoint: str,
+        *,
+        suffix: str | None = None,
+        as_extended: bool = True,
+        **kwargs: Any,
+    ) -> DataWorkflow:
+        """HTTP POST request returning a workflow over decoded response data."""
+        return self.request_workflow("POST", endpoint, suffix=suffix, as_extended=as_extended, **kwargs)
 
     def put(self, endpoint: str, **kwargs: Any) -> httpx.Response:
         """HTTP PUT request."""
@@ -536,6 +558,17 @@ class ConnectorBase(InputProvider, ABC):
         """HTTP PUT request returning decoded response data."""
         return self.request_data("PUT", endpoint, suffix=suffix, as_extended=as_extended, **kwargs)
 
+    def put_workflow(
+        self,
+        endpoint: str,
+        *,
+        suffix: str | None = None,
+        as_extended: bool = True,
+        **kwargs: Any,
+    ) -> DataWorkflow:
+        """HTTP PUT request returning a workflow over decoded response data."""
+        return self.request_workflow("PUT", endpoint, suffix=suffix, as_extended=as_extended, **kwargs)
+
     def delete(self, endpoint: str, **kwargs: Any) -> httpx.Response:
         """HTTP DELETE request."""
         return self.request("DELETE", endpoint, **kwargs)
@@ -544,6 +577,17 @@ class ConnectorBase(InputProvider, ABC):
         """HTTP DELETE request returning decoded response data."""
         return self.request_data("DELETE", endpoint, suffix=suffix, as_extended=as_extended, **kwargs)
 
+    def delete_workflow(
+        self,
+        endpoint: str,
+        *,
+        suffix: str | None = None,
+        as_extended: bool = True,
+        **kwargs: Any,
+    ) -> DataWorkflow:
+        """HTTP DELETE request returning a workflow over decoded response data."""
+        return self.request_workflow("DELETE", endpoint, suffix=suffix, as_extended=as_extended, **kwargs)
+
     def patch(self, endpoint: str, **kwargs: Any) -> httpx.Response:
         """HTTP PATCH request."""
         return self.request("PATCH", endpoint, **kwargs)
@@ -551,6 +595,17 @@ class ConnectorBase(InputProvider, ABC):
     def patch_data(self, endpoint: str, *, suffix: str | None = None, as_extended: bool = True, **kwargs: Any) -> Any:
         """HTTP PATCH request returning decoded response data."""
         return self.request_data("PATCH", endpoint, suffix=suffix, as_extended=as_extended, **kwargs)
+
+    def patch_workflow(
+        self,
+        endpoint: str,
+        *,
+        suffix: str | None = None,
+        as_extended: bool = True,
+        **kwargs: Any,
+    ) -> DataWorkflow:
+        """HTTP PATCH request returning a workflow over decoded response data."""
+        return self.request_workflow("PATCH", endpoint, suffix=suffix, as_extended=as_extended, **kwargs)
 
     # -------------------------------------------------------------------------
     # File Downloads
