@@ -5,6 +5,7 @@ from __future__ import annotations
 import sys
 
 from types import ModuleType
+from unittest.mock import patch
 
 from extended_data.connectors.meshy.persistence import vector_store as vector_store_module
 from extended_data.connectors.meshy.persistence.vector_store import VectorStore, get_embedding
@@ -87,6 +88,23 @@ def test_record_metadata_decodes_through_data_boundary(temp_dir, monkeypatch) ->
 
     assert isinstance(record, ExtendedDict)
     assert record["metadata"]["source"] == "test"
+
+
+def test_record_metadata_encodes_through_export_boundary(temp_dir) -> None:
+    """Persisted metadata should use the shared JSON export boundary on writes."""
+    with VectorStore(temp_dir / "assets.db") as store:
+        with patch(
+            "extended_data.connectors.meshy.persistence.vector_store.wrap_raw_data_for_export",
+            wraps=vector_store_module.wrap_raw_data_for_export,
+        ) as mock_wrap_for_export:
+            store.record_generation(
+                spec_hash="hash-abc",
+                prompt="cute otter character",
+                project="project1",
+                metadata={"source": "test"},
+            )
+
+    mock_wrap_for_export.assert_called_once_with({"source": "test"}, allow_encoding="json")
 
 
 def test_search_text_and_list_pending_return_extended_payloads(temp_dir) -> None:

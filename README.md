@@ -167,7 +167,8 @@ dispatch.
 Google service-account strings and Meshy persisted manifests/metadata follow
 that same decode path instead of parsing JSON in connector-local code.
 AWS S3 JSON object writes and Meshy manifest writes use the shared export
-boundary as well, keeping connector persistence aligned with Tier 3 file data.
+boundary as well, keeping connector persistence aligned with Tier 3 file data;
+Meshy vector-store metadata follows the same path.
 CLI JSON output, MCP tool results, and SecretSync `results_json` use that same
 export boundary after redaction.
 Serialized CLI/MCP boundaries and connector API error messages reuse the Tier 1

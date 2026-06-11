@@ -49,6 +49,7 @@ from typing import TYPE_CHECKING, Any, cast
 from typing_extensions import Self
 
 from extended_data.containers import ExtendedDict, ExtendedList, extend_data
+from extended_data.io import wrap_raw_data_for_export
 from extended_data.io.files import decode_file
 from extended_data.primitives.formats.errors import DataDecodeError
 
@@ -269,7 +270,7 @@ class VectorStore:
                 return cast(ExtendedDict, extend_data(_record_payload(self._row_to_record(row))))
 
             # Insert new record
-            metadata_json = json.dumps(metadata) if metadata else None
+            metadata_json = wrap_raw_data_for_export(metadata, allow_encoding="json") if metadata else None
 
             cursor = conn.execute(
                 """
