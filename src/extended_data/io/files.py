@@ -11,7 +11,7 @@ from collections.abc import Mapping
 from copy import deepcopy
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, TypeAlias, cast
+from typing import TYPE_CHECKING, Any, TypeAlias, cast
 
 import validators
 
@@ -20,6 +20,10 @@ from git import GitCommandError, InvalidGitRepositoryError, NoSuchPathError, Rep
 from extended_data.containers import ExtendedDict, ExtendedString, extend_data, to_builtin
 from extended_data.io.exporters import make_raw_data_export_safe, wrap_raw_data_for_export
 from extended_data.primitives.serialization import normalize_data_encoding
+
+
+if TYPE_CHECKING:
+    from extended_data.workflows import DataWorkflow
 
 
 FilePath: TypeAlias = str | os.PathLike[str]
@@ -112,6 +116,12 @@ class DataFile:
     def wrap_for_export(self, allow_encoding: bool | str = True, **format_opts: Any) -> str:
         """Return the artifact data wrapped as an encoded export string."""
         return wrap_raw_data_for_export(self.data, allow_encoding=allow_encoding, **format_opts)
+
+    def workflow(self, *, as_extended: bool = True) -> DataWorkflow:
+        """Start a DataWorkflow from this artifact's decoded data."""
+        from extended_data.workflows import DataWorkflow
+
+        return DataWorkflow.from_data_file(self, as_extended=as_extended)
 
     def write(
         self,

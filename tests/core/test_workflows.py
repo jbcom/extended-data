@@ -10,6 +10,7 @@ from pathlib import Path
 import pytest
 
 from extended_data import (
+    DataFile,
     DataWorkflow,
     ExtendedDict,
     ExtendedList,
@@ -85,6 +86,30 @@ def test_data_workflow_runs_named_value_transforms() -> None:
         "selected_services": ["api", "worker"],
         "tags": ["api", "docs"],
     }
+
+
+def test_data_workflow_starts_from_data_file_artifact() -> None:
+    """DataFile artifacts can start named workflows without manual .data plumbing."""
+    artifact = DataFile.decode('{"service": {"name": "api"}}', suffix="json", metadata={"status_code": 200})
+
+    workflow = artifact.workflow().then(("project-name", lambda data: {"name": data["service"]["name"]}))
+    result = workflow.result()
+
+    assert workflow.steps == ("data_file:memory", "project-name")
+    assert isinstance(workflow.value, ExtendedDict)
+    assert result.value["name"].upper_first() == "Api"
+    assert artifact.metadata["status_code"] == 200
+
+
+def test_data_workflow_from_data_file_can_return_builtin_state() -> None:
+    """DataFile-to-workflow composition can explicitly lower to plain Python values."""
+    artifact = DataFile.decode('{"service": {"name": "api"}}', suffix="json")
+
+    workflow = DataWorkflow.from_data_file(artifact, as_extended=False)
+
+    assert workflow.steps == ("data_file:memory",)
+    assert isinstance(workflow.value, dict)
+    assert not isinstance(workflow.value, ExtendedDict)
 
 
 def test_data_workflow_preserves_extended_policy_after_file_decode(tmp_path: Path) -> None:

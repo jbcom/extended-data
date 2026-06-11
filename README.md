@@ -236,12 +236,13 @@ the serialization boundary.
 workflows; it raises for missing files and promotes structured data into Tier 2
 containers by default. `DataFile` makes one decoded file or URL artifact
 first-class with promoted data, promoted source metadata, detached
-`as_extended()` views, and direct write/export helpers. `DataWorkflow` makes
-multi-step compositions first-class: read or decode data, apply named
+`as_extended()` views, direct write/export helpers, and a `workflow()` bridge
+for artifact-first processing. `DataWorkflow` makes multi-step compositions
+first-class: read, decode, or accept a `DataFile` artifact, apply named
 transformations, write an output artifact, and keep the step trail in a
-`WorkflowResult`. Completed workflow results expose detached promoted views
-with `as_extended()` plus direct `to_export_safe()` and `wrap_for_export()`
-helpers. Missing file inputs and empty writes fail loudly.
+`WorkflowResult`. Completed workflow results expose detached promoted views with
+`as_extended()` plus direct `to_export_safe()` and `wrap_for_export()` helpers.
+Missing file inputs and empty writes fail loudly.
 `InputProvider` stores its active, frozen, and merged input snapshots as
 `ExtendedDict` values, so direct input-data access can use Tier 2 container
 methods. `snapshot_inputs()` returns detached active or frozen snapshots, and

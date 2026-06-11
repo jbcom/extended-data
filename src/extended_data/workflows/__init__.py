@@ -10,7 +10,7 @@ from typing import Any, TypeAlias
 
 from extended_data.containers import extend_data, to_builtin
 from extended_data.io.exporters import make_raw_data_export_safe, wrap_raw_data_for_export
-from extended_data.io.files import FilePath, decode_file, read_data_file, write_file
+from extended_data.io.files import DataFile, FilePath, decode_file, read_data_file, write_file
 
 
 WorkflowAction: TypeAlias = Callable[[Any], Any]
@@ -83,6 +83,12 @@ class DataWorkflow:
     def from_value(cls, value: Any, *, as_extended: bool = True) -> DataWorkflow:
         """Start a workflow from an in-memory value."""
         return cls(value, steps=("value",), as_extended=as_extended)
+
+    @classmethod
+    def from_data_file(cls, artifact: DataFile, *, as_extended: bool = True) -> DataWorkflow:
+        """Start a workflow from a decoded DataFile artifact."""
+        value = artifact.as_extended() if as_extended else artifact.as_builtin()
+        return cls(value, steps=(f"data_file:{artifact.source}",), as_extended=as_extended)
 
     @classmethod
     def decode(

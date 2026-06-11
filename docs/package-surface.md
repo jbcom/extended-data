@@ -171,15 +171,16 @@ plain strings before JSON handoff.
 `DataFile` is the Tier 3 artifact surface for one decoded file, URL, or
 in-memory payload. It keeps `source`, `encoding`, and source metadata promoted,
 returns decoded `data` as Tier 2 containers by default, exposes detached
-`as_extended()` views, and writes output artifacts through the same export
-boundary as `write_file()`.
+`as_extended()` views, writes output artifacts through the same export boundary
+as `write_file()`, and starts artifact-first processing with `workflow()`.
 
 `DataWorkflow` is the Tier 3 composition surface for higher-order data
 processing. It reads or decodes structured data through the file and format
-processors, promotes values into Tier 2 containers by default, applies named
-transformation steps, writes output artifacts, and returns a `WorkflowResult`
-with the completed value, output path, and step trail. `WorkflowResult.as_extended()`
-returns a detached promoted view of the completed value, and result-level
+processors, accepts `DataFile` artifacts with `from_data_file()`, promotes
+values into Tier 2 containers by default, applies named transformation steps,
+writes output artifacts, and returns a `WorkflowResult` with the completed
+value, output path, and step trail. `WorkflowResult.as_extended()` returns a
+detached promoted view of the completed value, and result-level
 `to_export_safe()` / `wrap_for_export()` expose the same export boundary used by
 Tier 2 containers.
 
