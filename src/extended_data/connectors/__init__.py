@@ -1,9 +1,9 @@
 """Extended Data Connectors - shared connectors for cloud, SaaS, and AI platforms.
 
 This package provides modular connectors for various cloud providers and services:
-- Anthropic: Claude AI API and Agent SDK (NEW)
+- Anthropic: Claude AI API and Agent SDK
 - AWS: Organizations, SSO/Identity Center, S3, Secrets Manager
-- Cursor: Background Agent API for AI coding agents (NEW)
+- Cursor: Background Agent API for AI coding agents
 - Google Cloud: Workspace, Cloud Platform, Billing, Services (GKE, Compute, etc.)
 - GitHub: Repository operations, PR management
 - Meshy: 3D asset generation
