@@ -15,6 +15,7 @@ from extended_data.connectors.base import ConnectorAPIError, ConnectorBase, Rate
 from extended_data.containers import ExtendedDict, ExtendedList, ExtendedString
 from extended_data.io import DataFile
 from extended_data.logging import Logging
+from extended_data.workflows import DataWorkflow
 
 
 class ExampleConnector(ConnectorBase):
@@ -178,6 +179,32 @@ def test_request_data_file_adds_request_provenance() -> None:
     assert isinstance(artifact.data, ExtendedDict)
     assert artifact.metadata["method"] == "GET"
     assert artifact.metadata["endpoint"] == "/status"
+    mock_client.request.assert_called_once()
+
+
+def test_request_workflow_starts_from_response_artifact() -> None:
+    """request_workflow should hand API data directly to DataWorkflow with provenance."""
+    connector = _connector()
+    mock_client = MagicMock()
+    mock_client.request.return_value = httpx.Response(
+        200,
+        content=b'{"HTTPResponseCode":"200","SelectedServices":["api","api","worker"]}',
+        headers={"content-type": "application/json"},
+    )
+    connector._client = mock_client
+
+    workflow = connector.request_workflow("GET", "/status")
+    result = workflow.transform("reconstruct", "unhump", "deduplicate").result()
+
+    assert isinstance(workflow, DataWorkflow)
+    assert workflow.steps == ("data_file:https://api.example.com/status",)
+    assert workflow.metadata["method"] == "GET"
+    assert workflow.metadata["endpoint"] == "/status"
+    assert result.metadata["status_code"] == 200
+    assert result.as_builtin() == {
+        "http_response_code": 200,
+        "selected_services": ["api", "worker"],
+    }
     mock_client.request.assert_called_once()
 
 

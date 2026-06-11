@@ -345,7 +345,9 @@ through these shared data primitives and lower to built-in values only at model
 validation or redaction boundaries. Use
 `request_data_file()` when an API workflow needs the decoded data plus
 non-secret response provenance such as source URL, HTTP status, content type,
-method, and endpoint in a `DataFile` artifact.
+method, and endpoint in a `DataFile` artifact. Use `request_workflow()` when
+that response should immediately become a `DataWorkflow` with the same promoted
+metadata, named transforms, merge helpers, and export/write boundary.
 Connector methods that return external data payloads should call
 `extend_result()` at the return boundary, making SDK-shaped dictionaries,
 lists, decoded repository files, GraphQL results, and workflow-builder output

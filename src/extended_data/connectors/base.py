@@ -65,6 +65,7 @@ if TYPE_CHECKING:
 
     from extended_data.containers import ExtendedDict, ExtendedList
     from extended_data.io import DataFile
+    from extended_data.workflows import DataWorkflow
 
 
 class RateLimitError(Exception):
@@ -490,6 +491,26 @@ class ConnectorBase(InputProvider, ABC):
             as_extended=as_extended,
             metadata={"method": method.upper(), "endpoint": endpoint},
         )
+
+    def request_workflow(
+        self,
+        method: str,
+        endpoint: str,
+        *,
+        headers: dict[str, str] | None = None,
+        suffix: str | None = None,
+        as_extended: bool = True,
+        **kwargs: Any,
+    ) -> DataWorkflow:
+        """Make an HTTP request and return a workflow over the decoded response artifact."""
+        return self.request_data_file(
+            method,
+            endpoint,
+            headers=headers,
+            suffix=suffix,
+            as_extended=as_extended,
+            **kwargs,
+        ).workflow(as_extended=as_extended)
 
     def get(self, endpoint: str, **kwargs: Any) -> httpx.Response:
         """HTTP GET request."""

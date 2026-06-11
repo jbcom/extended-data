@@ -236,6 +236,7 @@ RAW_DATA_SURFACE_METHOD_NAMES = {
     "request",
     "request_data",
     "request_data_file",
+    "request_workflow",
     "snapshot_inputs",
 }
 
@@ -260,6 +261,7 @@ RAW_DATA_SURFACE_METHODS = (
     ConnectorBase.request,
     ConnectorBase.request_data,
     ConnectorBase.request_data_file,
+    ConnectorBase.request_workflow,
     InputProvider.freeze_inputs,
     InputProvider.get_input,
     InputProvider.merge_inputs,
