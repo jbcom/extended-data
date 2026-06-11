@@ -364,11 +364,9 @@ def _get_category(cls: builtins.type[ConnectorBase], spec: BuiltinConnectorSpec 
 def _get_capabilities(cls: builtins.type[ConnectorBase], spec: BuiltinConnectorSpec | None) -> tuple[str, ...]:
     """Get normalized capability metadata for a connector."""
     raw_capabilities = spec.capabilities if spec else getattr(cls, "CONNECTOR_CAPABILITIES", ())
-    capabilities = (
-        _normalize_catalog_token(capability)
-        for capability in raw_capabilities
-        if _normalize_catalog_token(capability)
-    )
+    capability_values = (raw_capabilities,) if isinstance(raw_capabilities, str) else raw_capabilities
+    capabilities = [_normalize_catalog_token(capability) for capability in capability_values]
+    capabilities = [capability for capability in capabilities if capability]
     return tuple(dict.fromkeys(capabilities))
 
 

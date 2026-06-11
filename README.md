@@ -142,6 +142,9 @@ catalog, including known connectors that need an `extended-data[...]` extra.
 Catalog entries include normalized categories and capabilities so workflows can
 select cloud, AI, communications, development, media, or secrets integrations
 without string matching class names.
+Custom `ConnectorBase` subclasses can set `CONNECTOR_CATEGORY` and
+`CONNECTOR_CAPABILITIES` to publish the same metadata through entry-point
+registration.
 Secret-like cache key fields such as `token`, `api_key`, `password`, and
 `client_secret` are hashed before they are stored in the fabric cache.
 `AWSConnector` and `GoogleConnector` are unified first-class classes: S3,

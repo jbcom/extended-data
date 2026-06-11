@@ -311,6 +311,9 @@ domain or supported operation without parsing class names. `ConnectorFabric`
 hashes secret-like cache-key fields such as `token`, `api_key`, `password`, and
 `client_secret` before storing cache entries, so cache inspection and debug
 output do not expose raw credential material.
+Custom `ConnectorBase` subclasses can set `CONNECTOR_CATEGORY` and
+`CONNECTOR_CAPABILITIES` so entry-point connectors participate in the same
+catalog query surface.
 
 Connectors that inherit `ConnectorBase` can keep raw transport access with
 `request()` or use `request_data()`, `get_data()`, `post_data()`, and the other

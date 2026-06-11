@@ -93,6 +93,8 @@ class ConnectorBase(InputProvider, ABC):
     Class Attributes:
         BASE_URL: API base URL (required for HTTP connectors)
         API_KEY_ENV: Environment variable name for API key
+        CONNECTOR_CATEGORY: Catalog category for registry metadata
+        CONNECTOR_CAPABILITIES: Catalog capabilities for registry metadata
         TIMEOUT: HTTP timeout in seconds (default 300)
         MIN_REQUEST_INTERVAL: Minimum seconds between requests (rate limiting)
         MAX_RETRIES: Maximum retry attempts (default 5)
@@ -106,6 +108,8 @@ class ConnectorBase(InputProvider, ABC):
     # Class-level configuration - override in subclasses
     BASE_URL: ClassVar[str] = ""
     API_KEY_ENV: ClassVar[str] = ""
+    CONNECTOR_CATEGORY: ClassVar[str] = "external"
+    CONNECTOR_CAPABILITIES: ClassVar[tuple[str, ...]] = ()
     TIMEOUT: ClassVar[float] = 300.0
     MIN_REQUEST_INTERVAL: ClassVar[float] = 0.0  # No rate limit by default
     MAX_RETRIES: ClassVar[int] = 5

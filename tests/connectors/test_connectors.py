@@ -7,6 +7,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from extended_data.connectors import registry
+from extended_data.connectors.base import ConnectorBase
 from extended_data.connectors.connectors import ConnectorFabric
 from extended_data.containers import ExtendedDict, ExtendedList, ExtendedString
 
@@ -209,6 +210,30 @@ class TestConnectorFabric:
         assert isinstance(connector_names[0], ExtendedString)
         assert "cursor" in connector_names
         assert ("github" in connector_names) is github_info["available"]
+
+    def test_external_connector_metadata_uses_base_class_catalog_contract(self, monkeypatch):
+        """Entry-point connectors can publish category and capability metadata."""
+
+        class CustomConnector(ConnectorBase):
+            CONNECTOR_CATEGORY = "Data_Warehouse"
+            CONNECTOR_CAPABILITIES = ("SQL", "Files", "sql")
+
+        monkeypatch.setattr(registry, "_connector_cache", {"custom": CustomConnector})
+        monkeypatch.setattr(registry, "_missing_builtin_connectors", {})
+
+        info = registry.get_connector_info("custom")
+        categories = registry.list_connector_categories()
+        capabilities = registry.list_connector_capabilities()
+        warehouse_connectors = registry.list_connectors_by_category("data_warehouse")
+        sql_connectors = registry.list_connectors_by_capability("sql")
+
+        assert info["source"] == "entry_point"
+        assert info["category"] == "data-warehouse"
+        assert info["capabilities"] == ["sql", "files"]
+        assert "data-warehouse" in categories
+        assert "sql" in capabilities
+        assert warehouse_connectors[0]["name"] == "custom"
+        assert sql_connectors[0]["name"] == "custom"
 
     @requires_boto3
     @patch("extended_data.connectors.aws.AWSConnector")
