@@ -12,10 +12,10 @@ from tempfile import TemporaryDirectory
 
 from extended_data import (
     DataWorkflow,
-    ExtendedDict,
     ExtendedList,
     base64_decode,
     base64_encode,
+    list_data_transform_steps,
     read_data_file,
     read_file,
     write_file,
@@ -89,15 +89,22 @@ def demonstrate_api_payload_workflow() -> None:
     """Normalize and serialize an API-style payload."""
     print("\n=== API Payload Workflow ===\n")
 
-    payload = ExtendedDict(
-        {
-            "HTTPResponseCode": 200,
-            "SelectedServices": ExtendedList(["api", "worker", "db"]).filter_values(denylist=["db"]),
-            "Tags": ["api", "api", "docs"],
-        }
-    )
+    payload = {
+        "HTTPResponseCode": "200",
+        "SelectedServices": ["api", "worker", "db", "api"],
+        "Tags": ["api", "api", "docs"],
+        "EmptyValue": "",
+    }
 
-    normalized = payload.deduplicate().unhump()
+    def select_services(data):
+        return data | {"SelectedServices": ExtendedList(data["SelectedServices"]).filter_values(denylist=["db"])}
+
+    workflow = (
+        DataWorkflow.from_value(payload)
+        .then(("select-services", select_services))
+        .transform("reconstruct", "deduplicate", "compact", "unhump")
+    )
+    normalized = workflow.result().value
 
     with TemporaryDirectory() as tmpdir:
         tld = Path(tmpdir)
@@ -105,6 +112,8 @@ def demonstrate_api_payload_workflow() -> None:
         payload_text = read_file("build/payload.json", tld=tld)
 
     print(payload_text)
+    print(f"Steps: {', '.join(workflow.steps)}")
+    print(f"Known transforms: {', '.join(list_data_transform_steps())}")
 
 
 def demonstrate_yaml_native_workflow() -> None:
