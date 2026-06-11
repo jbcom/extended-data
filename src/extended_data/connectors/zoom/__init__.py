@@ -44,6 +44,11 @@ def _zoom_error(action: str, exc: BaseException, *sensitive_values: Any) -> str:
     return f"{action}: {_safe_zoom_text(exc, *sensitive_values)}"
 
 
+def _zoom_response_error(action: str, data: Any, *sensitive_values: Any) -> RuntimeError:
+    """Build a redacted malformed-response error."""
+    return RuntimeError(f"{action}: {_safe_zoom_text(data, *sensitive_values)}")
+
+
 class ZoomConnector(VendorConnectorBase):
     """Zoom connector for user management."""
 
@@ -62,6 +67,34 @@ class ZoomConnector(VendorConnectorBase):
         self.client_secret = client_secret or self.get_input("ZOOM_CLIENT_SECRET", required=True)
         self.account_id = account_id or self.get_input("ZOOM_ACCOUNT_ID", required=True)
 
+    def _response_json(self, response: Any, action: str, *sensitive_values: Any) -> Any:
+        """Parse a Zoom JSON response or raise a redacted diagnostic."""
+        try:
+            return response.json()
+        except Exception as exc:
+            raise _zoom_response_error(action, exc, *sensitive_values) from None
+
+    def _response_mapping(self, response: Any, action: str, *sensitive_values: Any) -> dict[str, Any]:
+        """Parse and validate a Zoom object response."""
+        data = self._response_json(response, action, *sensitive_values)
+        if not isinstance(data, Mapping):
+            raise _zoom_response_error(action, data, *sensitive_values)
+        return dict(data)
+
+    def _response_list_field(
+        self,
+        response: Any,
+        field_name: str,
+        action: str,
+        *sensitive_values: Any,
+    ) -> list[dict[str, Any]]:
+        """Parse and validate a Zoom list field containing object payloads."""
+        data = self._response_mapping(response, action, *sensitive_values)
+        items = data.get(field_name, [])
+        if not isinstance(items, list) or any(not isinstance(item, Mapping) for item in items):
+            raise _zoom_response_error(action, data, *sensitive_values)
+        return [dict(item) for item in items]
+
     def get_access_token(self) -> str | None:
         """Get an OAuth access token from Zoom."""
         url = "https://zoom.us/oauth/token"
@@ -75,7 +108,23 @@ class ZoomConnector(VendorConnectorBase):
         try:
             response = requests.post(url, headers=headers, data=data, timeout=DEFAULT_REQUEST_TIMEOUT)
             response.raise_for_status()
-            return response.json().get("access_token")
+            token_data = self._response_mapping(
+                response,
+                "Unexpected Zoom access token response",
+                self.client_id,
+                self.client_secret,
+                self.account_id,
+            )
+            token = token_data.get("access_token")
+            if not isinstance(token, str) or not token.strip():
+                raise _zoom_response_error(
+                    "Unexpected Zoom access token response",
+                    token_data,
+                    self.client_id,
+                    self.client_secret,
+                    self.account_id,
+                )
+            return token
         except requests.exceptions.RequestException as exc:
             msg = _zoom_error(
                 "Failed to get Zoom access token",
@@ -114,11 +163,18 @@ class ZoomConnector(VendorConnectorBase):
             try:
                 response = requests.get(url, headers=headers, params=params, timeout=DEFAULT_REQUEST_TIMEOUT)
                 response.raise_for_status()
-                data = response.json()
-                for user in data.get("users", []):
-                    users[user["email"]] = user
+                data = self._response_mapping(response, "Unexpected Zoom users response", next_page_token, params)
+                raw_users = data.get("users", [])
+                if not isinstance(raw_users, list):
+                    raise _zoom_response_error("Unexpected Zoom users response", data, next_page_token, params)
+                for user in raw_users:
+                    if not isinstance(user, Mapping) or not isinstance(user.get("email"), str):
+                        raise _zoom_response_error("Unexpected Zoom users response", data, next_page_token, params)
+                    users[user["email"]] = dict(user)
 
                 next_page_token = data.get("next_page_token")
+                if next_page_token is not None and not isinstance(next_page_token, str):
+                    raise _zoom_response_error("Unexpected Zoom users response", data, next_page_token, params)
                 if not next_page_token:
                     break
             except requests.exceptions.RequestException as exc:
@@ -173,7 +229,7 @@ class ZoomConnector(VendorConnectorBase):
         try:
             response = requests.get(url, headers=headers, timeout=DEFAULT_REQUEST_TIMEOUT)
             response.raise_for_status()
-            return self.extend_result(response.json())
+            return self.extend_result(self._response_mapping(response, "Unexpected Zoom user response", user_id))
         except requests.exceptions.RequestException as exc:
             raise RuntimeError(_zoom_error("Failed to get Zoom user", exc, user_id)) from None
 
@@ -194,8 +250,9 @@ class ZoomConnector(VendorConnectorBase):
         try:
             response = requests.get(url, headers=headers, params=params, timeout=DEFAULT_REQUEST_TIMEOUT)
             response.raise_for_status()
-            data = response.json()
-            return self.extend_result(data.get("meetings", []))
+            return self.extend_result(
+                self._response_list_field(response, "meetings", "Unexpected Zoom meetings response", user_id, params)
+            )
         except requests.exceptions.RequestException as exc:
             raise RuntimeError(_zoom_error("Failed to list Zoom meetings", exc, user_id, params)) from None
 
@@ -214,7 +271,7 @@ class ZoomConnector(VendorConnectorBase):
         try:
             response = requests.get(url, headers=headers, timeout=DEFAULT_REQUEST_TIMEOUT)
             response.raise_for_status()
-            return self.extend_result(response.json())
+            return self.extend_result(self._response_mapping(response, "Unexpected Zoom meeting response", meeting_id))
         except requests.exceptions.RequestException as exc:
             raise RuntimeError(_zoom_error("Failed to get Zoom meeting", exc, meeting_id)) from None
 

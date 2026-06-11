@@ -16,6 +16,14 @@ def _logged_text(logger: MagicMock) -> str:
     return "\n".join(str(arg) for call in logger.method_calls for arg in call.args)
 
 
+def _token_response(token: str = "test-token") -> MagicMock:
+    """Build a successful Zoom OAuth response mock."""
+    response = MagicMock()
+    response.json.return_value = {"access_token": token}
+    response.raise_for_status = MagicMock()
+    return response
+
+
 class TestZoomConnector:
     """Test suite for ZoomConnector."""
 
@@ -75,6 +83,33 @@ class TestZoomConnector:
         assert "[REDACTED]" in message
         assert exc_info.value.__cause__ is None
 
+    @patch("extended_data.connectors.zoom.requests.post")
+    def test_get_access_token_malformed_response_is_redacted(self, mock_post, base_connector_kwargs):
+        """Missing token responses should fail loudly without exposing OAuth credentials."""
+        mock_response = MagicMock()
+        mock_response.json.return_value = {
+            "password": "hunter2",
+            "authorization": "Bearer raw_token",
+            "account_id": "test-account-id",
+        }
+        mock_response.raise_for_status = MagicMock()
+        mock_post.return_value = mock_response
+
+        connector = ZoomConnector(
+            client_id="test-client-id",
+            client_secret="test-client-secret",
+            account_id="test-account-id",
+            **base_connector_kwargs,
+        )
+
+        with pytest.raises(RuntimeError, match="Unexpected Zoom access token response") as exc_info:
+            connector.get_access_token()
+
+        message = str(exc_info.value)
+        for raw_value in ["hunter2", "raw_token", "test-client-id", "test-client-secret", "test-account-id"]:
+            assert raw_value not in message
+        assert "[REDACTED]" in message
+
     @patch("extended_data.connectors.zoom.requests.get")
     @patch("extended_data.connectors.zoom.requests.post")
     def test_list_users_redacts_request_failure_details(self, mock_post, mock_get, base_connector_kwargs):
@@ -102,6 +137,33 @@ class TestZoomConnector:
         assert "raw_token" not in message
         assert "[REDACTED]" in message
         assert exc_info.value.__cause__ is None
+
+    @patch("extended_data.connectors.zoom.requests.get")
+    @patch("extended_data.connectors.zoom.requests.post")
+    def test_list_users_malformed_response_is_redacted(self, mock_post, mock_get, base_connector_kwargs):
+        """Malformed user list responses should not return partial or raw payloads."""
+        mock_post.return_value = _token_response()
+        mock_users_response = MagicMock()
+        mock_users_response.json.return_value = {
+            "users": [{"password": "hunter2", "authorization": "Bearer raw_token"}]
+        }
+        mock_users_response.raise_for_status = MagicMock()
+        mock_get.return_value = mock_users_response
+
+        connector = ZoomConnector(
+            client_id="test-client-id",
+            client_secret="test-client-secret",
+            account_id="test-account-id",
+            **base_connector_kwargs,
+        )
+
+        with pytest.raises(RuntimeError, match="Unexpected Zoom users response") as exc_info:
+            connector.list_users()
+
+        message = str(exc_info.value)
+        assert "hunter2" not in message
+        assert "raw_token" not in message
+        assert "[REDACTED]" in message
 
     @patch("extended_data.connectors.zoom.requests.get")
     @patch("extended_data.connectors.zoom.requests.post")
@@ -292,6 +354,31 @@ class TestZoomConnector:
 
     @patch("extended_data.connectors.zoom.requests.get")
     @patch("extended_data.connectors.zoom.requests.post")
+    def test_get_user_malformed_response_is_redacted(self, mock_post, mock_get, base_connector_kwargs):
+        """Zoom user lookups should reject non-object payloads without leaking identifiers."""
+        mock_post.return_value = _token_response()
+        mock_user_response = MagicMock()
+        mock_user_response.json.return_value = ["private-user@example.com", {"password": "hunter2"}]
+        mock_user_response.raise_for_status = MagicMock()
+        mock_get.return_value = mock_user_response
+
+        connector = ZoomConnector(
+            client_id="test-client-id",
+            client_secret="test-client-secret",
+            account_id="test-account-id",
+            **base_connector_kwargs,
+        )
+
+        with pytest.raises(RuntimeError, match="Unexpected Zoom user response") as exc_info:
+            connector.get_user("private-user@example.com")
+
+        message = str(exc_info.value)
+        assert "private-user@example.com" not in message
+        assert "hunter2" not in message
+        assert "[REDACTED]" in message
+
+    @patch("extended_data.connectors.zoom.requests.get")
+    @patch("extended_data.connectors.zoom.requests.post")
     def test_list_meetings(self, mock_post, mock_get, base_connector_kwargs):
         """Test listing meetings for a user."""
         mock_token_response = MagicMock()
@@ -352,6 +439,34 @@ class TestZoomConnector:
 
     @patch("extended_data.connectors.zoom.requests.get")
     @patch("extended_data.connectors.zoom.requests.post")
+    def test_list_meetings_malformed_response_is_redacted(self, mock_post, mock_get, base_connector_kwargs):
+        """Zoom meeting list responses should preserve the ExtendedList contract."""
+        mock_post.return_value = _token_response()
+        mock_meetings_response = MagicMock()
+        mock_meetings_response.json.return_value = {
+            "meetings": [{"id": "111"}, "password=hunter2 Authorization: Bearer raw_token"]
+        }
+        mock_meetings_response.raise_for_status = MagicMock()
+        mock_get.return_value = mock_meetings_response
+
+        connector = ZoomConnector(
+            client_id="test-client-id",
+            client_secret="test-client-secret",
+            account_id="test-account-id",
+            **base_connector_kwargs,
+        )
+
+        with pytest.raises(RuntimeError, match="Unexpected Zoom meetings response") as exc_info:
+            connector.list_meetings("private-user@example.com")
+
+        message = str(exc_info.value)
+        assert "private-user@example.com" not in message
+        assert "hunter2" not in message
+        assert "raw_token" not in message
+        assert "[REDACTED]" in message
+
+    @patch("extended_data.connectors.zoom.requests.get")
+    @patch("extended_data.connectors.zoom.requests.post")
     def test_get_meeting(self, mock_post, mock_get, base_connector_kwargs):
         """Test getting a specific meeting."""
         mock_token_response = MagicMock()
@@ -406,3 +521,31 @@ class TestZoomConnector:
         assert "raw-token" not in message
         assert "[REDACTED]" in message
         assert exc_info.value.__cause__ is None
+
+    @patch("extended_data.connectors.zoom.requests.get")
+    @patch("extended_data.connectors.zoom.requests.post")
+    def test_get_meeting_json_parse_error_is_redacted(self, mock_post, mock_get, base_connector_kwargs):
+        """Zoom JSON parse failures should not expose raw meeting IDs or parser text."""
+        mock_post.return_value = _token_response()
+        mock_meeting_response = MagicMock()
+        mock_meeting_response.json.side_effect = ValueError(
+            "bad meeting private-meeting password=hunter2 Authorization: Bearer raw_token"
+        )
+        mock_meeting_response.raise_for_status = MagicMock()
+        mock_get.return_value = mock_meeting_response
+
+        connector = ZoomConnector(
+            client_id="test-client-id",
+            client_secret="test-client-secret",
+            account_id="test-account-id",
+            **base_connector_kwargs,
+        )
+
+        with pytest.raises(RuntimeError, match="Unexpected Zoom meeting response") as exc_info:
+            connector.get_meeting("private-meeting")
+
+        message = str(exc_info.value)
+        assert "private-meeting" not in message
+        assert "hunter2" not in message
+        assert "raw_token" not in message
+        assert "[REDACTED]" in message
