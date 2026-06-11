@@ -173,6 +173,9 @@ in-memory payload. It keeps `source`, `encoding`, and source metadata promoted,
 returns decoded `data` as Tier 2 containers by default, exposes detached
 `as_extended()` views, writes output artifacts through the same export boundary
 as `write_file()`, and starts artifact-first processing with `workflow()`.
+Source labels and metadata are redacted with the Tier 1 redaction policy before
+they enter workflow step names or `WorkflowResult.metadata`; caller-supplied
+metadata cannot override the sanitized core `source` and `path` fields.
 
 `DataWorkflow` is the Tier 3 composition surface for higher-order data
 processing. It reads or decodes structured data through the file and format

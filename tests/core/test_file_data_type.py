@@ -625,6 +625,30 @@ def test_data_file_decode_and_write_round_trip(tmp_path: Path) -> None:
     assert read_data_file(output.path) == {"service": {"name": "api"}}
 
 
+def test_data_file_redacts_secret_bearing_source_and_metadata() -> None:
+    """DataFile provenance should be safe to carry into workflow metadata."""
+    artifact = DataFile.decode(
+        '{"service": {"name": "api"}}',
+        file_path="https://example.com/config.json?api_key=key_123&region=us-east-1",
+        suffix="json",
+        metadata={
+            "authorization": "Bearer raw_token",
+            "nested": {"client_secret": "secret_456"},
+            "source": "password=hunter2",
+        },
+    )
+    workflow = artifact.workflow()
+
+    assert "key_123" not in artifact.source
+    assert "region=us-east-1" in artifact.source
+    assert artifact.metadata["source"] == artifact.source
+    assert artifact.metadata["authorization"] == "[REDACTED]"
+    assert artifact.metadata["nested"]["client_secret"] == "[REDACTED]"
+    assert "hunter2" not in artifact.metadata["source"]
+    assert workflow.metadata["source"] == artifact.source
+    assert "key_123" not in workflow.steps[0]
+
+
 def test_data_file_write_without_local_target_fails_loudly() -> None:
     """In-memory DataFile artifacts require an explicit output path."""
     artifact = DataFile.decode("plain text", suffix="raw")

@@ -31,6 +31,17 @@ def test_redact_sensitive_text_accepts_known_diagnostic_values() -> None:
     assert redacted.count("[REDACTED]") == 3
 
 
+def test_redact_sensitive_text_preserves_non_secret_url_query_values() -> None:
+    """Key/value redaction should not consume unrelated URL query parameters."""
+    message = "https://example.com/config.json?api_key=key_123&region=us-east-1"
+
+    redacted = redact_sensitive_text(message)
+
+    assert "key_123" not in redacted
+    assert "api_key=[REDACTED]" in redacted
+    assert "region=us-east-1" in redacted
+
+
 def test_redact_sensitive_text_flattens_nested_known_values() -> None:
     """Caller-provided diagnostic context can be nested like CLI or MCP arguments."""
     message = "failed for user@example.com at /tmp/private%2Fpath using prompt Fix login"

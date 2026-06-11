@@ -19,6 +19,7 @@ from git import GitCommandError, InvalidGitRepositoryError, NoSuchPathError, Rep
 
 from extended_data.containers import ExtendedDict, ExtendedString, extend_data, to_builtin
 from extended_data.io.exporters import make_raw_data_export_safe, wrap_raw_data_for_export
+from extended_data.primitives.redaction import redact_sensitive_data, redact_sensitive_text
 from extended_data.primitives.serialization import normalize_data_encoding
 
 
@@ -55,7 +56,7 @@ class DataFile:
         decoded = decode_file(file_data, file_path=file_path, suffix=encoding, as_extended=as_extended)
         source = str(file_path) if file_path is not None else "memory"
         return cls(
-            source=ExtendedString(source),
+            source=ExtendedString(_safe_data_file_source(source)),
             data=decoded,
             encoding=ExtendedString(encoding),
             metadata=_data_file_metadata(source=source, encoding=encoding, path=None, data=decoded, extra=metadata),
@@ -94,7 +95,7 @@ class DataFile:
         )
         path = None if is_url(source) else resolve_local_path(file_path, tld=tld)
         return cls(
-            source=ExtendedString(source),
+            source=ExtendedString(_safe_data_file_source(source)),
             data=decoded,
             encoding=ExtendedString(encoding),
             path=path,
@@ -150,7 +151,7 @@ class DataFile:
 
         output_encoding = _resolve_data_file_encoding(file_path=output_path, suffix=encoding)
         return DataFile(
-            source=ExtendedString(str(target)),
+            source=ExtendedString(_safe_data_file_source(str(target))),
             data=self.data,
             encoding=ExtendedString(output_encoding),
             path=output_path,
@@ -167,6 +168,11 @@ def _resolve_data_file_encoding(*, file_path: FilePath | None = None, suffix: st
     return "raw"
 
 
+def _safe_data_file_source(source: str) -> str:
+    """Return a source label safe for metadata and workflow steps."""
+    return redact_sensitive_text(source)
+
+
 def _data_file_metadata(
     *,
     source: str,
@@ -176,17 +182,16 @@ def _data_file_metadata(
     extra: Mapping[str, Any] | None = None,
 ) -> ExtendedDict:
     """Return promoted artifact metadata for workflow and connector handoff."""
-    metadata = ExtendedDict(
+    metadata = ExtendedDict(redact_sensitive_data(extra or {}))
+    metadata.update(
         {
-            "source": source,
+            "source": _safe_data_file_source(source),
             "encoding": encoding,
-            "path": str(path) if path is not None else None,
+            "path": redact_sensitive_text(path) if path is not None else None,
             "is_url": is_url(source),
             "data_type": type(data).__name__,
         }
     )
-    if extra:
-        metadata.update(extra)
     return metadata
 
 

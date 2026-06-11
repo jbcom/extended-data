@@ -18,7 +18,7 @@ JSON_SECRET_RE = re.compile(
     rf"(?i)([\"']?(?:{SENSITIVE_KEY_PATTERN})[\"']?\s*:\s*)"
     rf"([\"'][^\"']*[\"']|Bearer\s+[^\s,;}}\]]+|[^,\s}}\]]+)"
 )
-KEY_VALUE_SECRET_RE = re.compile(rf"(?i)(\b(?:{SENSITIVE_KEY_PATTERN})\b\s*=\s*)([^\s,;]+)")
+KEY_VALUE_SECRET_RE = re.compile(rf"(?i)(\b(?:{SENSITIVE_KEY_PATTERN})\b\s*=\s*)([^\s,;&]+)")
 CLI_SECRET_RE = re.compile(rf"(?i)(--(?:{SENSITIVE_KEY_PATTERN})(?:=|\s+))(\S+)")
 BEARER_SECRET_RE = re.compile(r"(?i)(\bBearer\s+)[A-Za-z0-9._~+/=-]+")
 REDACTED = "[REDACTED]"

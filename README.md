@@ -237,8 +237,10 @@ workflows; it raises for missing files and promotes structured data into Tier 2
 containers by default. `DataFile` makes one decoded file or URL artifact
 first-class with promoted data, promoted source metadata, detached
 `as_extended()` views, direct write/export helpers, and a `workflow()` bridge
-for artifact-first processing. `DataWorkflow` makes multi-step compositions
-first-class: read, decode, or accept a `DataFile` artifact, apply named
+for artifact-first processing. DataFile source labels and metadata use the
+shared Tier 1 redaction policy before they enter workflow steps or result
+metadata. `DataWorkflow` makes multi-step compositions first-class: read,
+decode, or accept a `DataFile` artifact, apply named
 transformations, write an output artifact, and keep the step trail in a
 `WorkflowResult`. Workflow metadata is promoted and preserved across
 transformations, lowering/promoting, and writes, so file and API provenance can
