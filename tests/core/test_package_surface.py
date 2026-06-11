@@ -88,7 +88,7 @@ def test_root_lazy_exports_do_not_describe_tier1_primitives() -> None:
     lazy_loader_docs = extended_data.__getattr__.__doc__ or ""
 
     assert "primitives" not in lazy_loader_docs
-    assert "adapters and processors" in lazy_loader_docs
+    assert "connectors and processors" in lazy_loader_docs
 
 
 def test_clean_major_version_public_names() -> None:

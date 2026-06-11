@@ -6,8 +6,8 @@ HashiCorp Vault to AWS Secrets Manager with two-phase architecture,
 inheritance, versioning, and CI/CD integration.
 
 The connector executes the supported `secretsync` subprocess CLI contract.
-Alternate runtime adapters should be added only after SecretSync publishes a
-stable adapter contract.
+Alternate runtime transports should be added only after SecretSync publishes a
+stable runtime contract.
 
 Example usage:
     from extended_data.connectors.secrets import SecretsConnector
@@ -153,8 +153,8 @@ class SecretsConnector(ConnectorBase):
     - Dry-run with visual diff output
     - CI/CD integration with exit codes
 
-    Alternate runtime adapters are intentionally not accepted here until
-    SecretSync publishes a stable adapter contract.
+    Alternate runtime transports are intentionally not accepted here until
+    SecretSync publishes a stable runtime contract.
     """
 
     def __init__(

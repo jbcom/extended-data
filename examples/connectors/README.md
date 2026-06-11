@@ -1,7 +1,7 @@
 # Connector Examples
 
 This directory contains working examples for `extended_data.connectors` and the
-registered adapters that hang off `ConnectorFabric`.
+registered integrations that hang off `ConnectorFabric`.
 
 Connector examples assume the major-version `extended-data` contract: external
 data payloads are promoted into Tier 2 containers at connector boundaries.

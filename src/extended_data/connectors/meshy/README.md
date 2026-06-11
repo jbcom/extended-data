@@ -2,7 +2,7 @@
 
 Meshy support is part of `extended-data` and lives under
 `extended_data.connectors.meshy`. It provides functional API helpers, a
-`MeshyConnector` fabric adapter, job orchestration, webhook handling, AI tool
+`MeshyConnector` fabric integration, job orchestration, webhook handling, AI tool
 adapters, and an MCP server.
 
 ## Install

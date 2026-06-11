@@ -2,7 +2,7 @@
 
 `extended-data` is one Python distribution with a single `extended_data`
 namespace. The root package exposes first-class containers, Tier 3 processors,
-and integrated adapters; pure Tier 1 utilities are imported from
+and integrated connectors; pure Tier 1 utilities are imported from
 `extended_data.primitives`.
 The old `extended_data_types`, `lifecyclelogging`,
 `directed_inputs_class`, and `vendor_connectors` import namespaces are not
@@ -375,7 +375,7 @@ payload = github.get_repository_file("service.json")
 assert payload["service"]["name"].upper_first() == "Api"
 ```
 
-The `secrets` adapter is the Python-facing bridge to the standalone SecretSync
+The `secrets` connector is the Python-facing bridge to the standalone SecretSync
 project (`jbcom/secrets-sync`). It uses the `secretsync` CLI, which must emit
 the stable `secretsync pipeline --output json` result envelope for both dry-run
 and apply runs. The connector decodes that envelope through the shared file/data

@@ -120,7 +120,7 @@ extended_data/
   io/           Tier 3 file, import, export, and base64 processors
   inputs/       InputProvider and decorator-based input injection
   logging/      structured lifecycle logging
-  connectors/   Tier 3 ConnectorFabric and data adapters
+  connectors/   Tier 3 ConnectorFabric and data integrations
   secrets/      SecretSync CLI bridge and typed result exports
   workflows/    Tier 3 higher-order workflow composition
 ```
@@ -140,7 +140,7 @@ incorrect imports fail fast.
 Tier 1 public exports stay function-oriented; use `get_default_dict()` for
 nested or sorted default mappings instead of importing the internal helper class.
 
-Connectors are first-class adapters in the data fabric. `ConnectorFabric`
+Connectors are first-class data integrations in the fabric. `ConnectorFabric`
 uses the registry to resolve connectors by name, injects shared input/logging
 context, caches connector instances, and lets specialized helpers coexist with
 generic connector lookup. `list_connectors()` returns the full connector
