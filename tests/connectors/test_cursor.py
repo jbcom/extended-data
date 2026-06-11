@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import os
 
 from unittest.mock import MagicMock, patch
@@ -44,7 +45,8 @@ def _json_response(payload: object) -> MagicMock:
     response.status_code = 200
     response.is_success = True
     response.headers = {"content-type": "application/json"}
-    response.text = "{}"
+    response.text = json.dumps(payload)
+    response.content = response.text.encode()
     response.json.return_value = payload
     return response
 
@@ -218,6 +220,33 @@ class TestModels:
         assert len(conv.messages) == 2
 
 
+class TestTransport:
+    """Tests for Cursor HTTP transport integration with Extended Data."""
+
+    @patch("extended_data.connectors.cursor.httpx.Client")
+    def test_request_api_decodes_response_through_extended_data_boundary(self, mock_client_class):
+        """Private transport should decode JSON bytes into ExtendedDict payloads."""
+        mock_client = MagicMock()
+        mock_client_class.return_value = mock_client
+
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.is_success = True
+        mock_response.headers = {"content-type": "application/json"}
+        mock_response.text = '{"service": {"name": "api"}}'
+        mock_response.content = mock_response.text.encode()
+        mock_response.json.side_effect = AssertionError("raw response.json() should not be used")
+        mock_client.request.return_value = mock_response
+
+        connector = CursorConnector(api_key="test-key")
+        payload = connector._request_api("/status")
+
+        assert isinstance(payload, ExtendedDict)
+        assert isinstance(payload["service"], ExtendedDict)
+        assert isinstance(payload["service"]["name"], ExtendedString)
+        assert payload["service"]["name"].upper_first() == "Api"
+
+
 class TestCursorConnector:
     """Tests for CursorConnector."""
 
@@ -254,6 +283,7 @@ class TestCursorConnector:
         mock_response.is_success = True
         mock_response.headers = {"content-type": "application/json"}
         mock_response.text = '{"agents": [{"id": "agent-1", "state": "running"}]}'
+        mock_response.content = mock_response.text.encode()
         mock_response.json.return_value = {"agents": [{"id": "agent-1", "state": "running"}]}
         mock_client.request.return_value = mock_response
 
@@ -278,6 +308,7 @@ class TestCursorConnector:
         mock_response.is_success = True
         mock_response.headers = {"content-type": "application/json"}
         mock_response.text = '{"id": "agent-1", "state": "finished", "pr_url": "https://github.com/org/repo/pull/1"}'
+        mock_response.content = mock_response.text.encode()
         mock_response.json.return_value = {
             "id": "agent-1",
             "state": "finished",
@@ -329,6 +360,7 @@ class TestCursorConnector:
         mock_response.is_success = True
         mock_response.headers = {"content-type": "application/json"}
         mock_response.text = '{"messages": [{"role": "user", "content": "hello"}]}'
+        mock_response.content = mock_response.text.encode()
         mock_response.json.return_value = {"messages": [{"role": "user", "content": "hello"}]}
         mock_client.request.return_value = mock_response
 
@@ -350,6 +382,8 @@ class TestCursorConnector:
         mock_response.status_code = 200
         mock_response.is_success = True
         mock_response.headers = {"content-type": "application/json"}
+        mock_response.text = '{"id": "new-agent", "state": "pending"}'
+        mock_response.content = mock_response.text.encode()
         mock_response.json.return_value = {"id": "new-agent", "state": "pending"}
         mock_client.request.return_value = mock_response
 
@@ -385,6 +419,7 @@ class TestCursorConnector:
         mock_response.is_success = True
         mock_response.headers = {"content-type": "application/json"}
         mock_response.text = '{"id": "new-agent", "state": "pending"}'
+        mock_response.content = mock_response.text.encode()
         mock_response.json.return_value = {"id": "new-agent", "state": "pending"}
         mock_client.request.return_value = mock_response
 
@@ -422,6 +457,7 @@ class TestCursorConnector:
         mock_response.is_success = True
         mock_response.headers = {"content-type": "application/json"}
         mock_response.text = '{"repositories": [{"name": "org/repo", "default_branch": "main"}]}'
+        mock_response.content = mock_response.text.encode()
         mock_response.json.return_value = {"repositories": [{"name": "org/repo", "default_branch": "main"}]}
         mock_client.request.return_value = mock_response
 
@@ -443,6 +479,7 @@ class TestCursorConnector:
         mock_response.is_success = True
         mock_response.headers = {"content-type": "application/json"}
         mock_response.text = '{"models": ["cursor-small", "cursor-large"]}'
+        mock_response.content = mock_response.text.encode()
         mock_response.json.return_value = {"models": ["cursor-small", "cursor-large"]}
         mock_client.request.return_value = mock_response
 
@@ -464,6 +501,7 @@ class TestCursorConnector:
         mock_response.is_success = True
         mock_response.headers = {"content-type": "application/json"}
         mock_response.text = "{}"
+        mock_response.content = mock_response.text.encode()
         mock_response.json.return_value = {}
         mock_client.request.return_value = mock_response
 

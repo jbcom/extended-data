@@ -393,7 +393,7 @@ class CursorConnector(VendorConnectorBase):
         endpoint: str,
         method: str = "GET",
         json_body: dict[str, Any] | None = None,
-    ) -> dict[str, Any] | None:
+    ) -> ExtendedDict | None:
         """Make an HTTP request to the Cursor API.
 
         Args:
@@ -423,7 +423,12 @@ class CursorConnector(VendorConnectorBase):
             if not text or not text.strip():
                 return None
 
-            return response.json()
+            decoded = self.decode_response(response, suffix="json", as_extended=True)
+            if decoded is None:
+                return None
+            if not isinstance(decoded, Mapping):
+                raise self._unexpected_response_error("_request_api", decoded, endpoint, json_body)
+            return ExtendedDict(decoded)
 
         except httpx.TimeoutException:
             raise CursorAPIError(f"Request timeout after {self._timeout}s") from None
@@ -455,8 +460,9 @@ class CursorConnector(VendorConnectorBase):
         *sensitive_values: Any,
     ) -> dict[str, Any]:
         """Validate one Cursor response model and return a JSON payload."""
+        model_data = to_builtin(data)
         try:
-            return self._model_payload(model_type.model_validate(data))
+            return self._model_payload(model_type.model_validate(model_data))
         except ValidationError:
             raise self._unexpected_response_error(operation, data, *sensitive_values) from None
 
@@ -469,7 +475,8 @@ class CursorConnector(VendorConnectorBase):
         *sensitive_values: Any,
     ) -> list[dict[str, Any]]:
         """Validate a Cursor response list and return JSON payloads."""
-        items = data.get(key, []) if isinstance(data, Mapping) else None
+        model_data = to_builtin(data)
+        items = model_data.get(key, []) if isinstance(model_data, Mapping) else None
         if not isinstance(items, list):
             raise self._unexpected_response_error(operation, data, *sensitive_values)
 
@@ -539,7 +546,8 @@ class CursorConnector(VendorConnectorBase):
         if not data:
             return self.extend_result(self._model_payload(Conversation(agent_id=agent_id, messages=[])))
 
-        message_data = data.get("messages", []) if isinstance(data, Mapping) else None
+        plain_data = to_builtin(data)
+        message_data = plain_data.get("messages", []) if isinstance(plain_data, Mapping) else None
         if not isinstance(message_data, list):
             raise self._unexpected_response_error("get_agent_conversation", data, agent_id)
 
@@ -706,7 +714,8 @@ class CursorConnector(VendorConnectorBase):
         if not data:
             return self.extend_result([])
 
-        models = data.get("models", []) if isinstance(data, Mapping) else None
+        plain_data = to_builtin(data)
+        models = plain_data.get("models", []) if isinstance(plain_data, Mapping) else None
         if not isinstance(models, list) or any(not isinstance(model, str) for model in models):
             raise self._unexpected_response_error("list_models", data)
         return self.extend_result(models)
