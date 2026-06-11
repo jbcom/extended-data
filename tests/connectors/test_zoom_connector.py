@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import json
+
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -16,12 +18,29 @@ def _logged_text(logger: MagicMock) -> str:
     return "\n".join(str(arg) for call in logger.method_calls for arg in call.args)
 
 
-def _token_response(token: str = "test-token") -> MagicMock:
-    """Build a successful Zoom OAuth response mock."""
+def _json_response(payload: object) -> MagicMock:
+    """Build a requests-like response whose JSON must be decoded from content."""
     response = MagicMock()
-    response.json.return_value = {"access_token": token}
+    response.content = json.dumps(payload).encode()
+    response.text = response.content.decode()
+    response.json.side_effect = AssertionError("Zoom responses must be decoded from content bytes")
     response.raise_for_status = MagicMock()
     return response
+
+
+def _text_response(text: str) -> MagicMock:
+    """Build a requests-like response with invalid/non-JSON body text."""
+    response = MagicMock()
+    response.content = text.encode()
+    response.text = text
+    response.json.side_effect = AssertionError("Zoom responses must be decoded from content bytes")
+    response.raise_for_status = MagicMock()
+    return response
+
+
+def _token_response(token: str = "test-token") -> MagicMock:
+    """Build a successful Zoom OAuth response mock."""
+    return _json_response({"access_token": token})
 
 
 class TestZoomConnector:
@@ -43,9 +62,7 @@ class TestZoomConnector:
     @patch("extended_data.connectors.zoom.requests.post")
     def test_get_access_token_success(self, mock_post, base_connector_kwargs):
         """Test successful access token retrieval."""
-        mock_response = MagicMock()
-        mock_response.json.return_value = {"access_token": "test-access-token"}
-        mock_response.raise_for_status = MagicMock()
+        mock_response = _json_response({"access_token": "test-access-token"})
         mock_post.return_value = mock_response
 
         connector = ZoomConnector(
@@ -86,13 +103,11 @@ class TestZoomConnector:
     @patch("extended_data.connectors.zoom.requests.post")
     def test_get_access_token_malformed_response_is_redacted(self, mock_post, base_connector_kwargs):
         """Missing token responses should fail loudly without exposing OAuth credentials."""
-        mock_response = MagicMock()
-        mock_response.json.return_value = {
+        mock_response = _json_response({
             "password": "hunter2",
             "authorization": "Bearer raw_token",
             "account_id": "test-account-id",
-        }
-        mock_response.raise_for_status = MagicMock()
+        })
         mock_post.return_value = mock_response
 
         connector = ZoomConnector(
@@ -114,10 +129,7 @@ class TestZoomConnector:
     @patch("extended_data.connectors.zoom.requests.post")
     def test_list_users_redacts_request_failure_details(self, mock_post, mock_get, base_connector_kwargs):
         """Zoom list failures should not expose raw secret-bearing exception text."""
-        mock_token_response = MagicMock()
-        mock_token_response.json.return_value = {"access_token": "test-token"}
-        mock_token_response.raise_for_status = MagicMock()
-        mock_post.return_value = mock_token_response
+        mock_post.return_value = _token_response()
         mock_get.side_effect = requests.exceptions.RequestException(
             "status=401 password=hunter2 Authorization: Bearer raw_token"
         )
@@ -143,11 +155,9 @@ class TestZoomConnector:
     def test_list_users_malformed_response_is_redacted(self, mock_post, mock_get, base_connector_kwargs):
         """Malformed user list responses should not return partial or raw payloads."""
         mock_post.return_value = _token_response()
-        mock_users_response = MagicMock()
-        mock_users_response.json.return_value = {
+        mock_users_response = _json_response({
             "users": [{"password": "hunter2", "authorization": "Bearer raw_token"}]
-        }
-        mock_users_response.raise_for_status = MagicMock()
+        })
         mock_get.return_value = mock_users_response
 
         connector = ZoomConnector(
@@ -169,20 +179,15 @@ class TestZoomConnector:
     @patch("extended_data.connectors.zoom.requests.post")
     def test_list_users(self, mock_post, mock_get, base_connector_kwargs):
         """Test listing Zoom users."""
-        mock_token_response = MagicMock()
-        mock_token_response.json.return_value = {"access_token": "test-token"}
-        mock_token_response.raise_for_status = MagicMock()
-        mock_post.return_value = mock_token_response
+        mock_post.return_value = _token_response()
 
-        mock_users_response = MagicMock()
-        mock_users_response.json.return_value = {
+        mock_users_response = _json_response({
             "users": [
                 {"email": "user1@example.com", "id": "123", "first_name": "User", "last_name": "One"},
                 {"email": "user2@example.com", "id": "456", "first_name": "User", "last_name": "Two"},
             ],
             "next_page_token": None,
-        }
-        mock_users_response.raise_for_status = MagicMock()
+        })
         mock_get.return_value = mock_users_response
 
         connector = ZoomConnector(
@@ -214,9 +219,7 @@ class TestZoomConnector:
     @patch("extended_data.connectors.zoom.requests.post")
     def test_create_zoom_user(self, mock_post, base_connector_kwargs):
         """Test creating a Zoom user."""
-        mock_token_response = MagicMock()
-        mock_token_response.json.return_value = {"access_token": "test-token"}
-        mock_token_response.raise_for_status = MagicMock()
+        mock_token_response = _token_response()
 
         mock_create_response = MagicMock()
         mock_create_response.raise_for_status = MagicMock()
@@ -238,10 +241,7 @@ class TestZoomConnector:
     @patch("extended_data.connectors.zoom.requests.post")
     def test_remove_zoom_user_redacts_error_state_and_logs(self, mock_post, mock_delete, base_connector_kwargs):
         """Zoom mutation failures should redact user IDs and exception secrets."""
-        mock_token_response = MagicMock()
-        mock_token_response.json.return_value = {"access_token": "test-token"}
-        mock_token_response.raise_for_status = MagicMock()
-        mock_post.return_value = mock_token_response
+        mock_post.return_value = _token_response()
         mock_delete.side_effect = requests.exceptions.RequestException(
             "failed for private-user@example.com?access_token=raw_token"
         )
@@ -265,9 +265,7 @@ class TestZoomConnector:
     @patch("extended_data.connectors.zoom.requests.post")
     def test_create_zoom_user_redacts_error_state_and_logs(self, mock_post, base_connector_kwargs):
         """Zoom create failures should redact user PII and avoid traceback logs."""
-        mock_token_response = MagicMock()
-        mock_token_response.json.return_value = {"access_token": "test-token"}
-        mock_token_response.raise_for_status = MagicMock()
+        mock_token_response = _token_response()
         mock_post.side_effect = [
             mock_token_response,
             requests.exceptions.RequestException("failed Jane SecretUser newuser@example.com token=raw-token"),
@@ -295,19 +293,14 @@ class TestZoomConnector:
     @patch("extended_data.connectors.zoom.requests.post")
     def test_get_user(self, mock_post, mock_get, base_connector_kwargs):
         """Test getting a specific user."""
-        mock_token_response = MagicMock()
-        mock_token_response.json.return_value = {"access_token": "test-token"}
-        mock_token_response.raise_for_status = MagicMock()
-        mock_post.return_value = mock_token_response
+        mock_post.return_value = _token_response()
 
-        mock_user_response = MagicMock()
-        mock_user_response.json.return_value = {
+        mock_user_response = _json_response({
             "id": "123",
             "email": "user1@example.com",
             "first_name": "User",
             "last_name": "One",
-        }
-        mock_user_response.raise_for_status = MagicMock()
+        })
         mock_get.return_value = mock_user_response
 
         connector = ZoomConnector(
@@ -327,10 +320,7 @@ class TestZoomConnector:
     @patch("extended_data.connectors.zoom.requests.post")
     def test_get_user_redacts_identifier_and_secret_details(self, mock_post, mock_get, base_connector_kwargs):
         """Zoom lookup failures should not echo user identifiers or secrets."""
-        mock_token_response = MagicMock()
-        mock_token_response.json.return_value = {"access_token": "test-token"}
-        mock_token_response.raise_for_status = MagicMock()
-        mock_post.return_value = mock_token_response
+        mock_post.return_value = _token_response()
         mock_get.side_effect = requests.exceptions.RequestException(
             "404 for user1@example.com and user1%40example.com client_secret=s3cr3t"
         )
@@ -357,9 +347,7 @@ class TestZoomConnector:
     def test_get_user_malformed_response_is_redacted(self, mock_post, mock_get, base_connector_kwargs):
         """Zoom user lookups should reject non-object payloads without leaking identifiers."""
         mock_post.return_value = _token_response()
-        mock_user_response = MagicMock()
-        mock_user_response.json.return_value = ["private-user@example.com", {"password": "hunter2"}]
-        mock_user_response.raise_for_status = MagicMock()
+        mock_user_response = _json_response(["private-user@example.com", {"password": "hunter2"}])
         mock_get.return_value = mock_user_response
 
         connector = ZoomConnector(
@@ -381,19 +369,14 @@ class TestZoomConnector:
     @patch("extended_data.connectors.zoom.requests.post")
     def test_list_meetings(self, mock_post, mock_get, base_connector_kwargs):
         """Test listing meetings for a user."""
-        mock_token_response = MagicMock()
-        mock_token_response.json.return_value = {"access_token": "test-token"}
-        mock_token_response.raise_for_status = MagicMock()
-        mock_post.return_value = mock_token_response
+        mock_post.return_value = _token_response()
 
-        mock_meetings_response = MagicMock()
-        mock_meetings_response.json.return_value = {
+        mock_meetings_response = _json_response({
             "meetings": [
                 {"id": "111", "topic": "Team Meeting"},
                 {"id": "222", "topic": "Client Call"},
             ]
-        }
-        mock_meetings_response.raise_for_status = MagicMock()
+        })
         mock_get.return_value = mock_meetings_response
 
         connector = ZoomConnector(
@@ -413,10 +396,7 @@ class TestZoomConnector:
     @patch("extended_data.connectors.zoom.requests.post")
     def test_list_meetings_redacts_identifier_and_secret_details(self, mock_post, mock_get, base_connector_kwargs):
         """Zoom meeting list failures should not chain raw user identifiers."""
-        mock_token_response = MagicMock()
-        mock_token_response.json.return_value = {"access_token": "test-token"}
-        mock_token_response.raise_for_status = MagicMock()
-        mock_post.return_value = mock_token_response
+        mock_post.return_value = _token_response()
         mock_get.side_effect = requests.exceptions.RequestException(
             "failed for private-user@example.com type=scheduled token=raw-token"
         )
@@ -442,11 +422,9 @@ class TestZoomConnector:
     def test_list_meetings_malformed_response_is_redacted(self, mock_post, mock_get, base_connector_kwargs):
         """Zoom meeting list responses should preserve the ExtendedList contract."""
         mock_post.return_value = _token_response()
-        mock_meetings_response = MagicMock()
-        mock_meetings_response.json.return_value = {
+        mock_meetings_response = _json_response({
             "meetings": [{"id": "111"}, "password=hunter2 Authorization: Bearer raw_token"]
-        }
-        mock_meetings_response.raise_for_status = MagicMock()
+        })
         mock_get.return_value = mock_meetings_response
 
         connector = ZoomConnector(
@@ -469,18 +447,13 @@ class TestZoomConnector:
     @patch("extended_data.connectors.zoom.requests.post")
     def test_get_meeting(self, mock_post, mock_get, base_connector_kwargs):
         """Test getting a specific meeting."""
-        mock_token_response = MagicMock()
-        mock_token_response.json.return_value = {"access_token": "test-token"}
-        mock_token_response.raise_for_status = MagicMock()
-        mock_post.return_value = mock_token_response
+        mock_post.return_value = _token_response()
 
-        mock_meeting_response = MagicMock()
-        mock_meeting_response.json.return_value = {
+        mock_meeting_response = _json_response({
             "id": "111",
             "topic": "Team Meeting",
             "start_time": "2024-01-15T10:00:00Z",
-        }
-        mock_meeting_response.raise_for_status = MagicMock()
+        })
         mock_get.return_value = mock_meeting_response
 
         connector = ZoomConnector(
@@ -500,10 +473,7 @@ class TestZoomConnector:
     @patch("extended_data.connectors.zoom.requests.post")
     def test_get_meeting_redacts_identifier_and_secret_details(self, mock_post, mock_get, base_connector_kwargs):
         """Zoom meeting lookup failures should not chain raw meeting identifiers."""
-        mock_token_response = MagicMock()
-        mock_token_response.json.return_value = {"access_token": "test-token"}
-        mock_token_response.raise_for_status = MagicMock()
-        mock_post.return_value = mock_token_response
+        mock_post.return_value = _token_response()
         mock_get.side_effect = requests.exceptions.RequestException("meeting private-meeting token=raw-token")
 
         connector = ZoomConnector(
@@ -527,11 +497,9 @@ class TestZoomConnector:
     def test_get_meeting_json_parse_error_is_redacted(self, mock_post, mock_get, base_connector_kwargs):
         """Zoom JSON parse failures should not expose raw meeting IDs or parser text."""
         mock_post.return_value = _token_response()
-        mock_meeting_response = MagicMock()
-        mock_meeting_response.json.side_effect = ValueError(
+        mock_meeting_response = _text_response(
             "bad meeting private-meeting password=hunter2 Authorization: Bearer raw_token"
         )
-        mock_meeting_response.raise_for_status = MagicMock()
         mock_get.return_value = mock_meeting_response
 
         connector = ZoomConnector(

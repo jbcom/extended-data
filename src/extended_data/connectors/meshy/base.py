@@ -22,8 +22,9 @@ import httpx
 from pydantic import BaseModel, ValidationError
 from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
 
-from extended_data.containers import ExtendedDict, ExtendedString, extend_data
+from extended_data.containers import ExtendedDict, ExtendedString, extend_data, to_builtin
 from extended_data.inputs import InputProvider
+from extended_data.io.files import decode_file
 from extended_data.primitives.redaction import redact_sensitive_text
 
 
@@ -129,20 +130,27 @@ def unexpected_response_message(data: Any) -> str:
     return f"Unexpected API response: missing 'result' key. Response: {redact_sensitive_text(data)}"
 
 
+def _decode_response_json(response: httpx.Response) -> Any:
+    """Decode a Meshy JSON response through the shared data boundary."""
+    if not response.content:
+        return None
+    return decode_file(response.content, suffix="json", as_extended=True)
+
+
 def task_id_from_response(response: httpx.Response) -> ExtendedString:
     """Extract a non-empty Meshy task id from a create/refine response."""
-    data = response.json()
+    data = _decode_response_json(response)
     result = data.get("result") if isinstance(data, Mapping) else None
-    if not isinstance(result, str) or not result.strip():
+    if not isinstance(result, (str, ExtendedString)) or not str(result).strip():
         raise RuntimeError(unexpected_response_message(data))
-    return ExtendedString(result)
+    return ExtendedString(str(result))
 
 
 def task_payload_from_response(response: httpx.Response, model_type: type[BaseModel], endpoint: str) -> ExtendedDict:
     """Validate a Meshy task payload and return a promoted public mapping."""
-    data = response.json()
+    data = _decode_response_json(response)
     try:
-        result = model_type(**data)
+        result = model_type.model_validate(to_builtin(data))
     except ValidationError:
         raise RuntimeError(f"Unexpected API response for {endpoint}: {redact_sensitive_text(data)}") from None
     return cast(ExtendedDict, extend_data(result.model_dump(mode="json")))

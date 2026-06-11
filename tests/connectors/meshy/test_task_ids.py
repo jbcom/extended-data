@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import json
+
 from unittest.mock import MagicMock, patch
 
+import httpx
 import pytest
 
 from extended_data.connectors.meshy import animate, image3d, retexture, rigging, text3d
@@ -18,14 +21,13 @@ from extended_data.containers import ExtendedDict, ExtendedString
 
 
 def _task_response(task_id: str) -> MagicMock:
-    response = MagicMock()
-    response.json.return_value = {"result": task_id}
-    return response
+    return _json_response({"result": task_id})
 
 
-def _json_response(payload: dict[str, object]) -> MagicMock:
-    response = MagicMock()
-    response.json.return_value = payload
+def _json_response(payload: object) -> MagicMock:
+    response = MagicMock(spec=httpx.Response)
+    response.content = json.dumps(payload).encode()
+    response.json.side_effect = AssertionError("Meshy responses must be decoded from response content")
     return response
 
 
@@ -266,8 +268,7 @@ def test_meshy_poll_redacts_failed_task_errors(monkeypatch: pytest.MonkeyPatch, 
 @pytest.mark.parametrize("payload", [{"result": ""}, {"result": 123}, ["not", "a", "mapping"]])
 def test_meshy_task_id_response_requires_non_empty_string_result(payload: object) -> None:
     """Task ids are string API handles, not arbitrary JSON payload values."""
-    response = MagicMock()
-    response.json.return_value = payload
+    response = _json_response(payload)
 
     with patch("extended_data.connectors.meshy.image3d.base.request", return_value=response):
         with pytest.raises(RuntimeError, match="missing 'result' key"):

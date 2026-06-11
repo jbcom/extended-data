@@ -150,6 +150,9 @@ preserved.
 Connector data payloads are promoted into Tier 2 containers at the boundary, so
 decoded files, HTTP response data, GraphQL responses, and SDK-shaped maps can
 use `ExtendedDict`, `ExtendedList`, and `ExtendedString` methods immediately.
+Built-in HTTP connectors decode response bytes through the same file/data
+decoding primitives instead of bypassing the boundary with transport-specific
+JSON helpers.
 Use `request_data_file()` when a connector workflow needs API response data and
 non-secret provenance such as source URL, HTTP status, content type, method,
 and endpoint in one `DataFile` artifact.

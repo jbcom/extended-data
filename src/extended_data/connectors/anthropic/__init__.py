@@ -282,9 +282,11 @@ class AnthropicConnector(VendorConnectorBase):
         """
         status_code = response.status_code
         try:
-            error_data = response.json()
-            error_type = error_data.get("error", {}).get("type", "unknown")
-            message = error_data.get("error", {}).get("message", response.text)
+            error_data = self.decode_response(response, suffix="json", as_extended=True)
+            raw_error = error_data.get("error", {}) if isinstance(error_data, Mapping) else {}
+            error = raw_error if isinstance(raw_error, Mapping) else {}
+            error_type = error.get("type", "unknown")
+            message = error.get("message", response.text)
         except Exception:
             error_type = "unknown"
             message = response.text
@@ -313,11 +315,11 @@ class AnthropicConnector(VendorConnectorBase):
     def _response_json(self, response: httpx.Response, operation: str) -> Any:
         """Parse a response body or raise a redacted malformed-response error."""
         try:
-            return response.json()
-        except Exception as exc:
+            return self.decode_response(response, suffix="json", as_extended=True)
+        except Exception:
             raise self._unexpected_response_error(
                 operation,
-                exc,
+                response.text,
                 status_code=response.status_code,
             ) from None
 
@@ -330,7 +332,7 @@ class AnthropicConnector(VendorConnectorBase):
         """Validate one Anthropic model response and return a JSON payload."""
         data = self._response_json(response, operation)
         try:
-            return self._model_payload(model_type.model_validate(data))
+            return self._model_payload(model_type.model_validate(to_builtin(data)))
         except ValidationError:
             raise self._unexpected_response_error(
                 operation,
@@ -487,7 +489,7 @@ class AnthropicConnector(VendorConnectorBase):
 
         data = self._response_json(response, "list_models")
         models_data = data.get("data") if isinstance(data, Mapping) else None
-        if not isinstance(models_data, list):
+        if not isinstance(models_data, (list, ExtendedList)):
             raise self._unexpected_response_error(
                 "list_models",
                 data,
@@ -495,7 +497,7 @@ class AnthropicConnector(VendorConnectorBase):
             )
 
         try:
-            parsed_models = [self._model_payload(Model.model_validate(model_data)) for model_data in models_data]
+            parsed_models = [self._model_payload(Model.model_validate(to_builtin(model_data))) for model_data in models_data]
         except ValidationError:
             raise self._unexpected_response_error(
                 "list_models",

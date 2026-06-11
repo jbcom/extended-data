@@ -12,19 +12,23 @@ from extended_data.containers import ExtendedDict, ExtendedList, ExtendedString
 
 
 def _response(payload: object, status_code: int = 200) -> httpx.Response:
-    return httpx.Response(
+    response = httpx.Response(
         status_code,
         json=payload,
         request=httpx.Request("GET", "https://jules.googleapis.com/v1alpha/test"),
     )
+    response.json = MagicMock(side_effect=AssertionError("Jules responses must be decoded from content bytes"))
+    return response
 
 
 def _text_response(text: str, status_code: int = 500, url: str = "https://jules.googleapis.com/v1alpha/test") -> httpx.Response:
-    return httpx.Response(
+    response = httpx.Response(
         status_code,
         text=text,
         request=httpx.Request("GET", url),
     )
+    response.json = MagicMock(side_effect=AssertionError("Jules responses must be decoded from content bytes"))
+    return response
 
 
 def test_session_pull_request_model_property() -> None:

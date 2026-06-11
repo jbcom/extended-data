@@ -6,6 +6,7 @@ import os
 
 from unittest.mock import MagicMock, patch
 
+import httpx
 import pytest
 
 from extended_data.connectors.anthropic import (
@@ -21,6 +22,20 @@ from extended_data.connectors.anthropic import (
     Usage,
 )
 from extended_data.containers import ExtendedDict, ExtendedList, ExtendedString, extend_data
+
+
+def _json_response(payload: object, status_code: int = 200) -> httpx.Response:
+    """Build an HTTPX response whose JSON must be read from content bytes."""
+    response = httpx.Response(status_code, json=payload)
+    response.json = MagicMock(side_effect=AssertionError("Anthropic responses must be decoded from content bytes"))
+    return response
+
+
+def _text_response(text: str, status_code: int = 200) -> httpx.Response:
+    """Build an HTTPX response with invalid/non-JSON body text."""
+    response = httpx.Response(status_code, content=text.encode())
+    response.json = MagicMock(side_effect=AssertionError("Anthropic responses must be decoded from content bytes"))
+    return response
 
 
 def _logged_text(logger: MagicMock) -> str:
@@ -143,10 +158,7 @@ class TestAnthropicConnector:
 
         mock_client = MagicMock()
 
-        mock_response = MagicMock()
-        mock_response.status_code = 200
-        mock_response.is_success = True
-        mock_response.json.return_value = {
+        mock_response = _json_response({
             "id": "msg_123",
             "type": "message",
             "role": "assistant",
@@ -154,7 +166,7 @@ class TestAnthropicConnector:
             "model": "claude-sonnet-4-20250514",
             "stop_reason": "end_turn",
             "usage": {"input_tokens": 10, "output_tokens": 5},
-        }
+        })
         mock_client.request.return_value = mock_response
 
         with patch.object(httpx, "Client", return_value=mock_client):
@@ -190,17 +202,14 @@ class TestAnthropicConnector:
 
         mock_client = MagicMock()
 
-        mock_response = MagicMock()
-        mock_response.status_code = 200
-        mock_response.is_success = True
-        mock_response.json.return_value = {
+        mock_response = _json_response({
             "id": "msg_123",
             "type": "message",
             "role": "assistant",
             "content": [{"type": "text", "text": "Hello!"}],
             "model": "claude-sonnet-4-20250514",
             "usage": {"input_tokens": 10, "output_tokens": 5},
-        }
+        })
         mock_client.request.return_value = mock_response
 
         with patch.object(httpx, "Client", return_value=mock_client):
@@ -221,15 +230,12 @@ class TestAnthropicConnector:
 
         mock_client = MagicMock()
 
-        mock_response = MagicMock()
-        mock_response.status_code = 200
-        mock_response.is_success = True
-        mock_response.json.return_value = {
+        mock_response = _json_response({
             "data": [
                 {"id": "claude-sonnet-4-20250514", "display_name": "Claude Sonnet 4"},
                 {"id": "claude-opus-4-20250514", "display_name": "Claude Opus 4"},
             ]
-        }
+        })
         mock_client.request.return_value = mock_response
 
         with patch.object(httpx, "Client", return_value=mock_client):
@@ -248,10 +254,7 @@ class TestAnthropicConnector:
 
         mock_client = MagicMock()
 
-        mock_response = MagicMock()
-        mock_response.status_code = 200
-        mock_response.is_success = True
-        mock_response.json.return_value = {"id": "claude-sonnet-4-20250514", "display_name": "Claude Sonnet 4"}
+        mock_response = _json_response({"id": "claude-sonnet-4-20250514", "display_name": "Claude Sonnet 4"})
         mock_client.request.return_value = mock_response
 
         with patch.object(httpx, "Client", return_value=mock_client):
@@ -267,10 +270,7 @@ class TestAnthropicConnector:
         import httpx
 
         mock_client = MagicMock()
-        mock_response = MagicMock()
-        mock_response.status_code = 200
-        mock_response.is_success = True
-        mock_response.json.return_value = {"input_tokens": 42}
+        mock_response = _json_response({"input_tokens": 42})
         mock_client.request.return_value = mock_response
 
         with patch.object(httpx, "Client", return_value=mock_client):
@@ -311,10 +311,7 @@ class TestAnthropicConnector:
         import httpx
 
         mock_client = MagicMock()
-        mock_response = MagicMock()
-        mock_response.status_code = 200
-        mock_response.is_success = True
-        mock_response.json.return_value = payload
+        mock_response = _json_response(payload)
         mock_client.request.return_value = mock_response
 
         with patch.object(httpx, "Client", return_value=mock_client):
@@ -335,10 +332,7 @@ class TestAnthropicConnector:
         import httpx
 
         mock_client = MagicMock()
-        mock_response = MagicMock()
-        mock_response.status_code = 200
-        mock_response.is_success = True
-        mock_response.json.side_effect = ValueError("bad password=hunter2 Authorization: Bearer raw_token")
+        mock_response = _text_response("bad password=hunter2 Authorization: Bearer raw_token")
         mock_client.request.return_value = mock_response
 
         with patch.object(httpx, "Client", return_value=mock_client):

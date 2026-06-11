@@ -10,7 +10,8 @@ from typing import Any
 import requests
 
 from extended_data.connectors.base import VendorConnectorBase
-from extended_data.containers import ExtendedDict, ExtendedList
+from extended_data.containers import ExtendedDict, ExtendedList, to_builtin
+from extended_data.io.files import decode_file
 from extended_data.logging import Logging
 from extended_data.primitives.redaction import redact_sensitive_text
 
@@ -69,17 +70,20 @@ class ZoomConnector(VendorConnectorBase):
 
     def _response_json(self, response: Any, action: str, *sensitive_values: Any) -> Any:
         """Parse a Zoom JSON response or raise a redacted diagnostic."""
+        content = getattr(response, "content", b"")
+        if not content:
+            return {}
         try:
-            return response.json()
-        except Exception as exc:
-            raise _zoom_response_error(action, exc, *sensitive_values) from None
+            return decode_file(content, suffix="json", as_extended=True)
+        except Exception:
+            raise _zoom_response_error(action, getattr(response, "text", content), *sensitive_values) from None
 
     def _response_mapping(self, response: Any, action: str, *sensitive_values: Any) -> dict[str, Any]:
         """Parse and validate a Zoom object response."""
         data = self._response_json(response, action, *sensitive_values)
         if not isinstance(data, Mapping):
             raise _zoom_response_error(action, data, *sensitive_values)
-        return dict(data)
+        return to_builtin(data)
 
     def _response_list_field(
         self,

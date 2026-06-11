@@ -309,7 +309,10 @@ credential material.
 Connectors that inherit `VendorConnectorBase` can keep raw transport access with
 `request()` or use `request_data()`, `get_data()`, `post_data()`, and the other
 verb-specific helpers to decode HTTP JSON, YAML, TOML, HCL, or text responses
-through the same Tier 2 container bridge used by file and input decoding. Use
+through the same Tier 2 container bridge used by file and input decoding.
+Built-in connectors that parse HTTP JSON responses should decode response bytes
+through these shared data primitives and lower to built-in values only at model
+validation or redaction boundaries. Use
 `request_data_file()` when an API workflow needs the decoded data plus
 non-secret response provenance such as source URL, HTTP status, content type,
 method, and endpoint in a `DataFile` artifact.

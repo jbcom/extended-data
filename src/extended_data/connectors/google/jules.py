@@ -37,7 +37,7 @@ from pydantic import BaseModel, Field, ValidationError
 
 from extended_data.connectors.base import VendorConnectorBase
 from extended_data.connectors.google._diagnostics import safe_google_text
-from extended_data.containers import ExtendedDict, ExtendedList
+from extended_data.containers import ExtendedDict, ExtendedList, to_builtin
 from extended_data.primitives.redaction import redact_sensitive_data
 
 
@@ -172,7 +172,7 @@ class JulesConnector(VendorConnectorBase):
         data = self._response_json(response, operation, diagnostic_values)
         if not isinstance(data, Mapping):
             raise self._unexpected_response_error(operation, data, response.status_code, diagnostic_values)
-        return dict(data)
+        return to_builtin(data)
 
     def _raise_api_error(
         self,
@@ -195,7 +195,7 @@ class JulesConnector(VendorConnectorBase):
         raise JulesError(
             safe_google_text(error.get("message", response.text), diagnostic_values),
             error_code,
-            redact_sensitive_data(error.get("details"), values=diagnostic_values),
+            redact_sensitive_data(to_builtin(error.get("details")), values=diagnostic_values),
         )
 
     def _response_json(self, response: httpx.Response, operation: str, diagnostic_values: list[Any]) -> Any:
@@ -203,7 +203,7 @@ class JulesConnector(VendorConnectorBase):
         if not response.content:
             return {}
         try:
-            return response.json()
+            return self.decode_response(response, suffix="json", as_extended=True)
         except Exception:
             raise self._unexpected_response_error(
                 operation,
@@ -250,7 +250,7 @@ class JulesConnector(VendorConnectorBase):
     ) -> dict[str, Any]:
         """Validate one Jules response model and return a JSON payload."""
         try:
-            return self._model_payload(model_type.model_validate(data))
+            return self._model_payload(model_type.model_validate(to_builtin(data)))
         except ValidationError:
             raise self._unexpected_response_error(
                 operation,
@@ -273,7 +273,7 @@ class JulesConnector(VendorConnectorBase):
             raise self._unexpected_response_error(operation, data, 200, list(sensitive_values))
 
         try:
-            return [self._model_payload(model_type.model_validate(item)) for item in items]
+            return [self._model_payload(model_type.model_validate(to_builtin(item))) for item in items]
         except ValidationError:
             raise self._unexpected_response_error(operation, data, 200, list(sensitive_values)) from None
 
