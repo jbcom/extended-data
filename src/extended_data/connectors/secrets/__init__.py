@@ -41,6 +41,7 @@ from typing import Any
 
 from extended_data.connectors.base import VendorConnectorBase
 from extended_data.containers import ExtendedDict, extend_data, to_builtin
+from extended_data.io import DataFile
 from extended_data.io.files import decode_file
 from extended_data.logging import Logging
 from extended_data.primitives.formats.errors import DataDecodeError
@@ -245,31 +246,37 @@ class SecretsConnector(VendorConnectorBase):
     def _cli_get_config_info(self, config_path: str) -> ConfigInfo:
         """Get config info via CLI."""
         try:
-            import yaml
-        except ImportError:
-            return ConfigInfo(error_message="pyyaml is required for CLI mode but not installed.")
-
-        try:
-            with open(config_path) as f:
-                cfg = yaml.safe_load(f)
+            cfg = to_builtin(DataFile.read(config_path, suffix="yaml", as_extended=True).data)
 
             if not isinstance(cfg, dict):
                 # Handles empty file (cfg=None) or non-dict root
                 cfg = {}
+            sources = cfg.get("sources", {})
+            if not isinstance(sources, dict):
+                sources = {}
+            targets = cfg.get("targets", {})
+            if not isinstance(targets, dict):
+                targets = {}
+            vault = cfg.get("vault", {})
+            if not isinstance(vault, dict):
+                vault = {}
+            aws = cfg.get("aws", {})
+            if not isinstance(aws, dict):
+                aws = {}
 
             return ConfigInfo(
                 valid=True,
-                source_count=len(cfg.get("sources", {})),
-                target_count=len(cfg.get("targets", {})),
-                sources=list(cfg.get("sources", {}).keys()),
-                targets=list(cfg.get("targets", {}).keys()),
+                source_count=len(sources),
+                target_count=len(targets),
+                sources=list(sources.keys()),
+                targets=list(targets.keys()),
                 has_merge_store="merge_store" in cfg,
-                vault_address=cfg.get("vault", {}).get("address", ""),
-                aws_region=cfg.get("aws", {}).get("region", ""),
+                vault_address=vault.get("address", ""),
+                aws_region=aws.get("region", ""),
             )
         except FileNotFoundError:
             return ConfigInfo(error_message=f"Configuration file not found: {redact_sensitive_text(config_path)}")
-        except yaml.YAMLError as e:
+        except DataDecodeError as e:
             return ConfigInfo(error_message=f"Error parsing YAML file: {redact_sensitive_text(e)}")
 
     def run_pipeline(

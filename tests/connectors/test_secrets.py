@@ -25,6 +25,7 @@ from extended_data.connectors.secrets.tools import (
     validate_config,
 )
 from extended_data.containers import ExtendedDict, ExtendedList, ExtendedString, extend_data
+from extended_data.io import DataFile
 from extended_data.primitives.formats.errors import DataDecodeError
 
 
@@ -72,6 +73,27 @@ def test_cli_get_config_info_valid(connector: SecretsConnector, tmp_path: Path) 
     assert info["has_merge_store"] is True
     assert info["vault_address"] == "http://vault:8200"
     assert info["aws_region"] == "us-east-1"
+
+
+@patch("extended_data.connectors.secrets.DataFile.read")
+def test_cli_get_config_info_reads_through_data_file(
+    mock_read: MagicMock,
+    connector: SecretsConnector,
+) -> None:
+    mock_read.return_value = DataFile.decode(
+        "sources:\n  src1: {}\ntargets:\n  tgt1: {}\n",
+        file_path="config.yaml",
+        suffix="yaml",
+    )
+
+    info = connector.get_config_info("config.yaml")
+
+    mock_read.assert_called_once_with("config.yaml", suffix="yaml", as_extended=True)
+    assert info["valid"] is True
+    assert info["source_count"] == 1
+    assert info["target_count"] == 1
+    assert info["sources"] == ["src1"]
+    assert info["targets"] == ["tgt1"]
 
 
 def test_cli_get_config_info_not_found(connector: SecretsConnector) -> None:

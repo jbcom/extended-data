@@ -350,7 +350,8 @@ The `secrets` adapter is the Python-facing bridge to the standalone SecretSync
 project (`jbcom/secrets-sync`). It uses the `secretsync` CLI, which must emit
 the stable `secretsync pipeline --output json` result envelope for both dry-run
 and apply runs. The connector decodes that envelope through the shared file/data
-primitives before lowering it into the `SyncResult` model.
+primitives before lowering it into the `SyncResult` model. Configuration
+inspection reads YAML configs through the same decoded `DataFile` artifact path.
 Secrets tool factories are exported from `extended_data.secrets`; the duplicate
 `extended_data.secrets.tools` module path is intentionally not preserved.
 
