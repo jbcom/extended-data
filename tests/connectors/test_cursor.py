@@ -38,6 +38,17 @@ def _logged_text(logger: MagicMock) -> str:
     return "\n".join(messages)
 
 
+def _json_response(payload: object) -> MagicMock:
+    """Build a JSON Cursor API response mock."""
+    response = MagicMock()
+    response.status_code = 200
+    response.is_success = True
+    response.headers = {"content-type": "application/json"}
+    response.text = "{}"
+    response.json.return_value = payload
+    return response
+
+
 class TestValidators:
     """Tests for input validators."""
 
@@ -461,3 +472,73 @@ class TestCursorConnector:
 
         assert isinstance(models, ExtendedList)
         assert models == []
+
+    @pytest.mark.parametrize(
+        ("method_name", "call", "payload", "raw_values"),
+        [
+            (
+                "list_agents",
+                lambda connector: connector.list_agents(),
+                {"agents": [{"state": "running", "password": "hunter2", "authorization": "Bearer raw_token"}]},
+                ["hunter2", "raw_token"],
+            ),
+            (
+                "get_agent_status",
+                lambda connector: connector.get_agent_status("secret-agent"),
+                {"id": "secret-agent", "api_key": "key_123"},
+                ["secret-agent", "key_123"],
+            ),
+            (
+                "get_agent_conversation",
+                lambda connector: connector.get_agent_conversation("secret-agent"),
+                {"messages": [{"role": "user", "password": "hunter2", "authorization": "Bearer raw_token"}]},
+                ["secret-agent", "hunter2", "raw_token"],
+            ),
+            (
+                "launch_agent",
+                lambda connector: connector.launch_agent(
+                    prompt_text="rotate password=hunter2 for customer-prod",
+                    repository="secret-org/private-repo",
+                ),
+                {"state": "pending", "task": "rotate password=hunter2 for secret-org/private-repo"},
+                ["hunter2", "secret-org/private-repo", "customer-prod"],
+            ),
+            (
+                "list_repositories",
+                lambda connector: connector.list_repositories(),
+                {"repositories": [{"url": "https://github.com/org/repo", "client_secret": "secret_123"}]},
+                ["secret_123"],
+            ),
+            (
+                "list_models",
+                lambda connector: connector.list_models(),
+                {"models": ["cursor-small", {"password": "hunter2"}]},
+                ["hunter2"],
+            ),
+        ],
+    )
+    @patch("extended_data.connectors.cursor.httpx.Client")
+    def test_success_response_validation_errors_are_redacted(
+        self,
+        mock_client_class,
+        method_name,
+        call,
+        payload,
+        raw_values,
+    ):
+        """Malformed success payloads should fail loudly without raw Pydantic details."""
+        mock_client = MagicMock()
+        mock_client_class.return_value = mock_client
+        mock_client.request.return_value = _json_response(payload)
+
+        connector = CursorConnector(api_key="test-key")
+
+        with pytest.raises(CursorAPIError) as exc_info:
+            call(connector)
+
+        message = str(exc_info.value)
+        assert method_name in message
+        assert "ValidationError" not in message
+        assert "[REDACTED]" in message
+        for raw_value in raw_values:
+            assert raw_value not in message

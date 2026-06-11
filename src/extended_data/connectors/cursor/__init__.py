@@ -32,7 +32,7 @@ from urllib.parse import urlparse
 
 import httpx
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from extended_data.connectors.base import VendorConnectorBase
 from extended_data.containers import ExtendedDict, ExtendedList, ExtendedString, to_builtin
@@ -440,6 +440,44 @@ class CursorConnector(VendorConnectorBase):
             payload["error"] = sanitize_error(payload["error"])
         return payload
 
+    @staticmethod
+    def _unexpected_response_error(operation: str, data: Any, *sensitive_values: Any) -> CursorAPIError:
+        """Build a redacted malformed-response error."""
+        return CursorAPIError(
+            f"Unexpected Cursor response for {operation}: {_safe_cursor_text(data, *sensitive_values)}"
+        )
+
+    def _parse_model_response(
+        self,
+        data: Any,
+        model_type: type[BaseModel],
+        operation: str,
+        *sensitive_values: Any,
+    ) -> dict[str, Any]:
+        """Validate one Cursor response model and return a JSON payload."""
+        try:
+            return self._model_payload(model_type.model_validate(data))
+        except ValidationError:
+            raise self._unexpected_response_error(operation, data, *sensitive_values) from None
+
+    def _parse_model_list(
+        self,
+        data: Any,
+        key: str,
+        model_type: type[BaseModel],
+        operation: str,
+        *sensitive_values: Any,
+    ) -> list[dict[str, Any]]:
+        """Validate a Cursor response list and return JSON payloads."""
+        items = data.get(key, []) if isinstance(data, Mapping) else None
+        if not isinstance(items, list):
+            raise self._unexpected_response_error(operation, data, *sensitive_values)
+
+        try:
+            return [self._model_payload(model_type.model_validate(item)) for item in items]
+        except ValidationError:
+            raise self._unexpected_response_error(operation, data, *sensitive_values) from None
+
     # =========================================================================
     # Agent Operations
     # =========================================================================
@@ -458,8 +496,7 @@ class CursorConnector(VendorConnectorBase):
         if not data:
             return self.extend_result([])
 
-        agents_data = data.get("agents", [])
-        return self.extend_result([self._model_payload(Agent.model_validate(a)) for a in agents_data])
+        return self.extend_result(self._parse_model_list(data, "agents", Agent, "list_agents"))
 
     def get_agent_status(self, agent_id: str) -> ExtendedDict:
         """Get status of a specific agent.
@@ -480,7 +517,7 @@ class CursorConnector(VendorConnectorBase):
         data = self._request_api(f"/agents/{agent_id}")
         if not data:
             raise CursorAPIError(f"Empty response when getting agent status for {_safe_cursor_ref(agent_id)}")
-        return self.extend_result(self._model_payload(Agent.model_validate(data)))
+        return self.extend_result(self._parse_model_response(data, Agent, "get_agent_status", agent_id))
 
     def get_agent_conversation(self, agent_id: str) -> ExtendedDict:
         """Get conversation history for an agent.
@@ -502,8 +539,16 @@ class CursorConnector(VendorConnectorBase):
         if not data:
             return self.extend_result(self._model_payload(Conversation(agent_id=agent_id, messages=[])))
 
-        messages = [ConversationMessage.model_validate(m) for m in data.get("messages", [])]
-        return self.extend_result(self._model_payload(Conversation(agent_id=agent_id, messages=messages)))
+        message_data = data.get("messages", []) if isinstance(data, Mapping) else None
+        if not isinstance(message_data, list):
+            raise self._unexpected_response_error("get_agent_conversation", data, agent_id)
+
+        try:
+            messages = [ConversationMessage.model_validate(message) for message in message_data]
+            conversation = Conversation(agent_id=agent_id, messages=messages)
+        except ValidationError:
+            raise self._unexpected_response_error("get_agent_conversation", data, agent_id) from None
+        return self.extend_result(self._model_payload(conversation))
 
     def launch_agent(
         self,
@@ -588,7 +633,18 @@ class CursorConnector(VendorConnectorBase):
         if not data:
             msg = "Empty response when launching agent"
             raise CursorAPIError(msg)
-        return self.extend_result(self._model_payload(Agent.model_validate(data)))
+        return self.extend_result(
+            self._parse_model_response(
+                data,
+                Agent,
+                "launch_agent",
+                prompt_text,
+                repository,
+                ref,
+                branch_name,
+                webhook_url,
+            )
+        )
 
     def add_followup(self, agent_id: str, prompt_text: str) -> None:
         """Send a follow-up message to an agent.
@@ -630,8 +686,7 @@ class CursorConnector(VendorConnectorBase):
         if not data:
             return self.extend_result([])
 
-        repos_data = data.get("repositories", [])
-        return self.extend_result([self._model_payload(Repository.model_validate(r)) for r in repos_data])
+        return self.extend_result(self._parse_model_list(data, "repositories", Repository, "list_repositories"))
 
     # =========================================================================
     # Model Operations
@@ -651,4 +706,7 @@ class CursorConnector(VendorConnectorBase):
         if not data:
             return self.extend_result([])
 
-        return self.extend_result(data.get("models", []))
+        models = data.get("models", []) if isinstance(data, Mapping) else None
+        if not isinstance(models, list) or any(not isinstance(model, str) for model in models):
+            raise self._unexpected_response_error("list_models", data)
+        return self.extend_result(models)
