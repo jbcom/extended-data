@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import json
-
 from collections.abc import Sequence
 from typing import TYPE_CHECKING, Any, cast
 
@@ -14,7 +12,9 @@ from extended_data.connectors.google.cloud import GoogleCloudMixin
 from extended_data.connectors.google.services import GoogleServicesMixin
 from extended_data.connectors.google.workspace import GoogleWorkspaceMixin
 from extended_data.containers import ExtendedDict, ExtendedList
+from extended_data.io.files import decode_file
 from extended_data.logging import Logging
+from extended_data.primitives.formats.errors import DataDecodeError
 from extended_data.primitives.redaction import redact_sensitive_text
 
 
@@ -99,8 +99,8 @@ class GoogleConnector(
         # Parse if string
         if isinstance(service_account_info, str):
             try:
-                service_account_info = json.loads(service_account_info)
-            except json.JSONDecodeError as e:
+                service_account_info = decode_file(service_account_info, suffix="json", as_extended=False)
+            except DataDecodeError as e:
                 safe_payload = redact_sensitive_text(service_account_info, values=[service_account_info])
                 error_message = (
                     "Failed to parse GOOGLE_SERVICE_ACCOUNT JSON: "
@@ -281,8 +281,8 @@ class GoogleConnector(
             candidate = raw_value.strip()
             if candidate:
                 try:
-                    parsed = json.loads(candidate)
-                except json.JSONDecodeError:
+                    parsed = decode_file(candidate, suffix="json", as_extended=False)
+                except DataDecodeError:
                     pass
                 else:
                     return self._normalize_str_sequence(parsed)

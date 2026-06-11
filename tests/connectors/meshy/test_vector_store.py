@@ -69,6 +69,26 @@ def test_get_record_methods_return_extended_payloads(temp_dir) -> None:
     assert by_task["task_id"] == "task-123"
 
 
+def test_record_metadata_decodes_through_data_boundary(temp_dir, monkeypatch) -> None:
+    """Persisted metadata should use the shared JSON decoder on reads."""
+    with VectorStore(temp_dir / "assets.db") as store:
+        store.record_generation(
+            spec_hash="hash-abc",
+            prompt="cute otter character",
+            project="project1",
+            metadata={"source": "test"},
+        )
+
+        def fail_local_json_loads(*_: object) -> object:
+            raise AssertionError("metadata_json must be decoded through decode_file")
+
+        monkeypatch.setattr(vector_store_module.json, "loads", fail_local_json_loads)
+        record = store.get_by_spec_hash("hash-abc")
+
+    assert isinstance(record, ExtendedDict)
+    assert record["metadata"]["source"] == "test"
+
+
 def test_search_text_and_list_pending_return_extended_payloads(temp_dir) -> None:
     """Search and pending queries should return extended lists of mappings."""
     with VectorStore(temp_dir / "assets.db") as store:

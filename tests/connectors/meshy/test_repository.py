@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 
 from datetime import datetime, timezone
+from unittest.mock import patch
 
 import pytest
 
@@ -68,6 +69,29 @@ class TestProjectManifest:
         manifest = task_repository.load_project_manifest("project2")
         assert isinstance(manifest, ExtendedDict)
         assert manifest["project"] == "project2"
+
+    def test_load_existing_manifest_decodes_through_data_file_boundary(self, task_repository, temp_dir):
+        """Existing manifests should be read through DataFile, not local json.load."""
+        project_dir = temp_dir / "project2"
+        project_dir.mkdir()
+        manifest_path = project_dir / "manifest.json"
+        manifest_path.write_text(
+            json.dumps(
+                {
+                    "project": "project2",
+                    "asset_specs": {},
+                    "version": "1.0",
+                    "last_updated": datetime.now(timezone.utc).isoformat(),
+                }
+            )
+        )
+
+        with patch("extended_data.connectors.meshy.persistence.repository.json.load") as mock_json_load:
+            mock_json_load.side_effect = AssertionError("manifests must be decoded through DataFile")
+            manifest = task_repository.load_project_manifest("project2")
+
+        assert manifest["project"] == "project2"
+        mock_json_load.assert_not_called()
 
     def test_save_and_load_manifest(self, task_repository):
         """Test saving and reloading manifest."""

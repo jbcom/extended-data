@@ -20,6 +20,7 @@ from extended_data.connectors.meshy.persistence.schemas import (
 )
 from extended_data.connectors.meshy.persistence.utils import compute_spec_hash as util_compute_spec_hash
 from extended_data.containers import ExtendedDict, ExtendedList, extend_data
+from extended_data.io.files import DataFile
 from extended_data.primitives.redaction import redact_sensitive_text
 
 
@@ -59,9 +60,8 @@ class TaskRepository:
             self.save_project_manifest(manifest)
             return manifest
 
-        with open(manifest_path) as f:
-            data = json.load(f)
-            return ProjectManifest(**data)
+        data = DataFile.read(manifest_path, as_extended=False).as_builtin()
+        return ProjectManifest(**data)
 
     def load_project_manifest(self, project: str) -> ExtendedDict:
         """Load manifest for a project, creating empty one if missing.

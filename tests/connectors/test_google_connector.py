@@ -89,6 +89,21 @@ class TestGoogleConnector:
         assert connector.service_account_info == service_account
         assert connector._credentials is None
 
+    @patch("extended_data.connectors.google.decode_file")
+    def test_init_decodes_service_account_string_through_data_boundary(self, mock_decode_file, base_connector_kwargs):
+        """Service-account JSON strings should use the shared data decoder."""
+        service_account = _service_account()
+        service_account_text = '{"type": "service_account"}'
+        mock_decode_file.return_value = service_account
+
+        connector = GoogleConnector(
+            service_account_info=service_account_text,
+            **base_connector_kwargs,
+        )
+
+        assert connector.service_account_info == service_account
+        mock_decode_file.assert_called_once_with(service_account_text, suffix="json", as_extended=False)
+
     def test_init_redacts_invalid_service_account_json_logs(self, base_connector_kwargs):
         """Invalid service-account JSON diagnostics should not expose key material."""
         invalid_service_account = '{"private_key": "-----BEGIN RSA PRIVATE KEY-----\\nMIIE...test"'
@@ -103,6 +118,21 @@ class TestGoogleConnector:
         assert "[REDACTED]" in diagnostics
         assert exc_info.value.__cause__ is None
         assert all("exc_info" not in logged_call.kwargs for logged_call in base_connector_kwargs["logger"].logger.method_calls)
+
+    @patch("extended_data.connectors.google.decode_file")
+    def test_sequence_option_input_decodes_json_through_data_boundary(self, mock_decode_file, base_connector_kwargs):
+        """List-like Google input values should use the shared data decoder."""
+        mock_decode_file.return_value = ["/Engineering", "/Platform"]
+        connector = GoogleConnector(
+            service_account_info=_service_account(),
+            inputs={"GOOGLE_OU_ALLOW_LIST": '["/Engineering", "/Platform"]'},
+            **base_connector_kwargs,
+        )
+
+        result = connector._resolve_sequence_option(None, "GOOGLE_OU_ALLOW_LIST")
+
+        assert result == ["/Engineering", "/Platform"]
+        mock_decode_file.assert_called_once_with('["/Engineering", "/Platform"]', suffix="json", as_extended=False)
 
     @patch("extended_data.connectors.google.service_account.Credentials.from_service_account_info")
     def test_credentials_property(self, mock_from_sa, base_connector_kwargs):

@@ -333,6 +333,8 @@ low-level HTTP helpers do not leak into serialized tool catalogs.
 CLI `--arg` values that look like JSON are decoded through the shared
 structured data boundary before method dispatch, matching file, input, and
 connector payload decoding.
+Google service-account strings and Meshy persisted manifests/metadata use that
+same boundary, so connector-local reads do not grow private JSON parsers.
 Serialized CLI/MCP boundaries apply Tier 1 redaction after Tier 2 containers
 are lowered to JSON-compatible data, and connector API error messages use the
 same redaction policy before exceptions are raised. Common secret-bearing keys

@@ -49,6 +49,8 @@ from typing import TYPE_CHECKING, Any, cast
 from typing_extensions import Self
 
 from extended_data.containers import ExtendedDict, ExtendedList, extend_data
+from extended_data.io.files import decode_file
+from extended_data.primitives.formats.errors import DataDecodeError
 
 
 if TYPE_CHECKING:
@@ -528,8 +530,8 @@ class VectorStore:
         """Convert database row to GenerationRecord."""
         metadata = {}
         if row["metadata_json"]:
-            with suppress(json.JSONDecodeError):
-                metadata = json.loads(row["metadata_json"])
+            with suppress(DataDecodeError):
+                metadata = decode_file(row["metadata_json"], suffix="json", as_extended=False)
 
         return GenerationRecord(
             id=row["id"],
