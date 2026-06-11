@@ -11,7 +11,7 @@ from extended_data.connectors.google.jules import JulesConnector, JulesError, Se
 from extended_data.containers import ExtendedDict, ExtendedList, ExtendedString
 
 
-def _response(payload: dict, status_code: int = 200) -> httpx.Response:
+def _response(payload: object, status_code: int = 200) -> httpx.Response:
     return httpx.Response(
         status_code,
         json=payload,
@@ -162,7 +162,7 @@ def test_handle_response_raises_jules_error() -> None:
     response = _response({"error": {"message": "denied", "code": 403, "details": [{"reason": "forbidden"}]}}, 403)
 
     with pytest.raises(JulesError) as exc_info:
-        connector._handle_response(response)
+        connector._handle_response(response, "test_operation")
 
     assert exc_info.value.code == 403
     assert exc_info.value.details == [{"reason": "forbidden"}]
@@ -183,7 +183,7 @@ def test_handle_response_redacts_sensitive_jules_error_details() -> None:
     )
 
     with pytest.raises(JulesError) as exc_info:
-        connector._handle_response(response)
+        connector._handle_response(response, "test_operation")
 
     message = str(exc_info.value)
     assert "hunter2" not in message
@@ -208,7 +208,7 @@ def test_handle_response_redacts_request_url_in_jules_error() -> None:
     )
 
     with pytest.raises(JulesError) as exc_info:
-        connector._handle_response(response)
+        connector._handle_response(response, "get_session", "sessions/private-session")
 
     error = exc_info.value
     assert request_url not in str(error)
@@ -227,7 +227,7 @@ def test_handle_response_malformed_error_has_sanitized_message_without_cause() -
     )
 
     with pytest.raises(JulesError) as exc_info:
-        connector._handle_response(response)
+        connector._handle_response(response, "get_session", "sessions/private-session")
 
     error = exc_info.value
     message = str(error)
@@ -235,3 +235,126 @@ def test_handle_response_malformed_error_has_sanitized_message_without_cause() -
     assert error.__cause__ is None
     assert request_url not in message
     assert "hunter2" not in message
+
+
+def test_handle_response_rejects_non_object_success_response() -> None:
+    """Successful Jules responses must still be JSON objects."""
+    connector = JulesConnector(api_key="test-key")
+    request_url = "https://jules.googleapis.com/v1alpha/sessions/private-session?api_key=raw_key"
+    response = httpx.Response(
+        200,
+        json=["sessions/private-session", {"password": "hunter2"}],
+        request=httpx.Request("GET", request_url),
+    )
+
+    with pytest.raises(JulesError, match="Unexpected Jules response for get_session") as exc_info:
+        connector._handle_response(response, "get_session", "sessions/private-session")
+
+    message = str(exc_info.value)
+    assert exc_info.value.code == 200
+    assert "sessions/private-session" not in message
+    assert "hunter2" not in message
+    assert "raw_key" not in message
+    assert "[REDACTED]" in message
+    assert exc_info.value.__cause__ is None
+
+
+def test_handle_response_redacts_non_object_error_response() -> None:
+    """Non-object Jules error JSON should still become a sanitized JulesError."""
+    connector = JulesConnector(api_key="test-key")
+    request_url = "https://jules.googleapis.com/v1alpha/sessions/private-session?api_key=raw_key"
+    response = httpx.Response(
+        500,
+        json=["sessions/private-session", "password=hunter2 Authorization: Bearer raw_token"],
+        request=httpx.Request("GET", request_url),
+    )
+
+    with pytest.raises(JulesError) as exc_info:
+        connector._handle_response(response, "get_session", "sessions/private-session")
+
+    message = str(exc_info.value)
+    assert exc_info.value.code == 500
+    assert "sessions/private-session" not in message
+    assert "hunter2" not in message
+    assert "raw_token" not in message
+    assert "raw_key" not in message
+    assert "[REDACTED]" in message
+    assert exc_info.value.__cause__ is None
+
+
+def test_create_session_malformed_response_is_redacted() -> None:
+    """Created session payloads should validate without exposing prompts or sources."""
+    connector = JulesConnector(api_key="test-key")
+    connector.post = MagicMock(
+        return_value=_response(
+            {
+                "id": "123",
+                "debug": "Fix private prompt",
+                "source": "sources/github/private-org/private-repo",
+                "password": "hunter2",
+            }
+        )
+    )
+
+    with pytest.raises(JulesError, match="Unexpected Jules response for create_session") as exc_info:
+        connector.create_session(
+            prompt="Fix private prompt",
+            source="sources/github/private-org/private-repo",
+            title="private-title",
+        )
+
+    message = str(exc_info.value)
+    assert "Fix private prompt" not in message
+    assert "sources/github/private-org/private-repo" not in message
+    assert "private-title" not in message
+    assert "hunter2" not in message
+    assert "[REDACTED]" in message
+
+
+def test_list_sources_malformed_response_is_redacted() -> None:
+    """Source list payloads must contain a list of valid Source objects."""
+    connector = JulesConnector(api_key="test-key")
+    connector.get = MagicMock(
+        return_value=_response(
+            {
+                "sources": [
+                    {
+                        "name": "sources/github/org/repo",
+                        "debug": "private-page-token",
+                        "authorization": "Bearer raw_token",
+                    }
+                ]
+            }
+        )
+    )
+
+    with pytest.raises(JulesError, match="Unexpected Jules response for list_sources") as exc_info:
+        connector.list_sources(page_token="private-page-token")
+
+    message = str(exc_info.value)
+    assert "private-page-token" not in message
+    assert "raw_token" not in message
+    assert "[REDACTED]" in message
+
+
+def test_list_sessions_requires_sessions_list() -> None:
+    """Session list payloads should fail loudly when the list contract changes."""
+    connector = JulesConnector(api_key="test-key")
+    connector.get = MagicMock(
+        return_value=_response(
+            {
+                "sessions": {
+                    "name": "sessions/private-session",
+                    "password": "hunter2",
+                }
+            }
+        )
+    )
+
+    with pytest.raises(JulesError, match="Unexpected Jules response for list_sessions") as exc_info:
+        connector.list_sessions(page_token="private-page-token")
+
+    message = str(exc_info.value)
+    assert "private-page-token" not in message
+    assert "hunter2" not in message
+    assert "[REDACTED]" in message

@@ -26,13 +26,14 @@ Reference: https://developers.google.com/jules/api
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from contextlib import suppress
 from enum import Enum
 from typing import Any
 
 import httpx
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ValidationError
 
 from extended_data.connectors.base import VendorConnectorBase
 from extended_data.connectors.google._diagnostics import safe_google_text
@@ -162,24 +163,71 @@ class JulesConnector(VendorConnectorBase):
             "Content-Type": "application/json",
         }
 
-    def _handle_response(self, response: httpx.Response) -> dict[str, Any]:
-        """Handle API response, raising on errors."""
+    def _handle_response(self, response: httpx.Response, operation: str, *sensitive_values: Any) -> dict[str, Any]:
+        """Handle API response, raising redacted errors for API or payload failures."""
+        diagnostic_values = self._response_diagnostic_values(response, *sensitive_values)
         if not response.is_success:
-            diagnostic_values = self._response_diagnostic_values(response)
-            try:
-                error = response.json().get("error", {})
-                raise JulesError(
-                    safe_google_text(error.get("message", response.text), diagnostic_values),
-                    error.get("code", response.status_code),
-                    redact_sensitive_data(error.get("details"), values=diagnostic_values),
-                )
-            except (ValueError, KeyError):
-                raise JulesError(safe_google_text(response.text, diagnostic_values), response.status_code) from None
-        return response.json()
+            self._raise_api_error(response, operation, diagnostic_values)
 
-    def _response_diagnostic_values(self, response: httpx.Response) -> list[str]:
+        data = self._response_json(response, operation, diagnostic_values)
+        if not isinstance(data, Mapping):
+            raise self._unexpected_response_error(operation, data, response.status_code, diagnostic_values)
+        return dict(data)
+
+    def _raise_api_error(
+        self,
+        response: httpx.Response,
+        operation: str,
+        diagnostic_values: list[Any],
+    ) -> None:
+        """Raise a Jules API error with all details redacted."""
+        try:
+            error_data = self._response_json(response, operation, diagnostic_values)
+        except JulesError:
+            raise JulesError(safe_google_text(response.text, diagnostic_values), response.status_code) from None
+
+        raw_error = error_data.get("error", {}) if isinstance(error_data, Mapping) else {}
+        error = raw_error if isinstance(raw_error, Mapping) else {}
+        error_code = error.get("code", response.status_code)
+        if not isinstance(error_code, int):
+            error_code = response.status_code
+
+        raise JulesError(
+            safe_google_text(error.get("message", response.text), diagnostic_values),
+            error_code,
+            redact_sensitive_data(error.get("details"), values=diagnostic_values),
+        )
+
+    def _response_json(self, response: httpx.Response, operation: str, diagnostic_values: list[Any]) -> Any:
+        """Parse JSON response content or raise a redacted malformed-response error."""
+        if not response.content:
+            return {}
+        try:
+            return response.json()
+        except Exception:
+            raise self._unexpected_response_error(
+                operation,
+                response.text,
+                response.status_code,
+                diagnostic_values,
+            ) from None
+
+    @staticmethod
+    def _unexpected_response_error(
+        operation: str,
+        data: Any,
+        status_code: int,
+        diagnostic_values: list[Any],
+    ) -> JulesError:
+        """Build a redacted malformed-response error."""
+        return JulesError(
+            f"Unexpected Jules response for {operation}: {safe_google_text(data, diagnostic_values)}",
+            status_code,
+        )
+
+    def _response_diagnostic_values(self, response: httpx.Response, *sensitive_values: Any) -> list[Any]:
         """Collect caller-controlled response identifiers for diagnostics redaction."""
-        values = [self._base_url]
+        values: list[Any] = [self._base_url, self._api_key, *sensitive_values]
         with suppress(RuntimeError):
             values.append(str(response.request.url))
         return values
@@ -192,6 +240,42 @@ class JulesConnector(VendorConnectorBase):
     def _model_payload(model: BaseModel) -> dict[str, Any]:
         """Serialize a Jules model using API field aliases."""
         return model.model_dump(by_alias=True)
+
+    def _parse_model_response(
+        self,
+        data: Any,
+        model_type: type[BaseModel],
+        operation: str,
+        *sensitive_values: Any,
+    ) -> dict[str, Any]:
+        """Validate one Jules response model and return a JSON payload."""
+        try:
+            return self._model_payload(model_type.model_validate(data))
+        except ValidationError:
+            raise self._unexpected_response_error(
+                operation,
+                data,
+                200,
+                list(sensitive_values),
+            ) from None
+
+    def _parse_model_list(
+        self,
+        data: Mapping[str, Any],
+        field_name: str,
+        model_type: type[BaseModel],
+        operation: str,
+        *sensitive_values: Any,
+    ) -> list[dict[str, Any]]:
+        """Validate a Jules response list and return JSON payloads."""
+        items = data.get(field_name)
+        if not isinstance(items, list):
+            raise self._unexpected_response_error(operation, data, 200, list(sensitive_values))
+
+        try:
+            return [self._model_payload(model_type.model_validate(item)) for item in items]
+        except ValidationError:
+            raise self._unexpected_response_error(operation, data, 200, list(sensitive_values)) from None
 
     def list_sources(self, page_size: int = 100, page_token: str = "") -> ExtendedList[ExtendedDict]:
         """List available sources (connected GitHub repos).
@@ -208,9 +292,9 @@ class JulesConnector(VendorConnectorBase):
             params["pageToken"] = page_token
 
         response = self.get("/sources", params=params)
-        data = self._handle_response(response)
+        data = self._handle_response(response, "list_sources", params)
 
-        return self.extend_result([self._model_payload(Source(**s)) for s in data.get("sources", [])])
+        return self.extend_result(self._parse_model_list(data, "sources", Source, "list_sources", params))
 
     # =========================================================================
     # Sessions
@@ -255,9 +339,9 @@ class JulesConnector(VendorConnectorBase):
             body["requirePlanApproval"] = True
 
         response = self.post("/sessions", json=body)
-        data = self._handle_response(response)
+        data = self._handle_response(response, "create_session", body)
 
-        return self.extend_result(self._model_payload(Session(**data)))
+        return self.extend_result(self._parse_model_response(data, Session, "create_session", body))
 
     def get_session(self, session_name: str) -> ExtendedDict:
         """Get a session by name.
@@ -273,9 +357,9 @@ class JulesConnector(VendorConnectorBase):
             session_name = f"sessions/{session_name}"
 
         response = self.get(f"/{session_name}")
-        data = self._handle_response(response)
+        data = self._handle_response(response, "get_session", session_name)
 
-        return self.extend_result(self._model_payload(Session(**data)))
+        return self.extend_result(self._parse_model_response(data, Session, "get_session", session_name))
 
     def list_sessions(self, page_size: int = 20, page_token: str = "") -> ExtendedList[ExtendedDict]:
         """List sessions.
@@ -292,9 +376,9 @@ class JulesConnector(VendorConnectorBase):
             params["pageToken"] = page_token
 
         response = self.get("/sessions", params=params)
-        data = self._handle_response(response)
+        data = self._handle_response(response, "list_sessions", params)
 
-        return self.extend_result([self._model_payload(Session(**s)) for s in data.get("sessions", [])])
+        return self.extend_result(self._parse_model_list(data, "sessions", Session, "list_sessions", params))
 
     def approve_plan(self, session_name: str) -> ExtendedDict:
         """Approve the plan for a session that requires approval.
@@ -309,7 +393,7 @@ class JulesConnector(VendorConnectorBase):
             session_name = f"sessions/{session_name}"
 
         response = self.post(f"/{session_name}:approvePlan")
-        self._handle_response(response)
+        self._handle_response(response, "approve_plan", session_name)
 
         # API returns empty on success, fetch updated session
         return self.get_session(session_name)
@@ -332,7 +416,7 @@ class JulesConnector(VendorConnectorBase):
 
         # The API uses sendMessage, not addUserResponse
         response = self.post(f"/{session_name}:sendMessage", json={})
-        self._handle_response(response)
+        self._handle_response(response, "add_user_response", session_name, message)
 
         # API returns empty on success, fetch updated session
         return self.get_session(session_name)
