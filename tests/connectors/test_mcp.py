@@ -73,7 +73,7 @@ def test_catalog_tool_handlers_return_tier2_catalog_payloads() -> None:
     repositories = tools["extended_data_list_connectors_by_capability"]["handler"](capability="repositories")
 
     assert isinstance(names, ExtendedList)
-    assert "github" in names
+    assert "cursor" in names
     assert isinstance(github, ExtendedDict)
     assert github["category"] == "development"
     assert "repositories" in github["capabilities"]
