@@ -105,6 +105,26 @@ def test_get_crewai_tool_decorator_explains_user_managed_install(monkeypatch) ->
     assert "extended-data[crewai]" not in message
 
 
+def test_sentence_transformers_explains_user_managed_install(monkeypatch) -> None:
+    """Missing sentence-transformers reports the deliberate no-extra install policy."""
+
+    def fake_import_module(name: str) -> object:
+        if name == "sentence_transformers":
+            raise ImportError("No module named 'sentence_transformers'")
+        pytest.fail(f"unexpected import: {name}")
+
+    monkeypatch.setattr(_optional.importlib, "import_module", fake_import_module)
+
+    with pytest.raises(ImportError) as exc_info:
+        _optional.require_extra("sentence_transformers")
+
+    message = str(exc_info.value)
+    assert "sentence-transformers separately" in message
+    assert "torch" in message
+    assert "extended-data[vector]" not in message
+    assert _optional.get_extra_for_package("sentence_transformers") is None
+
+
 def test_get_crewai_tool_decorator_returns_tool_decorator(monkeypatch) -> None:
     """Installed CrewAI tool support is returned directly."""
     sentinel = object()

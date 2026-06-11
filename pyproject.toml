@@ -103,7 +103,6 @@ webhooks = [
     "uvicorn>=0.45.0",
 ]
 vector = [
-    "sentence-transformers>=5.4.1",
     "sqlite-vec>=0.1.9",
 ]
 tests = [
@@ -144,7 +143,6 @@ all = [
     "python-graphql-client>=0.4.3",
     "pyyaml>=6.0.3",
     "rich>=13.7.0,<15.0.0",
-    "sentence-transformers>=5.4.1",
     "slack-sdk>=3.41.0",
     "sqlite-vec>=0.1.9",
     "strands-agents>=1.36.0",

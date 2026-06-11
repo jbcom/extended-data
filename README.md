@@ -32,6 +32,9 @@ Published runtime extras are `anthropic`, `aws`, `cursor`, `github`, `google`,
 CrewAI adapters remain available when `crewai` is installed independently, but
 `extended-data` intentionally does not publish a CrewAI extra while current
 CrewAI releases pull vulnerable `chromadb` versions transitively.
+The `vector` extra installs `sqlite-vec` for local vector search; embedding
+model packages such as `sentence-transformers` are user-managed while current
+releases pull vulnerable `torch` versions transitively.
 
 ## Usage
 

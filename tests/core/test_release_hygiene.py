@@ -59,6 +59,7 @@ NON_RUNTIME_EXTRAS = {"all", "dev", "tests", "typing"}
 PACKAGE_SHAPE_RE = re.compile(r"^  ([a-z_]+)/\s+")
 UNPATCHED_RUNTIME_VULNERABILITIES = {
     "chromadb": "GHSA-f4j7-r4q5-qw2c",
+    "torch": "GHSA-rrmf-rvhw-rf47",
 }
 
 

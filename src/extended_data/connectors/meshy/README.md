@@ -18,6 +18,11 @@ asset metadata:
 pip install "extended-data[meshy,vector]"
 ```
 
+The `vector` extra installs `sqlite-vec` for local similarity search.
+Embedding generation through `get_embedding()` uses `sentence-transformers`
+only when users install it independently after reviewing its `torch` dependency
+tree.
+
 ## Functional API
 
 ```python

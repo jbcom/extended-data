@@ -47,7 +47,6 @@ PACKAGE_TO_EXTRA: dict[str, str] = {
     "fastapi": "webhooks",
     "uvicorn": "webhooks",
     "sqlite_vec": "vector",
-    "sentence_transformers": "vector",
 }
 
 # Cache for import checks
@@ -57,6 +56,10 @@ PACKAGE_INSTALL_HINTS: dict[str, str] = {
     "crewai": (
         "Install CrewAI separately after reviewing its dependency tree; extended-data does not publish a "
         "CrewAI extra while current CrewAI releases pull vulnerable chromadb versions."
+    ),
+    "sentence_transformers": (
+        "Install sentence-transformers separately after reviewing its dependency tree; extended-data does not "
+        "include it in the vector extra while current releases pull vulnerable torch versions."
     ),
 }
 

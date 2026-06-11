@@ -31,7 +31,9 @@ Requirements:
 
     The vector extra includes:
     - sqlite-vec (vector similarity extension)
-    - Optional: sentence-transformers for embeddings
+
+    get_embedding() uses sentence-transformers only when users install it
+    independently after reviewing its torch dependency tree.
 """
 
 from __future__ import annotations

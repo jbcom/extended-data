@@ -484,7 +484,7 @@ Published runtime extras:
 | `extended-data[slack]` | Slack connector operations |
 | `extended-data[strands]` | Strands tool adapters |
 | `extended-data[vault]` | Vault connector operations |
-| `extended-data[vector]` | Local vector search for generated asset metadata |
+| `extended-data[vector]` | SQLite vector search for generated asset metadata |
 | `extended-data[webhooks]` | Webhook listener support |
 | `extended-data[zoom]` | Zoom connector operations |
 | `extended-data[ai]` | Aggregate LangChain, MCP, and Strands install target |
@@ -492,6 +492,9 @@ Published runtime extras:
 CrewAI tool adapters are still importable when users install `crewai` directly,
 but `extended-data` does not expose a CrewAI extra while current CrewAI
 dependency trees pull vulnerable `chromadb` releases.
+The `vector` extra installs `sqlite-vec` for local vector search; embedding
+model packages such as `sentence-transformers` remain user-managed while
+current releases pull vulnerable `torch` versions.
 All built-in CrewAI tool adapters use
 `extended_data.connectors._optional.get_crewai_tool_decorator()` so missing or
 incompatible CrewAI installs fail with the same user-managed install guidance.
