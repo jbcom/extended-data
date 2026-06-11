@@ -47,7 +47,7 @@ def test_data_workflow_layered_config_round_trip(tmp_path: Path) -> None:
     env_data = DataWorkflow.from_file("config/dev.yaml", tld=tmp_path).value
     result = (
         DataWorkflow.from_file("config/base.yaml", tld=tmp_path)
-        .then(("merge-env", lambda data: data.deep_merge(env_data)))
+        .merge(env_data, name="merge-env")
         .write("build/config.yaml", tld=tmp_path)
     )
 
@@ -88,6 +88,50 @@ def test_data_workflow_runs_named_value_transforms() -> None:
         "selected_services": ["api", "worker"],
         "tags": ["api", "docs"],
     }
+
+
+def test_data_workflow_deep_merges_mapping_values() -> None:
+    """DataWorkflow should expose deep merge without ad hoc lambda steps."""
+    workflow = DataWorkflow.from_value({"service": {"name": "api"}, "ports": [8080]}).merge(
+        {"service": {"debug": True}, "ports": [8081]},
+        name="merge-env",
+    )
+    result = workflow.result()
+
+    assert workflow.steps == ("value", "merge-env")
+    assert isinstance(workflow.value, ExtendedDict)
+    assert result.as_builtin() == {
+        "service": {"name": "api", "debug": True},
+        "ports": [8080, 8081],
+    }
+
+
+def test_data_workflow_merge_file_reads_and_merges_layer(tmp_path: Path) -> None:
+    """File-backed merge should use the same decoded DataFile boundary as reads."""
+    write_file("base.yaml", {"service": {"name": "api"}, "ports": [8080]}, tld=tmp_path)
+    write_file("env.yaml", {"service": {"debug": "true"}, "ports": [8081]}, tld=tmp_path)
+
+    workflow = DataWorkflow.from_file("base.yaml", tld=tmp_path).merge_file("env.yaml", tld=tmp_path)
+    result = workflow.transform("reconstruct").result()
+
+    assert workflow.steps == ("read:base.yaml", "merge:env.yaml")
+    assert result.steps == ("read:base.yaml", "merge:env.yaml", "transform:reconstruct")
+    assert result.as_builtin() == {
+        "service": {"name": "api", "debug": True},
+        "ports": [8080, 8081],
+    }
+
+
+def test_data_workflow_merge_requires_mapping_values() -> None:
+    """Merge calls should fail loudly when no layer is provided."""
+    with pytest.raises(ValueError, match=r"DataWorkflow\.merge requires at least one mapping"):
+        DataWorkflow.from_value({"service": "api"}).merge()
+
+
+def test_data_workflow_merge_reports_shape_mismatch() -> None:
+    """Deep merge should fail when the current workflow value is not mapping-shaped."""
+    with pytest.raises(TypeError, match="merge is not available for ExtendedList"):
+        DataWorkflow.from_value(["api"]).merge({"service": "api"})
 
 
 def test_data_workflow_applies_shared_named_transforms() -> None:

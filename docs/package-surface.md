@@ -181,13 +181,17 @@ metadata cannot override the sanitized core `source` and `path` fields.
 `DataWorkflow` is the Tier 3 composition surface for higher-order data
 processing. It reads or decodes structured data through the file and format
 processors, accepts `DataFile` artifacts with `from_data_file()`, promotes
-values into Tier 2 containers by default, applies reusable `WorkflowStep`
-functions or named transform steps, writes output artifacts, and returns a
-`WorkflowResult` with the completed value, output path, step trail, and
-promoted metadata. `DataWorkflow.transform()` applies the same named Tier 2
+values into Tier 2 containers by default, deep-merges in-memory or file-backed
+mapping layers, applies reusable `WorkflowStep` functions or named transform
+steps, writes output artifacts, and returns a `WorkflowResult` with the
+completed value, output path, step trail, and promoted metadata.
+`DataWorkflow.merge()` deep-merges mapping values through the Tier 2
+`ExtendedDict` primitive, and `merge_file()` decodes structured file layers
+through `DataFile` before merging. `DataWorkflow.transform()` applies the same
+named Tier 2
 transform catalog exposed by the CLI, including `reconstruct`, `unhump`,
 `deduplicate`, `compact`, and string case transforms. Workflow metadata is
-preserved across `then()`, `run()`, `transform()`, `as_builtin()`,
+preserved across `then()`, `run()`, `merge()`, `merge_file()`, `transform()`, `as_builtin()`,
 `as_extended()`, and `write()`, so file and API provenance from `DataFile`
 artifacts remains attached to the result. `WorkflowResult.as_extended()` returns
 a detached promoted view of the completed value, and result-level
@@ -200,7 +204,7 @@ from extended_data import DataWorkflow
 env_data = DataWorkflow.from_file("config/dev.yaml").value
 result = (
     DataWorkflow.from_file("config/base.yaml")
-    .then(("merge-env", lambda data: data.deep_merge(env_data)))
+    .merge(env_data, name="merge-env")
     .transform("reconstruct", "unhump")
     .write("build/config.yaml")
 )
@@ -219,9 +223,9 @@ assert "unhump" in list_data_transform_steps()
 ```
 
 Missing workflow input files raise `FileNotFoundError`, and empty workflow
-writes raise `ValueError` unless `allow_empty=True` is passed. Unknown transform
-names and transforms that do not match the current data shape raise instead of
-silently preserving stale workflow state.
+writes raise `ValueError` unless `allow_empty=True` is passed. Missing merge
+layers, unknown transform names, and operations that do not match the current
+data shape raise instead of silently preserving stale workflow state.
 
 `InputProvider` loads input data from explicit mappings, environment variables,
 and stdin, then decodes or coerces values through the shared primitive and

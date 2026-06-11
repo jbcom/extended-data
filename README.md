@@ -46,7 +46,7 @@ data = decode_json('{"status": "ok"}')
 payload = ExtendedDict(data).deep_merge({"source": "example"})
 decoded_file = decode_file('{"service": {"name": "api"}}', suffix="json")
 artifact = DataFile.decode('{"service": {"name": "api"}}', suffix="json")
-workflow = DataWorkflow.from_value(payload).transform("unhump").result()
+workflow = DataWorkflow.from_value(payload).merge({"region": "us-east-1"}).transform("unhump").result()
 
 print(encode_yaml(payload))
 print(decoded_file["service"]["name"].upper_first())
@@ -290,17 +290,19 @@ first-class with promoted data, promoted source metadata, detached
 for artifact-first processing. DataFile source labels and metadata use the
 shared Tier 1 redaction policy before they enter workflow steps or result
 metadata. `DataWorkflow` makes multi-step compositions first-class: read,
-decode, or accept a `DataFile` artifact, apply named
+decode, or accept a `DataFile` artifact, deep-merge mapping layers, apply named
 transformations, write an output artifact, and keep the step trail in a
-`WorkflowResult`. Workflow metadata is promoted and preserved across
+`WorkflowResult`. `DataWorkflow.merge_file()` reads a structured file through
+the same `DataFile` boundary before merging it. Workflow metadata is promoted
+and preserved across
 transformations, lowering/promoting, and writes, so file and API provenance can
 stay with the result. Completed workflow results expose detached promoted views
 with `as_extended()` plus direct `to_export_safe()` and `wrap_for_export()`
 helpers. `DataWorkflow.transform()` applies the same named Tier 2 transform
 catalog exposed by the package CLI, including `reconstruct`, `unhump`,
 `deduplicate`, `compact`, and string case transforms. Missing file inputs,
-unknown transform names, shape-incompatible transforms, and empty writes fail
-loudly.
+missing merge layers, unknown transform names, shape-incompatible transforms,
+and empty writes fail loudly.
 `InputProvider` stores its active, frozen, and merged input snapshots as
 `ExtendedDict` values, so direct input-data access can use Tier 2 container
 methods. `snapshot_inputs()` returns detached active or frozen snapshots, and

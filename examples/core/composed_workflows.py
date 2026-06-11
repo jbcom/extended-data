@@ -47,7 +47,7 @@ def demonstrate_layered_config_workflow() -> None:
         env_data = DataWorkflow.from_file("config/dev.yaml", tld=tld).value
         result = (
             DataWorkflow.from_file("config/base.yaml", tld=tld)
-            .then(("merge-env", lambda data: data.deep_merge(env_data)))
+            .merge(env_data, name="merge-env")
             .write("build/config.yaml", tld=tld)
         )
         result.to_export_safe()

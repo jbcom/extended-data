@@ -262,6 +262,33 @@ class DataWorkflow:
             workflow = workflow.then((f"transform:{step}", data_transform_action(step)), as_extended=as_extended)
         return workflow
 
+    def merge(
+        self,
+        *mappings: Mapping[str, Any],
+        name: str = "merge",
+        as_extended: bool | None = None,
+    ) -> DataWorkflow:
+        """Deep-merge mappings into the current workflow value."""
+        if not mappings:
+            raise ValueError("DataWorkflow.merge requires at least one mapping")
+
+        return self.then((name, _deep_merge_action(*mappings)), as_extended=as_extended)
+
+    def merge_file(
+        self,
+        file_path: FilePath,
+        *,
+        suffix: str | None = None,
+        charset: str = "utf-8",
+        errors: str = "strict",
+        tld: Path | None = None,
+        name: str | None = None,
+        as_extended: bool | None = None,
+    ) -> DataWorkflow:
+        """Read a structured file and deep-merge it into the workflow value."""
+        artifact = DataFile.read(file_path, suffix=suffix, charset=charset, errors=errors, tld=tld)
+        return self.merge(artifact.as_extended(), name=name or f"merge:{file_path}", as_extended=as_extended)
+
     def as_builtin(self) -> DataWorkflow:
         """Return the next workflow state with built-in Python containers."""
         return DataWorkflow(
@@ -313,6 +340,19 @@ class DataWorkflow:
             output_path=output_path,
             metadata=self.metadata,
         )
+
+
+def _deep_merge_action(*mappings: Mapping[str, Any]) -> WorkflowAction:
+    """Return a typed workflow action that deep-merges mapping values."""
+    merge_values = tuple(extend_data(deepcopy(to_builtin(mapping))) for mapping in mappings)
+
+    def merge(data: Any) -> Any:
+        method = getattr(data, "deep_merge", None)
+        if not callable(method):
+            raise TypeError(f"merge is not available for {type(data).__name__}")
+        return method(*merge_values)
+
+    return merge
 
 
 def _coerce_step(step: StepLike, *, name: str | None = None) -> WorkflowStep:

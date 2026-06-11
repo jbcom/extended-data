@@ -10,7 +10,7 @@ from typing import Any, cast
 
 from extended_data.io import DataFile
 from extended_data.primitives.redaction import redact_sensitive_text
-from extended_data.workflows import DataWorkflow, WorkflowAction, WorkflowResult, list_data_transform_steps
+from extended_data.workflows import DataWorkflow, WorkflowResult, list_data_transform_steps
 
 
 CONNECTOR_COMMANDS = frozenset({"call", "info", "list", "mcp", "methods"})
@@ -78,19 +78,8 @@ def _merge_workflow(args: argparse.Namespace) -> DataWorkflow:
 
     workflow = DataWorkflow.from_file(file_paths[0], suffix=args.suffix)
     for file_path in file_paths[1:]:
-        artifact = DataFile.read(file_path, suffix=args.suffix)
-        merge_value = artifact.as_extended()
-        workflow = workflow.then((f"merge:{file_path}", _deep_merge_action(merge_value)))
+        workflow = workflow.merge_file(file_path, suffix=args.suffix)
     return workflow
-
-
-def _deep_merge_action(value: Any) -> WorkflowAction:
-    """Return a typed workflow action that deep-merges one value."""
-
-    def merge(data: Any) -> Any:
-        return data.deep_merge(value)
-
-    return merge
 
 
 def cmd_merge(args: argparse.Namespace) -> int:

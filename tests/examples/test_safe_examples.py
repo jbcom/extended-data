@@ -157,9 +157,10 @@ def test_basic_core_example_uses_container_first_operations() -> None:
 
 
 def test_composed_workflow_example_uses_named_transforms() -> None:
-    """The workflow example should exercise the public named-transform API."""
+    """The workflow example should exercise public merge and transform APIs."""
     text = (REPO_ROOT / "examples/core/composed_workflows.py").read_text(encoding="utf-8")
 
+    assert ".merge(" in text
     assert ".transform(" in text
     assert "list_data_transform_steps" in text
 
