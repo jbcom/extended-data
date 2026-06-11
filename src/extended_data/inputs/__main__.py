@@ -9,7 +9,6 @@ YAML, and Base64 and coerces scalar values through Tier 1 type primitives.
 from __future__ import annotations
 
 import binascii
-import json
 import os
 import sys
 
@@ -21,9 +20,8 @@ from deepmerge import Merger  # type: ignore[attr-defined]
 from extended_data.containers.factory import extend_data, to_builtin
 from extended_data.containers.mappings import ExtendedDict
 from extended_data.io.base64 import base64_decode
+from extended_data.io.files import decode_file
 from extended_data.primitives.formats.errors import DataDecodeError
-from extended_data.primitives.formats.json import decode_json
-from extended_data.primitives.formats.yaml import decode_yaml
 from extended_data.primitives.state import is_nothing
 from extended_data.primitives.types import (
     string_to_bool,
@@ -130,9 +128,12 @@ class InputProvider:
             return {}
 
         try:
-            decoded_stdin: dict[str, Any] = json.loads(inputs_from_stdin)
+            decoded_stdin = decode_file(inputs_from_stdin, suffix="json", as_extended=False)
+            if not isinstance(decoded_stdin, dict):
+                message = "Failed to decode stdin as JSON object."
+                raise TypeError(message)
             return decoded_stdin
-        except json.JSONDecodeError as exc:
+        except DataDecodeError as exc:
             message = f"Failed to decode stdin as JSON ({len(inputs_from_stdin)} characters)."
             raise RuntimeError(message) from exc
 
@@ -312,19 +313,22 @@ class InputProvider:
 
         if decode_from_yaml:
             try:
-                conf = decode_yaml(conf)
+                conf = decode_file(conf, suffix="yaml", as_extended=as_extended)
             except DataDecodeError as exc:
                 message = f"Failed to decode input {k} from YAML."
                 raise RuntimeError(message) from exc
         elif decode_from_json:
             try:
-                conf = decode_json(conf)
+                conf = decode_file(conf, suffix="json", as_extended=as_extended)
             except DataDecodeError as exc:
                 message = f"Failed to decode input {k} from JSON."
                 raise RuntimeError(message) from exc
 
         if conf is None and not allow_none:
             return self._return_value(default, as_extended=as_extended)
+
+        if (decode_from_yaml or decode_from_json) and as_extended:
+            return conf
 
         return self._return_value(conf, as_extended=as_extended)
 

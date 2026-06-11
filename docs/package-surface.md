@@ -209,7 +209,9 @@ Missing workflow input files raise `FileNotFoundError`, and empty workflow
 writes raise `ValueError` unless `allow_empty=True` is passed.
 
 `InputProvider` loads input data from explicit mappings, environment variables,
-and stdin, then decodes or coerces values through the primitive layer. Its
+and stdin, then decodes or coerces values through the shared primitive and
+file/data layers. Stdin JSON and JSON/YAML `decode_input()` paths use the same
+structured decoder boundary as file and connector payloads. Its
 `decode_input(..., as_extended=True)` path gives input-driven workflows the same
 container bridge as file and Base64 decoding; fallback values use that same
 promotion rule, so defaults do not silently drop back to plain dictionaries.

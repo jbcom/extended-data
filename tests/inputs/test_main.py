@@ -38,6 +38,7 @@ import pytest
 
 from extended_data import base64_encode
 from extended_data.containers import ExtendedDict, ExtendedString
+from extended_data.inputs import __main__ as inputs_module
 from extended_data.inputs.__main__ import InputProvider
 
 
@@ -93,6 +94,24 @@ def test_init_with_stdin(monkeypatch):
     monkeypatch.setattr("sys.stdin.read", lambda: input_data)
 
     dic = InputProvider(from_stdin=True)
+    assert dic.inputs["stdin_key"] == "stdin_value"
+
+
+@pytest.mark.usefixtures("_env_setup")
+def test_init_with_stdin_decodes_through_data_boundary(monkeypatch):
+    """Stdin JSON should use the shared data decoder before merging inputs."""
+
+    def fake_decode_file(data, *, suffix=None, as_extended=True):
+        assert data == '{"stdin_key": "stdin_value"}'
+        assert suffix == "json"
+        assert as_extended is False
+        return {"stdin_key": "stdin_value"}
+
+    monkeypatch.setattr("sys.stdin.read", lambda: '{"stdin_key": "stdin_value"}')
+    monkeypatch.setattr(inputs_module, "decode_file", fake_decode_file)
+
+    dic = InputProvider(from_stdin=True)
+
     assert dic.inputs["stdin_key"] == "stdin_value"
 
 
@@ -224,6 +243,36 @@ def test_decode_input_yaml():
     """
     dic = InputProvider(inputs={"yaml_key": "name: test"})
     decoded = dic.decode_input("yaml_key", decode_from_yaml=True)
+    assert decoded == {"name": "test"}
+
+
+@pytest.mark.parametrize(
+    ("input_key", "input_value", "decode_kwargs", "expected_suffix"),
+    [
+        ("json_key", '{"name": "test"}', {"decode_from_json": True}, "json"),
+        ("yaml_key", "name: test", {"decode_from_yaml": True}, "yaml"),
+    ],
+)
+def test_decode_input_uses_data_boundary(
+    monkeypatch,
+    input_key: str,
+    input_value: str,
+    decode_kwargs: dict[str, bool],
+    expected_suffix: str,
+) -> None:
+    """Structured input decoding should use the shared file/data decoder."""
+
+    def fake_decode_file(data, *, suffix=None, as_extended=True):
+        assert data == input_value
+        assert suffix == expected_suffix
+        assert as_extended is False
+        return {"name": "test"}
+
+    monkeypatch.setattr(inputs_module, "decode_file", fake_decode_file)
+    dic = InputProvider(inputs={input_key: input_value}, from_environment=False)
+
+    decoded = dic.decode_input(input_key, **decode_kwargs)
+
     assert decoded == {"name": "test"}
 
 

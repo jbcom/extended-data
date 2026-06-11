@@ -262,7 +262,9 @@ state by default. `get_input()` remains the scalar coercion boundary for
 booleans, numbers, paths, datetimes, and credential strings; pass
 `as_extended=True` when an injected raw or fallback input value should stay in
 Tier 2 form and keep using container methods such as `reconstruct_special_types()`
-and `to_export_safe()`.
+and `to_export_safe()`. Stdin JSON plus JSON/YAML `decode_input()` paths use
+the same file/data decoding boundary as structured files and connector
+payloads.
 `Logging` stores marked log message collections as `ExtendedDict` and
 `ExtendedSet` values while keeping Python logger and handler objects plain.
 Use `get_stored_messages()` or `snapshot_stored_messages()` when downstream
