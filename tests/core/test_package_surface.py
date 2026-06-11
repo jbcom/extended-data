@@ -170,6 +170,7 @@ def test_root_exports_first_class_integrated_surfaces() -> None:
     assert isinstance(connector_names[0], ExtendedString)
     assert get_type_hints(connectors.list_connectors)["return"] == ExtendedList[ExtendedString]
     assert get_type_hints(ConnectorFabric.list_connectors)["return"] == ExtendedList[ExtendedString]
+    assert get_type_hints(ConnectorFabric.get_connector)["return"] is connectors.ConnectorBase
     assert "cursor" in connector_names
 
 

@@ -7,6 +7,7 @@ import hashlib
 from typing import TYPE_CHECKING, Any
 
 # Import zoom directly (no extra deps)
+from extended_data.connectors.base import ConnectorBase
 from extended_data.connectors.registry import (
     get_connector_class,
 )
@@ -129,7 +130,7 @@ class ConnectorFabric(InputProvider):
         """Get catalog metadata for one connector."""
         return get_registered_connector_info(name, include_unavailable=include_unavailable)
 
-    def get_connector(self, name: str, **kwargs: Any) -> Any:
+    def get_connector(self, name: str, **kwargs: Any) -> ConnectorBase:
         """Get a cached connector instance by registry name.
 
         The connector receives the fabric's shared inputs and logger unless
