@@ -6,6 +6,7 @@ from hypothesis import given
 from hypothesis import strategies as st
 
 from extended_data.logging import Logging
+from extended_data.primitives import redact_sensitive_text
 
 
 # Strategy for valid log levels
@@ -57,7 +58,7 @@ def test_basic_logging_properties(message: str, log_level: str) -> None:
     result = logger.logged_statement(message, log_level=log_level)  # type: ignore[arg-type]
 
     assert result is not None
-    assert message in result
+    assert redact_sensitive_text(message) in result
 
 
 @given(message=log_messages, marker=marker_names)
@@ -75,7 +76,7 @@ def test_context_marker_properties(message: str, marker: str) -> None:
     )
 
     assert result is not None
-    assert f"[{marker}]" in result
+    assert redact_sensitive_text(f"[{marker}]") in result
 
 
 @given(message=log_messages, marker=marker_names)
@@ -93,7 +94,7 @@ def test_storage_marker_properties(message: str, marker: str) -> None:
     )
 
     assert marker in logger.stored_messages
-    assert message in next(iter(logger.stored_messages[marker]))
+    assert redact_sensitive_text(message) in next(iter(logger.stored_messages[marker]))
 
 
 @given(message=log_messages, verbosity=verbosity_levels, marker=marker_names)
@@ -116,7 +117,7 @@ def test_verbosity_bypass_properties(message: str, verbosity: int, marker: str) 
     )
 
     assert result is not None
-    assert message in result
+    assert redact_sensitive_text(message) in result
 
 
 @given(message=log_messages, verbosity=verbosity_levels)
@@ -149,6 +150,6 @@ def test_verbosity_control_properties(message: str, verbosity: int) -> None:
 
     if verbosity <= logger.verbosity_threshold:
         assert result is not None
-        assert message in result
+        assert redact_sensitive_text(message) in result
     else:
         assert result is None

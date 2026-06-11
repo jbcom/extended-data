@@ -228,6 +228,11 @@ storage marker, with each marker containing an `ExtendedSet` of promoted
 messages. `get_stored_messages()` returns a detached promoted message set for
 one marker, and `snapshot_stored_messages()` returns a detached `ExtendedDict`
 copy of all stored collections for downstream export or workflow composition.
+Runtime log messages and attached JSON payloads are redacted with the Tier 1
+redaction primitives before they reach Python logging handlers or stored message
+collections. `exit_run()` formatting failures also report a redacted result
+snapshot and suppress the internal formatting exception chain so diagnostics do
+not echo raw payload data.
 
 `ConnectorFabric` caches and coordinates vendor connectors while sharing input
 loading, logging, data normalization, retry behavior, and serialization.

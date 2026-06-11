@@ -10,6 +10,7 @@ from typing import Any
 
 from extended_data.io import make_raw_data_export_safe, wrap_raw_data_for_export
 from extended_data.logging.const import DEFAULT_LOG_LEVEL
+from extended_data.primitives.redaction import redact_sensitive_data
 
 
 def get_log_level(level: int | str) -> int:
@@ -87,7 +88,7 @@ def sanitize_json_data(data: Any) -> Any:
     """
     # Use Extended Data core' make_raw_data_export_safe for comprehensive handling
     # This handles datetime, Path, large numbers, and more
-    return make_raw_data_export_safe(data, export_to_yaml=False)
+    return redact_sensitive_data(make_raw_data_export_safe(data, export_to_yaml=False))
 
 
 def add_labeled_json(

@@ -43,6 +43,8 @@ from extended_data.logging.utils import (
 from extended_data.primitives import (
     get_unique_signature,
     is_nothing,
+    redact_sensitive_data,
+    redact_sensitive_text,
     string_to_bool,
     to_camel_case,
     to_kebab_case,
@@ -342,6 +344,7 @@ class Logging:
 
         final_msg = self._prepare_message(msg, context_marker, identifiers)
         final_msg = add_json_data(final_msg, json_data, labeled_json_data)
+        final_msg = redact_sensitive_text(final_msg)
 
         # Normalize levels once here before passing to storage
         final_allowed = self._normalize_levels(allowed_levels) if allowed_levels is not None else self.allowed_levels
@@ -455,6 +458,15 @@ class Logging:
             else:
                 result[transformed_key] = value
         return result
+
+    @staticmethod
+    def _format_exit_run_error_snapshot(data: Any) -> str:
+        """Return a redacted diagnostic snapshot for exit_run failures."""
+        redacted_data = redact_sensitive_data(data)
+        try:
+            return wrap_raw_data_for_export(redacted_data, allow_encoding=True)
+        except Exception:
+            return redact_sensitive_text(redacted_data)
 
     def exit_run(
         self,
@@ -644,7 +656,10 @@ class Logging:
 
             sys.stdout.write(data)
             sys.exit(0)
-        except ExitRunError as exc:
-            err_msg = f"Failed to dump results because of a formatting error:\n\n{data}"
-            self.logger.critical(err_msg, exc_info=True)
-            raise RuntimeError(err_msg) from exc
+        except ExitRunError:
+            err_msg = (
+                "Failed to dump results because of a formatting error:\n\n"
+                f"{self._format_exit_run_error_snapshot(data)}"
+            )
+            self.logger.critical(err_msg)
+            raise RuntimeError(err_msg) from None

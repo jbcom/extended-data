@@ -56,6 +56,25 @@ def test_json_logging(logger: Logging) -> None:
     assert "value" in result
 
 
+def test_logging_redacts_sensitive_message_and_json_payloads(logger: Logging) -> None:
+    """Runtime log messages apply the shared Tier 1 redaction policy."""
+    result = logger.logged_statement(
+        "Request failed with Authorization: Bearer raw_token",
+        json_data={"password": "hunter2", "nested": {"api_key": "key_123"}},
+        labeled_json_data={"Request": {"client_secret": "secret_123"}},
+        storage_marker="events",
+        log_level="info",
+    )
+
+    assert result is not None
+    stored = next(iter(logger.stored_messages["events"]))
+    for raw_secret in ["raw_token", "hunter2", "key_123", "secret_123"]:
+        assert raw_secret not in result
+        assert raw_secret not in stored
+    assert result.count("[REDACTED]") >= 4
+    assert stored.count("[REDACTED]") >= 4
+
+
 def test_storage_marker(logger: Logging) -> None:
     """Test storing messages under specific markers.
 

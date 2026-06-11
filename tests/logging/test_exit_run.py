@@ -258,6 +258,38 @@ class TestExitRunNoExit:
                 exit_on_completion=False,
             )
 
+    def test_exit_run_formatting_errors_redact_result_snapshot(self, logger: Logging, tmp_path: Path) -> None:
+        """Formatting failures should report redacted diagnostics without chained traces."""
+        os.chdir(tmp_path)
+        results = {
+            "a": {
+                "otherField": "value",
+                "password": "hunter2",
+                "headers": {"authorization": "Bearer raw_token"},
+            }
+        }
+
+        with (
+            patch.object(logger.logger, "critical") as mock_critical,
+            pytest.raises(RuntimeError, match="formatting error") as exc_info,
+        ):
+            logger.exit_run(
+                results,
+                sort_by_field="missingField",
+                exit_on_completion=False,
+            )
+
+        mock_critical.assert_called_once()
+        logged_message = mock_critical.call_args.args[0]
+        assert mock_critical.call_args.kwargs == {}
+        assert exc_info.value.__cause__ is None
+        assert exc_info.value.__suppress_context__ is True
+        for raw_secret in ["hunter2", "raw_token"]:
+            assert raw_secret not in logged_message
+            assert raw_secret not in str(exc_info.value)
+        assert "[REDACTED]" in logged_message
+        assert "Traceback" not in logged_message
+
     def test_exit_run_with_errors_raises(self, logger: Logging, tmp_path: Path) -> None:
         """Test that exit_run raises when error_list is not empty."""
         os.chdir(tmp_path)

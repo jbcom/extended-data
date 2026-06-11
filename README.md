@@ -241,7 +241,10 @@ and `to_export_safe()`.
 `Logging` stores marked log message collections as `ExtendedDict` and
 `ExtendedSet` values while keeping Python logger and handler objects plain.
 Use `get_stored_messages()` or `snapshot_stored_messages()` when downstream
-data workflows need detached promoted copies of collected messages.
+data workflows need detached promoted copies of collected messages. Runtime log
+messages and attached JSON payloads use the same Tier 1 redaction policy as
+connector diagnostics, and `exit_run()` formatting failures report redacted
+result snapshots instead of raw payload data.
 
 More detail lives in [`docs/package-surface.md`](docs/package-surface.md).
 
