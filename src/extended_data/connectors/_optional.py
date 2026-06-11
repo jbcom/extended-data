@@ -25,7 +25,7 @@ from extended_data.containers import ExtendedDict, ExtendedList, ExtendedString,
 
 # Mapping of package names to their extras
 PACKAGE_TO_EXTRA: dict[str, str] = {
-    # Vendor connectors
+    # Connector extras
     "boto3": "aws",
     "google.cloud": "google",
     "google.api_core": "google",

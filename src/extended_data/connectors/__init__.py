@@ -58,7 +58,7 @@ from extended_data.connectors.aws import (
     AWSS3Mixin,
     AWSSSOmixin,
 )
-from extended_data.connectors.base import VendorConnectorBase
+from extended_data.connectors.base import ConnectorBase
 from extended_data.connectors.cloud_params import (
     get_aws_call_params,
     get_cloud_call_params,
@@ -90,6 +90,7 @@ __all__ = [
     "AWSS3Mixin",
     "AWSSSOmixin",
     "AnthropicConnector",
+    "ConnectorBase",
     "ConnectorFabric",
     "ConnectorInfo",
     "CursorConnector",
@@ -104,7 +105,6 @@ __all__ = [
     "SecretsConnector",
     "SlackConnector",
     "VaultConnector",
-    "VendorConnectorBase",
     "ZoomConnector",
     "__version__",
     "get_aws_call_params",

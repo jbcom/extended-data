@@ -34,7 +34,7 @@ import httpx
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
-from extended_data.connectors.base import VendorConnectorBase
+from extended_data.connectors.base import ConnectorBase
 from extended_data.containers import ExtendedDict, ExtendedList, ExtendedString, to_builtin
 from extended_data.logging import Logging
 from extended_data.primitives.redaction import redact_sensitive_text
@@ -339,7 +339,7 @@ def sanitize_error(error: Any, *, values: Iterable[Any] | None = None) -> str:
 # =============================================================================
 
 
-class CursorConnector(VendorConnectorBase):
+class CursorConnector(ConnectorBase):
     """Cursor Background Agent API connector.
 
     Provides HTTP client access to Cursor's agent management API for spawning,

@@ -24,7 +24,7 @@ from extended_data.connectors.aws._diagnostics import aws_operation_error, safe_
 from extended_data.connectors.aws.organizations import AWSOrganizationsMixin
 from extended_data.connectors.aws.s3 import AWSS3Mixin
 from extended_data.connectors.aws.sso import AWSSSOmixin
-from extended_data.connectors.base import VendorConnectorBase
+from extended_data.connectors.base import ConnectorBase
 from extended_data.containers import ExtendedDict, ExtendedList, ExtendedString, to_builtin
 from extended_data.logging import Logging
 from extended_data.primitives import is_nothing
@@ -60,7 +60,7 @@ def _load_aws_sdk() -> Any:
     return boto3
 
 
-class AWSConnector(AWSOrganizationsMixin, AWSSSOmixin, AWSS3Mixin, VendorConnectorBase):
+class AWSConnector(AWSOrganizationsMixin, AWSSSOmixin, AWSS3Mixin, ConnectorBase):
     """AWS connector for boto3 client, resource, and vendor data operations.
 
     This first-class connector provides:

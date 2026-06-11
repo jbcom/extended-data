@@ -31,7 +31,7 @@ def is_connector_data_method(method: Any) -> bool:
         return False
 
     qualname = getattr(method, "__qualname__", "")
-    if qualname.startswith(("VendorConnectorBase.", "InputProvider.")):
+    if qualname.startswith(("ConnectorBase.", "InputProvider.")):
         return False
 
     return annotation_includes_extended_payload(return_annotation(method))

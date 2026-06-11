@@ -8,12 +8,12 @@ from __future__ import annotations
 
 from typing import Any
 
-from extended_data.connectors.base import VendorConnectorBase
+from extended_data.connectors.base import ConnectorBase
 from extended_data.connectors.meshy import animate, image3d, retexture, rigging, text3d
 from extended_data.containers import ExtendedDict, ExtendedString
 
 
-class MeshyConnector(VendorConnectorBase):
+class MeshyConnector(ConnectorBase):
     """Meshy AI 3D generation connector.
 
     Provides access to text-to-3D, image-to-3D, rigging, animation, and retexturing.

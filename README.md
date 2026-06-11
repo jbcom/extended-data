@@ -108,7 +108,7 @@ extended_data/
   io/           Tier 3 file, import, export, and base64 processors
   inputs/       InputProvider and decorator-based input injection
   logging/      structured lifecycle logging
-  connectors/   Tier 3 ConnectorFabric and vendor adapters
+  connectors/   Tier 3 ConnectorFabric and data adapters
   secrets/      SecretSync CLI bridge and typed result exports
   workflows/    Tier 3 higher-order workflow composition
 ```
@@ -128,10 +128,10 @@ remaining migration work fails fast.
 Tier 1 public exports stay function-oriented; use `get_default_dict()` for
 nested or sorted default mappings instead of importing the internal helper class.
 
-Vendor connectors are first-class adapters in the data fabric. `ConnectorFabric`
+Connectors are first-class adapters in the data fabric. `ConnectorFabric`
 uses the registry to resolve connectors by name, injects shared input/logging
 context, caches connector instances, and lets specialized helpers coexist with
-generic vendor lookup. `list_connectors()` returns registered connectors whose
+generic connector lookup. `list_connectors()` returns registered connectors whose
 runtime requirements are installed; use `list_connector_info()` for the full
 catalog, including known connectors that need an `extended-data[...]` extra.
 Secret-like cache key fields such as `token`, `api_key`, `password`, and

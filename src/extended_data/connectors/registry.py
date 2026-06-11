@@ -1,9 +1,9 @@
-"""Vendor Connector Registry with Entry Points.
+"""Connector Registry with Entry Points.
 
 This module provides automatic discovery and registration of extended data connectors
 using Python's entry points system. This allows:
 
-1. DRY interface via VendorConnectorBase ABC
+1. DRY interface via ConnectorBase ABC
 2. Automatic discovery of all connectors (even from other packages)
 3. Unified factory function for instantiation
 4. Same registry used by both MCP and CLI
@@ -46,7 +46,7 @@ from extended_data.primitives.redaction import redact_sensitive_text
 
 
 if TYPE_CHECKING:
-    from extended_data.connectors.base import VendorConnectorBase
+    from extended_data.connectors.base import ConnectorBase
 
 
 @dataclass(frozen=True)
@@ -111,7 +111,7 @@ BUILTIN_CONNECTORS: dict[str, BuiltinConnectorSpec] = {
 
 
 # Cache for discovered connectors
-_connector_cache: dict[str, builtins.type[VendorConnectorBase]] | None = None
+_connector_cache: dict[str, builtins.type[ConnectorBase]] | None = None
 _missing_builtin_connectors: dict[str, ImportError] = {}
 
 
@@ -120,14 +120,14 @@ def _normalize_connector_name(name: str) -> str:
     return name.strip().lower()
 
 
-def _discover_connectors() -> dict[str, builtins.type[VendorConnectorBase]]:
+def _discover_connectors() -> dict[str, builtins.type[ConnectorBase]]:
     """Discover all registered connectors via entry points."""
     global _connector_cache
 
     if _connector_cache is not None:
         return _connector_cache
 
-    connectors: dict[str, builtins.type[VendorConnectorBase]] = {}
+    connectors: dict[str, builtins.type[ConnectorBase]] = {}
 
     # Python 3.10+ uses importlib.metadata
     from importlib.metadata import entry_points
@@ -187,7 +187,7 @@ def _raise_unregistered_builtin_connector(name: str) -> NoReturn:
     )
 
 
-def _list_connector_classes() -> dict[str, builtins.type[VendorConnectorBase]]:
+def _list_connector_classes() -> dict[str, builtins.type[ConnectorBase]]:
     """List available connector classes for internal tool registration."""
     return _discover_connectors().copy()
 
@@ -207,7 +207,7 @@ def list_connectors() -> ExtendedList[ExtendedString]:
     )
 
 
-def get_connector_class(name: str) -> builtins.type[VendorConnectorBase]:
+def get_connector_class(name: str) -> builtins.type[ConnectorBase]:
     """Get a connector class by name.
 
     Args:
@@ -239,7 +239,7 @@ def get_connector_class(name: str) -> builtins.type[VendorConnectorBase]:
     return connectors[name_lower]
 
 
-def get_connector(name: str, **kwargs: Any) -> VendorConnectorBase:
+def get_connector(name: str, **kwargs: Any) -> ConnectorBase:
     """Factory to instantiate a connector by name.
 
     Args:
@@ -267,7 +267,7 @@ def clear_cache() -> None:
     _missing_builtin_connectors.clear()
 
 
-def _get_description(cls: builtins.type[VendorConnectorBase]) -> str | None:
+def _get_description(cls: builtins.type[ConnectorBase]) -> str | None:
     """Get the first useful line from a connector docstring."""
     if not cls.__doc__:
         return None
@@ -278,7 +278,7 @@ def _get_description(cls: builtins.type[VendorConnectorBase]) -> str | None:
     return None
 
 
-def _available_connector_info(name: str, cls: builtins.type[VendorConnectorBase]) -> ConnectorInfo:
+def _available_connector_info(name: str, cls: builtins.type[ConnectorBase]) -> ConnectorInfo:
     """Build metadata for a loadable connector."""
     spec = BUILTIN_CONNECTORS.get(name)
     source = "builtin" if spec else "entry_point"

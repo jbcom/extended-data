@@ -35,7 +35,7 @@ import httpx
 
 from pydantic import BaseModel, Field, ValidationError
 
-from extended_data.connectors.base import VendorConnectorBase
+from extended_data.connectors.base import ConnectorBase
 from extended_data.connectors.google._diagnostics import safe_google_text
 from extended_data.containers import ExtendedDict, ExtendedList, to_builtin
 from extended_data.primitives.redaction import redact_sensitive_data
@@ -130,7 +130,7 @@ class JulesError(Exception):
         self.details = details
 
 
-class JulesConnector(VendorConnectorBase):
+class JulesConnector(ConnectorBase):
     """Connector for Google Jules AI Agent API.
 
     Provides methods to interact with Jules for automated coding tasks.

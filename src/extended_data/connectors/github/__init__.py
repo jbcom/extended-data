@@ -9,7 +9,7 @@ from copy import deepcopy
 from typing import Any
 
 from extended_data.connectors._optional import require_extra
-from extended_data.connectors.base import VendorConnectorBase
+from extended_data.connectors.base import ConnectorBase
 from extended_data.connectors.github._diagnostics import safe_github_ref, safe_github_text
 from extended_data.containers import ExtendedDict, ExtendedList, ExtendedString, ExtendedTuple
 from extended_data.io import (
@@ -81,7 +81,7 @@ def get_github_api_error(exc: BaseException) -> str | None:
 DEFAULT_PER_PAGE = 100
 
 
-class GitHubConnector(VendorConnectorBase):
+class GitHubConnector(ConnectorBase):
     """GitHub connector for repository operations."""
 
     def __init__(

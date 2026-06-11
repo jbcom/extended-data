@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any
 
 from extended_data.connectors._optional import require_extra
-from extended_data.connectors.base import VendorConnectorBase
+from extended_data.connectors.base import ConnectorBase
 from extended_data.containers import ExtendedDict, ExtendedList, ExtendedString
 from extended_data.logging import Logging
 from extended_data.primitives import is_nothing
@@ -69,7 +69,7 @@ def _iter_diagnostic_values(values: Iterable[Any]) -> Iterable[Any]:
             yield value
 
 
-class VaultConnector(VendorConnectorBase):
+class VaultConnector(ConnectorBase):
     """Vault connector with token and AppRole authentication."""
 
     def __init__(

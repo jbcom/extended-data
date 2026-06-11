@@ -252,7 +252,7 @@ collections. `exit_run()` formatting failures also report a redacted result
 snapshot and suppress the internal formatting exception chain so diagnostics do
 not echo raw payload data.
 
-`ConnectorFabric` caches and coordinates vendor connectors while sharing input
+`ConnectorFabric` caches and coordinates registered connectors while sharing input
 loading, logging, data normalization, retry behavior, and serialization.
 `AWSConnector` and `GoogleConnector` are unified connector classes in this
 major version: common S3, Organizations, SSO, Workspace, Cloud Resource
@@ -308,7 +308,7 @@ fields such as `token`, `api_key`, `password`, and `client_secret` before
 storing cache entries, so cache inspection and debug output do not expose raw
 credential material.
 
-Connectors that inherit `VendorConnectorBase` can keep raw transport access with
+Connectors that inherit `ConnectorBase` can keep raw transport access with
 `request()` or use `request_data()`, `get_data()`, `post_data()`, and the other
 verb-specific helpers to decode HTTP JSON, YAML, TOML, HCL, or text responses
 through the same Tier 2 container bridge used by file and input decoding.

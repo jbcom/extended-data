@@ -1,4 +1,4 @@
-"""ConnectorFabric - cached vendor connector access for Extended Data."""
+"""ConnectorFabric - cached connector access for Extended Data."""
 
 from __future__ import annotations
 
@@ -54,7 +54,7 @@ def _cache_safe_value(name: str, value: Any) -> Any:
 
 
 # Optional connectors - imported lazily when methods are called
-# This allows the package to be imported without all vendor SDKs installed
+# This allows the package to be imported without all optional SDKs installed
 
 if TYPE_CHECKING:
     import boto3
@@ -73,7 +73,7 @@ if TYPE_CHECKING:
 class ConnectorFabric(InputProvider):
     """Public API for extended data connectors with client caching.
 
-    This class provides cached access to registered vendor connectors while
+    This class provides cached access to registered connectors while
     sharing input snapshots, lifecycle logging, and data normalization.
 
     Usage:
@@ -134,7 +134,7 @@ class ConnectorFabric(InputProvider):
 
         The connector receives the fabric's shared inputs and logger unless
         explicit values are passed in ``kwargs``. This is the generic path for
-        vendor adapters that are registered through entry points or built-ins.
+        connectors that are registered through entry points or built-ins.
         """
         connector_name = name.strip().lower()
         cache_kwargs = {"name": connector_name, **kwargs}

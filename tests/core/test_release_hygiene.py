@@ -23,6 +23,7 @@ PUBLIC_TEXT_ROOTS = (
     REPO_ROOT / "README.md",
 )
 OLD_PROJECT_TERMS = ("terraform-modules", "TerraformDataSource")
+OLD_PUBLIC_API_NAMES = ("VendorConnectorBase",)
 OLD_PACKAGE_NAMESPACES = (
     "directed_inputs_class",
     "extended_data_types",
@@ -155,7 +156,7 @@ def test_public_text_does_not_reference_old_project_origins() -> None:
         if path.suffix in {".pyc", ".png"}:
             continue
         text = path.read_text(encoding="utf-8")
-        for term in OLD_PROJECT_TERMS:
+        for term in (*OLD_PROJECT_TERMS, *OLD_PUBLIC_API_NAMES):
             if term in text:
                 offenders.append(f"{path.relative_to(REPO_ROOT)}: {term}")
 

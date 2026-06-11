@@ -1,6 +1,6 @@
 """Base class for all extended data connectors.
 
-This module provides VendorConnectorBase - the foundation for ALL connectors
+This module provides ConnectorBase - the foundation for ALL connectors
 in the package connector fabric. It extends InputProvider and provides:
 
 1. Credential loading from env vars, stdin, or direct inputs
@@ -11,9 +11,9 @@ in the package connector fabric. It extends InputProvider and provides:
 ALL connectors should extend this class instead of InputProvider directly.
 
 Usage:
-    from extended_data import ExtendedDict, VendorConnectorBase
+    from extended_data import ExtendedDict, ConnectorBase
 
-    class MyConnector(VendorConnectorBase):
+    class MyConnector(ConnectorBase):
         API_KEY_ENV = "MY_API_KEY"  # Required env var name
         BASE_URL = "https://api.example.com"
 
@@ -79,7 +79,7 @@ class ConnectorAPIError(Exception):
         self.status_code = status_code
 
 
-class VendorConnectorBase(InputProvider, ABC):
+class ConnectorBase(InputProvider, ABC):
     """Base class for all extended data connectors.
 
     Provides:
@@ -114,8 +114,8 @@ class VendorConnectorBase(InputProvider, ABC):
     # Each subclass gets its own lock and timestamp to avoid cross-connector interference.
     # This is intentionally class-level (not instance-level) so all instances of the same
     # connector type share rate limiting, but different connector types are independent.
-    _rate_limit_locks: ClassVar[dict[builtins.type[VendorConnectorBase], threading.Lock]] = {}
-    _last_request_times: ClassVar[dict[builtins.type[VendorConnectorBase], float]] = {}
+    _rate_limit_locks: ClassVar[dict[builtins.type[ConnectorBase], threading.Lock]] = {}
+    _last_request_times: ClassVar[dict[builtins.type[ConnectorBase], float]] = {}
 
     def __init__(
         self,

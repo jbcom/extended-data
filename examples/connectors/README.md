@@ -1,9 +1,9 @@
 # Connector Examples
 
 This directory contains working examples for `extended_data.connectors` and the
-vendor adapters that hang off `ConnectorFabric`.
+registered adapters that hang off `ConnectorFabric`.
 
-Connector examples assume the major-version `extended-data` contract: vendor
+Connector examples assume the major-version `extended-data` contract: external
 data payloads are promoted into Tier 2 containers at connector boundaries.
 Callers can use `ExtendedDict`, `ExtendedList`, and `ExtendedString` methods on
 decoded API, file, and SDK-shaped results, then call `to_builtin()` only when a

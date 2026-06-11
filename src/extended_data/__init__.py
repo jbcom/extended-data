@@ -1,7 +1,7 @@
 """Extended Data.
 
 This package provides Python utilities for structured data primitives, inputs,
-logging, vendor data connectors, and workflow-oriented integrations.
+logging, external data connectors, and workflow-oriented integrations.
 """
 
 from __future__ import annotations
@@ -53,6 +53,7 @@ if TYPE_CHECKING:
     from extended_data.connectors import (
         AnthropicConnector,
         AWSConnector,
+        ConnectorBase,
         ConnectorFabric,
         ConnectorInfo,
         CursorConnector,
@@ -62,7 +63,6 @@ if TYPE_CHECKING:
         MeshyConnector,
         SlackConnector,
         VaultConnector,
-        VendorConnectorBase,
         ZoomConnector,
         get_connector,
         get_connector_class,
@@ -96,7 +96,7 @@ _LAZY_EXPORTS = {
     "SyncOptions": ("extended_data.secrets", "SyncOptions"),
     "SyncResult": ("extended_data.secrets", "SyncResult"),
     "VaultConnector": ("extended_data.connectors", "VaultConnector"),
-    "VendorConnectorBase": ("extended_data.connectors", "VendorConnectorBase"),
+    "ConnectorBase": ("extended_data.connectors", "ConnectorBase"),
     "ZoomConnector": ("extended_data.connectors", "ZoomConnector"),
     "directed_inputs": ("extended_data.inputs", "directed_inputs"),
     "get_connector": ("extended_data.connectors", "get_connector"),
@@ -122,6 +122,7 @@ def __getattr__(name: str) -> Any:
 __all__ = [
     "AWSConnector",
     "AnthropicConnector",
+    "ConnectorBase",
     "ConnectorFabric",
     "ConnectorInfo",
     "CursorConnector",
@@ -150,7 +151,6 @@ __all__ = [
     "SyncOptions",
     "SyncResult",
     "VaultConnector",
-    "VendorConnectorBase",
     "WorkflowAction",
     "WorkflowResult",
     "WorkflowStep",

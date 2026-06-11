@@ -17,7 +17,7 @@ from extended_data.connectors.aws.codedeploy import create_codedeploy_deployment
 from extended_data.connectors.aws.organizations import AWSOrganizationsMixin
 from extended_data.connectors.aws.s3 import AWSS3Mixin
 from extended_data.connectors.aws.sso import AWSSSOmixin
-from extended_data.connectors.base import VendorConnectorBase
+from extended_data.connectors.base import ConnectorBase
 from extended_data.connectors.cursor import CursorConnector
 from extended_data.connectors.github import GitHubConnector
 from extended_data.connectors.google import GoogleConnector
@@ -206,7 +206,7 @@ PAYLOAD_METHODS = (
 
 RAW_CONNECTOR_BOUNDARIES = {
     ("src/extended_data/connectors/ai_tools.py", "build_langchain_tools"),
-    ("src/extended_data/connectors/base.py", "VendorConnectorBase.get_tools"),
+    ("src/extended_data/connectors/base.py", "ConnectorBase.get_tools"),
     ("src/extended_data/connectors/surface.py", "connector_data_methods"),
     ("src/extended_data/connectors/zoom/__init__.py", "ZoomConnector.get_headers"),
 }
@@ -240,26 +240,26 @@ RAW_DATA_SURFACE_METHOD_NAMES = {
 }
 
 RAW_DATA_SURFACE_METHODS = (
-    VendorConnectorBase.close,
-    VendorConnectorBase.decode_response_file,
-    VendorConnectorBase.delete,
-    VendorConnectorBase.delete_data,
-    VendorConnectorBase.download,
-    VendorConnectorBase.extend_result,
-    VendorConnectorBase.get,
-    VendorConnectorBase.get_ai_tool_definitions,
-    VendorConnectorBase.get_data,
-    VendorConnectorBase.get_tools,
-    VendorConnectorBase.handle_ai_tool_call,
-    VendorConnectorBase.patch,
-    VendorConnectorBase.patch_data,
-    VendorConnectorBase.post,
-    VendorConnectorBase.post_data,
-    VendorConnectorBase.put,
-    VendorConnectorBase.put_data,
-    VendorConnectorBase.request,
-    VendorConnectorBase.request_data,
-    VendorConnectorBase.request_data_file,
+    ConnectorBase.close,
+    ConnectorBase.decode_response_file,
+    ConnectorBase.delete,
+    ConnectorBase.delete_data,
+    ConnectorBase.download,
+    ConnectorBase.extend_result,
+    ConnectorBase.get,
+    ConnectorBase.get_ai_tool_definitions,
+    ConnectorBase.get_data,
+    ConnectorBase.get_tools,
+    ConnectorBase.handle_ai_tool_call,
+    ConnectorBase.patch,
+    ConnectorBase.patch_data,
+    ConnectorBase.post,
+    ConnectorBase.post_data,
+    ConnectorBase.put,
+    ConnectorBase.put_data,
+    ConnectorBase.request,
+    ConnectorBase.request_data,
+    ConnectorBase.request_data_file,
     InputProvider.freeze_inputs,
     InputProvider.get_input,
     InputProvider.merge_inputs,

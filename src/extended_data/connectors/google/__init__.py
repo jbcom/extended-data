@@ -6,7 +6,7 @@ from collections.abc import Sequence
 from typing import TYPE_CHECKING, Any, cast
 
 from extended_data.connectors._optional import require_extra
-from extended_data.connectors.base import VendorConnectorBase
+from extended_data.connectors.base import ConnectorBase
 from extended_data.connectors.google.billing import GoogleBillingMixin
 from extended_data.connectors.google.cloud import GoogleCloudMixin
 from extended_data.connectors.google.services import GoogleServicesMixin
@@ -57,7 +57,7 @@ class GoogleConnector(
     GoogleCloudMixin,
     GoogleBillingMixin,
     GoogleServicesMixin,
-    VendorConnectorBase,
+    ConnectorBase,
 ):
     """Google Cloud and Workspace connector.
 
@@ -84,7 +84,7 @@ class GoogleConnector(
             scopes: OAuth scopes to request. Defaults to common scopes.
             subject: Email to impersonate via domain-wide delegation.
             logger: Optional Logging instance.
-            **kwargs: Additional arguments passed to VendorConnectorBase.
+            **kwargs: Additional arguments passed to ConnectorBase.
         """
         super().__init__(logger=logger, **kwargs)
         _load_google_sdk()

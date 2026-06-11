@@ -38,7 +38,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Any
 
-from extended_data.connectors.base import VendorConnectorBase
+from extended_data.connectors.base import ConnectorBase
 from extended_data.containers import ExtendedDict, extend_data, to_builtin
 from extended_data.io import DataFile, wrap_raw_data_for_export
 from extended_data.io.files import decode_file
@@ -140,7 +140,7 @@ class ConfigInfo:
         return extend_data(asdict(self))
 
 
-class SecretsConnector(VendorConnectorBase):
+class SecretsConnector(ConnectorBase):
     """Enterprise-grade SecretSync connector.
 
     This connector wraps the standalone SecretSync project
@@ -168,7 +168,7 @@ class SecretsConnector(VendorConnectorBase):
         Args:
             cli_path: Path to secretsync CLI binary (for CLI mode)
             logger: Logger instance
-            **kwargs: Passed to VendorConnectorBase
+            **kwargs: Passed to ConnectorBase
         """
         super().__init__(logger=logger, **kwargs)
 

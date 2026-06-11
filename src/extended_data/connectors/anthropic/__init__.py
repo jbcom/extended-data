@@ -37,7 +37,7 @@ import httpx
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
-from extended_data.connectors.base import VendorConnectorBase
+from extended_data.connectors.base import ConnectorBase
 from extended_data.containers import ExtendedDict, ExtendedList, extend_data, to_builtin
 from extended_data.logging import Logging
 from extended_data.primitives.redaction import redact_sensitive_text
@@ -198,7 +198,7 @@ class AgentExecutionResult:
 # =============================================================================
 
 
-class AnthropicConnector(VendorConnectorBase):
+class AnthropicConnector(ConnectorBase):
     """Anthropic Claude API connector.
 
     Provides HTTP client access to Anthropic's Claude AI API for message

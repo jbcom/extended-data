@@ -11,13 +11,13 @@ import pytest
 
 from pydantic import BaseModel, Field
 
-from extended_data.connectors.base import ConnectorAPIError, RateLimitError, VendorConnectorBase
+from extended_data.connectors.base import ConnectorAPIError, ConnectorBase, RateLimitError
 from extended_data.containers import ExtendedDict, ExtendedList, ExtendedString
 from extended_data.io import DataFile
 from extended_data.logging import Logging
 
 
-class ExampleConnector(VendorConnectorBase):
+class ExampleConnector(ConnectorBase):
     """Small connector used to exercise the base class."""
 
     BASE_URL = "https://api.example.com"

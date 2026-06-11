@@ -94,9 +94,13 @@ def test_root_lazy_exports_do_not_describe_tier1_primitives() -> None:
 def test_clean_major_version_public_names() -> None:
     """The public surface uses integrated extended-data names."""
     assert inputs.InputProvider.__name__ == "InputProvider"
+    assert connectors.ConnectorBase.__name__ == "ConnectorBase"
     assert connectors.ConnectorFabric is ConnectorFabric
+    assert extended_data.ConnectorBase is connectors.ConnectorBase
     assert not hasattr(inputs, "DirectedInputsClass")
+    assert not hasattr(connectors, "VendorConnectorBase")
     assert not hasattr(connectors, "VendorConnectors")
+    assert not hasattr(extended_data, "VendorConnectorBase")
     assert not hasattr(connectors, "AWSConnectorFull")
     assert not hasattr(connectors, "GoogleConnectorFull")
     assert not hasattr(connectors, "GoogleCloudConnector")
@@ -147,6 +151,7 @@ def test_root_exports_first_class_integrated_surfaces() -> None:
     assert extended_data.DataWorkflow.__name__ == "DataWorkflow"
     assert extended_data.InputProvider is InputProvider
     assert extended_data.Logging is Logging
+    assert extended_data.ConnectorBase is connectors.ConnectorBase
     assert extended_data.ConnectorFabric is ConnectorFabric
     assert extended_data.ConnectorInfo.__name__ == "ConnectorInfo"
     assert extended_data.WorkflowResult.__name__ == "WorkflowResult"

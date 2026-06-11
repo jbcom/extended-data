@@ -24,7 +24,7 @@ else:
 
 
 from extended_data.connectors._optional import require_extra
-from extended_data.connectors.base import VendorConnectorBase
+from extended_data.connectors.base import ConnectorBase
 from extended_data.containers import ExtendedDict, ExtendedList, ExtendedString, extend_data, to_builtin
 from extended_data.io import wrap_raw_data_for_export
 from extended_data.logging import Logging
@@ -204,7 +204,7 @@ def get_rich_text_blocks(
     return extend_data([{"type": "rich_text", "elements": elements}, get_divider()])
 
 
-class SlackConnector(VendorConnectorBase):
+class SlackConnector(ConnectorBase):
     """Slack connector for messaging, directory, and channel management."""
 
     def __init__(
@@ -220,7 +220,7 @@ class SlackConnector(VendorConnectorBase):
             token: Slack user token with directory scopes.
             bot_token: Bot token used for posting messages.
             logger: Optional shared logger instance.
-            **kwargs: Extra keyword arguments forwarded to VendorConnectorBase.
+            **kwargs: Extra keyword arguments forwarded to ConnectorBase.
         """
         super().__init__(logger=logger, **kwargs)
         _load_slack_sdk()

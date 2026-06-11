@@ -9,7 +9,7 @@ from typing import Any
 
 import requests
 
-from extended_data.connectors.base import VendorConnectorBase
+from extended_data.connectors.base import ConnectorBase
 from extended_data.containers import ExtendedDict, ExtendedList, to_builtin
 from extended_data.io.files import decode_file
 from extended_data.logging import Logging
@@ -50,7 +50,7 @@ def _zoom_response_error(action: str, data: Any, *sensitive_values: Any) -> Runt
     return RuntimeError(f"{action}: {_safe_zoom_text(data, *sensitive_values)}")
 
 
-class ZoomConnector(VendorConnectorBase):
+class ZoomConnector(ConnectorBase):
     """Zoom connector for user management."""
 
     def __init__(
