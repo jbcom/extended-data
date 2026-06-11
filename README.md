@@ -37,7 +37,7 @@ CrewAI releases pull vulnerable `chromadb` versions transitively.
 ## Usage
 
 ```python
-from extended_data import ConnectorFabric, DataWorkflow, ExtendedDict, InputProvider, Logging, decode_file
+from extended_data import ConnectorFabric, DataFile, DataWorkflow, ExtendedDict, InputProvider, Logging, decode_file
 from extended_data.primitives import decode_json, encode_yaml, number_to_words, redact_sensitive_text
 
 logger = Logging(logger_name="example")
@@ -46,6 +46,7 @@ connectors = ConnectorFabric(inputs=inputs.inputs, logger=logger)
 data = decode_json('{"status": "ok"}')
 payload = ExtendedDict(data).deep_merge({"source": "example"})
 decoded_file = decode_file('{"service": {"name": "api"}}', suffix="json")
+artifact = DataFile.decode('{"service": {"name": "api"}}', suffix="json")
 workflow = DataWorkflow.from_value(payload).then(("normalize", lambda data: data.unhump())).result()
 
 print(encode_yaml(payload))
@@ -53,6 +54,7 @@ print(decoded_file["service"]["name"].upper_first())
 print(number_to_words(42))
 print(redact_sensitive_text("Authorization: Bearer raw_token"))
 print(redact_sensitive_text("failed for user@example.com", values=["user@example.com"]))
+print(artifact.metadata["encoding"])
 print(workflow.as_builtin())
 ```
 
@@ -229,12 +231,14 @@ Format encoders lower extended containers, including extended mapping keys, at
 the serialization boundary.
 `read_data_file()` is the direct file boundary for one-step read plus decode
 workflows; it raises for missing files and promotes structured data into Tier 2
-containers by default. `DataWorkflow` makes those compositions first-class:
-read or decode data, apply named transformations, write an output artifact, and
-keep the step trail in a `WorkflowResult`. Completed workflow results expose
-detached promoted views with `as_extended()` plus direct `to_export_safe()` and
-`wrap_for_export()` helpers. Missing workflow inputs and empty writes fail
-loudly.
+containers by default. `DataFile` makes one decoded file or URL artifact
+first-class with promoted data, promoted source metadata, detached
+`as_extended()` views, and direct write/export helpers. `DataWorkflow` makes
+multi-step compositions first-class: read or decode data, apply named
+transformations, write an output artifact, and keep the step trail in a
+`WorkflowResult`. Completed workflow results expose detached promoted views
+with `as_extended()` plus direct `to_export_safe()` and `wrap_for_export()`
+helpers. Missing file inputs and empty writes fail loudly.
 `InputProvider` stores its active, frozen, and merged input snapshots as
 `ExtendedDict` values, so direct input-data access can use Tier 2 container
 methods. `snapshot_inputs()` returns detached active or frozen snapshots, and

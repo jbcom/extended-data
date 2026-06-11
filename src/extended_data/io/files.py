@@ -8,6 +8,8 @@ import urllib.request
 
 from base64 import b64encode
 from collections.abc import Mapping
+from copy import deepcopy
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, TypeAlias, cast
 
@@ -15,11 +17,156 @@ import validators
 
 from git import GitCommandError, InvalidGitRepositoryError, NoSuchPathError, Repo
 
+from extended_data.containers import ExtendedDict, ExtendedString, extend_data, to_builtin
+from extended_data.io.exporters import make_raw_data_export_safe, wrap_raw_data_for_export
 from extended_data.primitives.serialization import normalize_data_encoding
 
 
 FilePath: TypeAlias = str | os.PathLike[str]
 """Type alias for file paths that can be represented as strings or os.PathLike objects."""
+
+
+@dataclass(frozen=True, slots=True)
+class DataFile:
+    """Decoded file or URL data with source metadata and export helpers."""
+
+    source: ExtendedString
+    data: Any
+    encoding: ExtendedString
+    path: Path | None = None
+    metadata: ExtendedDict = field(default_factory=ExtendedDict)
+
+    @classmethod
+    def decode(
+        cls,
+        file_data: str | memoryview | bytes | bytearray,
+        *,
+        file_path: FilePath | None = None,
+        suffix: str | None = None,
+        as_extended: bool = True,
+    ) -> DataFile:
+        """Decode in-memory data into a first-class data file artifact."""
+        encoding = _resolve_data_file_encoding(file_path=file_path, suffix=suffix)
+        decoded = decode_file(file_data, file_path=file_path, suffix=encoding, as_extended=as_extended)
+        source = str(file_path) if file_path is not None else "memory"
+        return cls(
+            source=ExtendedString(source),
+            data=decoded,
+            encoding=ExtendedString(encoding),
+            metadata=_data_file_metadata(source=source, encoding=encoding, path=None, data=decoded),
+        )
+
+    @classmethod
+    def read(
+        cls,
+        file_path: FilePath,
+        *,
+        suffix: str | None = None,
+        as_extended: bool = True,
+        charset: str = "utf-8",
+        errors: str = "strict",
+        headers: Mapping[str, str] | None = None,
+        tld: Path | None = None,
+    ) -> DataFile:
+        """Read and decode a local file or URL into a first-class data artifact."""
+        file_data = read_file(
+            file_path,
+            charset=charset,
+            errors=errors,
+            headers=headers,
+            tld=tld,
+        )
+        if file_data is None:
+            raise FileNotFoundError(str(file_path))
+
+        source = str(file_path)
+        encoding = _resolve_data_file_encoding(file_path=file_path, suffix=suffix)
+        decoded = decode_file(
+            cast(str | memoryview | bytes | bytearray, file_data),
+            file_path=file_path,
+            suffix=encoding,
+            as_extended=as_extended,
+        )
+        path = None if is_url(source) else resolve_local_path(file_path, tld=tld)
+        return cls(
+            source=ExtendedString(source),
+            data=decoded,
+            encoding=ExtendedString(encoding),
+            path=path,
+            metadata=_data_file_metadata(source=source, encoding=encoding, path=path, data=decoded),
+        )
+
+    def as_builtin(self) -> Any:
+        """Return the artifact data lowered to built-in Python values."""
+        return to_builtin(self.data)
+
+    def as_extended(self) -> Any:
+        """Return a detached copy of artifact data promoted to Extended Data containers."""
+        return extend_data(deepcopy(to_builtin(self.data)))
+
+    def to_export_safe(self, *, export_to_yaml: bool = False) -> Any:
+        """Return the artifact data converted to export-safe primitive values."""
+        return make_raw_data_export_safe(self.data, export_to_yaml=export_to_yaml)
+
+    def wrap_for_export(self, allow_encoding: bool | str = True, **format_opts: Any) -> str:
+        """Return the artifact data wrapped as an encoded export string."""
+        return wrap_raw_data_for_export(self.data, allow_encoding=allow_encoding, **format_opts)
+
+    def write(
+        self,
+        file_path: FilePath | None = None,
+        *,
+        encoding: str | None = None,
+        charset: str = "utf-8",
+        allow_empty: bool = False,
+        tld: Path | None = None,
+    ) -> DataFile:
+        """Write artifact data and return a new artifact for the output path."""
+        target = file_path if file_path is not None else self.path
+        if target is None:
+            raise ValueError("DataFile has no local path; pass file_path to write it")
+
+        output_path = write_file(
+            target,
+            self.data,
+            encoding=encoding,
+            charset=charset,
+            allow_empty=allow_empty,
+            tld=tld,
+        )
+        if output_path is None:
+            raise ValueError("DataFile data was empty; pass allow_empty=True to write it")
+
+        output_encoding = _resolve_data_file_encoding(file_path=output_path, suffix=encoding)
+        return DataFile(
+            source=ExtendedString(str(target)),
+            data=self.data,
+            encoding=ExtendedString(output_encoding),
+            path=output_path,
+            metadata=_data_file_metadata(source=str(target), encoding=output_encoding, path=output_path, data=self.data),
+        )
+
+
+def _resolve_data_file_encoding(*, file_path: FilePath | None = None, suffix: str | None = None) -> str:
+    """Return the normalized encoding used by a DataFile artifact."""
+    if suffix is not None:
+        return normalize_data_encoding(suffix) or "raw"
+    if file_path is not None:
+        return get_encoding_for_file_path(file_path)
+    return "raw"
+
+
+def _data_file_metadata(*, source: str, encoding: str, path: Path | None, data: Any) -> ExtendedDict:
+    """Return promoted artifact metadata for workflow and connector handoff."""
+    return ExtendedDict(
+        {
+            "source": source,
+            "encoding": encoding,
+            "path": str(path) if path is not None else None,
+            "is_url": is_url(source),
+            "data_type": type(data).__name__,
+        }
+    )
 
 
 def _github_auth_header_env(github_token: str) -> dict[str, str]:

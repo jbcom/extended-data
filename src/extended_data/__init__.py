@@ -26,6 +26,7 @@ from extended_data.io.exporters import (
     wrap_raw_data_for_export,
 )
 from extended_data.io.files import (
+    DataFile,
     FilePath,
     clone_repository_to_temp,
     decode_file,
@@ -125,6 +126,7 @@ __all__ = [
     "ConnectorInfo",
     "CursorConnector",
     "DataDecodeError",
+    "DataFile",
     "DataWorkflow",
     "ExitRunError",
     "ExtendedDict",

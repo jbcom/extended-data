@@ -143,6 +143,7 @@ def test_old_monorepo_import_namespaces_are_not_preserved() -> None:
 def test_root_exports_first_class_integrated_surfaces() -> None:
     """Inputs, logging, and connector fabric are available from the root package."""
     assert extended_data.DataDecodeError.__name__ == "DataDecodeError"
+    assert extended_data.DataFile.__name__ == "DataFile"
     assert extended_data.DataWorkflow.__name__ == "DataWorkflow"
     assert extended_data.InputProvider is InputProvider
     assert extended_data.Logging is Logging

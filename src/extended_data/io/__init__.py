@@ -3,6 +3,7 @@
 from extended_data.io.base64 import base64_decode, base64_encode
 from extended_data.io.exporters import make_raw_data_export_safe, wrap_raw_data_for_export
 from extended_data.io.files import (
+    DataFile,
     FilePath,
     clone_repository_to_temp,
     decode_file,
@@ -24,6 +25,7 @@ from extended_data.io.importers import unwrap_raw_data_from_import
 
 
 __all__ = [
+    "DataFile",
     "FilePath",
     "base64_decode",
     "base64_encode",

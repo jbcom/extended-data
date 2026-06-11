@@ -27,6 +27,7 @@ from git import GitCommandError, InvalidGitRepositoryError, NoSuchPathError, Rep
 
 from extended_data.containers import ExtendedDict, ExtendedList, ExtendedString
 from extended_data.io.files import (
+    DataFile,
     FilePath,
     clone_repository_to_temp,
     decode_file,
@@ -573,6 +574,63 @@ def test_read_data_file_raises_for_missing_file(tmp_path: Path) -> None:
     """Missing data-file reads fail loudly."""
     with pytest.raises(FileNotFoundError, match=r"missing\.json"):
         read_data_file("missing.json", tld=tmp_path)
+
+
+def test_data_file_read_promotes_data_and_metadata(tmp_path: Path) -> None:
+    """DataFile reads keep file data and source metadata in the promoted surface."""
+    test_file = tmp_path / "service.json"
+    test_file.write_text('{"service": {"name": "api"}, "ports": [8080]}')
+
+    artifact = DataFile.read("service.json", tld=tmp_path)
+
+    assert artifact.source == "service.json"
+    assert artifact.encoding == "json"
+    assert artifact.path == test_file.resolve()
+    assert isinstance(artifact.data, ExtendedDict)
+    assert isinstance(artifact.data["service"], ExtendedDict)
+    assert isinstance(artifact.data["service"]["name"], ExtendedString)
+    assert isinstance(artifact.metadata, ExtendedDict)
+    assert artifact.metadata["encoding"].upper_first() == "Json"
+    assert artifact.metadata["path"] == str(test_file.resolve())
+    assert artifact.metadata["is_url"] is False
+    assert artifact.as_builtin() == {"service": {"name": "api"}, "ports": [8080]}
+
+
+def test_data_file_extended_view_is_detached() -> None:
+    """DataFile promoted views should not share mutable state with artifact data."""
+    artifact = DataFile.decode('{"service": {"name": "api"}}', suffix="json")
+
+    promoted = artifact.as_extended()
+    promoted["service"]["name"] = "worker"
+
+    assert isinstance(promoted, ExtendedDict)
+    assert artifact.data["service"]["name"] == "api"
+    assert artifact.as_extended()["service"]["name"].upper_first() == "Api"
+
+
+def test_data_file_decode_and_write_round_trip(tmp_path: Path) -> None:
+    """DataFile composes decode, export, write, and readback as a Tier 3 artifact."""
+    artifact = DataFile.decode('{"service": {"name": "api"}}', suffix="json")
+
+    assert isinstance(artifact.data, ExtendedDict)
+    assert artifact.source == "memory"
+    assert artifact.encoding == "json"
+    assert artifact.wrap_for_export(allow_encoding="json").strip().startswith("{")
+
+    output = artifact.write("build/service.yaml", tld=tmp_path)
+
+    assert output.path == tmp_path / "build" / "service.yaml"
+    assert output.encoding == "yaml"
+    assert isinstance(output.metadata["source"], ExtendedString)
+    assert read_data_file(output.path) == {"service": {"name": "api"}}
+
+
+def test_data_file_write_without_local_target_fails_loudly() -> None:
+    """In-memory DataFile artifacts require an explicit output path."""
+    artifact = DataFile.decode("plain text", suffix="raw")
+
+    with pytest.raises(ValueError, match="pass file_path"):
+        artifact.write()
 
 
 def test_write_file_json(tmp_path: Path) -> None:

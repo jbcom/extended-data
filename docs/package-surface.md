@@ -12,6 +12,7 @@ preserved in this major version.
 from extended_data import (
     ConnectorFabric,
     DataDecodeError,
+    DataFile,
     DataWorkflow,
     ExtendedDict,
     ExtendedList,
@@ -147,12 +148,14 @@ Tier 3 file and decode surfaces promote decoded values into Tier 2 containers
 by default:
 
 ```python
-from extended_data import decode_file, read_data_file
+from extended_data import DataFile, decode_file, read_data_file
 
 payload = decode_file('{"service": {"name": "api"}}', suffix="json")
 file_payload = read_data_file("config/service.json")
+artifact = DataFile.decode('{"service": {"name": "api"}}', suffix="json")
 assert payload["service"]["name"].upper_first() == "Api"
 assert file_payload["service"]["name"].upper_first() == "Api"
+assert artifact.metadata["encoding"].upper_first() == "Json"
 ```
 
 Pass `as_extended=False` when a decode boundary should return standard Python
@@ -164,6 +167,12 @@ lists.
 Format encoders lower Tier 2 containers the same way before serializing JSON,
 YAML, TOML, and HCL output, including extended mapping keys that must become
 plain strings before JSON handoff.
+
+`DataFile` is the Tier 3 artifact surface for one decoded file, URL, or
+in-memory payload. It keeps `source`, `encoding`, and source metadata promoted,
+returns decoded `data` as Tier 2 containers by default, exposes detached
+`as_extended()` views, and writes output artifacts through the same export
+boundary as `write_file()`.
 
 `DataWorkflow` is the Tier 3 composition surface for higher-order data
 processing. It reads or decodes structured data through the file and format
