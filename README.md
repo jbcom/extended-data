@@ -240,9 +240,11 @@ first-class with promoted data, promoted source metadata, detached
 for artifact-first processing. `DataWorkflow` makes multi-step compositions
 first-class: read, decode, or accept a `DataFile` artifact, apply named
 transformations, write an output artifact, and keep the step trail in a
-`WorkflowResult`. Completed workflow results expose detached promoted views with
-`as_extended()` plus direct `to_export_safe()` and `wrap_for_export()` helpers.
-Missing file inputs and empty writes fail loudly.
+`WorkflowResult`. Workflow metadata is promoted and preserved across
+transformations, lowering/promoting, and writes, so file and API provenance can
+stay with the result. Completed workflow results expose detached promoted views
+with `as_extended()` plus direct `to_export_safe()` and `wrap_for_export()`
+helpers. Missing file inputs and empty writes fail loudly.
 `InputProvider` stores its active, frozen, and merged input snapshots as
 `ExtendedDict` values, so direct input-data access can use Tier 2 container
 methods. `snapshot_inputs()` returns detached active or frozen snapshots, and

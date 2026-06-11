@@ -97,8 +97,10 @@ def test_data_workflow_starts_from_data_file_artifact() -> None:
 
     assert workflow.steps == ("data_file:memory", "project-name")
     assert isinstance(workflow.value, ExtendedDict)
+    assert workflow.metadata["status_code"] == 200
     assert result.value["name"].upper_first() == "Api"
-    assert artifact.metadata["status_code"] == 200
+    assert result.metadata["status_code"] == 200
+    assert result.metadata["source"] == "memory"
 
 
 def test_data_workflow_from_data_file_can_return_builtin_state() -> None:
@@ -110,6 +112,40 @@ def test_data_workflow_from_data_file_can_return_builtin_state() -> None:
     assert workflow.steps == ("data_file:memory",)
     assert isinstance(workflow.value, dict)
     assert not isinstance(workflow.value, ExtendedDict)
+    assert workflow.metadata["encoding"] == "json"
+
+
+def test_data_workflow_metadata_survives_state_transitions(tmp_path: Path) -> None:
+    """Workflow metadata should stay promoted through transforms, lowering, and writes."""
+    write_file("config/service.json", {"service": {"name": "api"}}, tld=tmp_path)
+
+    workflow = (
+        DataWorkflow.from_file("config/service.json", tld=tmp_path)
+        .then(("project", lambda data: {"name": data["service"]["name"]}))
+        .as_builtin()
+        .as_extended()
+    )
+    result = workflow.write("build/service.json", tld=tmp_path)
+
+    assert workflow.metadata["source"] == "config/service.json"
+    assert workflow.metadata["encoding"] == "json"
+    assert workflow.metadata["path"] == str((tmp_path / "config" / "service.json").resolve())
+    assert result.metadata == workflow.metadata
+    assert result.output_path == tmp_path / "build" / "service.json"
+
+
+def test_workflow_metadata_views_are_detached() -> None:
+    """Workflow and result metadata accessors should not expose mutable internals."""
+    workflow = DataWorkflow.from_value({"service": "api"}, metadata={"source": {"name": "payload"}})
+    result = workflow.result()
+
+    workflow_metadata = workflow.metadata
+    result_metadata = result.metadata
+    workflow_metadata["source"]["name"] = "mutated"
+    result_metadata["source"]["name"] = "also-mutated"
+
+    assert workflow.metadata["source"]["name"] == "payload"
+    assert result.metadata["source"]["name"] == "payload"
 
 
 def test_data_workflow_preserves_extended_policy_after_file_decode(tmp_path: Path) -> None:

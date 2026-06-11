@@ -179,10 +179,12 @@ processing. It reads or decodes structured data through the file and format
 processors, accepts `DataFile` artifacts with `from_data_file()`, promotes
 values into Tier 2 containers by default, applies named transformation steps,
 writes output artifacts, and returns a `WorkflowResult` with the completed
-value, output path, and step trail. `WorkflowResult.as_extended()` returns a
-detached promoted view of the completed value, and result-level
-`to_export_safe()` / `wrap_for_export()` expose the same export boundary used by
-Tier 2 containers.
+value, output path, step trail, and promoted metadata. Workflow metadata is
+preserved across `then()`, `run()`, `as_builtin()`, `as_extended()`, and
+`write()`, so file and API provenance from `DataFile` artifacts remains attached
+to the result. `WorkflowResult.as_extended()` returns a detached promoted view
+of the completed value, and result-level `to_export_safe()` /
+`wrap_for_export()` expose the same export boundary used by Tier 2 containers.
 
 ```python
 from extended_data import DataWorkflow
@@ -195,6 +197,7 @@ result = (
 )
 
 assert result.steps == ("read:config/base.yaml", "merge-env", "write:build/config.yaml")
+assert result.metadata["source"] == "config/base.yaml"
 assert result.as_extended()["service"]["name"].upper_first() == "Api"
 assert result.to_export_safe()["service"]["name"] == "api"
 ```

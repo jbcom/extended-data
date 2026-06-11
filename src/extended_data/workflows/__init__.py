@@ -2,15 +2,15 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable, Iterable
+from collections.abc import Callable, Iterable, Mapping
 from copy import deepcopy
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, TypeAlias
 
-from extended_data.containers import extend_data, to_builtin
+from extended_data.containers import ExtendedDict, extend_data, to_builtin
 from extended_data.io.exporters import make_raw_data_export_safe, wrap_raw_data_for_export
-from extended_data.io.files import DataFile, FilePath, decode_file, read_data_file, write_file
+from extended_data.io.files import DataFile, FilePath, write_file
 
 
 WorkflowAction: TypeAlias = Callable[[Any], Any]
@@ -29,13 +29,32 @@ class WorkflowStep:
         return self.action(value)
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True, slots=True, init=False)
 class WorkflowResult:
     """The completed value and audit trail for a data workflow."""
 
     value: Any
-    steps: tuple[str, ...] = ()
-    output_path: Path | None = None
+    steps: tuple[str, ...]
+    output_path: Path | None
+    _metadata: ExtendedDict = field(repr=False)
+
+    def __init__(
+        self,
+        value: Any,
+        steps: Iterable[str] = (),
+        output_path: Path | None = None,
+        metadata: Mapping[str, Any] | None = None,
+    ) -> None:
+        """Store workflow metadata as promoted detached data."""
+        object.__setattr__(self, "value", value)
+        object.__setattr__(self, "steps", tuple(steps))
+        object.__setattr__(self, "output_path", output_path)
+        object.__setattr__(self, "_metadata", ExtendedDict(metadata or {}))
+
+    @property
+    def metadata(self) -> ExtendedDict:
+        """Return a detached promoted copy of workflow metadata."""
+        return ExtendedDict(to_builtin(self._metadata))
 
     def as_builtin(self) -> Any:
         """Return the workflow value lowered to built-in Python containers."""
@@ -63,11 +82,13 @@ class DataWorkflow:
         *,
         steps: Iterable[str] = (),
         as_extended: bool = True,
+        metadata: Mapping[str, Any] | None = None,
     ) -> None:
         """Create a workflow from an existing value."""
         self._value = extend_data(value) if as_extended else value
         self._steps = tuple(steps)
         self._as_extended = as_extended
+        self._metadata = ExtendedDict(metadata or {})
 
     @property
     def value(self) -> Any:
@@ -79,16 +100,32 @@ class DataWorkflow:
         """Return the names of executed workflow steps."""
         return self._steps
 
+    @property
+    def metadata(self) -> ExtendedDict:
+        """Return a detached promoted copy of workflow metadata."""
+        return ExtendedDict(to_builtin(self._metadata))
+
     @classmethod
-    def from_value(cls, value: Any, *, as_extended: bool = True) -> DataWorkflow:
+    def from_value(
+        cls,
+        value: Any,
+        *,
+        as_extended: bool = True,
+        metadata: Mapping[str, Any] | None = None,
+    ) -> DataWorkflow:
         """Start a workflow from an in-memory value."""
-        return cls(value, steps=("value",), as_extended=as_extended)
+        return cls(value, steps=("value",), as_extended=as_extended, metadata=metadata)
 
     @classmethod
     def from_data_file(cls, artifact: DataFile, *, as_extended: bool = True) -> DataWorkflow:
         """Start a workflow from a decoded DataFile artifact."""
         value = artifact.as_extended() if as_extended else artifact.as_builtin()
-        return cls(value, steps=(f"data_file:{artifact.source}",), as_extended=as_extended)
+        return cls(
+            value,
+            steps=(f"data_file:{artifact.source}",),
+            as_extended=as_extended,
+            metadata=artifact.metadata,
+        )
 
     @classmethod
     def decode(
@@ -98,10 +135,22 @@ class DataWorkflow:
         file_path: FilePath | None = None,
         suffix: str | None = None,
         as_extended: bool = True,
+        metadata: Mapping[str, Any] | None = None,
     ) -> DataWorkflow:
         """Start a workflow by decoding structured text or bytes."""
-        decoded = decode_file(file_data, file_path=file_path, suffix=suffix, as_extended=as_extended)
-        return cls(decoded, steps=(_decode_step_name(file_path=file_path, suffix=suffix),), as_extended=as_extended)
+        artifact = DataFile.decode(
+            file_data,
+            file_path=file_path,
+            suffix=suffix,
+            as_extended=as_extended,
+            metadata=metadata,
+        )
+        return cls(
+            artifact.data,
+            steps=(_decode_step_name(file_path=file_path, suffix=suffix),),
+            as_extended=as_extended,
+            metadata=artifact.metadata,
+        )
 
     @classmethod
     def from_file(
@@ -115,7 +164,7 @@ class DataWorkflow:
         tld: Path | None = None,
     ) -> DataWorkflow:
         """Read and decode a local file or URL into a workflow."""
-        decoded = read_data_file(
+        artifact = DataFile.read(
             file_path,
             suffix=suffix,
             as_extended=as_extended,
@@ -123,7 +172,12 @@ class DataWorkflow:
             errors=errors,
             tld=tld,
         )
-        return cls(decoded, steps=(f"read:{file_path}",), as_extended=as_extended)
+        return cls(
+            artifact.data,
+            steps=(f"read:{file_path}",),
+            as_extended=as_extended,
+            metadata=artifact.metadata,
+        )
 
     def then(
         self,
@@ -142,6 +196,7 @@ class DataWorkflow:
             next_value,
             steps=(*self._steps, workflow_step.name),
             as_extended=should_extend,
+            metadata=self._metadata,
         )
 
     def run(self, *steps: StepLike, as_extended: bool | None = None) -> DataWorkflow:
@@ -153,15 +208,25 @@ class DataWorkflow:
 
     def as_builtin(self) -> DataWorkflow:
         """Return the next workflow state with built-in Python containers."""
-        return DataWorkflow(to_builtin(self._value), steps=(*self._steps, "to_builtin"), as_extended=False)
+        return DataWorkflow(
+            to_builtin(self._value),
+            steps=(*self._steps, "to_builtin"),
+            as_extended=False,
+            metadata=self._metadata,
+        )
 
     def as_extended(self) -> DataWorkflow:
         """Return the next workflow state with Extended Data containers."""
-        return DataWorkflow(extend_data(self._value), steps=(*self._steps, "as_extended"), as_extended=True)
+        return DataWorkflow(
+            extend_data(self._value),
+            steps=(*self._steps, "as_extended"),
+            as_extended=True,
+            metadata=self._metadata,
+        )
 
     def result(self) -> WorkflowResult:
         """Return a completed workflow result without writing an output artifact."""
-        return WorkflowResult(value=self._value, steps=self._steps)
+        return WorkflowResult(value=self._value, steps=self._steps, metadata=self.metadata)
 
     def write(
         self,
@@ -190,6 +255,7 @@ class DataWorkflow:
             value=self._value,
             steps=(*self._steps, f"write:{file_path}"),
             output_path=output_path,
+            metadata=self.metadata,
         )
 
 
