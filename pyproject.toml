@@ -87,19 +87,20 @@ meshy = [
 secrets = ["pyyaml>=6.0.3"]
 langchain = [
     "langchain-core>=1.3.0",
-    "langsmith>=0.7.33",
+    "langsmith>=0.8.18",
 ]
 strands = ["strands-agents>=1.36.0"]
 mcp = ["mcp>=1.26.0,<1.27.dev0"]
 ai = [
     "langchain-core>=1.3.0",
-    "langsmith>=0.7.33",
+    "langsmith>=0.8.18",
     "mcp>=1.26.0,<1.27.dev0",
     "strands-agents>=1.36.0",
 ]
 webhooks = [
     "fastapi>=0.136.0",
     "pyngrok>=8.0.0",
+    "starlette>=1.3.1",
     "uvicorn>=0.45.0",
 ]
 vector = [
@@ -135,7 +136,7 @@ all = [
     "google-cloud-resource-manager>=1.17.0",
     "hvac>=2.4.0",
     "langchain-core>=1.3.0",
-    "langsmith>=0.7.33",
+    "langsmith>=0.8.18",
     "mcp>=1.26.0,<1.27.dev0",
     "numpy>=2.2.6",
     "PyGithub>=2.9.1",
@@ -145,6 +146,7 @@ all = [
     "rich>=13.7.0,<15.0.0",
     "slack-sdk>=3.41.0",
     "sqlite-vec>=0.1.9",
+    "starlette>=1.3.1",
     "strands-agents>=1.36.0",
     "uvicorn>=0.45.0",
     "validators>=0.35.0",
