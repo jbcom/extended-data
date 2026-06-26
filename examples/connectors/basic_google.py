@@ -17,6 +17,8 @@ from __future__ import annotations
 import os
 import sys
 
+from extended_data import ConnectorFabric
+
 
 def main() -> int:
     """Demonstrate Google connector usage."""
@@ -25,14 +27,16 @@ def main() -> int:
         print("Error: GOOGLE_SERVICE_ACCOUNT environment variable is required.")
         return 1
 
-    try:
-        from extended_data.connectors import GoogleConnector
-    except ImportError:
-        print("Error: Could not import extended_data.connectors. Install with: pip install extended-data[google]")
+    fabric = ConnectorFabric()
+    info = fabric.get_connector_info("google")
+    if not info["available"]:
+        print(f"Error: Google connector is unavailable. Install with: {info['install']}")
+        if info["missing"]:
+            print(f"Missing packages: {', '.join(info['missing'])}")
         return 1
 
     print("Creating Google connector...")
-    connector = GoogleConnector()
+    connector = fabric.get_connector("google")
     print("Google connector created successfully.")
 
     # List projects

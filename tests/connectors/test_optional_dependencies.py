@@ -25,11 +25,49 @@ def test_builtin_connector_metadata_maps_stay_aligned() -> None:
 
     assert names == set(_optional.CONNECTOR_REQUIREMENTS)
     assert names == set(_optional.CONNECTOR_EXTRAS)
+    assert names == set(registry.BUILTIN_CONNECTOR_ADAPTERS)
 
     for name, spec in registry.BUILTIN_CONNECTORS.items():
+        adapter = registry.BUILTIN_CONNECTOR_ADAPTERS[name]
         extra = _optional.get_extra_for_connector(name)
+        assert isinstance(adapter, registry.ConnectorAdapter)
+        assert adapter.name == name
+        assert adapter.spec == spec
         assert isinstance(extra, ExtendedString)
         assert extra == spec.extra
+
+
+def test_builtin_adapter_reports_unavailable_metadata_without_raising(monkeypatch) -> None:
+    """Missing optional packages should be discoverable as metadata."""
+    monkeypatch.setattr(
+        registry,
+        "get_missing_connector_requirements",
+        lambda name: ExtendedList(["boto3"]) if name == "aws" else ExtendedList(),
+    )
+
+    adapter = registry.get_connector_adapter(" aws ")
+    info = adapter.as_dict()
+
+    assert isinstance(adapter, registry.ConnectorAdapter)
+    assert info["name"] == "aws"
+    assert info["available"] is False
+    assert info["extra"] == "aws"
+    assert info["install"] == "pip install extended-data[aws]"
+    assert info["missing"] == ["boto3"]
+
+
+def test_unavailable_adapter_raises_central_install_error_when_constructed(monkeypatch) -> None:
+    """Construction failures should come from the adapter registry."""
+    monkeypatch.setattr(
+        registry,
+        "get_missing_connector_requirements",
+        lambda name: ExtendedList(["boto3"]) if name == "aws" else ExtendedList(),
+    )
+
+    with pytest.raises(ImportError, match=r"extended-data\[aws\]") as exc_info:
+        registry.get_connector_adapter("aws", include_unavailable=False)
+
+    assert "Missing packages: boto3" in str(exc_info.value)
 
 
 def test_connector_optional_metadata_returns_extended_values(monkeypatch) -> None:

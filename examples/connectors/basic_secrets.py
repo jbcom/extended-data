@@ -18,17 +18,21 @@ import sys
 
 from pathlib import Path
 
+from extended_data import ConnectorFabric, OutputFormat, SyncOptions
+
 
 def main() -> int:
     """Inspect a SecretSync pipeline config and run a dry-run through the CLI contract."""
-    try:
-        from extended_data import OutputFormat, SecretsConnector, SyncOptions
-    except ImportError:
-        print("Error: Could not import SecretSync support. Install with: pip install extended-data[secrets]")
+    fabric = ConnectorFabric()
+    info = fabric.get_connector_info("secrets")
+    if not info["available"]:
+        print(f"Error: SecretSync connector is unavailable. Install with: {info['install']}")
+        if info["missing"]:
+            print(f"Missing packages: {', '.join(info['missing'])}")
         return 1
 
     config_path = Path(sys.argv[1] if len(sys.argv) > 1 else "pipeline.yaml")
-    connector = SecretsConnector()
+    connector = fabric.get_connector("secrets")
 
     print(f"Inspecting SecretSync config: {config_path}")
     config_info = connector.get_config_info(str(config_path))

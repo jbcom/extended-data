@@ -47,6 +47,7 @@ operations/inputs
 operations/logging
 integrations/connectors
 integrations/secrets
+examples/index
 publishing
 PUBLISHING_CHECKLIST
 package-surface

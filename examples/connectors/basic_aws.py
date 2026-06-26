@@ -18,6 +18,8 @@ from __future__ import annotations
 import os
 import sys
 
+from extended_data import ConnectorFabric
+
 
 def main() -> int:
     """Demonstrate AWS connector usage."""
@@ -26,14 +28,16 @@ def main() -> int:
         print("Error: AWS_ACCESS_KEY_ID environment variable is required.")
         return 1
 
-    try:
-        from extended_data.connectors import AWSConnector
-    except ImportError:
-        print("Error: Could not import extended_data.connectors. Install with: pip install extended-data[aws]")
+    fabric = ConnectorFabric()
+    info = fabric.get_connector_info("aws")
+    if not info["available"]:
+        print(f"Error: AWS connector is unavailable. Install with: {info['install']}")
+        if info["missing"]:
+            print(f"Missing packages: {', '.join(info['missing'])}")
         return 1
 
     print("Creating AWS connector...")
-    connector = AWSConnector()
+    connector = fabric.get_connector("aws")
     print("AWS connector created successfully.")
 
     # List S3 buckets

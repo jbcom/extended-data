@@ -4,11 +4,13 @@ from __future__ import annotations
 
 import hashlib
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 # Import zoom directly (no extra deps)
 from extended_data.connectors.base import ConnectorBase
 from extended_data.connectors.registry import (
+    ConnectorAdapter,
+    get_connector_adapter,
     get_connector_class,
 )
 from extended_data.connectors.registry import (
@@ -175,6 +177,10 @@ class ConnectorFabric(InputProvider):
         """Get catalog metadata for one connector."""
         return get_registered_connector_info(name, include_unavailable=include_unavailable)
 
+    def get_connector_adapter(self, name: str, *, include_unavailable: bool = True) -> ConnectorAdapter:
+        """Get the adapter registry entry for one connector."""
+        return get_connector_adapter(name, include_unavailable=include_unavailable)
+
     def get_connector(self, name: str, **kwargs: Any) -> ConnectorBase:
         """Get a cached connector instance by registry name.
 
@@ -209,25 +215,9 @@ class ConnectorFabric(InputProvider):
 
         Requires: pip install extended-data[aws]
         """
-        try:
-            from extended_data.connectors.aws import AWSConnector
-        except ImportError as e:
-            msg = "AWS connector requires boto3. Install with: pip install extended-data[aws]"
-            raise ImportError(msg) from e
-
         execution_role_arn = execution_role_arn or self.get_input("EXECUTION_ROLE_ARN", required=False)
-
-        cached = self._get_cached_client("aws_connector", execution_role_arn=execution_role_arn)
-        if cached:
-            return cached
-
-        connector = AWSConnector(
-            execution_role_arn=execution_role_arn,
-            logger=self.logging,
-            inputs=self.inputs,
-        )
-        self._set_cached_client("aws_connector", connector, execution_role_arn=execution_role_arn)
-        return connector
+        connector = self.get_connector("aws", execution_role_arn=execution_role_arn)
+        return cast("AWSConnector", connector)
 
     def get_aws_client(
         self,
@@ -350,44 +340,19 @@ class ConnectorFabric(InputProvider):
 
         Requires: pip install extended-data[github]
         """
-        try:
-            from extended_data.connectors.github import GitHubConnector
-        except ImportError as e:
-            msg = "GitHub connector requires PyGithub. Install with: pip install extended-data[github]"
-            raise ImportError(msg) from e
-
         github_owner = github_owner or self.get_input("GITHUB_OWNER", required=True)
         github_repo = github_repo or self.get_input("GITHUB_REPO", required=False)
         github_branch = github_branch or self.get_input("GITHUB_BRANCH", required=False)
         github_token = github_token or self.get_input("GITHUB_TOKEN", required=True)
 
-        cached = self._get_cached_client(
+        connector = self.get_connector(
             "github",
             github_owner=github_owner,
             github_repo=github_repo,
             github_branch=github_branch,
             github_token=github_token,
         )
-        if cached:
-            return cached
-
-        connector = GitHubConnector(
-            github_owner=github_owner,
-            github_repo=github_repo,
-            github_branch=github_branch,
-            github_token=github_token,
-            logger=self.logging,
-            inputs=self.inputs,
-        )
-        self._set_cached_client(
-            "github",
-            connector,
-            github_owner=github_owner,
-            github_repo=github_repo,
-            github_branch=github_branch,
-            github_token=github_token,
-        )
-        return connector
+        return cast("GitHubConnector", connector)
 
     # -------------------------------------------------------------------------
     # Google
@@ -403,46 +368,14 @@ class ConnectorFabric(InputProvider):
 
         Requires: pip install extended-data[google]
         """
-        try:
-            from extended_data.connectors.google import GoogleConnector
-        except ImportError as e:
-            msg = (
-                "Google connector requires google-api-python-client. "
-                "Install with: pip install extended-data[google]"
-            )
-            raise ImportError(msg) from e
-
         service_account_info = service_account_info or self.get_input("GOOGLE_SERVICE_ACCOUNT", required=True)
-
-        # For caching, use a hash to avoid exposing sensitive data
-        cache_sa = hashlib.sha256(str(service_account_info).encode()).hexdigest()[:16] if service_account_info else None
-
-        cache_scopes = tuple(scopes) if scopes else None
-
-        cached = self._get_cached_client(
+        connector = self.get_connector(
             "google",
-            service_account=cache_sa,
-            scopes=cache_scopes,
-            subject=subject,
-        )
-        if cached:
-            return cached
-
-        connector = GoogleConnector(
             service_account_info=service_account_info,
             scopes=scopes,
             subject=subject,
-            logger=self.logging,
-            inputs=self.inputs,
         )
-        self._set_cached_client(
-            "google",
-            connector,
-            service_account=cache_sa,
-            scopes=cache_scopes,
-            subject=subject,
-        )
-        return connector
+        return cast("GoogleConnector", connector)
 
     # -------------------------------------------------------------------------
     # Slack
@@ -457,27 +390,11 @@ class ConnectorFabric(InputProvider):
 
         Requires: pip install extended-data[slack]
         """
-        try:
-            from extended_data.connectors.slack import SlackConnector
-        except ImportError as e:
-            msg = "Slack connector requires slack_sdk. Install with: pip install extended-data[slack]"
-            raise ImportError(msg) from e
-
         token = token or self.get_input("SLACK_TOKEN", required=True)
         bot_token = bot_token or self.get_input("SLACK_BOT_TOKEN", required=True)
 
-        cached = self._get_cached_client("slack", token=token, bot_token=bot_token)
-        if cached:
-            return cached
-
-        connector = SlackConnector(
-            token=token,
-            bot_token=bot_token,
-            logger=self.logging,
-            inputs=self.inputs,
-        )
-        self._set_cached_client("slack", connector, token=token, bot_token=bot_token)
-        return connector
+        connector = self.get_connector("slack", token=token, bot_token=bot_token)
+        return cast("SlackConnector", connector)
 
     # -------------------------------------------------------------------------
     # Vault
@@ -493,41 +410,20 @@ class ConnectorFabric(InputProvider):
 
         Requires: pip install extended-data[vault]
         """
-        try:
-            from extended_data.connectors.vault import VaultConnector
-        except ImportError as e:
-            msg = "Vault connector requires hvac. Install with: pip install extended-data[vault]"
-            raise ImportError(msg) from e
-
         vault_url = vault_url or self.get_input("VAULT_ADDR", required=False)
         vault_namespace = vault_namespace or self.get_input("VAULT_NAMESPACE", required=False)
         vault_token = vault_token or self.get_input("VAULT_TOKEN", required=False)
 
-        cached = self._get_cached_client(
-            "vault",
-            vault_url=vault_url,
-            vault_namespace=vault_namespace,
-            vault_token=vault_token,
+        connector = cast(
+            "VaultConnector",
+            self.get_connector(
+                "vault",
+                vault_url=vault_url,
+                vault_namespace=vault_namespace,
+                vault_token=vault_token,
+            ),
         )
-        if cached:
-            return cached
-
-        connector = VaultConnector(
-            vault_url=vault_url,
-            vault_namespace=vault_namespace,
-            vault_token=vault_token,
-            logger=self.logging,
-            inputs=self.inputs,
-        )
-        client = connector.vault_client
-        self._set_cached_client(
-            "vault",
-            client,
-            vault_url=vault_url,
-            vault_namespace=vault_namespace,
-            vault_token=vault_token,
-        )
-        return client
+        return connector.vault_client
 
     def get_vault_connector(
         self,
@@ -539,40 +435,17 @@ class ConnectorFabric(InputProvider):
 
         Requires: pip install extended-data[vault]
         """
-        try:
-            from extended_data.connectors.vault import VaultConnector
-        except ImportError as e:
-            msg = "Vault connector requires hvac. Install with: pip install extended-data[vault]"
-            raise ImportError(msg) from e
-
         vault_url = vault_url or self.get_input("VAULT_ADDR", required=False)
         vault_namespace = vault_namespace or self.get_input("VAULT_NAMESPACE", required=False)
         vault_token = vault_token or self.get_input("VAULT_TOKEN", required=False)
 
-        cached = self._get_cached_client(
-            "vault_connector",
+        connector = self.get_connector(
+            "vault",
             vault_url=vault_url,
             vault_namespace=vault_namespace,
             vault_token=vault_token,
         )
-        if cached:
-            return cached
-
-        connector = VaultConnector(
-            vault_url=vault_url,
-            vault_namespace=vault_namespace,
-            vault_token=vault_token,
-            logger=self.logging,
-            inputs=self.inputs,
-        )
-        self._set_cached_client(
-            "vault_connector",
-            connector,
-            vault_url=vault_url,
-            vault_namespace=vault_namespace,
-            vault_token=vault_token,
-        )
-        return connector
+        return cast("VaultConnector", connector)
 
     # -------------------------------------------------------------------------
     # Zoom

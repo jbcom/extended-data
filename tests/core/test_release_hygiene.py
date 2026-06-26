@@ -169,8 +169,9 @@ def test_publishing_checklist_matches_workflow_action_pins() -> None:
     assert _publishing_checklist_pins() == _workflow_action_pins()
 
 
-def test_release_workflow_uses_pypi_trusted_publishing() -> None:
-    """Publishing should use PyPI trusted publishing instead of repository tokens."""
+def test_cd_workflow_uses_pypi_trusted_publishing() -> None:
+    """Publishing should use PyPI trusted publishing from the PyPI-configured CD workflow."""
+    cd_workflow = (WORKFLOW_ROOT / "cd.yml").read_text(encoding="utf-8")
     release_workflow = (WORKFLOW_ROOT / "release.yml").read_text(encoding="utf-8")
     forbidden_token_markers = (
         "PYPI_API_TOKEN",
@@ -181,10 +182,20 @@ def test_release_workflow_uses_pypi_trusted_publishing() -> None:
         "secrets.PYPI",
     )
 
-    assert "id-token: write" in release_workflow
-    assert "uv publish --trusted-publishing always" in release_workflow
-    assert "uv publish" in release_workflow
-    assert all(marker not in release_workflow for marker in forbidden_token_markers)
+    assert "id-token: write" in cd_workflow
+    assert "uv publish --trusted-publishing always" in cd_workflow
+    assert "uv publish" in cd_workflow
+    assert "uv publish" not in release_workflow
+    assert all(marker not in cd_workflow for marker in forbidden_token_markers)
+
+
+def test_release_workflow_dispatches_cd_after_release_please() -> None:
+    """Release Please should own releases and hand successful release tags to CD."""
+    release_workflow = (WORKFLOW_ROOT / "release.yml").read_text(encoding="utf-8")
+
+    assert "googleapis/release-please-action@" in release_workflow
+    assert "steps.release.outputs.release_created == 'true'" in release_workflow
+    assert 'gh workflow run cd.yml --ref main -f tag="$RELEASE_TAG"' in release_workflow
 
 
 def test_public_text_does_not_reference_old_project_origins() -> None:

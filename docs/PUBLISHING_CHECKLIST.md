@@ -1,19 +1,20 @@
 # Publishing Checklist
 
 `extended-data` uses the standard `ci.yml` > `release.yml` > `cd.yml` workflow
-shape. Continuous delivery from `main` updates release-please and publishes the
-Sphinx/Furo documentation site; tag builds publish package artifacts through
-PyPI trusted publishing. Do not hand-edit versions, changelog entries, release
-tags, or GitHub releases during the normal release path.
+shape. `release.yml` owns release-please. When a release-please PR merge creates
+a release tag, it dispatches `cd.yml` for package publication and the
+Sphinx/Furo documentation deploy. Do not hand-edit versions, changelog entries,
+release tags, or GitHub releases during the normal release path.
 
 ## Release Model
 
-- `cd.yml` owns release-please version detection, changelog updates, release
-  PRs, Git tags, and GitHub Pages publication for `extended-data.dev`.
-- `release.yml` owns tag-gated package verification and PyPI publication.
+- `release.yml` owns release-please version detection, changelog updates,
+  release PRs, Git tags, and dispatching `cd.yml` after a release is created.
+- `cd.yml` owns tag-gated package verification, PyPI publication, and GitHub
+  Pages publication for `extended-data.dev`.
 - The package name is `extended-data`; PyPI publication uses the tighter
   `extended-data` distribution name.
-- The release workflow publishes only for `v*` tags.
+- The CD workflow publishes only for the release tag passed by `release.yml`.
 - The PyPI job uses OIDC trusted publishing through `uv publish`; no PyPI token
   should be stored in repository secrets for the normal path.
 
@@ -55,13 +56,12 @@ Current workflow action pins:
 
 1. Land normal feature, fix, docs, and maintenance commits using Conventional
    Commit prefixes.
-2. Let `cd.yml` open or update the release-please PR.
+2. Let `release.yml` open or update the release-please PR.
 3. Review the release PR for the expected changelog and manifest updates.
 4. Merge the release PR.
-5. Confirm `release.yml` ran from the release tag and published to PyPI through
-   trusted publishing.
-6. Confirm `cd.yml` published the Sphinx site to GitHub Pages for
-   `extended-data.dev`.
+5. Confirm `release.yml` created the GitHub release and dispatched `cd.yml`.
+6. Confirm `cd.yml` published to PyPI through trusted publishing and deployed
+   the Sphinx site to GitHub Pages for `extended-data.dev`.
 7. Verify the package can be installed from PyPI:
 
 ```bash

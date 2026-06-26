@@ -36,6 +36,9 @@ from __future__ import annotations
 import os
 import sys
 
+from extended_data import ConnectorFabric
+from extended_data.connectors._optional import require_extra
+
 
 def main() -> int:
     """Run the Meshy MCP server."""
@@ -44,10 +47,17 @@ def main() -> int:
         print("Error: MESHY_API_KEY environment variable is required.")
         return 1
 
+    meshy_info = ConnectorFabric().get_connector_info("meshy")
+    if not meshy_info["available"]:
+        print(f"Error: Meshy connector is unavailable. Install with: {meshy_info['install']}")
+        return 1
+
     try:
+        require_extra("mcp", "mcp")
         from extended_data.connectors.meshy.mcp import run_server
-    except ImportError:
-        print("Error: Could not import MCP server. Install with: pip install extended-data[meshy,mcp]")
+    except ImportError as exc:
+        print(f"Error: {exc}")
+        print("Install with: pip install extended-data[meshy,mcp]")
         return 1
 
     print("Starting Meshy MCP server...")

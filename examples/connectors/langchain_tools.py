@@ -18,6 +18,10 @@ from __future__ import annotations
 import os
 import sys
 
+from extended_data import ConnectorFabric
+from extended_data.connectors._optional import require_extra
+from extended_data.connectors.meshy.tools import get_tools
+
 
 def main() -> int:
     """Demonstrate LangChain integration with Meshy tools."""
@@ -32,13 +36,17 @@ def main() -> int:
         print(f"Error: Missing required environment variables: {', '.join(missing)}")
         return 1
 
-    try:
-        from langchain_anthropic import ChatAnthropic
-        from langgraph.prebuilt import create_react_agent
+    meshy_info = ConnectorFabric().get_connector_info("meshy")
+    if not meshy_info["available"]:
+        print(f"Error: Meshy connector is unavailable. Install with: {meshy_info['install']}")
+        return 1
 
-        from extended_data.connectors.meshy.tools import get_tools
-    except ImportError:
-        print("Error: Could not import required packages.")
+    try:
+        require_extra("langchain_core", "langchain")
+        langchain_anthropic = require_extra("langchain_anthropic", "langchain")
+        langgraph_prebuilt = require_extra("langgraph.prebuilt", "langchain")
+    except ImportError as exc:
+        print(f"Error: {exc}")
         print("Install with: pip install extended-data[meshy,langchain] langchain-anthropic langgraph")
         return 1
 
@@ -47,10 +55,10 @@ def main() -> int:
     print(f"Loaded {len(tools)} Meshy tools for LangChain.")
 
     # Create the LLM
-    llm = ChatAnthropic(model="claude-sonnet-4-20250514", temperature=0)
+    llm = langchain_anthropic.ChatAnthropic(model="claude-sonnet-4-20250514", temperature=0)
 
     # Create the agent
-    agent = create_react_agent(llm, tools)
+    agent = langgraph_prebuilt.create_react_agent(llm, tools)
 
     # Run a query
     query = "Generate a 3D model of a red sports car in preview mode"

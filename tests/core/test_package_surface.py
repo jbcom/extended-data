@@ -152,6 +152,8 @@ def test_root_exports_first_class_integrated_surfaces() -> None:
     assert extended_data.InputProvider is InputProvider
     assert extended_data.Logging is Logging
     assert extended_data.ConnectorBase is connectors.ConnectorBase
+    assert extended_data.ConnectorAdapter is connectors.ConnectorAdapter
+    assert extended_data.BuiltinConnectorAdapter is connectors.BuiltinConnectorAdapter
     assert extended_data.ConnectorFabric is ConnectorFabric
     assert extended_data.ConnectorInfo.__name__ == "ConnectorInfo"
     assert extended_data.WorkflowResult.__name__ == "WorkflowResult"
@@ -168,6 +170,7 @@ def test_root_exports_first_class_integrated_surfaces() -> None:
     assert callable(extended_data.directed_inputs)
     assert callable(extended_data.read_data_file)
     assert callable(extended_data.get_connector)
+    assert callable(extended_data.get_connector_adapter)
     assert callable(extended_data.list_available_connectors)
     assert callable(extended_data.list_connector_info)
     assert callable(extended_data.list_connector_categories)
@@ -175,12 +178,15 @@ def test_root_exports_first_class_integrated_surfaces() -> None:
     assert callable(extended_data.list_connectors_by_category)
     assert callable(extended_data.list_connectors_by_capability)
     connector_names = extended_data.list_connectors()
+    github_adapter = extended_data.get_connector_adapter("github")
     available_connector_names = extended_data.list_available_connectors()
     connector_categories = extended_data.list_connector_categories()
     connector_capabilities = extended_data.list_connector_capabilities()
     cloud_connectors = extended_data.list_connectors_by_category("cloud")
     repository_connectors = extended_data.list_connectors_by_capability("repositories")
     assert isinstance(connector_names, ExtendedList)
+    assert isinstance(github_adapter, connectors.ConnectorAdapter)
+    assert github_adapter.name == "github"
     assert isinstance(connector_names[0], ExtendedString)
     assert isinstance(available_connector_names, ExtendedList)
     assert isinstance(available_connector_names[0], ExtendedString)

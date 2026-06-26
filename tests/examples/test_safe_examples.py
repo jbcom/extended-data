@@ -57,6 +57,7 @@ FUNCTION_FIRST_BASIC_USAGE_HELPERS = (
 )
 ROOT_DISALLOWED_TIER1_IMPORTS = tuple(sorted(primitives.__all__))
 PYTHON_MARKDOWN_BLOCK_RE = re.compile(r"```python\n(?P<code>.*?)\n```", re.DOTALL)
+EXAMPLE_LITERAL_INCLUDE_RE = re.compile(r"\{literalinclude\}\s+\.\./\.\./(?P<path>examples/[^\s]+\.py)")
 SENSITIVE_IDENTIFIER_RE = re.compile(r"(api_?key|secret|token|password|authorization)", re.IGNORECASE)
 
 
@@ -77,6 +78,17 @@ def test_example_inventory_is_complete() -> None:
     )
 
     assert sorted(ALL_EXAMPLES) == discovered
+
+
+def test_all_examples_are_included_in_sphinx_docs() -> None:
+    """Every runnable example should be rendered from source in Sphinx docs."""
+    documented: set[str] = set()
+
+    for path in sorted((REPO_ROOT / "docs" / "examples").glob("*.md")):
+        text = path.read_text(encoding="utf-8")
+        documented.update(match.group("path") for match in EXAMPLE_LITERAL_INCLUDE_RE.finditer(text))
+
+    assert set(ALL_EXAMPLES) == documented
 
 
 @pytest.mark.parametrize("example_path", SAFE_EXAMPLES)

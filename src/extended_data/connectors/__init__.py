@@ -90,6 +90,8 @@ __all__ = [
     "AWSS3Mixin",
     "AWSSSOmixin",
     "AnthropicConnector",
+    "BuiltinConnectorAdapter",
+    "ConnectorAdapter",
     "ConnectorBase",
     "ConnectorFabric",
     "ConnectorInfo",
@@ -110,6 +112,7 @@ __all__ = [
     "get_aws_call_params",
     "get_cloud_call_params",
     "get_connector",
+    "get_connector_adapter",
     "get_connector_class",
     "get_connector_info",
     "get_google_call_params",
@@ -125,8 +128,11 @@ __all__ = [
 
 # Registry - unified access to all connectors
 from extended_data.connectors.registry import (
+    BuiltinConnectorAdapter,
+    ConnectorAdapter,
     ConnectorInfo,
     get_connector,
+    get_connector_adapter,
     get_connector_class,
     get_connector_info,
     list_available_connectors,

@@ -174,9 +174,12 @@ class TestConnectorFabric:
         """ConnectorFabric exposes registry-backed catalog metadata."""
         vc = ConnectorFabric(from_environment=False)
 
+        adapter = vc.get_connector_adapter("github")
         info = vc.list_connector_info()
         names = {connector["name"] for connector in info}
 
+        assert isinstance(adapter, registry.ConnectorAdapter)
+        assert adapter.name == "github"
         assert isinstance(info, ExtendedList)
         assert isinstance(info[0], ExtendedDict)
         assert isinstance(info[0]["name"], ExtendedString)
@@ -448,23 +451,26 @@ class TestConnectorFabric:
     def test_get_connector_class_known_missing_builtin_has_install_hint(self, monkeypatch):
         """Registry raises install guidance when a known built-in extra is missing."""
         monkeypatch.setattr(registry, "_connector_cache", {})
-        monkeypatch.setitem(
-            registry._missing_builtin_connectors,
-            "github",
-            ImportError("No module named 'github' password=hunter2 Authorization: Bearer raw_token"),
+        monkeypatch.setattr(
+            registry,
+            "get_missing_connector_requirements",
+            lambda name: ExtendedList(["github"]) if name == "github" else ExtendedList(),
         )
 
         with pytest.raises(ImportError, match=r"extended-data\[github\]") as exc_info:
             registry.get_connector_class(" github ")
 
         message = str(exc_info.value)
-        assert "hunter2" not in message
-        assert "raw_token" not in message
-        assert "[REDACTED]" in message
+        assert "Missing packages: github" in message
 
     def test_get_connector_info_includes_known_missing_builtin(self, monkeypatch):
         """Registry metadata includes unavailable known connectors."""
         monkeypatch.setattr(registry, "_connector_cache", {})
+        monkeypatch.setattr(
+            registry,
+            "get_missing_connector_requirements",
+            lambda name: ExtendedList(["github"]) if name == "github" else ExtendedList(),
+        )
         monkeypatch.setitem(
             registry._missing_builtin_connectors,
             "github",
@@ -480,6 +486,7 @@ class TestConnectorFabric:
         assert info["extra"] == "github"
         assert info["install"] == "pip install extended-data[github]"
         assert info["class"] == "GitHubConnector"
+        assert info["missing"] == ["github"]
         assert "hunter2" not in info["error"]
         assert "raw_token" not in info["error"]
         assert "[REDACTED]" in info["error"]
@@ -497,26 +504,35 @@ class TestConnectorFabric:
         assert "raw_token" not in message
         assert "[REDACTED]" in message
 
-    def test_get_connector_class_rejects_unregistered_builtin_entry_point(self, monkeypatch):
-        """Declared built-ins must be registered through entry points."""
+    def test_builtin_adapter_loads_known_connector_without_entry_point_cache(self, monkeypatch):
+        """Built-in adapters are authoritative even before entry-point discovery."""
         monkeypatch.setattr(registry, "_connector_cache", {})
         monkeypatch.setattr(registry, "_missing_builtin_connectors", {})
+        monkeypatch.setattr(registry, "get_missing_connector_requirements", lambda name: ExtendedList())
 
-        with pytest.raises(RuntimeError, match="not registered"):
-            registry.get_connector_class(" github ")
+        cls = registry.get_connector_class(" cursor ")
 
-    def test_get_connector_info_reports_unregistered_builtin_entry_point(self, monkeypatch):
-        """Registry metadata exposes missing built-in entry-point registration."""
+        assert cls.__name__ == "CursorConnector"
+
+    def test_get_connector_adapter_wraps_entry_point_connectors(self, monkeypatch):
+        """External entry-point classes are exposed through the same adapter contract."""
+
+        class CustomConnector(ConnectorBase):
+            CONNECTOR_CATEGORY = "warehouse"
+
         monkeypatch.setattr(registry, "_connector_cache", {})
         monkeypatch.setattr(registry, "_missing_builtin_connectors", {})
+        monkeypatch.setattr(registry, "_connector_cache", {"custom": CustomConnector})
 
-        info = registry.get_connector_info(" github ")
+        adapter = registry.get_connector_adapter(" custom ")
+        info = adapter.as_dict()
 
-        assert isinstance(info, ExtendedDict)
-        assert info["name"] == "github"
-        assert info["available"] is False
-        assert info["extra"] == "github"
-        assert "not registered" in info["error"]
+        assert isinstance(adapter, registry.ConnectorAdapter)
+        assert adapter.name == "custom"
+        assert adapter.load_class() is CustomConnector
+        assert info["name"] == "custom"
+        assert info["source"] == "entry_point"
+        assert info["category"] == "warehouse"
 
     def test_builtin_with_missing_requirements_is_unavailable(self):
         """Entry-point registered built-ins report unavailable when extras are missing."""
@@ -573,4 +589,5 @@ class TestConnectorFabric:
         assert "cursor" in catalog_names
         assert "github" in catalog_names
         assert isinstance(available_names, ExtendedList)
-        assert available_names == ["cursor"]
+        assert "cursor" in available_names
+        assert "github" not in available_names

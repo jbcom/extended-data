@@ -31,7 +31,9 @@ Entry Points (in pyproject.toml):
 
 from __future__ import annotations
 
+import abc
 import builtins
+import importlib
 
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, NoReturn
@@ -98,6 +100,33 @@ class ConnectorInfo:
             "description": self.description,
             "error": self.error,
         })
+
+
+class ConnectorAdapter(abc.ABC):
+    """Adapter contract for connector availability, metadata, and construction."""
+
+    name: str
+
+    @abc.abstractmethod
+    def load_class(self) -> builtins.type[ConnectorBase]:
+        """Return the connector class when the adapter is available."""
+
+    @abc.abstractmethod
+    def validate_dependencies(self) -> None:
+        """Raise a central install error when adapter requirements are missing."""
+
+    @abc.abstractmethod
+    def info(self, error: ImportError | None = None) -> ConnectorInfo:
+        """Return registry metadata for this adapter."""
+
+    def create(self, **kwargs: Any) -> ConnectorBase:
+        """Instantiate the adapter's connector class."""
+        cls = self.load_class()
+        return cls(**kwargs)
+
+    def as_dict(self) -> ExtendedDict:
+        """Return extended JSON-friendly adapter metadata."""
+        return self.info().as_dict()
 
 
 BUILTIN_CONNECTORS: dict[str, BuiltinConnectorSpec] = {
@@ -183,6 +212,128 @@ BUILTIN_CONNECTORS: dict[str, BuiltinConnectorSpec] = {
 }
 
 
+@dataclass(frozen=True)
+class BuiltinConnectorAdapter(ConnectorAdapter):
+    """Adapter for a connector shipped inside this distribution."""
+
+    name: str
+    spec: BuiltinConnectorSpec
+
+    @property
+    def extra(self) -> str:
+        """Return the install extra for this adapter."""
+        return self.spec.extra
+
+    @property
+    def requirements(self) -> ExtendedList[ExtendedString]:
+        """Return import names required by this adapter."""
+        return get_connector_requirements(self.name)
+
+    @property
+    def missing(self) -> ExtendedList[ExtendedString]:
+        """Return missing import names for this adapter."""
+        return get_missing_connector_requirements(self.name)
+
+    @property
+    def install(self) -> str:
+        """Return the pip install command for this adapter."""
+        install = get_connector_install_command(self.name)
+        return str(install or f"pip install extended-data[{self.spec.extra}]")
+
+    @property
+    def available(self) -> bool:
+        """Return whether optional runtime requirements are installed."""
+        return not self.missing
+
+    def unavailable_error(self, error: ImportError | None = None) -> ImportError:
+        """Build the central unavailable-adapter import error."""
+        missing = self.missing
+        reason = (
+            "its optional dependencies are not installed"
+            if missing
+            else "it could not be loaded from the connector adapter registry"
+        )
+        msg = f"The '{self.name}' connector is built in but {reason}.\nInstall with: {self.install}"
+        if missing:
+            msg = f"{msg}\nMissing packages: {', '.join(str(package) for package in missing)}"
+        if error and str(error):
+            msg = f"{msg}\nOriginal import error: {redact_sensitive_text(error)}"
+        return ImportError(msg)
+
+    def validate_dependencies(self) -> None:
+        """Ensure this adapter's optional runtime requirements are installed."""
+        if self.missing:
+            raise self.unavailable_error()
+
+    def load_class(self) -> builtins.type[ConnectorBase]:
+        """Load the connector class after dependency validation."""
+        self.validate_dependencies()
+        try:
+            module = importlib.import_module(self.spec.module_path)
+            return getattr(module, self.spec.class_name)
+        except ImportError as error:
+            raise self.unavailable_error(error) from error
+        except AttributeError as error:
+            msg = (
+                f"The built-in '{self.name}' connector adapter points at "
+                f"{self.spec.module_path}:{self.spec.class_name}, but that class does not exist."
+            )
+            raise RuntimeError(msg) from error
+
+    def info(self, error: ImportError | None = None) -> ConnectorInfo:
+        """Return metadata without requiring caller-side import juggling."""
+        if self.missing or error is not None:
+            return _builtin_connector_info(self, available=False, error=error)
+
+        try:
+            cls = self.load_class()
+        except ImportError as exc:
+            return _builtin_connector_info(self, available=False, error=exc)
+
+        return _class_connector_info(self.name, cls, spec=self.spec)
+
+
+@dataclass(frozen=True)
+class RegisteredConnectorAdapter(ConnectorAdapter):
+    """Adapter for a connector class discovered through entry points."""
+
+    name: str
+    connector_class: builtins.type[ConnectorBase]
+
+    def load_class(self) -> builtins.type[ConnectorBase]:
+        """Return the already discovered connector class."""
+        return self.connector_class
+
+    def validate_dependencies(self) -> None:
+        """Entry-point connectors are considered available after successful load."""
+
+    def info(self, error: ImportError | None = None) -> ConnectorInfo:
+        """Return metadata for a loaded entry-point connector."""
+        if error is not None:
+            return ConnectorInfo(
+                name=self.name,
+                available=False,
+                source="entry_point",
+                extra=str(extra) if (extra := get_extra_for_connector(self.name)) is not None else None,
+                category="external",
+                capabilities=(),
+                install=str(install) if (install := get_connector_install_command(self.name)) is not None else None,
+                requirements=tuple(str(requirement) for requirement in get_connector_requirements(self.name)),
+                missing=tuple(str(requirement) for requirement in get_missing_connector_requirements(self.name)),
+                class_name=None,
+                module=None,
+                base_url=None,
+                description=None,
+                error=redact_sensitive_text(error),
+            )
+        return _class_connector_info(self.name, self.connector_class, spec=None)
+
+
+BUILTIN_CONNECTOR_ADAPTERS: dict[str, BuiltinConnectorAdapter] = {
+    name: BuiltinConnectorAdapter(name=name, spec=spec) for name, spec in BUILTIN_CONNECTORS.items()
+}
+
+
 # Cache for discovered connectors
 _connector_cache: dict[str, builtins.type[ConnectorBase]] | None = None
 _missing_builtin_connectors: dict[str, ImportError] = {}
@@ -242,17 +393,8 @@ def _discover_connectors() -> dict[str, builtins.type[ConnectorBase]]:
 
 def _raise_missing_builtin_connector(name: str, error: ImportError) -> NoReturn:
     """Raise a clear install hint for a known built-in connector."""
-    install = str(get_connector_install_command(name) or f"pip install extended-data[{BUILTIN_CONNECTORS[name].extra}]")
-    missing = get_missing_connector_requirements(name)
-    msg = (
-        f"The '{name}' connector is built in but its optional dependencies are not installed.\n"
-        f"Install with: {install}"
-    )
-    if missing:
-        msg = f"{msg}\nMissing packages: {', '.join(str(package) for package in missing)}"
-    if str(error):
-        msg = f"{msg}\nOriginal import error: {redact_sensitive_text(error)}"
-    raise ImportError(msg) from error
+    adapter = BUILTIN_CONNECTOR_ADAPTERS[name]
+    raise adapter.unavailable_error(error) from error
 
 
 def _raise_unregistered_builtin_connector(name: str) -> NoReturn:
@@ -301,6 +443,13 @@ def get_connector_class(name: str) -> builtins.type[ConnectorBase]:
     connectors = _discover_connectors()
     name_lower = _normalize_connector_name(name)
 
+    if name_lower in BUILTIN_CONNECTOR_ADAPTERS:
+        try:
+            return BUILTIN_CONNECTOR_ADAPTERS[name_lower].load_class()
+        except ImportError as error:
+            _missing_builtin_connectors[name_lower] = error
+            _raise_missing_builtin_connector(name_lower, error)
+
     if name_lower not in connectors:
         if name_lower in _missing_builtin_connectors:
             _raise_missing_builtin_connector(name_lower, _missing_builtin_connectors[name_lower])
@@ -308,12 +457,6 @@ def get_connector_class(name: str) -> builtins.type[ConnectorBase]:
             _raise_unregistered_builtin_connector(name_lower)
         available = ", ".join(sorted(connectors.keys()))
         raise ValueError(f"Unknown connector: {redact_sensitive_text(name)}. Available: {available}")
-
-    if name_lower in BUILTIN_CONNECTORS:
-        missing = get_missing_connector_requirements(name_lower)
-        if missing:
-            error = ImportError(f"Missing packages: {', '.join(str(package) for package in missing)}")
-            _raise_missing_builtin_connector(name_lower, error)
 
     return connectors[name_lower]
 
@@ -335,8 +478,7 @@ def get_connector(name: str, **kwargs: Any) -> ConnectorBase:
         >>> connector = get_connector('jules', api_key='...')
         >>> connector.list_sources()
     """
-    cls = get_connector_class(name)
-    return cls(**kwargs)
+    return get_connector_adapter(name, include_unavailable=False).create(**kwargs)
 
 
 def clear_cache() -> None:
@@ -372,9 +514,13 @@ def _get_capabilities(cls: builtins.type[ConnectorBase], spec: BuiltinConnectorS
     return tuple(dict.fromkeys(capabilities))
 
 
-def _available_connector_info(name: str, cls: builtins.type[ConnectorBase]) -> ConnectorInfo:
-    """Build metadata for a loadable connector."""
-    spec = BUILTIN_CONNECTORS.get(name)
+def _class_connector_info(
+    name: str,
+    cls: builtins.type[ConnectorBase],
+    *,
+    spec: BuiltinConnectorSpec | None,
+) -> ConnectorInfo:
+    """Build metadata for a loadable connector class."""
     source = "builtin" if spec else "entry_point"
     extra_value = spec.extra if spec else get_extra_for_connector(name)
     extra = str(extra_value) if extra_value is not None else None
@@ -400,31 +546,45 @@ def _available_connector_info(name: str, cls: builtins.type[ConnectorBase]) -> C
     )
 
 
-def _missing_builtin_connector_info(name: str, error: ImportError | None) -> ConnectorInfo:
+def _available_connector_info(name: str, cls: builtins.type[ConnectorBase]) -> ConnectorInfo:
+    """Build metadata for a loadable connector."""
+    return _class_connector_info(name, cls, spec=BUILTIN_CONNECTORS.get(name))
+
+
+def _builtin_connector_info(
+    adapter: BuiltinConnectorAdapter,
+    *,
+    available: bool,
+    error: ImportError | None,
+) -> ConnectorInfo:
     """Build metadata for a known built-in connector that cannot be loaded."""
-    spec = BUILTIN_CONNECTORS[name]
     error_message = (
         redact_sensitive_text(error)
         if error
-        else "Built-in connector is declared but is not registered in the extended_data.connectors entry point group."
+        else "Connector optional dependencies are not installed."
     )
 
     return ConnectorInfo(
-        name=name,
-        available=False,
+        name=adapter.name,
+        available=available,
         source="builtin",
-        extra=spec.extra,
-        category=spec.category,
-        capabilities=spec.capabilities,
-        install=str(install) if (install := get_connector_install_command(name)) is not None else None,
-        requirements=tuple(str(requirement) for requirement in get_connector_requirements(name)),
-        missing=tuple(str(requirement) for requirement in get_missing_connector_requirements(name)),
-        class_name=spec.class_name,
-        module=spec.module_path,
+        extra=adapter.extra,
+        category=adapter.spec.category,
+        capabilities=adapter.spec.capabilities,
+        install=adapter.install,
+        requirements=tuple(str(requirement) for requirement in adapter.requirements),
+        missing=tuple(str(requirement) for requirement in adapter.missing),
+        class_name=adapter.spec.class_name,
+        module=adapter.spec.module_path,
         base_url=None,
         description=None,
         error=error_message,
     )
+
+
+def _missing_builtin_connector_info(name: str, error: ImportError | None) -> ConnectorInfo:
+    """Build metadata for a known built-in connector that cannot be loaded."""
+    return BUILTIN_CONNECTOR_ADAPTERS[name].info(error)
 
 
 # =============================================================================
@@ -436,6 +596,16 @@ def get_connector_info(name: str, *, include_unavailable: bool = True) -> Extend
     """Get registry metadata about a connector."""
     connector_name = _normalize_connector_name(name)
     connectors = _discover_connectors()
+
+    if connector_name in BUILTIN_CONNECTOR_ADAPTERS:
+        adapter = BUILTIN_CONNECTOR_ADAPTERS[connector_name]
+        info = adapter.info(_missing_builtin_connectors.get(connector_name))
+        if info.available or include_unavailable:
+            return info.as_dict()
+        _raise_missing_builtin_connector(
+            connector_name,
+            _missing_builtin_connectors.get(connector_name) or adapter.unavailable_error(),
+        )
 
     if connector_name in connectors:
         return _available_connector_info(connector_name, connectors[connector_name]).as_dict()
@@ -452,14 +622,34 @@ def get_connector_info(name: str, *, include_unavailable: bool = True) -> Extend
     raise ValueError(f"Unknown connector: {redact_sensitive_text(name)}. Available: {available}")
 
 
+def get_connector_adapter(name: str, *, include_unavailable: bool = True) -> ConnectorAdapter:
+    """Get the adapter registry entry for a connector."""
+    connector_name = _normalize_connector_name(name)
+    connectors = _discover_connectors()
+
+    if connector_name in BUILTIN_CONNECTOR_ADAPTERS:
+        adapter = BUILTIN_CONNECTOR_ADAPTERS[connector_name]
+        if adapter.info(_missing_builtin_connectors.get(connector_name)).available or include_unavailable:
+            return adapter
+        _raise_missing_builtin_connector(
+            connector_name,
+            _missing_builtin_connectors.get(connector_name) or adapter.unavailable_error(),
+        )
+
+    if connector_name in connectors:
+        return RegisteredConnectorAdapter(connector_name, connectors[connector_name])
+
+    available = ", ".join(sorted(set(connectors) | set(BUILTIN_CONNECTORS)))
+    raise ValueError(f"Unknown connector: {redact_sensitive_text(name)}. Available: {available}")
+
+
 def list_connector_info(*, include_unavailable: bool = True) -> ExtendedList[ExtendedDict]:
     """Get registry metadata for known connectors."""
     connectors = _discover_connectors()
-    names = set(connectors)
+    names = set(connectors) | set(BUILTIN_CONNECTOR_ADAPTERS)
     if include_unavailable:
-        names.update(BUILTIN_CONNECTORS)
         names.update(_missing_builtin_connectors)
-    info = [get_connector_info(name, include_unavailable=include_unavailable) for name in sorted(names)]
+    info = [get_connector_info(name, include_unavailable=True) for name in sorted(names)]
     if not include_unavailable:
         return extend_data([connector for connector in info if connector["available"]])
     return extend_data(info)
