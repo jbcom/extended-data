@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""File operation examples for Extended Data core library.
+"""File operation examples for the Extended Data core package.
 
 This module demonstrates file path utilities, encoding detection,
-and file read/write operations provided by the library.
+and file read/write operations provided by the package.
 """
 
 from __future__ import annotations
@@ -13,9 +13,9 @@ from pathlib import Path
 
 from extended_data import (
     FilePath,
-    decode_file,
     file_path_depth,
     is_url,
+    read_data_file,
     read_file,
     resolve_local_path,
     write_file,
@@ -69,7 +69,7 @@ def demonstrate_file_operations() -> None:
     with tempfile.TemporaryDirectory() as tmpdir:
         # Write a file
         test_file = Path(tmpdir) / "test.txt"
-        content = "Hello, Extended Data Types!\nThis is a test file."
+        content = "Hello, extended-data!\nThis is a test file."
 
         write_file(test_file, content)
         print(f"Wrote file: {test_file}")
@@ -89,17 +89,16 @@ settings:
 """
         write_file(yaml_file, yaml_content)
 
-        yaml_text = read_file(yaml_file)
-        data = decode_file(yaml_text, file_path=yaml_file)
+        data = read_data_file(yaml_file)
         print(f"\nDecoded YAML file: {data}")
+        print(f"YAML service keys: {data.flatten().keys()}")
 
         # Write and read JSON
         json_file = Path(tmpdir) / "data.json"
         json_content = '{"users": [{"id": 1, "name": "Alice"}]}'
         write_file(json_file, json_content)
 
-        json_text = read_file(json_file)
-        data = decode_file(json_text, file_path=json_file)
+        data = read_data_file(json_file)
         print(f"Decoded JSON file: {data}")
 
 

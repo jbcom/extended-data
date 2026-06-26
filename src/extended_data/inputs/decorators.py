@@ -24,6 +24,7 @@ from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
+from extended_data.containers import ExtendedDict, to_builtin
 from extended_data.inputs.__main__ import InputProvider
 
 
@@ -59,6 +60,7 @@ class InputConfig:
     decode_from_yaml: bool = False
     decode_from_base64: bool = False
     allow_none: bool = True
+    as_extended: bool = False
     is_bool: bool = False
     is_integer: bool = False
     is_float: bool = False
@@ -80,7 +82,10 @@ class InputConfig:
                 decode_from_yaml=self.decode_from_yaml,
                 decode_from_base64=self.decode_from_base64,
                 allow_none=self.allow_none,
+                as_extended=self.as_extended,
             )
+        elif source_present and provider.inputs.get(key) is None and self.allow_none and not self.required:
+            value = None
         else:
             value = provider.get_input(
                 key,
@@ -91,6 +96,7 @@ class InputConfig:
                 is_float=self.is_float,
                 is_path=self.is_path,
                 is_datetime=self.is_datetime,
+                as_extended=self.as_extended,
             )
 
         if value is None and not source_present and self.default is _MISSING and not self.required:
@@ -103,7 +109,7 @@ class InputConfig:
 class InputProviderMetadata:
     """Metadata exposed on decorated classes for runtime integrations."""
 
-    options: dict[str, Any] = field(default_factory=dict)
+    options: ExtendedDict = field(default_factory=ExtendedDict)
 
 
 class InputContext:
@@ -118,13 +124,15 @@ class InputContext:
         env_prefix: str | None = None,
         strip_env_prefix: bool = False,
     ):
-        self._options: dict[str, Any] = {
-            "inputs": dict(inputs) if inputs else None,
-            "from_environment": from_environment,
-            "from_stdin": from_stdin,
-            "env_prefix": env_prefix,
-            "strip_env_prefix": strip_env_prefix,
-        }
+        self._options = ExtendedDict(
+            {
+                "inputs": dict(inputs) if inputs else None,
+                "from_environment": from_environment,
+                "from_stdin": from_stdin,
+                "env_prefix": env_prefix,
+                "strip_env_prefix": strip_env_prefix,
+            }
+        )
         self._instance: InputProvider | None = None
 
     def refresh(self, **overrides: Any) -> None:
@@ -133,9 +141,9 @@ class InputContext:
         self._instance = None
 
     @property
-    def options(self) -> dict[str, Any]:
+    def options(self) -> ExtendedDict:
         """Current configuration (copy) used for instantiation."""
-        return dict(self._options)
+        return ExtendedDict(to_builtin(self._options))
 
     def resolve(self, config: InputConfig) -> Any | object:
         """Resolve a parameter value using the provided configuration."""
@@ -148,7 +156,7 @@ class InputContext:
 
     def _ensure_instance(self) -> InputProvider:
         if self._instance is None:
-            kwargs = {k: v for k, v in self._options.items() if v is not None}
+            kwargs = {k: v for k, v in to_builtin(self._options).items() if v is not None}
             self._instance = InputProvider(**kwargs)
         return self._instance
 
@@ -191,7 +199,7 @@ def directed_inputs(
         if getattr(cls, "__input_provider_enabled__", False):
             return cls
 
-        metadata = InputProviderMetadata(options={k: v for k, v in base_options.items() if v is not None})
+        metadata = InputProviderMetadata(options=ExtendedDict({k: v for k, v in base_options.items() if v is not None}))
         cls.__input_provider_enabled__ = True
         cls.__input_provider_metadata__ = metadata
 

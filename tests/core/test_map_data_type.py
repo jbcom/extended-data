@@ -37,7 +37,7 @@ from pathlib import Path
 
 import pytest
 
-from extended_data.map_data_type import (
+from extended_data.primitives.mappings import (
     SortedDefaultDict,
     all_values_from_map,
     create_merger,
@@ -226,10 +226,12 @@ def test_first_non_empty_value_from_map_returns_none_for_falsy_values() -> None:
 
 def test_deep_merge_merges_nested_dicts_lists_and_sets() -> None:
     """Merge nested structures using the default strategies."""
+    first = {"config": {"enabled": True}, "items": [1], "tags": {"a"}}
+    second = {"config": {"threshold": 2}, "items": [2], "tags": {"b"}}
     result = deep_merge(
         {},
-        {"config": {"enabled": True}, "items": [1], "tags": {"a"}},
-        {"config": {"threshold": 2}, "items": [2], "tags": {"b"}},
+        first,
+        second,
     )
 
     assert result == {
@@ -237,6 +239,8 @@ def test_deep_merge_merges_nested_dicts_lists_and_sets() -> None:
         "items": [1, 2],
         "tags": {"a", "b"},
     }
+    assert first == {"config": {"enabled": True}, "items": [1], "tags": {"a"}}
+    assert second == {"config": {"threshold": 2}, "items": [2], "tags": {"b"}}
 
 
 def test_create_merger_can_override_list_values() -> None:

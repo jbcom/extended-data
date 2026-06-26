@@ -23,7 +23,7 @@ from typing import Any
 
 import pytest
 
-from extended_data.state_utils import (
+from extended_data.primitives.state import (
     all_non_empty,
     any_non_empty,
     are_nothing,
@@ -96,7 +96,7 @@ def test_are_nothing_with_no_inputs_returns_true() -> None:
 
 def test_are_nothing_fallback_branch_returns_false(mocker) -> None:
     """Defensively return False for unexpected all_non_empty output types."""
-    mocker.patch("extended_data.state_utils.all_non_empty", return_value="unexpected")
+    mocker.patch("extended_data.primitives.state.all_non_empty", return_value="unexpected")
 
     assert are_nothing("value") is False
 

@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """End-to-end workflow examples for Extended Data core.
 
-This script demonstrates how the library's smaller helpers compose into more
-complete configuration and payload pipelines.
+This script demonstrates how package primitives, containers, and processors
+compose into complete configuration and payload pipelines.
 """
 
 from __future__ import annotations
@@ -11,19 +11,17 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 
 from extended_data import (
+    DataWorkflow,
+    ExtendedList,
     base64_decode,
     base64_encode,
-    decode_file,
-    decode_hcl2,
-    deduplicate_map,
-    deep_merge,
-    encode_hcl2,
-    filter_list,
+    list_data_transform_steps,
+    read_data_file,
     read_file,
-    to_snake_case,
     write_file,
 )
-from extended_data.yaml_utils import YamlTagged
+from extended_data.primitives import decode_hcl2, encode_hcl2
+from extended_data.primitives.formats.yaml import YamlTagged
 
 
 def demonstrate_layered_config_workflow() -> None:
@@ -46,17 +44,17 @@ def demonstrate_layered_config_workflow() -> None:
         write_file("config/base.yaml", base_config, tld=tld)
         write_file("config/dev.yaml", env_config, tld=tld)
 
-        base_text = read_file("config/base.yaml", tld=tld)
-        env_text = read_file("config/dev.yaml", tld=tld)
-
-        base_data = decode_file(base_text, file_path="config/base.yaml")
-        env_data = decode_file(env_text, file_path="config/dev.yaml")
-        merged = deep_merge(base_data, env_data)
-
-        write_file("build/config.yaml", merged, tld=tld)
+        env_data = DataWorkflow.from_file("config/dev.yaml", tld=tld).value
+        result = (
+            DataWorkflow.from_file("config/base.yaml", tld=tld)
+            .merge(env_data, name="merge-env")
+            .write("build/config.yaml", tld=tld)
+        )
+        result.to_export_safe()
         merged_text = read_file("build/config.yaml", tld=tld)
 
     print(merged_text)
+    print(f"Steps: {', '.join(result.steps)}")
 
 
 def demonstrate_terraform_handoff_workflow() -> None:
@@ -92,12 +90,21 @@ def demonstrate_api_payload_workflow() -> None:
     print("\n=== API Payload Workflow ===\n")
 
     payload = {
-        "HTTPResponseCode": 200,
-        "SelectedServices": filter_list(["api", "worker", "db"], denylist=["db"]),
+        "HTTPResponseCode": "200",
+        "SelectedServices": ["api", "worker", "db", "api"],
         "Tags": ["api", "api", "docs"],
+        "EmptyValue": "",
     }
 
-    normalized = {to_snake_case(key): value for key, value in deduplicate_map(payload).items()}
+    def select_services(data):
+        return data | {"SelectedServices": ExtendedList(data["SelectedServices"]).filter_values(denylist=["db"])}
+
+    workflow = (
+        DataWorkflow.from_value(payload)
+        .then(("select-services", select_services))
+        .transform("reconstruct", "deduplicate", "compact", "unhump")
+    )
+    normalized = workflow.result().value
 
     with TemporaryDirectory() as tmpdir:
         tld = Path(tmpdir)
@@ -105,6 +112,8 @@ def demonstrate_api_payload_workflow() -> None:
         payload_text = read_file("build/payload.json", tld=tld)
 
     print(payload_text)
+    print(f"Steps: {', '.join(workflow.steps)}")
+    print(f"Known transforms: {', '.join(list_data_transform_steps())}")
 
 
 def demonstrate_yaml_native_workflow() -> None:
@@ -120,7 +129,7 @@ def demonstrate_yaml_native_workflow() -> None:
         tld = Path(tmpdir)
         write_file("template.yaml", template, tld=tld)
         rendered = read_file("template.yaml", tld=tld)
-        decoded = decode_file(rendered, file_path="template.yaml")
+        decoded = read_data_file("template.yaml", tld=tld)
 
     print(rendered)
     print(f"\nDecoded tag: {decoded['bucket_name'].tag}")

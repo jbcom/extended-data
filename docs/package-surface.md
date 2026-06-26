@@ -1,69 +1,93 @@
 # Package Surface
 
-`extended-data` is one Python distribution with a single `extended_data`
-namespace. The root package exposes the primitives users need most often:
+`extended-data` is a base Python data package. Its public contract is the
+`extended_data` namespace plus the console command `extended-data`.
+
+## Tier 1 Primitives
+
+Pure functions live under `extended_data.primitives`. These functions cover
+structured serialization, scalar coercion, matching, key normalization,
+sequence/mapping utilities, state predicates, stack inspection, and redaction.
 
 ```python
-from extended_data import (
-    ConnectorFabric,
-    InputProvider,
-    Logging,
-    decode_json,
-    encode_yaml,
-    flatten_map,
-)
+from extended_data.primitives import decode_json, encode_yaml, redact_sensitive_text
+
+payload = decode_json('{"service": "api"}')
+
+assert payload == {"service": "api"}
+assert "service: api" in encode_yaml(payload)
+assert redact_sensitive_text("token=abc") == "token=[REDACTED]"
 ```
 
-## Layers
+Tier 1 names are intentionally not exported from the package root. Import them
+from `extended_data.primitives` so the root remains reserved for cohesive data
+surfaces.
 
-- Core data primitives handle serialization, file decoding, type coercion,
-  string transforms, map/list transforms, and export-safe values.
-- `InputProvider` loads input data from explicit mappings, environment
-  variables, and stdin, then decodes or coerces values through the same core
-  primitives.
-- `Logging` provides structured lifecycle logging for applications and
-  connector workflows.
-- `ConnectorFabric` caches and coordinates vendor connectors while sharing
-  input loading, logging, data normalization, retry behavior, and serialization.
+## Tier 2 Containers
 
-## Connector Fabric
+Extended containers promote decoded data into ergonomic objects:
 
-Use specialized helpers when they match the operation:
+- `ExtendedString`
+- `ExtendedDict`
+- `ExtendedList`
+- `ExtendedTuple`
+- `ExtendedSet`
 
 ```python
-from extended_data import ConnectorFabric
+from extended_data import ExtendedDict, ExtendedList, ExtendedString
 
-fabric = ConnectorFabric(inputs={"ZOOM_ACCOUNT_ID": "..."}, from_environment=False)
-zoom = fabric.get_zoom_client(client_id="...", client_secret="...")
+assert ExtendedString("api-gateway").to_snake_case() == "api_gateway"
+assert ExtendedList([None, "", {"service": "api"}]).first_non_empty()["service"] == "api"
+assert ExtendedDict({"enabled": "true"}).reconstruct_special_types()["enabled"] is True
 ```
 
-Use the registry-backed generic path when a connector is registered by name:
+The containers keep Python collection behavior while adding methods that route
+through Tier 1 primitives.
+
+## Tier 3 Processors
+
+Tier 3 surfaces compose primitives and containers for real data movement:
+
+- `DataFile` reads, decodes, tracks metadata, and exports structured files.
+- `DataWorkflow` layers file reads, merges, transforms, writes, and provenance.
+- `InputProvider` loads direct inputs and environment data.
+- `Logging` handles structured lifecycle logging and returns stored snapshots
+  as extended containers.
 
 ```python
-github = fabric.get_connector(
-    "github",
-    github_owner="jbcom",
-    github_token="...",
-)
+from extended_data import DataFile, DataWorkflow, InputProvider, Logging
+
+artifact = DataFile.decode("service:\n  name: api\n", suffix="yaml")
+workflow = DataWorkflow.from_value(artifact.data).merge({"replicas": 2}).result()
+inputs = InputProvider(inputs={"ENV": "dev"}, from_environment=False)
+logger = Logging(logger_name="docs", enable_console=False, enable_file=False)
+
+logger.logged_statement("workflow ready", json_data=workflow.as_builtin(), log_level="info")
+
+assert artifact.metadata["encoding"] == "yaml"
+assert workflow.as_builtin()["replicas"] == 2
+assert inputs.inputs["ENV"] == "dev"
 ```
 
-Both paths share the same input provider and lifecycle logger, and both cache
-instances by connector type and constructor inputs. Generic connector names are
-stripped and lowercased before lookup.
+## CLI
 
-## Optional Integrations
-
-Install only the vendor or AI layers you need:
+The `extended-data` command exposes the same file and workflow boundary:
 
 ```bash
-pip install "extended-data[aws,github,vault]"
-pip install "extended-data[google,slack,zoom]"
-pip install "extended-data[ai]"
-pip install "extended-data[meshy,mcp]"
+extended-data decode '{"service": {"name": "api"}}' --suffix json
+extended-data decode --file config.yaml --output json
+extended-data inspect --file config.yaml
+extended-data merge config/base.yaml config/dev.yaml --output yaml
+extended-data transform --file payload.json --step reconstruct --step unhump
 ```
 
-Optional dependency checks live in `extended_data.connectors._optional`; there
-are no old package compatibility shims in the public API. When a known built-in
-connector is requested without its optional extra installed, the registry raises
-an `ImportError` with the exact `extended-data[...]` install target instead of
-reporting the connector as unknown.
+## Split Packages
+
+`vendor-connectors` owns external API clients, optional vendor SDK dependencies,
+MCP/tool adapters, and vendor-specific examples. `secrets-sync-bridge` owns the
+Python bridge to the `secrets-sync` Go CLI.
+
+`extended-data` does not preserve `extended_data.connectors`,
+`extended_data.secrets`, `extended_data_types`, `directed_inputs_class`, or
+`lifecyclelogging` compatibility shims. Those import failures are intentional in
+this major version.

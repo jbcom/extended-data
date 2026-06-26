@@ -11,6 +11,8 @@ from unittest.mock import patch
 
 import pytest
 
+import extended_data.logging.logging as logging_module
+
 from extended_data.logging import ExitRunError, Logging
 
 
@@ -85,13 +87,12 @@ class TestExitRunNoExit:
         output = logger.exit_run(None, exit_on_completion=False)
         assert output == {}
 
-    def test_exit_run_unhump_results(self, logger: Logging, tmp_path: Path) -> None:
-        """Test that exit_run converts camelCase to snake_case."""
+    def test_exit_run_unhump_results_is_not_preserved(self, logger: Logging, tmp_path: Path) -> None:
+        """The clean major-version API should not keep the old shorthand flag."""
         os.chdir(tmp_path)
         results = {"myKey": {"nestedKey": "value"}}
-        output = logger.exit_run(results, unhump_results=True, exit_on_completion=False)
-        assert "my_key" in output
-        assert "nested_key" in output["my_key"]
+        with pytest.raises(TypeError, match="unhump_results"):
+            logger.exit_run(results, unhump_results=True, exit_on_completion=False)
 
     def test_exit_run_key_transform_snake_case(self, logger: Logging, tmp_path: Path) -> None:
         """Test key_transform with snake_case string."""
@@ -259,6 +260,38 @@ class TestExitRunNoExit:
                 exit_on_completion=False,
             )
 
+    def test_exit_run_formatting_errors_redact_result_snapshot(self, logger: Logging, tmp_path: Path) -> None:
+        """Formatting failures should report redacted diagnostics without chained traces."""
+        os.chdir(tmp_path)
+        results = {
+            "a": {
+                "otherField": "value",
+                "password": "hunter2",
+                "headers": {"authorization": "Bearer raw_token"},
+            }
+        }
+
+        with (
+            patch.object(logger.logger, "critical") as mock_critical,
+            pytest.raises(RuntimeError, match="formatting error") as exc_info,
+        ):
+            logger.exit_run(
+                results,
+                sort_by_field="missingField",
+                exit_on_completion=False,
+            )
+
+        mock_critical.assert_called_once()
+        logged_message = mock_critical.call_args.args[0]
+        assert mock_critical.call_args.kwargs == {}
+        assert exc_info.value.__cause__ is None
+        assert exc_info.value.__suppress_context__ is True
+        for raw_secret in ["hunter2", "raw_token"]:
+            assert raw_secret not in logged_message
+            assert raw_secret not in str(exc_info.value)
+        assert "[REDACTED]" in logged_message
+        assert "Traceback" not in logged_message
+
     def test_exit_run_with_errors_raises(self, logger: Logging, tmp_path: Path) -> None:
         """Test that exit_run raises when error_list is not empty."""
         os.chdir(tmp_path)
@@ -280,12 +313,17 @@ class TestExitRunWithExit:
         with (
             patch("sys.stdout.write") as mock_write,
             patch("sys.exit") as mock_exit,
+            patch(
+                "extended_data.logging.logging.wrap_raw_data_for_export",
+                wraps=logging_module.wrap_raw_data_for_export,
+            ) as mock_wrap_for_export,
         ):
             logger.exit_run(results)
             mock_write.assert_called_once()
             written = mock_write.call_args[0][0]
             assert json.loads(written) == results
             mock_exit.assert_called_once_with(0)
+            mock_wrap_for_export.assert_any_call(results, allow_encoding="json", default=str)
 
     def test_exit_run_wraps_in_key(self, logger: Logging, tmp_path: Path) -> None:
         """Test that exit_run wraps results in specified key."""

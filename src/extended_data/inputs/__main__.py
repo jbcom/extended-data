@@ -1,35 +1,34 @@
-"""Module to handle directed inputs for the InputProvider library.
+"""Tier 3 directed input processing for the extended-data package.
 
-This module provides functionality for managing inputs from various sources
-(environment, stdin) and allows for dynamic merging, freezing, and thawing
-of inputs. It includes methods to decode inputs from JSON, YAML, and Base64
-formats, as well as handling boolean and integer conversions.
+This module manages inputs from environment variables, stdin, and explicit
+mappings. It can merge, replace, snapshot, freeze, and thaw input state while
+keeping public snapshots in Tier 2 containers. It also decodes inputs from JSON,
+YAML, and Base64 and coerces scalar values through Tier 1 type primitives.
 """
 
 from __future__ import annotations
 
 import binascii
-import json
 import os
 import sys
 
 from copy import deepcopy
 from typing import TYPE_CHECKING, Any
 
-from case_insensitive_dict import CaseInsensitiveDict
 from deepmerge import Merger  # type: ignore[attr-defined]
-from yaml import YAMLError
 
-from extended_data import (
-    base64_decode,
-    decode_json,
-    decode_yaml,
-    is_nothing,
-    strtobool,
-    strtodatetime,
-    strtofloat,
-    strtoint,
-    strtopath,
+from extended_data.containers.factory import extend_data, to_builtin
+from extended_data.containers.mappings import ExtendedDict
+from extended_data.io.base64 import base64_decode
+from extended_data.io.files import decode_file
+from extended_data.primitives.formats.errors import DataDecodeError
+from extended_data.primitives.state import is_nothing
+from extended_data.primitives.types import (
+    string_to_bool,
+    string_to_datetime,
+    string_to_float,
+    string_to_int,
+    string_to_path,
 )
 
 
@@ -37,14 +36,15 @@ if TYPE_CHECKING:
     from collections.abc import Mapping
 
 
-class InputProvider:
-    """A class to manage and process directed inputs from environment variables.
+_MISSING = object()
 
-    stdin, or provided dictionaries.
+
+class InputProvider:
+    """Manage directed inputs from environment variables, stdin, or mappings.
 
     Attributes:
-        inputs (CaseInsensitiveDict): Dictionary to store inputs.
-        frozen_inputs (CaseInsensitiveDict): Dictionary to store frozen inputs.
+        inputs (ExtendedDict): Dictionary to store inputs.
+        frozen_inputs (ExtendedDict): Dictionary to store frozen inputs.
         from_stdin (bool): Flag indicating if inputs were read from stdin.
         merger (Merger): Object to manage deep merging of dictionaries.
     """
@@ -80,20 +80,20 @@ class InputProvider:
             env_inputs = self._filtered_environment(os.environ, env_prefix=env_prefix, strip_prefix=strip_env_prefix)
             current_inputs = self._merge_inputs(env_inputs, current_inputs)
 
-        if from_stdin and not strtobool(os.getenv("OVERRIDE_STDIN", "False")):
+        if from_stdin and not string_to_bool(os.getenv("OVERRIDE_STDIN", "False")):
             stdin_inputs = self._load_from_stdin()
             current_inputs = self._merge_inputs(stdin_inputs, current_inputs)
 
         self.from_stdin = from_stdin
-        self.inputs: CaseInsensitiveDict[str, Any] = CaseInsensitiveDict(current_inputs)
-        self.frozen_inputs: CaseInsensitiveDict[str, Any] = CaseInsensitiveDict()
+        self.inputs: ExtendedDict = ExtendedDict(current_inputs)
+        self.frozen_inputs: ExtendedDict = ExtendedDict()
 
     @staticmethod
     def _normalize_inputs(inputs: Mapping[str, Any] | None) -> dict[str, Any]:
         if inputs is None or is_nothing(inputs):
             return {}
 
-        return dict(inputs)
+        return to_builtin(dict(inputs))
 
     @staticmethod
     def _filtered_environment(
@@ -113,10 +113,10 @@ class InputProvider:
 
     def _merge_inputs(self, base: Mapping[str, Any], incoming: Mapping[str, Any]) -> dict[str, Any]:
         if is_nothing(incoming):
-            return deepcopy(dict(base))
+            return deepcopy(to_builtin(base))
 
-        clean_base = deepcopy(dict(base))
-        clean_incoming = deepcopy(dict(incoming))
+        clean_base = deepcopy(to_builtin(base))
+        clean_incoming = deepcopy(to_builtin(incoming))
 
         return self.merger.merge(clean_base, clean_incoming)
 
@@ -128,10 +128,13 @@ class InputProvider:
             return {}
 
         try:
-            decoded_stdin: dict[str, Any] = json.loads(inputs_from_stdin)
+            decoded_stdin = decode_file(inputs_from_stdin, suffix="json", as_extended=False)
+            if not isinstance(decoded_stdin, dict):
+                message = "Failed to decode stdin as JSON object."
+                raise TypeError(message)
             return decoded_stdin
-        except json.JSONDecodeError as exc:
-            message = f"Failed to decode stdin:\n{inputs_from_stdin}"
+        except DataDecodeError as exc:
+            message = f"Failed to decode stdin as JSON ({len(inputs_from_stdin)} characters)."
             raise RuntimeError(message) from exc
 
     @staticmethod
@@ -143,10 +146,23 @@ class InputProvider:
             try:
                 return value.decode("utf-8")
             except UnicodeDecodeError as exc:
-                message = f"Failed to decode bytes to string: {value!r}"
+                message = f"Failed to decode {type(value).__name__} input as UTF-8 text."
                 raise RuntimeError(message) from exc
 
         return value
+
+    @staticmethod
+    def _format_available_keys(inputs: Mapping[str, Any]) -> str:
+        """Format available input keys without exposing their values."""
+        if not inputs:
+            return "none"
+
+        keys = sorted(str(key) for key in inputs)
+        return ", ".join(keys[:20]) + (f", ... ({len(keys)} total)" if len(keys) > 20 else "")
+
+    @staticmethod
+    def _return_value(value: Any, *, as_extended: bool) -> Any:
+        return extend_data(value) if as_extended else value
 
     def get_input(
         self,
@@ -158,6 +174,7 @@ class InputProvider:
         is_float: bool = False,
         is_path: bool = False,
         is_datetime: bool = False,
+        as_extended: bool = False,
     ) -> Any:
         """Retrieves an input by key, with options for type conversion and default values.
 
@@ -174,49 +191,58 @@ class InputProvider:
             is_float (bool): Whether to convert the input to a float.
             is_path (bool): Whether to convert the input to a Path object.
             is_datetime (bool): Whether to convert the input to a datetime object.
+            as_extended (bool): Whether to wrap the returned value in Tier 2 containers.
 
         Returns:
             Any: The retrieved input, potentially converted or defaulted.
         """
-        inp = self.inputs.get(k, default)
+        inp = to_builtin(self.inputs.get(k, default))
 
         if is_nothing(inp):
             inp = default
 
         if is_bool and not isinstance(inp, bool):
-            inp = strtobool(inp)
+            try:
+                inp = string_to_bool(str(inp), raise_on_error=True)
+            except (TypeError, ValueError) as exc:
+                message = f"Input {k} cannot be converted to boolean."
+                raise RuntimeError(message) from exc
 
         if is_integer and inp is not None and not isinstance(inp, int):
             try:
-                inp = strtoint(inp)
+                inp = string_to_int(str(inp), raise_on_error=True)
             except (TypeError, ValueError) as exc:
-                message = f"Input {k} cannot be converted to integer: {inp!r}"
+                message = f"Input {k} cannot be converted to integer."
                 raise RuntimeError(message) from exc
 
         if is_float and inp is not None and not isinstance(inp, float):
             try:
-                inp = strtofloat(str(inp))
+                inp = string_to_float(str(inp), raise_on_error=True)
             except (TypeError, ValueError) as exc:
-                message = f"Input {k} cannot be converted to float: {inp!r}"
+                message = f"Input {k} cannot be converted to float."
                 raise RuntimeError(message) from exc
 
         if is_path and inp is not None:
             try:
-                inp = strtopath(str(inp))
+                inp = string_to_path(str(inp), raise_on_error=True)
             except (TypeError, ValueError) as exc:
-                message = f"Input {k} cannot be converted to Path: {inp!r}"
+                message = f"Input {k} cannot be converted to Path."
                 raise RuntimeError(message) from exc
 
         if is_datetime and inp is not None:
             try:
-                inp = strtodatetime(str(inp))
+                inp = string_to_datetime(str(inp), raise_on_error=True)
             except (TypeError, ValueError) as exc:
-                message = f"Input {k} cannot be converted to datetime: {inp!r}"
+                message = f"Input {k} cannot be converted to datetime."
                 raise RuntimeError(message) from exc
 
         if is_nothing(inp) and required:
-            message = f"Required input {k} not passed from inputs:\n{self.inputs}"
+            available = self._format_available_keys(self.inputs)
+            message = f"Required input {k} not passed. Available input keys: {available}."
             raise RuntimeError(message)
+
+        if as_extended:
+            return extend_data(inp)
 
         return inp
 
@@ -229,6 +255,7 @@ class InputProvider:
         decode_from_yaml: bool = False,
         decode_from_base64: bool = False,
         allow_none: bool = True,
+        as_extended: bool = False,
     ) -> Any:
         """Decodes an input value, optionally from Base64, JSON, or YAML.
 
@@ -241,19 +268,31 @@ class InputProvider:
             decode_from_yaml (bool): Whether to decode the input from YAML format.
             decode_from_base64 (bool): Whether to decode the input from Base64.
             allow_none (bool): Whether to allow None as a valid return value.
+            as_extended (bool): Wrap decoded container values in Tier 2 Extended Data containers.
 
         Returns:
             Any: The decoded input, potentially converted or defaulted.
         """
-        conf = self.get_input(k, default=default, required=required)
+        raw_input = self.inputs.get(k, _MISSING)
+        source_present = raw_input is not _MISSING
 
-        if conf is None or conf == default:
-            return conf
+        if not source_present:
+            if required:
+                self.get_input(k, default=default, required=True)
+            return self._return_value(default, as_extended=as_extended)
+
+        conf = to_builtin(raw_input)
+        if conf is None:
+            return self._return_value(default, as_extended=as_extended) if not allow_none else None
+        if is_nothing(conf):
+            if required:
+                self.get_input(k, default=default, required=True)
+            return self._return_value(default, as_extended=as_extended)
 
         conf = self._coerce_text(conf)
 
         if not isinstance(conf, str):
-            return conf
+            return self._return_value(conf, as_extended=as_extended)
 
         if decode_from_base64:
             try:
@@ -261,74 +300,111 @@ class InputProvider:
                     conf,
                     unwrap_raw_data=decode_from_json or decode_from_yaml,
                     encoding="json" if decode_from_json else "yaml",
+                    as_extended=False,
                 )
-            except binascii.Error as exc:
-                message = f"Failed to decode {conf} from base64"
+            except (binascii.Error, DataDecodeError) as exc:
+                message = f"Failed to decode input {k} from Base64."
                 raise RuntimeError(message) from exc
+
+            if not isinstance(conf, str):
+                if conf is None and not allow_none:
+                    return self._return_value(default, as_extended=as_extended)
+                return self._return_value(conf, as_extended=as_extended)
 
         if decode_from_yaml:
             try:
-                conf = decode_yaml(conf)
-            except YAMLError as exc:
-                message = f"Failed to decode {conf} from YAML"
+                conf = decode_file(conf, suffix="yaml", as_extended=as_extended)
+            except DataDecodeError as exc:
+                message = f"Failed to decode input {k} from YAML."
                 raise RuntimeError(message) from exc
         elif decode_from_json:
             try:
-                conf = decode_json(conf)
-            except json.JSONDecodeError as exc:
-                message = f"Failed to decode {conf} from JSON"
+                conf = decode_file(conf, suffix="json", as_extended=as_extended)
+            except DataDecodeError as exc:
+                message = f"Failed to decode input {k} from JSON."
                 raise RuntimeError(message) from exc
 
         if conf is None and not allow_none:
-            return default
+            return self._return_value(default, as_extended=as_extended)
 
-        return conf
+        if (decode_from_yaml or decode_from_json) and as_extended:
+            return conf
 
-    def freeze_inputs(self) -> CaseInsensitiveDict[str, Any]:
+        return self._return_value(conf, as_extended=as_extended)
+
+    def freeze_inputs(self) -> ExtendedDict:
         """Freezes the current inputs, preventing further modifications until thawed.
 
         Returns:
-            CaseInsensitiveDict: The frozen inputs.
+            ExtendedDict: The frozen inputs.
         """
         if is_nothing(self.frozen_inputs):
-            self.frozen_inputs = deepcopy(self.inputs)
-            self.inputs = CaseInsensitiveDict()
+            self.frozen_inputs = ExtendedDict(deepcopy(to_builtin(self.inputs)))
+            self.inputs = ExtendedDict()
 
         return self.frozen_inputs
 
-    def thaw_inputs(self) -> CaseInsensitiveDict[str, Any]:
+    def thaw_inputs(self) -> ExtendedDict:
         """Thaws the inputs, merging the frozen inputs back into the current inputs.
 
         Returns:
-            CaseInsensitiveDict: The thawed inputs.
+            ExtendedDict: The thawed inputs.
         """
         if is_nothing(self.inputs):
-            self.inputs = deepcopy(self.frozen_inputs)
-            self.frozen_inputs = CaseInsensitiveDict()
+            self.inputs = ExtendedDict(deepcopy(to_builtin(self.frozen_inputs)))
+            self.frozen_inputs = ExtendedDict()
             return self.inputs
 
-        self.inputs = self.merger.merge(deepcopy(self.inputs), deepcopy(self.frozen_inputs))
-        self.frozen_inputs = CaseInsensitiveDict()
+        merged = self._merge_inputs(self.inputs, self.frozen_inputs)
+        self.inputs = ExtendedDict(merged)
+        self.frozen_inputs = ExtendedDict()
         return self.inputs
 
-    def merge_inputs(self, new_inputs: Mapping[str, Any] | None) -> CaseInsensitiveDict[str, Any]:
+    def snapshot_inputs(self, *, frozen: bool = False) -> ExtendedDict:
+        """Return a detached Tier 2 snapshot of active or frozen inputs.
+
+        Args:
+            frozen (bool): Return frozen inputs instead of active inputs.
+
+        Returns:
+            ExtendedDict: A promoted copy of the requested input state.
+        """
+        source = self.frozen_inputs if frozen else self.inputs
+        return ExtendedDict(deepcopy(to_builtin(source)))
+
+    def replace_inputs(self, new_inputs: Mapping[str, Any] | None, *, clear_frozen: bool = True) -> ExtendedDict:
+        """Replace active inputs with a normalized Tier 2 snapshot.
+
+        Args:
+            new_inputs (Mapping[str, Any] | None): New active input values.
+            clear_frozen (bool): Whether to clear frozen inputs after replacement.
+
+        Returns:
+            ExtendedDict: The updated active input mapping.
+        """
+        self.inputs = ExtendedDict(deepcopy(self._normalize_inputs(new_inputs)))
+        if clear_frozen:
+            self.frozen_inputs = ExtendedDict()
+        return self.inputs
+
+    def merge_inputs(self, new_inputs: Mapping[str, Any] | None) -> ExtendedDict:
         """Merge new inputs into the current inputs using deep merge semantics.
 
         Args:
             new_inputs (Mapping[str, Any] | None): Incoming values to merge.
 
         Returns:
-            CaseInsensitiveDict[str, Any]: The updated input mapping.
+            ExtendedDict: The updated input mapping.
         """
         merged = self._merge_inputs(self.inputs, self._normalize_inputs(new_inputs))
-        self.inputs = CaseInsensitiveDict(merged)
+        self.inputs = ExtendedDict(merged)
         return self.inputs
 
-    def shift_inputs(self) -> CaseInsensitiveDict[str, Any]:
+    def shift_inputs(self) -> ExtendedDict:
         """Shifts between frozen and thawed inputs.
 
         Returns:
-            CaseInsensitiveDict: The resulting inputs after the shift.
+            ExtendedDict: The resulting inputs after the shift.
         """
         if is_nothing(self.frozen_inputs):
             return self.freeze_inputs()

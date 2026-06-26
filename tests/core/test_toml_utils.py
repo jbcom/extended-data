@@ -17,23 +17,21 @@ from pathlib import Path
 import pytest
 import tomlkit
 
-from extended_data.toml_utils import decode_toml, encode_toml
+from extended_data.containers import ExtendedDict
+from extended_data.primitives.formats.errors import DataDecodeError
+from extended_data.primitives.formats.toml import decode_toml, encode_toml
 
 
 def test_decode_toml_invalid_format() -> None:
-    """Tests the `decode_toml` function with an invalid TOML format.
-
-    This test checks whether the `decode_toml` function raises a `ParseError`
-    when provided with a malformed TOML string, specifically one that contains
-    an unclosed quote.
-
-    Asserts:
-        The function raises `tomlkit.exceptions.ParseError` when decoding
-        the invalid TOML string.
-    """
-    invalid_toml = "title = 'Unclosed quote"
-    with pytest.raises(tomlkit.exceptions.ParseError):
+    """Reject malformed TOML through a sanitized package error."""
+    invalid_toml = "token = 'super-secret"
+    with pytest.raises(DataDecodeError) as exc_info:
         decode_toml(invalid_toml)
+
+    message = str(exc_info.value)
+    assert "Failed to decode TOML data" in message
+    assert "line 1" in message
+    assert "super-secret" not in message
 
 
 def test_decode_toml_bytes_success() -> None:
@@ -43,8 +41,8 @@ def test_decode_toml_bytes_success() -> None:
 
 
 def test_decode_toml_invalid_bytes() -> None:
-    """Raise a TOMLKitError when bytes cannot be decoded."""
-    with pytest.raises(tomlkit.exceptions.TOMLKitError, match="Failed to decode bytes to string"):
+    """Raise a sanitized decode error when bytes cannot be decoded."""
+    with pytest.raises(DataDecodeError, match="input bytes are not valid UTF-8"):
         decode_toml(b"\x80")
 
 
@@ -73,3 +71,16 @@ def test_encode_toml_converts_tuple_like_composites() -> None:
     parsed = tomlkit.parse(result)
     assert parsed["items"] == ["alpha", "beta"]
     assert sorted(parsed["values"]) == [1, 2]
+
+
+@pytest.mark.parametrize("use_data_attribute", [False, True])
+def test_encode_toml_lowers_extended_containers(use_data_attribute: bool) -> None:
+    """Encode Tier 2 containers through TOML's existing primitive normalization."""
+    payload = ExtendedDict({"service": {"name": "api"}, "ports": [80, 443]})
+    raw_data = payload.data if use_data_attribute else payload
+
+    result = encode_toml(raw_data)
+
+    parsed = tomlkit.parse(result)
+    assert parsed["service"]["name"] == "api"
+    assert parsed["ports"] == [80, 443]

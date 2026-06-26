@@ -13,9 +13,15 @@ Functions:
 
 from __future__ import annotations
 
+from dataclasses import asdict, dataclass, is_dataclass
+from datetime import datetime
+
+import orjson
 import pytest
 
-from extended_data.json_utils import decode_json, encode_json
+from extended_data.containers import ExtendedDict, ExtendedString
+from extended_data.primitives.formats.errors import DataDecodeError
+from extended_data.primitives.formats.json import decode_json, encode_json
 
 
 @pytest.fixture
@@ -67,6 +73,30 @@ def test_decode_json(simple_json: str, simple_dict: dict) -> None:
     assert result == simple_dict
 
 
+@pytest.mark.parametrize(
+    "raw_json",
+    [
+        b'{"status":"ok"}',
+        bytearray(b'{"status":"ok"}'),
+        memoryview(b'{"status":"ok"}'),
+    ],
+)
+def test_decode_json_accepts_binary_inputs(raw_json: bytes | bytearray | memoryview) -> None:
+    """JSON decoding should accept all byte-like inputs used by file/API boundaries."""
+    assert decode_json(raw_json) == {"status": "ok"}
+
+
+def test_decode_json_invalid_input_raises_sanitized_decode_error() -> None:
+    """Invalid JSON raises a package-owned decode error without echoing values."""
+    with pytest.raises(DataDecodeError) as exc_info:
+        decode_json('{"token": "super-secret"')
+
+    message = str(exc_info.value)
+    assert "Failed to decode JSON data" in message
+    assert "line 1" in message
+    assert "super-secret" not in message
+
+
 def test_encode_json(simple_dict: dict, simple_json: str) -> None:
     """Tests encoding of a dictionary to JSON format.
 
@@ -99,3 +129,89 @@ def test_encode_json_bytes_output(simple_dict: dict) -> None:
     """
     result = encode_json(simple_dict)
     assert isinstance(result, str)
+
+
+@pytest.mark.parametrize("use_data_attribute", [False, True])
+def test_encode_json_lowers_extended_containers(use_data_attribute: bool) -> None:
+    """Encode Tier 2 containers as their plain JSON-compatible contents."""
+    payload = ExtendedDict({"status": "ok", "items": ["one"]})
+    raw_data = payload.data if use_data_attribute else payload
+
+    result = encode_json(raw_data, sort_keys=True)
+
+    assert decode_json(result) == {"items": ["one"], "status": "ok"}
+
+
+def test_encode_json_lowers_extended_mapping_keys() -> None:
+    """Extended mapping keys are lowered before JSON handoff."""
+    payload = ExtendedDict({ExtendedString("service"): {"name": "api"}})
+
+    result = encode_json(payload, sort_keys=True)
+
+    assert decode_json(result) == {"service": {"name": "api"}}
+
+
+def test_encode_json_exercises_orjson_options() -> None:
+    """Encoding options should be forwarded to orjson while preserving data-lowering semantics."""
+
+    @dataclass
+    class Service:
+        name: str
+
+    class EnvironmentLabel(str):
+        __slots__ = ()
+
+    def default(value: object) -> object:
+        if is_dataclass(value):
+            return {"dataclass": asdict(value)}
+        if isinstance(value, datetime):
+            return {"datetime": value.isoformat()}
+        if isinstance(value, EnvironmentLabel):
+            return {"label": str(value)}
+        raise TypeError
+
+    payload = {
+        2: "two",
+        "service": Service("api"),
+        "when": datetime(2026, 6, 11, 6, 30, 45, 123456),
+        "label": EnvironmentLabel("prod"),
+    }
+
+    result = encode_json(
+        payload,
+        default=default,
+        non_str_keys=True,
+        passthrough_dataclass=True,
+        passthrough_datetime=True,
+        passthrough_subclass=True,
+        serialize_numpy=True,
+        strict_integer=True,
+        sort_keys=True,
+        append_newline=True,
+    )
+
+    assert result.endswith("\n")
+    assert decode_json(result) == {
+        "2": "two",
+        "label": {"label": "prod"},
+        "service": {"dataclass": {"name": "api"}},
+        "when": {"datetime": "2026-06-11T06:30:45.123456"},
+    }
+
+
+def test_encode_json_datetime_options() -> None:
+    """Datetime options should control UTC, microsecond, and Z suffix rendering."""
+    result = encode_json(
+        {"when": datetime(2026, 6, 11, 6, 30, 45, 123456)},
+        naive_utc=True,
+        omit_microseconds=True,
+        utc_z=True,
+    )
+
+    assert decode_json(result) == {"when": "2026-06-11T06:30:45Z"}
+
+
+def test_encode_json_strict_integer_rejects_unsafe_values() -> None:
+    """Strict integer encoding should reject values outside the JSON-safe integer range."""
+    with pytest.raises(orjson.JSONEncodeError):
+        encode_json({"unsafe": 2**60}, strict_integer=True)

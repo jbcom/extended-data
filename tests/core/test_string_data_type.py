@@ -1,4 +1,4 @@
-"""Test Suite for Extended Data Types - String Operations
+"""Test suite for extended-data string operations.
 
 This module contains test functions and fixtures for verifying the functionality of various string operations
 provided by the `extended_data` package. The module covers a wide range of string manipulation and validation
@@ -14,14 +14,12 @@ Fixtures are used extensively to provide test data, promoting reusability and cl
     - `upper_first_char_data`: Provides input strings and expected results for testing uppercase conversion of the first character.
     - `url_data`: Provides URLs and expected validation results for testing URL checks.
     - `titleize_name_data`: Provides camelCase names and expected TitleCase results for testing titleization.
-    - `strtobool_data`: Provides strings representing truth values for testing boolean conversion.
-    - `strtofloat_data`: Provides strings representing floats for testing float conversion.
-    - `strtoint_data`: Provides strings representing integers for testing integer conversion.
+    - `string_to_bool_data`: Provides strings representing truth values for testing boolean conversion.
+    - `string_to_float_data`: Provides strings representing floats for testing float conversion.
+    - `string_to_int_data`: Provides strings representing integers for testing integer conversion.
     - `valid_path_data`: Provides valid input values and expected results for testing path conversion.
     - `invalid_path_data`: Provides invalid inputs and expected exceptions for testing path conversion with errors.
     - `silent_invalid_path_data`: Provides invalid inputs for testing path conversion when errors are silenced.
-    - `removeprefix_data`: Provides input strings, prefixes, and expected results for testing prefix removal.
-    - `removesuffix_data`: Provides input strings, suffixes, and expected results for testing suffix removal.
 
 ### Test Functions
 The module contains the following test functions:
@@ -31,14 +29,12 @@ The module contains the following test functions:
     - `test_upper_first_char`: Tests converting the first character of a string to uppercase.
     - `test_is_url`: Tests checking if a string is a valid URL.
     - `test_titleize_name`: Tests converting camelCase names to TitleCase.
-    - `test_strtobool`: Tests converting a string to a boolean value.
-    - `test_strtofloat`: Tests converting a string to a float value.
-    - `test_strtoint`: Tests converting a string to an integer value.
-    - `test_strtopath`: Tests converting valid inputs into pathlib.Path objects.
-    - `test_strtopath_invalid`: Tests handling invalid path inputs that should raise exceptions.
-    - `test_strtopath_invalid_silent`: Tests handling invalid path inputs when errors are silenced.
-    - `test_removeprefix`: Tests removing a prefix from a string.
-    - `test_removesuffix`: Tests removing a suffix from a string.
+    - `test_string_to_bool`: Tests converting a string to a boolean value.
+    - `test_string_to_float`: Tests converting a string to a float value.
+    - `test_string_to_int`: Tests converting a string to an integer value.
+    - `test_string_to_path`: Tests converting valid inputs into pathlib.Path objects.
+    - `test_string_to_path_invalid`: Tests handling invalid path inputs that should raise exceptions.
+    - `test_string_to_path_invalid_silent`: Tests handling invalid path inputs when errors are silenced.
 """
 
 from __future__ import annotations
@@ -47,12 +43,11 @@ from typing import Any
 
 import pytest
 
-from extended_data.string_data_type import (
-    bytestostr,
+from extended_data.containers import ExtendedString
+from extended_data.primitives.strings import (
+    bytes_to_string,
     is_url,
     lower_first_char,
-    removeprefix,
-    removesuffix,
     sanitize_key,
     titleize_name,
     truncate,
@@ -140,38 +135,6 @@ def titleize_name_data(request: Any) -> tuple[str, str]:
     return request.param
 
 
-@pytest.fixture(
-    params=[
-        ("test_string", "test_", "string"),
-        ("string", "test_", "string"),
-        ("test_string", "", "test_string"),
-    ]
-)
-def removeprefix_data(request: Any) -> tuple[str, str, str]:
-    """Provides data for testing removeprefix function.
-
-    Yields:
-        tuple[str, str, str]: A tuple containing the input string, prefix, and expected result.
-    """
-    return request.param
-
-
-@pytest.fixture(
-    params=[
-        ("test_string", "_string", "test"),
-        ("test", "_string", "test"),
-        ("test_string", "", "test_string"),
-    ]
-)
-def removesuffix_data(request: Any) -> tuple[str, str, str]:
-    """Provides data for testing removesuffix function.
-
-    Yields:
-        tuple[str, str, str]: A tuple containing the input string, suffix, and expected result.
-    """
-    return request.param
-
-
 @pytest.mark.parametrize(
     ("input_value", "expected_output"),
     [
@@ -181,7 +144,7 @@ def removesuffix_data(request: Any) -> tuple[str, str, str]:
         (memoryview(b"memoryview data"), "memoryview data"),  # Memoryview input
     ],
 )
-def test_bytestostr(input_value: str | memoryview | bytes | bytearray, expected_output: str) -> None:
+def test_bytes_to_string(input_value: str | memoryview | bytes | bytearray, expected_output: str) -> None:
     """Tests converting various byte-like objects and strings into a UTF-8 decoded string.
 
     Args:
@@ -189,25 +152,25 @@ def test_bytestostr(input_value: str | memoryview | bytes | bytearray, expected_
         expected_output (str): The expected UTF-8 decoded string.
 
     Asserts:
-        The result of bytestostr matches the expected UTF-8 decoded string for valid inputs.
+        The result of bytes_to_string matches the expected UTF-8 decoded string for valid inputs.
     """
-    assert bytestostr(input_value) == expected_output
+    assert bytes_to_string(input_value) == expected_output
 
 
-def test_bytestostr_invalid_bytes() -> None:
+def test_bytes_to_string_invalid_bytes() -> None:
     """Tests handling of invalid byte sequences during conversion to string.
 
     Asserts:
-        The bytestostr function raises a ConversionError when invalid bytes cannot be decoded.
+        The bytes_to_string function raises a ConversionError when invalid bytes cannot be decoded.
     """
     invalid_bytes = b"\x80invalid"
     with pytest.raises(UnicodeDecodeError):
-        bytestostr(invalid_bytes)
+        bytes_to_string(invalid_bytes)
 
 
-def test_bytestostr_falls_back_to_string_conversion() -> None:
+def test_bytes_to_string_falls_back_to_string_conversion() -> None:
     """Convert non-bytes objects with a plain string fallback."""
-    assert bytestostr(123) == "123"
+    assert bytes_to_string(123) == "123"
 
 
 def test_sanitize_key(test_key: str, sanitized_key: str) -> None:
@@ -293,27 +256,13 @@ def test_titleize_name(titleize_name_data: tuple[str, str]) -> None:
     assert titleize_name(name) == expected
 
 
-def test_removeprefix(removeprefix_data: tuple[str, str, str]) -> None:
-    """Tests removing a prefix from a string.
+def test_string_utilities_accept_extended_string_values() -> None:
+    """Tier 1 string utilities compose with Tier 2 ExtendedString values."""
+    value = ExtendedString("helloWorld")
 
-    Args:
-        removeprefix_data (tuple[str, str, str]): A fixture providing the input string, prefix, and expected result.
-
-    Asserts:
-        The result of removeprefix matches the expected string with the prefix removed.
-    """
-    string, prefix, expected = removeprefix_data
-    assert removeprefix(string, prefix) == expected
-
-
-def test_removesuffix(removesuffix_data: tuple[str, str, str]) -> None:
-    """Tests removing a suffix from a string.
-
-    Args:
-        removesuffix_data (tuple[str, str, str]): A fixture providing the input string, suffix, and expected result.
-
-    Asserts:
-        The result of removesuffix matches the expected string with the suffix removed.
-    """
-    string, suffix, expected = removesuffix_data
-    assert removesuffix(string, suffix) == expected
+    assert sanitize_key(ExtendedString("key-with*invalid_chars")) == "key_with_invalid_chars"
+    assert truncate(ExtendedString("abcdef"), 4) == "a..."
+    assert lower_first_char(ExtendedString("Hello")) == "hello"
+    assert upper_first_char(ExtendedString("hello")) == "Hello"
+    assert is_url(ExtendedString("https://example.com"))
+    assert titleize_name(value) == "Hello World"

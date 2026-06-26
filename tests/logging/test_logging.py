@@ -7,6 +7,7 @@ from typing import Any
 
 import pytest
 
+from extended_data.containers import ExtendedDict, ExtendedSet, ExtendedString
 from extended_data.logging import Logging
 from extended_data.logging.log_types import LogLevel
 
@@ -20,6 +21,16 @@ def test_logger_initialization() -> None:
     logger = Logging(enable_console=True)
     assert logger.enable_console is True
     assert logger.logger is not None
+
+
+def test_logger_does_not_write_files_by_default(tmp_path, monkeypatch) -> None:
+    """Default logging should not create files in the caller's working directory."""
+    monkeypatch.chdir(tmp_path)
+
+    logger = Logging(logger_name="default_logger")
+
+    assert logger.enable_file is False
+    assert not (tmp_path / "default_logger.log").exists()
 
 
 def test_basic_logging(logger: Logging) -> None:
@@ -45,6 +56,25 @@ def test_json_logging(logger: Logging) -> None:
     assert "value" in result
 
 
+def test_logging_redacts_sensitive_message_and_json_payloads(logger: Logging) -> None:
+    """Runtime log messages apply the shared Tier 1 redaction policy."""
+    result = logger.logged_statement(
+        "Request failed with Authorization: Bearer raw_token",
+        json_data={"password": "hunter2", "nested": {"api_key": "key_123"}},
+        labeled_json_data={"Request": {"client_secret": "secret_123"}},
+        storage_marker="events",
+        log_level="info",
+    )
+
+    assert result is not None
+    stored = next(iter(logger.stored_messages["events"]))
+    for raw_secret in ["raw_token", "hunter2", "key_123", "secret_123"]:
+        assert raw_secret not in result
+        assert raw_secret not in stored
+    assert result.count("[REDACTED]") >= 4
+    assert stored.count("[REDACTED]") >= 4
+
+
 def test_storage_marker(logger: Logging) -> None:
     """Test storing messages under specific markers.
 
@@ -60,8 +90,34 @@ def test_storage_marker(logger: Logging) -> None:
     )
 
     assert result == msg
+    assert isinstance(logger.stored_messages, ExtendedDict)
     assert storage_marker in logger.stored_messages
+    assert isinstance(logger.stored_messages[storage_marker], ExtendedSet)
     assert msg in logger.stored_messages[storage_marker]
+    stored_msg = next(iter(logger.stored_messages[storage_marker]))
+    assert isinstance(stored_msg, ExtendedString)
+
+
+def test_stored_message_snapshots_are_detached_extended_collections(logger: Logging) -> None:
+    """Stored logging data can be consumed through promoted detached snapshots."""
+    logger.logged_statement("First message", storage_marker="events", log_level="info")  # type: ignore[arg-type]
+    logger.logged_statement("Second message", storage_marker="events", log_level="info")  # type: ignore[arg-type]
+
+    messages = logger.get_stored_messages("events")
+    snapshot = logger.snapshot_stored_messages()
+    missing = logger.get_stored_messages("missing")
+
+    messages.add("Local mutation")
+    snapshot["events"].add("Snapshot mutation")
+
+    assert isinstance(messages, ExtendedSet)
+    assert all(isinstance(message, ExtendedString) for message in messages)
+    assert isinstance(snapshot, ExtendedDict)
+    assert isinstance(snapshot["events"], ExtendedSet)
+    assert missing == set()
+    assert "Local mutation" not in logger.stored_messages["events"]
+    assert "Snapshot mutation" not in logger.stored_messages["events"]
+    assert sorted(logger.snapshot_stored_messages().to_export_safe()["events"]) == ["First message", "Second message"]
 
 
 def test_context_marker(logger: Logging) -> None:
@@ -174,6 +230,8 @@ def test_log_level_filtering(logger: Logging) -> None:
 
     # Allowed level should be stored
     logger.logged_statement(msg, log_level="info")  # type: ignore[arg-type]
+    assert isinstance(logger.stored_messages, ExtendedDict)
+    assert isinstance(logger.stored_messages[storage_marker], ExtendedSet)
     assert msg in logger.stored_messages[storage_marker]
 
     # Denied level should not be stored
@@ -220,7 +278,9 @@ def test_all_log_levels(logger: Logging, log_level: LogLevel) -> None:
 
     assert result == msg
     assert storage_marker in logger.stored_messages
+    assert isinstance(logger.stored_messages[storage_marker], ExtendedSet)
     stored_msg = next(iter(m for m in logger.stored_messages[storage_marker] if msg in m))
+    assert isinstance(stored_msg, ExtendedString)
 
     # Check for warning prefix on appropriate levels
     if log_level not in ["debug", "info"]:

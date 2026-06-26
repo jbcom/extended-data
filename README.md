@@ -1,11 +1,20 @@
 # Extended Data
 
 Comprehensive Python data utilities for serialization, configuration inputs,
-structured logging, vendor data connectors, and workflow-oriented integrations.
+structured logging, file processing, and workflow composition.
 
-This repository is the clean major-version consolidation of the previous
-`extended-data-library` Python packages. The old package namespaces are not
-preserved; the public API now lives under `extended_data`.
+The public API lives under one `extended_data` namespace with three deliberate
+tiers:
+
+- Tier 1: pure functions for codecs, string transforms, redaction, matching,
+  type coercion, mapping, sequence, and state utilities.
+- Tier 2: `ExtendedString`, `ExtendedDict`, `ExtendedList`, `ExtendedTuple`,
+  and `ExtendedSet` containers that expose Tier 1 operations as methods.
+- Tier 3: data processors that compose the first two tiers for files, inputs,
+  logging, export/import boundaries, and workflows.
+
+External API clients live in the separate `vendor-connectors` distribution.
+SecretSync's Python bridge lives in `secrets-sync-bridge`.
 
 ## Install
 
@@ -13,71 +22,96 @@ preserved; the public API now lives under `extended_data`.
 pip install extended-data
 ```
 
-Optional integrations are installed by feature:
+Development and documentation extras are available for contributors:
 
 ```bash
-pip install "extended-data[aws,github,vault]"
-pip install "extended-data[google,slack,zoom]"
-pip install "extended-data[ai]"
-pip install "extended-data[meshy,mcp]"
-pip install "extended-data[secrets]"
+pip install "extended-data[dev]"
+pip install "extended-data[docs]"
 ```
 
 ## Usage
 
 ```python
-from extended_data import ConnectorFabric, InputProvider, Logging, decode_json, encode_yaml
+from extended_data import DataFile, DataWorkflow, ExtendedDict, InputProvider, Logging, decode_file
+from extended_data.primitives import decode_json, encode_yaml, number_to_words, redact_sensitive_text
 
-logger = Logging(logger_name="example")
-inputs = InputProvider(inputs={"GITHUB_OWNER": "jbcom"}, from_environment=False)
-connectors = ConnectorFabric(inputs=inputs.inputs, logger=logger)
-data = decode_json('{"status": "ok"}')
+logger = Logging(logger_name="example", enable_console=False, enable_file=False)
+inputs = InputProvider(inputs={"SERVICE_NAME": "api"}, from_environment=False)
+data = decode_json('{"service": {"name": "api"}}')
+payload = ExtendedDict(data).deep_merge({"replicas": 3})
+decoded_file = decode_file('{"service": {"name": "worker"}}', suffix="json")
+artifact = DataFile.decode("service:\n  name: api\n", suffix="yaml")
+workflow = DataWorkflow.from_value(payload).transform("unhump").result()
 
-print(encode_yaml(data))
+logger.logged_statement("prepared workflow", json_data=workflow.as_builtin(), log_level="info")
+
+assert inputs.inputs["SERVICE_NAME"] == "api"
+assert decoded_file["service"]["name"].upper_first() == "Worker"
+assert artifact.metadata["encoding"] == "yaml"
+assert number_to_words(42) == "forty-two"
+assert redact_sensitive_text("Authorization: Bearer raw_token") == "Authorization: [REDACTED]"
+assert "replicas: 3" in encode_yaml(workflow.as_builtin())
 ```
 
-The fabric can also instantiate any registered connector by name:
+The installed CLI exposes the Tier 3 data boundary:
 
-```python
-github = connectors.get_connector(
-    "github",
-    github_owner="jbcom",
-    github_token="...",
-)
+```bash
+extended-data decode '{"service": {"name": "api"}}' --suffix json
+extended-data decode --file config.yaml --output json
+extended-data inspect --file config.yaml
+extended-data merge config/base.yaml config/dev.yaml --output yaml
+extended-data transform --file payload.json --step reconstruct --step unhump
 ```
-
-Connector names are normalized before lookup. If a known built-in connector is
-requested without its optional extra installed, the registry raises an
-`ImportError` with the matching `extended-data[...]` install target.
 
 ## Package Shape
 
 ```text
 extended_data/
-  core serialization, files, types, transforms
+  containers/   Tier 2 ExtendedString/Dict/List/Tuple/Set wrappers
   inputs/       InputProvider and decorator-based input injection
+  io/           Tier 3 file, import, export, and base64 processors
   logging/      structured lifecycle logging
-  connectors/   ConnectorFabric and vendor adapters
-  secrets/      Python access to secret sync primitives
-  workflows/    higher-order workflow composition
+  primitives/   Tier 1 pure functions and codecs
+  workflows/    Tier 3 higher-order workflow composition
 ```
 
-Vendor connectors are first-class adapters in the data fabric. `ConnectorFabric`
-uses the registry to resolve connectors by name, injects shared input/logging
-context, caches connector instances, and lets specialized helpers coexist with
-generic vendor lookup.
+Tier 1 primitive names are explicit in this major version and live under
+`extended_data.primitives`, not the package root. Use `bytes_to_string()` for
+bytes-like coercion and `string_to_bool()`, `string_to_int()`,
+`string_to_float()`, `string_to_path()`, `string_to_date()`,
+`string_to_datetime()`, and `string_to_time()` for scalar string conversion.
+Use `redact_sensitive_text()` and `redact_sensitive_data()` for diagnostic and
+JSON-like payload redaction. Pass `values=[...]` when a caller knows specific
+context values, such as resource IDs, emails, paths, or URLs, must be withheld
+in addition to common secret fields.
 
-More detail lives in [`docs/package-surface.md`](docs/package-surface.md).
+Tier 2 containers inherit from standard Python collection primitives and expose
+chainable data operations. For example, `ExtendedString.decode_json()` promotes
+JSON into extended containers, `ExtendedDict.reconstruct_special_types()` turns
+string scalars into booleans/numbers/dates where safe, and
+`ExtendedList.first_non_empty()` returns the first meaningful value without
+lowering the surrounding data boundary.
 
-## Development
+Tier 3 processors keep structured data moving through explicit boundaries.
+`DataFile` reads, decodes, tracks metadata, and exports structured files.
+`DataWorkflow` layers reads, merges, transforms, writes, and provenance into a
+single result object. `InputProvider` loads direct inputs and environment data,
+and `Logging` provides structured lifecycle logging with stored-message
+snapshots returned as extended containers.
+
+The old `extended_data_types`, `directed_inputs_class`, and `lifecyclelogging`
+package names are not shimmed. The removed `extended_data.connectors` and
+`extended_data.secrets` namespaces are also not preserved. Clean-break import
+failures are intentional so stale migrations are visible.
+
+## Local Development
 
 ```bash
-uv sync --extra tests --extra typing
-uv run pytest
-uv run ruff check src tests
-uv build
+uv sync --all-extras --dev
+tox -e lint
+tox -e typecheck
+tox -e py311,py312,py313,py314
+tox -e examples
+tox -e docs
+tox -e build
 ```
-
-## License
-
-MIT.

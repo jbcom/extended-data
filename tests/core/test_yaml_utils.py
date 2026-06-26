@@ -19,11 +19,12 @@ from __future__ import annotations
 from types import SimpleNamespace
 
 import pytest
-import yaml
 
 from yaml import MappingNode, ScalarNode, SequenceNode
 
-from extended_data.yaml_utils import (
+from extended_data.containers import ExtendedDict
+from extended_data.primitives.formats.errors import DataDecodeError
+from extended_data.primitives.formats.yaml import (
     LiteralScalarString,
     YamlPairs,
     YamlTagged,
@@ -92,6 +93,17 @@ def test_encode_yaml(simple_yaml_fixture: str) -> None:
     assert result_data == expected_data
 
 
+@pytest.mark.parametrize("use_data_attribute", [False, True])
+def test_encode_yaml_lowers_extended_containers(use_data_attribute: bool) -> None:
+    """Encode Tier 2 containers while preserving YAML-compatible built-ins."""
+    payload = ExtendedDict({"status": "ok", "items": ["one"]})
+    raw_data = payload.data if use_data_attribute else payload
+
+    result = encode_yaml(raw_data)
+
+    assert decode_yaml(result) == {"status": "ok", "items": ["one"]}
+
+
 def test_yaml_construct_undefined() -> None:
     """Tests decoding of YAML data with a custom tag.
 
@@ -155,9 +167,20 @@ def test_decode_yaml_bytes_success(simple_yaml_fixture: str) -> None:
 
 
 def test_decode_yaml_invalid_bytes() -> None:
-    """Raise a YAMLError when bytes cannot be decoded."""
-    with pytest.raises(yaml.YAMLError, match="Failed to decode bytes to string"):
+    """Raise a sanitized decode error when bytes cannot be decoded."""
+    with pytest.raises(DataDecodeError, match="input bytes are not valid UTF-8"):
         decode_yaml(b"\x80")
+
+
+def test_decode_yaml_invalid_input_does_not_echo_payload() -> None:
+    """Invalid YAML messages do not include source snippets."""
+    with pytest.raises(DataDecodeError) as exc_info:
+        decode_yaml("token: [super-secret")
+
+    message = str(exc_info.value)
+    assert "Failed to decode YAML data" in message
+    assert "line 1" in message
+    assert "super-secret" not in message
 
 
 @pytest.mark.parametrize(

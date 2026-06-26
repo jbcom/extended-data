@@ -17,6 +17,7 @@ and mock objects to simulate Git operations without requiring actual repositorie
 
 from __future__ import annotations
 
+from base64 import b64encode
 from pathlib import Path
 from typing import Any
 
@@ -24,7 +25,9 @@ import pytest
 
 from git import GitCommandError, InvalidGitRepositoryError, NoSuchPathError, Repo
 
-from extended_data.file_data_type import (
+from extended_data.containers import ExtendedDict, ExtendedList, ExtendedString
+from extended_data.io.files import (
+    DataFile,
     FilePath,
     clone_repository_to_temp,
     decode_file,
@@ -37,6 +40,7 @@ from extended_data.file_data_type import (
     get_tld,
     is_url,
     match_file_extensions,
+    read_data_file,
     read_file,
     resolve_local_path,
     write_file,
@@ -80,7 +84,7 @@ def test_get_parent_repository(mocker) -> None:
         The result of get_parent_repository is either a valid Repo object or None if invalid.
     """
     # Mock the Repo constructor to return a mock Repo instance
-    mock_repo_constructor = mocker.patch("extended_data.file_data_type.Repo")
+    mock_repo_constructor = mocker.patch("extended_data.io.files.Repo")
     mock_repo_instance = mocker.Mock(spec=Repo)
     mock_repo_constructor.return_value = mock_repo_instance
 
@@ -124,7 +128,8 @@ def test_clone_repository_to_temp(mocker, valid_repo_data: dict) -> None:
         valid_repo_data: Dictionary containing valid repository data.
     """
     # Mock the Repo.clone_from method to return a mock Repo instance
-    mock_clone_from = mocker.patch("extended_data.file_data_type.Repo.clone_from")
+    mock_clone_from = mocker.patch("extended_data.io.files.Repo.clone_from")
+    mocker.patch.dict("extended_data.io.files.os.environ", {}, clear=True)
     mock_repo_instance = mocker.Mock(spec=Repo)
     mock_clone_from.return_value = mock_repo_instance
 
@@ -134,6 +139,15 @@ def test_clone_repository_to_temp(mocker, valid_repo_data: dict) -> None:
     # Assert that temp_dir is a Path instance and repo is the mocked Repo instance
     assert isinstance(temp_dir, Path)
     assert repo is mock_repo_instance
+    clone_url = mock_clone_from.call_args.args[0]
+    clone_env = mock_clone_from.call_args.kwargs["env"]
+    expected_header = b64encode(b"x-access-token:token123").decode("ascii")
+
+    assert clone_url == "https://github.com/owner/repo.git"
+    assert "token123" not in clone_url
+    assert clone_env["GIT_CONFIG_KEY_0"] == "http.https://github.com/.extraheader"
+    assert clone_env["GIT_CONFIG_VALUE_0"] == f"Authorization: Basic {expected_header}"
+    assert clone_env["GIT_CONFIG_COUNT"] == "1"
 
     # Test cloning with errors
     mock_clone_from.side_effect = GitCommandError("Error", "git")
@@ -156,7 +170,7 @@ def test_clone_repository_to_temp_additional_errors(
     mocker, valid_repo_data: dict, side_effect: Exception, message: str
 ) -> None:
     """Map additional git clone failures to consistent OSError messages."""
-    mocker.patch("extended_data.file_data_type.Repo.clone_from", side_effect=side_effect)
+    mocker.patch("extended_data.io.files.Repo.clone_from", side_effect=side_effect)
 
     with pytest.raises(OSError, match=message):
         clone_repository_to_temp(**valid_repo_data)
@@ -171,7 +185,7 @@ def test_get_tld(mocker) -> None:
         The result of get_tld matches the expected top-level directory or None if not a repository.
     """
     # Mock get_parent_repository to return a mock Repo instance
-    mock_get_parent_repo = mocker.patch("extended_data.file_data_type.get_parent_repository")
+    mock_get_parent_repo = mocker.patch("extended_data.io.files.get_parent_repository")
     mock_repo_instance = mocker.Mock(spec=Repo)
     mock_repo_instance.working_tree_dir = "/valid/repo"
     mock_get_parent_repo.return_value = mock_repo_instance
@@ -341,7 +355,7 @@ def test_resolve_local_path_relative_no_tld(mocker) -> None:
     Asserts:
         RuntimeError is raised when no tld is available.
     """
-    mocker.patch("extended_data.file_data_type.get_tld", return_value=None)
+    mocker.patch("extended_data.io.files.get_tld", return_value=None)
     with pytest.raises(RuntimeError, match="Cannot resolve relative path"):
         resolve_local_path("relative/file.txt")
 
@@ -392,7 +406,7 @@ def test_read_file_url_decoded(mocker) -> None:
             return b"hello from url"
 
     mock_urlopen = mocker.patch(
-        "extended_data.file_data_type.urllib.request.urlopen",
+        "extended_data.io.files.urllib.request.urlopen",
         return_value=MockResponse(),
     )
 
@@ -418,7 +432,7 @@ def test_read_file_url_bytes(mocker) -> None:
             return b"\x00\x01\x02"
 
     mocker.patch(
-        "extended_data.file_data_type.urllib.request.urlopen",
+        "extended_data.io.files.urllib.request.urlopen",
         return_value=MockResponse(),
     )
 
@@ -456,10 +470,10 @@ def test_read_file_return_path(tmp_path: Path) -> None:
 @pytest.mark.parametrize(
     ("data", "suffix", "expected_type"),
     [
-        ('{"key": "value"}', "json", dict),
-        ("key: value", "yaml", dict),
-        ("key: value", "yml", dict),
-        ("plain text", "txt", str),
+        ('{"key": "value"}', "json", ExtendedDict),
+        ("key: value", "yaml", ExtendedDict),
+        ("key: value", "yml", ExtendedDict),
+        ("plain text", "txt", ExtendedString),
     ],
 )
 def test_decode_file(data: str, suffix: str, expected_type: type) -> None:
@@ -477,6 +491,14 @@ def test_decode_file(data: str, suffix: str, expected_type: type) -> None:
     assert isinstance(result, expected_type)
 
 
+def test_decode_file_can_return_builtin_containers() -> None:
+    """File decoding can explicitly lower back to plain Python containers."""
+    result = decode_file('{"key": "value"}', suffix="json", as_extended=False)
+
+    assert isinstance(result, dict)
+    assert not isinstance(result, ExtendedDict)
+
+
 def test_decode_file_infer_suffix() -> None:
     """Tests decode_file inferring suffix from file path.
 
@@ -484,26 +506,155 @@ def test_decode_file_infer_suffix() -> None:
         Suffix is correctly inferred from file path.
     """
     result = decode_file('{"key": "value"}', file_path="/path/to/file.json")
-    assert isinstance(result, dict)
+    assert isinstance(result, ExtendedDict)
     assert result == {"key": "value"}
 
 
 def test_decode_file_infer_hcl_suffix() -> None:
     """Infer HCL decoding from a Terraform file path."""
     result = decode_file('variable "region" { default = "us-east-1" }', file_path="/path/to/variables.tf")
+    assert isinstance(result, ExtendedDict)
     assert result == {"variable": [{"region": {"default": "us-east-1"}}]}
 
 
 def test_decode_file_infer_toml_alias_suffix() -> None:
     """Infer TOML decoding from historical .tml suffixes."""
     result = decode_file('title = "Example"\n', file_path="/path/to/config.tml")
+    assert isinstance(result, ExtendedDict)
     assert result == {"title": "Example"}
 
 
 def test_decode_file_accepts_bytes_payload() -> None:
     """Decode bytes-like payloads through the same file helper."""
     result = decode_file(b'{"key":"value"}', file_path="/path/to/file.json")
+    assert isinstance(result, ExtendedDict)
     assert result == {"key": "value"}
+
+
+def test_decode_file_returns_extended_containers_by_default() -> None:
+    """File decoding enters the Tier 2 container layer by default."""
+    result = decode_file(
+        '{"service": {"name": "api"}, "ports": [8080]}',
+        file_path="/path/to/file.json",
+    )
+
+    assert isinstance(result, ExtendedDict)
+    assert isinstance(result["service"], ExtendedDict)
+    assert isinstance(result["service"]["name"], ExtendedString)
+    assert isinstance(result["ports"], ExtendedList)
+
+
+def test_read_data_file_reads_and_decodes_extended_data(tmp_path: Path) -> None:
+    """Data-file reads enter the Tier 2 container layer in one operation."""
+    test_file = tmp_path / "service.json"
+    test_file.write_text('{"service": {"name": "api"}, "ports": [8080]}')
+
+    result = read_data_file(test_file, tld=tmp_path)
+
+    assert isinstance(result, ExtendedDict)
+    assert isinstance(result["service"], ExtendedDict)
+    assert isinstance(result["service"]["name"], ExtendedString)
+    assert isinstance(result["ports"], ExtendedList)
+    assert result["service"]["name"].upper_first() == "Api"
+
+
+def test_read_data_file_can_return_builtin_data(tmp_path: Path) -> None:
+    """The composed file-data boundary can explicitly return plain Python values."""
+    test_file = tmp_path / "service.json"
+    test_file.write_text('{"service": {"name": "api"}}')
+
+    result = read_data_file(test_file, as_extended=False, tld=tmp_path)
+
+    assert isinstance(result, dict)
+    assert not isinstance(result, ExtendedDict)
+    assert isinstance(result["service"], dict)
+
+
+def test_read_data_file_raises_for_missing_file(tmp_path: Path) -> None:
+    """Missing data-file reads fail loudly."""
+    with pytest.raises(FileNotFoundError, match=r"missing\.json"):
+        read_data_file("missing.json", tld=tmp_path)
+
+
+def test_data_file_read_promotes_data_and_metadata(tmp_path: Path) -> None:
+    """DataFile reads keep file data and source metadata in the promoted surface."""
+    test_file = tmp_path / "service.json"
+    test_file.write_text('{"service": {"name": "api"}, "ports": [8080]}')
+
+    artifact = DataFile.read("service.json", tld=tmp_path)
+
+    assert artifact.source == "service.json"
+    assert artifact.encoding == "json"
+    assert artifact.path == test_file.resolve()
+    assert isinstance(artifact.data, ExtendedDict)
+    assert isinstance(artifact.data["service"], ExtendedDict)
+    assert isinstance(artifact.data["service"]["name"], ExtendedString)
+    assert isinstance(artifact.metadata, ExtendedDict)
+    assert artifact.metadata["encoding"].upper_first() == "Json"
+    assert artifact.metadata["path"] == str(test_file.resolve())
+    assert artifact.metadata["is_url"] is False
+    assert artifact.as_builtin() == {"service": {"name": "api"}, "ports": [8080]}
+
+
+def test_data_file_extended_view_is_detached() -> None:
+    """DataFile promoted views should not share mutable state with artifact data."""
+    artifact = DataFile.decode('{"service": {"name": "api"}}', suffix="json")
+
+    promoted = artifact.as_extended()
+    promoted["service"]["name"] = "worker"
+
+    assert isinstance(promoted, ExtendedDict)
+    assert artifact.data["service"]["name"] == "api"
+    assert artifact.as_extended()["service"]["name"].upper_first() == "Api"
+
+
+def test_data_file_decode_and_write_round_trip(tmp_path: Path) -> None:
+    """DataFile composes decode, export, write, and readback as a Tier 3 artifact."""
+    artifact = DataFile.decode('{"service": {"name": "api"}}', suffix="json")
+
+    assert isinstance(artifact.data, ExtendedDict)
+    assert artifact.source == "memory"
+    assert artifact.encoding == "json"
+    assert artifact.wrap_for_export(allow_encoding="json").strip().startswith("{")
+
+    output = artifact.write("build/service.yaml", tld=tmp_path)
+
+    assert output.path == tmp_path / "build" / "service.yaml"
+    assert output.encoding == "yaml"
+    assert isinstance(output.metadata["source"], ExtendedString)
+    assert read_data_file(output.path) == {"service": {"name": "api"}}
+
+
+def test_data_file_redacts_secret_bearing_source_and_metadata() -> None:
+    """DataFile provenance should be safe to carry into workflow metadata."""
+    artifact = DataFile.decode(
+        '{"service": {"name": "api"}}',
+        file_path="https://example.com/config.json?api_key=key_123&region=us-east-1",
+        suffix="json",
+        metadata={
+            "authorization": "Bearer raw_token",
+            "nested": {"client_secret": "secret_456"},
+            "source": "password=hunter2",
+        },
+    )
+    workflow = artifact.workflow()
+
+    assert "key_123" not in artifact.source
+    assert "region=us-east-1" in artifact.source
+    assert artifact.metadata["source"] == artifact.source
+    assert artifact.metadata["authorization"] == "[REDACTED]"
+    assert artifact.metadata["nested"]["client_secret"] == "[REDACTED]"
+    assert "hunter2" not in artifact.metadata["source"]
+    assert workflow.metadata["source"] == artifact.source
+    assert "key_123" not in workflow.steps[0]
+
+
+def test_data_file_write_without_local_target_fails_loudly() -> None:
+    """In-memory DataFile artifacts require an explicit output path."""
+    artifact = DataFile.decode("plain text", suffix="raw")
+
+    with pytest.raises(ValueError, match="pass file_path"):
+        artifact.write()
 
 
 def test_write_file_json(tmp_path: Path) -> None:

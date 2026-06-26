@@ -1,0 +1,403 @@
+"""Extended sequence containers built on Tier 1 primitives."""
+
+from __future__ import annotations
+
+from collections import UserList
+from collections.abc import Callable, Iterable, Iterator, MutableSet
+from operator import index as operator_index
+from typing import Any, SupportsIndex, TypeVar, cast, overload
+
+from extended_data.containers.mappings import ExtendedDict
+from extended_data.primitives.mappings import zipmap as primitive_zipmap
+from extended_data.primitives.sequences import filter_list, flatten_list
+from extended_data.primitives.splitting import split_list_by_type
+from extended_data.primitives.state import first_non_empty as primitive_first_non_empty
+from extended_data.primitives.state import is_nothing
+from extended_data.primitives.types import make_hashable, reconstruct_special_types
+
+
+T = TypeVar("T")
+U = TypeVar("U")
+
+
+class ExtendedList(UserList[T]):
+    """List wrapper with chainable primitive operations."""
+
+    def __init__(self, initlist: Iterable[T] | None = None) -> None:
+        """Initialize the extended list."""
+        super().__init__()
+        self.extend(initlist or [])
+
+    @staticmethod
+    def _wrap_item(item: T) -> T:
+        """Promote nested built-in containers to extended containers."""
+        from extended_data.containers.factory import extend_data
+
+        return cast(T, extend_data(item))
+
+    @overload
+    def __setitem__(self, i: SupportsIndex, item: T) -> None: ...
+
+    @overload
+    def __setitem__(self, i: slice, item: Iterable[T]) -> None: ...
+
+    def __setitem__(self, i: SupportsIndex | slice, item: T | Iterable[T]) -> None:
+        """Set values while preserving extended nested containers."""
+        if isinstance(i, slice):
+            self.data[i] = [self._wrap_item(value) for value in cast(Iterable[T], item)]
+            return
+        self.data[i] = self._wrap_item(cast(T, item))
+
+    def append(self, item: T) -> None:
+        """Append a value while preserving extended nested containers."""
+        self.data.append(self._wrap_item(item))
+
+    def extend(self, other: Iterable[T]) -> None:
+        """Extend values while preserving extended nested containers."""
+        self.data.extend(self._wrap_item(item) for item in other)
+
+    def __iadd__(self, other: Iterable[T]) -> ExtendedList[T]:
+        """Extend in place while preserving extended nested containers."""
+        self.extend(other)
+        return self
+
+    def __imul__(self, count: SupportsIndex) -> ExtendedList[T]:
+        """Repeat in place while preserving extended nested containers."""
+        self.data *= operator_index(count)
+        self.data[:] = [self._wrap_item(item) for item in self.data]
+        return self
+
+    def insert(self, i: int, item: T) -> None:
+        """Insert a value while preserving extended nested containers."""
+        self.data.insert(i, self._wrap_item(item))
+
+    def flatten(self) -> ExtendedList[Any]:
+        """Return a recursively flattened copy."""
+        from extended_data.containers.factory import extend_data, to_builtin
+
+        return extend_data(flatten_list(to_builtin(self.data)))
+
+    def compact(self) -> ExtendedList[T]:
+        """Return a copy without values considered empty."""
+        return ExtendedList(item for item in self.data if not is_nothing(item))
+
+    def map(self, func: Callable[[T], U]) -> ExtendedList[U]:
+        """Return a copy with a callable applied to each item."""
+        return ExtendedList(func(item) for item in self.data)
+
+    def filter(self, predicate: Callable[[T], bool]) -> ExtendedList[T]:
+        """Return a copy containing items accepted by a predicate."""
+        return ExtendedList(item for item in self.data if predicate(item))
+
+    def filter_values(
+        self,
+        *,
+        allowlist: Iterable[T] | None = None,
+        denylist: Iterable[T] | None = None,
+    ) -> ExtendedList[T]:
+        """Return a copy filtered by explicit allowed and denied values."""
+        return ExtendedList(filter_list(self.data, allowlist=allowlist, denylist=denylist))
+
+    def split_by_type(self, *, primitive_only: bool = False) -> ExtendedDict:
+        """Return values grouped by type name."""
+        from extended_data.containers.factory import extend_data, to_builtin
+
+        grouped = split_list_by_type(to_builtin(self.data), primitive_only=primitive_only)
+        return extend_data({type_key.__name__: values for type_key, values in grouped.items()})
+
+    def first_non_empty(self) -> T | None:
+        """Return the first value not considered empty."""
+        return cast(T | None, primitive_first_non_empty(*self.data))
+
+    def zipmap(self, values: Iterable[str]) -> ExtendedDict:
+        """Return an extended mapping from this list's values to provided values."""
+        from extended_data.containers.factory import extend_data, to_builtin
+
+        keys = [str(item) for item in to_builtin(self.data)]
+        mapped_values = [str(item) for item in to_builtin(list(values))]
+        return extend_data(primitive_zipmap(keys, mapped_values))
+
+    def reconstruct_special_types(self, *, fail_silently: bool = False) -> ExtendedList[Any]:
+        """Return a copy with string-like special values reconstructed."""
+        from extended_data.containers.factory import extend_data, to_builtin
+
+        return extend_data(reconstruct_special_types(to_builtin(self.data), fail_silently=fail_silently))
+
+    def to_export_safe(self, *, export_to_yaml: bool = False) -> Any:
+        """Return this list converted to export-safe primitive data."""
+        from extended_data.io.exporters import make_raw_data_export_safe
+
+        return make_raw_data_export_safe(self.data, export_to_yaml=export_to_yaml)
+
+    def wrap_for_export(self, allow_encoding: bool | str = True, **format_opts: Any) -> str:
+        """Return this list wrapped as an encoded export string."""
+        from extended_data.io.exporters import wrap_raw_data_for_export
+
+        return wrap_raw_data_for_export(self.data, allow_encoding=allow_encoding, **format_opts)
+
+    def unique(self) -> ExtendedList[T]:
+        """Return a copy with duplicate values removed while preserving order."""
+        seen: set[Any] = set()
+        values: list[T] = []
+        for item in self.data:
+            marker = make_hashable(item)
+            if marker in seen:
+                continue
+            seen.add(marker)
+            values.append(item)
+        return ExtendedList(values)
+
+
+class ExtendedTuple(tuple[T, ...]):
+    """Tuple wrapper with immutable chainable sequence operations."""
+
+    __slots__ = ()
+
+    def __new__(cls, values: Iterable[T] | None = None) -> ExtendedTuple[T]:
+        """Initialize the extended tuple."""
+        items = () if values is None else values
+        return super().__new__(cls, (cls._wrap_item(item) for item in items))
+
+    @staticmethod
+    def _wrap_item(item: T) -> T:
+        """Promote nested built-in containers to extended containers."""
+        from extended_data.containers.factory import extend_data
+
+        return cast(T, extend_data(item))
+
+    @overload
+    def __getitem__(self, index: SupportsIndex) -> T: ...
+
+    @overload
+    def __getitem__(self, index: slice) -> ExtendedTuple[T]: ...
+
+    def __getitem__(self, index: SupportsIndex | slice) -> T | ExtendedTuple[T]:
+        """Return sliced values as ExtendedTuple instances."""
+        value = super().__getitem__(index)
+        if isinstance(index, slice):
+            return ExtendedTuple(cast(tuple[T, ...], value))
+        return cast(T, value)
+
+    @overload
+    def __add__(self, other: tuple[T, ...]) -> ExtendedTuple[T]: ...
+
+    @overload
+    def __add__(self, other: tuple[U, ...]) -> ExtendedTuple[T | U]: ...
+
+    def __add__(self, other: tuple[Any, ...]) -> ExtendedTuple[Any]:
+        """Concatenate tuples while preserving the ExtendedTuple surface."""
+        return ExtendedTuple((*tuple(self), *other))
+
+    def __radd__(self, other: tuple[Any, ...]) -> ExtendedTuple[Any]:
+        """Concatenate tuples while preserving the ExtendedTuple surface."""
+        return ExtendedTuple((*other, *tuple(self)))
+
+    def __mul__(self, count: SupportsIndex) -> ExtendedTuple[T]:
+        """Repeat tuple values while preserving the ExtendedTuple surface."""
+        return ExtendedTuple(tuple(self) * operator_index(count))
+
+    def __rmul__(self, count: SupportsIndex) -> ExtendedTuple[T]:
+        """Repeat tuple values while preserving the ExtendedTuple surface."""
+        return self * count
+
+    def flatten(self) -> ExtendedTuple[Any]:
+        """Return a recursively flattened tuple copy."""
+        from extended_data.containers.factory import to_builtin
+
+        def _flatten(items: Iterable[Any]) -> list[Any]:
+            flattened: list[Any] = []
+            for item in items:
+                plain_item = to_builtin(item)
+                if isinstance(plain_item, list | tuple):
+                    flattened.extend(_flatten(plain_item))
+                else:
+                    flattened.append(plain_item)
+            return flattened
+
+        return ExtendedTuple(_flatten(self))
+
+    def compact(self) -> ExtendedTuple[T]:
+        """Return a copy without values considered empty."""
+        return ExtendedTuple(item for item in self if not is_nothing(item))
+
+    def map(self, func: Callable[[T], U]) -> ExtendedTuple[U]:
+        """Return a copy with a callable applied to each item."""
+        return ExtendedTuple(func(item) for item in self)
+
+    def filter(self, predicate: Callable[[T], bool]) -> ExtendedTuple[T]:
+        """Return a copy containing items accepted by a predicate."""
+        return ExtendedTuple(item for item in self if predicate(item))
+
+    def unique(self) -> ExtendedTuple[T]:
+        """Return a copy with duplicate values removed while preserving order."""
+        seen: set[Any] = set()
+        values: list[T] = []
+        for item in self:
+            marker = make_hashable(item)
+            if marker in seen:
+                continue
+            seen.add(marker)
+            values.append(item)
+        return ExtendedTuple(values)
+
+    def split_by_type(self, *, primitive_only: bool = False) -> ExtendedDict:
+        """Return values grouped by type name while keeping tuple-shaped groups."""
+        from extended_data.containers.factory import extend_data, to_builtin
+
+        grouped = split_list_by_type(list(to_builtin(self)), primitive_only=primitive_only)
+        return extend_data({type_key.__name__: tuple(values) for type_key, values in grouped.items()})
+
+    def first_non_empty(self) -> T | None:
+        """Return the first value not considered empty."""
+        return cast(T | None, primitive_first_non_empty(*self))
+
+    def zipmap(self, values: Iterable[str]) -> ExtendedDict:
+        """Return an extended mapping from this tuple's values to provided values."""
+        from extended_data.containers.factory import extend_data, to_builtin
+
+        keys = [str(item) for item in to_builtin(tuple(self))]
+        mapped_values = [str(item) for item in to_builtin(list(values))]
+        return extend_data(primitive_zipmap(keys, mapped_values))
+
+    def reconstruct_special_types(self, *, fail_silently: bool = False) -> ExtendedTuple[Any]:
+        """Return a copy with string-like special values reconstructed."""
+        from extended_data.containers.factory import extend_data, to_builtin
+
+        return extend_data(reconstruct_special_types(to_builtin(tuple(self)), fail_silently=fail_silently))
+
+    def to_export_safe(self, *, export_to_yaml: bool = False) -> Any:
+        """Return this tuple converted to export-safe primitive data."""
+        from extended_data.io.exporters import make_raw_data_export_safe
+
+        return make_raw_data_export_safe(tuple(self), export_to_yaml=export_to_yaml)
+
+    def wrap_for_export(self, allow_encoding: bool | str = True, **format_opts: Any) -> str:
+        """Return this tuple wrapped as an encoded export string."""
+        from extended_data.io.exporters import wrap_raw_data_for_export
+
+        return wrap_raw_data_for_export(tuple(self), allow_encoding=allow_encoding, **format_opts)
+
+    def to_tuple(self) -> tuple[T, ...]:
+        """Return a plain tuple copy."""
+        return tuple(self)
+
+
+class ExtendedSet(MutableSet[T]):
+    """Set wrapper with explicit chainable operations."""
+
+    def __init__(self, values: Iterable[T] | None = None) -> None:
+        """Initialize the extended set."""
+        self._data: set[T] = set()
+        for value in values or []:
+            self.add(value)
+
+    @staticmethod
+    def _wrap_item(item: T) -> T:
+        """Promote nested built-in containers to extended containers."""
+        from extended_data.containers.factory import extend_data
+
+        return cast(T, extend_data(item))
+
+    def __contains__(self, value: object) -> bool:
+        """Return whether the set contains a value."""
+        return value in self._data
+
+    def __iter__(self) -> Iterator[T]:
+        """Iterate over set values."""
+        return iter(self._data)
+
+    def __len__(self) -> int:
+        """Return the number of set values."""
+        return len(self._data)
+
+    def __repr__(self) -> str:
+        """Return a value-oriented representation."""
+        return f"{self.__class__.__name__}({self._data!r})"
+
+    def add(self, value: T) -> None:
+        """Add a value to the set."""
+        self._data.add(self._wrap_item(value))
+
+    def update(self, *others: Iterable[T]) -> None:
+        """Add values from one or more iterables."""
+        for other in others:
+            for value in other:
+                self.add(value)
+
+    def discard(self, value: T) -> None:
+        """Remove a value from the set if present."""
+        self._data.discard(value)
+
+    def copy(self) -> ExtendedSet[T]:
+        """Return a shallow copy."""
+        return ExtendedSet(self._data)
+
+    def compact(self) -> ExtendedSet[T]:
+        """Return a copy without values considered empty."""
+        return ExtendedSet(item for item in self._data if not is_nothing(item))
+
+    def reconstruct_special_types(self, *, fail_silently: bool = False) -> ExtendedSet[Any]:
+        """Return a copy with string-like special values reconstructed."""
+        from extended_data.containers.factory import extend_data, to_builtin
+
+        return extend_data(reconstruct_special_types(to_builtin(self._data), fail_silently=fail_silently))
+
+    def to_export_safe(self, *, export_to_yaml: bool = False) -> Any:
+        """Return this set converted to export-safe primitive data."""
+        from extended_data.io.exporters import make_raw_data_export_safe
+
+        return make_raw_data_export_safe(self._data, export_to_yaml=export_to_yaml)
+
+    def wrap_for_export(self, allow_encoding: bool | str = True, **format_opts: Any) -> str:
+        """Return this set wrapped as an encoded export string."""
+        from extended_data.io.exporters import wrap_raw_data_for_export
+
+        return wrap_raw_data_for_export(self._data, allow_encoding=allow_encoding, **format_opts)
+
+    def union(self, *others: Iterable[T]) -> ExtendedSet[T]:
+        """Return a union with other iterables."""
+        result = set(self._data)
+        for other in others:
+            result.update(other)
+        return ExtendedSet(result)
+
+    def intersection(self, *others: Iterable[T]) -> ExtendedSet[T]:
+        """Return an intersection with other iterables."""
+        result = set(self._data)
+        for other in others:
+            result.intersection_update(other)
+        return ExtendedSet(result)
+
+    def difference(self, *others: Iterable[T]) -> ExtendedSet[T]:
+        """Return a difference against other iterables."""
+        result = set(self._data)
+        for other in others:
+            result.difference_update(other)
+        return ExtendedSet(result)
+
+    def symmetric_difference(self, other: Iterable[T]) -> ExtendedSet[T]:
+        """Return a symmetric difference against another iterable."""
+        result = set(self._data)
+        for value in other:
+            wrapped = self._wrap_item(value)
+            if wrapped in result:
+                result.remove(wrapped)
+            else:
+                result.add(wrapped)
+        return ExtendedSet(result)
+
+    def intersection_update(self, *others: Iterable[T]) -> None:
+        """Keep only values found in all other iterables."""
+        self._data = self.intersection(*others)._data
+
+    def difference_update(self, *others: Iterable[T]) -> None:
+        """Remove values found in other iterables."""
+        self._data = self.difference(*others)._data
+
+    def symmetric_difference_update(self, other: Iterable[T]) -> None:
+        """Replace values with the symmetric difference against another iterable."""
+        self._data = self.symmetric_difference(other)._data
+
+    def to_set(self) -> set[T]:
+        """Return a plain set copy."""
+        return set(self._data)

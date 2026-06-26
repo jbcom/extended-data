@@ -18,7 +18,6 @@ import logging
 import os
 import sys
 
-from collections import defaultdict
 from collections.abc import Callable, Mapping, Sequence
 from copy import deepcopy
 from pathlib import Path
@@ -28,18 +27,8 @@ from typing import (
     cast,
 )
 
-import orjson
-
-from extended_data import (
-    get_unique_signature,
-    is_nothing,
-    strtobool,
-    to_camel_case,
-    to_kebab_case,
-    to_pascal_case,
-    to_snake_case,
-    wrap_raw_data_for_export,
-)
+from extended_data.containers import ExtendedDict, ExtendedSet, to_builtin
+from extended_data.io import wrap_raw_data_for_export
 from extended_data.logging.const import VERBOSITY
 from extended_data.logging.handlers import add_console_handler, add_file_handler
 from extended_data.logging.log_types import LogLevel
@@ -48,6 +37,17 @@ from extended_data.logging.utils import (
     clear_existing_handlers,
     find_logger,
     get_log_level,
+)
+from extended_data.primitives import (
+    get_unique_signature,
+    is_nothing,
+    redact_sensitive_data,
+    redact_sensitive_text,
+    string_to_bool,
+    to_camel_case,
+    to_kebab_case,
+    to_pascal_case,
+    to_snake_case,
 )
 
 
@@ -73,7 +73,7 @@ class Logging:
     def __init__(
         self,
         enable_console: bool = False,
-        enable_file: bool = True,
+        enable_file: bool = False,
         logger: logging.Logger | None = None,
         logger_name: str | None = None,
         log_file_name: str | None = None,
@@ -91,7 +91,8 @@ class Logging:
 
         Args:
             enable_console: Whether to enable console output.
-            enable_file: Whether to enable file output.
+            enable_file: Whether to enable file output. Defaults to False so library
+                consumers do not get log files unless they opt in.
             logger: An existing logger instance to use.
             logger_name: The name for a new logger instance.
             log_file_name: The name of the log file if file logging enabled.
@@ -117,7 +118,7 @@ class Logging:
         )
 
         # Message storage
-        self.stored_messages: defaultdict[str, set[str]] = defaultdict(set)
+        self.stored_messages: ExtendedDict = ExtendedDict()
         self.error_list: list[str] = []
         self.last_error_instance: Any = None
         self.last_error_text: str | None = None
@@ -193,10 +194,10 @@ class Logging:
             logger.setLevel(gunicorn_logger.level)
             return
 
-        if self.enable_console or strtobool(os.getenv("OVERRIDE_TO_CONSOLE", "False")):
+        if self.enable_console or string_to_bool(os.getenv("OVERRIDE_TO_CONSOLE", "False")):
             add_console_handler(logger)
 
-        if self.enable_file or strtobool(os.getenv("OVERRIDE_TO_FILE", "False")):
+        if self.enable_file or string_to_bool(os.getenv("OVERRIDE_TO_FILE", "False")):
             # Pass the log file name directly
             add_file_handler(logger, log_file_name)
 
@@ -280,9 +281,27 @@ class Logging:
             return
 
         if (not allowed_levels or log_level in allowed_levels) and log_level not in denied_levels:
-            self.stored_messages[storage_marker].add(
+            self._stored_messages_for(storage_marker).add(
                 f":warning: {msg}" if log_level not in ["debug", "info"] else msg,
             )
+
+    def _stored_messages_for(self, storage_marker: str) -> ExtendedSet[str]:
+        """Return the promoted message collection for a storage marker."""
+        stored_messages = self.stored_messages.get(storage_marker)
+        if isinstance(stored_messages, ExtendedSet):
+            return stored_messages
+
+        promoted_messages = ExtendedSet[str](stored_messages or [])
+        self.stored_messages[storage_marker] = promoted_messages
+        return promoted_messages
+
+    def get_stored_messages(self, storage_marker: str) -> ExtendedSet[str]:
+        """Return a detached promoted copy of messages for one storage marker."""
+        return ExtendedSet[str](deepcopy(to_builtin(self.stored_messages.get(storage_marker, ExtendedSet()))))
+
+    def snapshot_stored_messages(self) -> ExtendedDict:
+        """Return a detached Tier 2 snapshot of all stored message collections."""
+        return ExtendedDict(deepcopy(to_builtin(self.stored_messages)))
 
     def logged_statement(
         self,
@@ -323,6 +342,7 @@ class Logging:
 
         final_msg = self._prepare_message(msg, context_marker, identifiers)
         final_msg = add_json_data(final_msg, json_data, labeled_json_data)
+        final_msg = redact_sensitive_text(final_msg)
 
         # Normalize levels once here before passing to storage
         final_allowed = self._normalize_levels(allowed_levels) if allowed_levels is not None else self.allowed_levels
@@ -383,14 +403,12 @@ class Logging:
     def _resolve_key_transform(
         self,
         key_transform: KeyTransform | str | None,
-        unhump_results: bool,
         prefix: str | None,
     ) -> KeyTransform | None:
         """Resolve key_transform parameter to a callable.
 
         Args:
             key_transform: User-provided transform (callable, string name, or None).
-            unhump_results: Legacy flag for snake_case transformation.
             prefix: If set, implies transformation is needed.
 
         Returns:
@@ -406,8 +424,7 @@ class Logging:
                     raise ValueError(f"Unknown key_transform '{key_transform}'. Available: {available}")
                 return self.KEY_TRANSFORMS[key_transform]
 
-        # Legacy unhump_results flag
-        if unhump_results or prefix:
+        if prefix:
             return to_snake_case
 
         return None
@@ -440,10 +457,18 @@ class Logging:
                 result[transformed_key] = value
         return result
 
+    @staticmethod
+    def _format_exit_run_error_snapshot(data: Any) -> str:
+        """Return a redacted diagnostic snapshot for exit_run failures."""
+        redacted_data = redact_sensitive_data(data)
+        try:
+            return wrap_raw_data_for_export(redacted_data, allow_encoding=True)
+        except Exception:
+            return redact_sensitive_text(redacted_data)
+
     def exit_run(
         self,
         results: Mapping[str, Any] | None = None,
-        unhump_results: bool = False,
         key_transform: KeyTransform | str | None = None,
         prefix: str | None = None,
         prefix_allowlist: Sequence[str] | None = None,
@@ -469,14 +494,11 @@ class Logging:
 
         Args:
             results: The results to format and output. Defaults to empty dict.
-            unhump_results: Convert camelCase keys to snake_case (shorthand for
-                key_transform="snake_case").
             key_transform: Transform function for result keys. Can be:
                 - A callable that takes a string and returns a string
                 - A string naming a built-in transform: "snake_case", "camel_case",
                   "pascal_case", "kebab_case"
                 - None to skip transformation
-                When unhump_results=True, defaults to "snake_case".
             prefix: Prefix to add to result keys (implies key transformation).
             prefix_allowlist: Keys to include when prefixing.
             prefix_denylist: Keys to exclude when prefixing.
@@ -500,7 +522,7 @@ class Logging:
 
         Examples:
             # Simple snake_case transformation (most common)
-            logging.exit_run(results, unhump_results=True)
+            logging.exit_run(results, key_transform="snake_case")
 
             # Explicit transform
             logging.exit_run(results, key_transform="kebab_case")
@@ -508,8 +530,11 @@ class Logging:
             # Custom transform function
             logging.exit_run(results, key_transform=lambda k: k.upper())
         """
+        if "unhump_results" in format_opts:
+            raise TypeError("exit_run() got an unexpected keyword argument 'unhump_results'")
+
         # Resolve key_transform from various inputs
-        transform_fn = self._resolve_key_transform(key_transform, unhump_results, prefix)
+        transform_fn = self._resolve_key_transform(key_transform, prefix)
         try:
             self.log_results(results, "results")
 
@@ -625,11 +650,14 @@ class Logging:
 
             if not isinstance(data, str):
                 self.logger.info("Dumping results to JSON")
-                data = orjson.dumps(data, default=str).decode("utf-8")
+                data = wrap_raw_data_for_export(data, allow_encoding="json", default=str)
 
             sys.stdout.write(data)
             sys.exit(0)
-        except ExitRunError as exc:
-            err_msg = f"Failed to dump results because of a formatting error:\n\n{data}"
-            self.logger.critical(err_msg, exc_info=True)
-            raise RuntimeError(err_msg) from exc
+        except ExitRunError:
+            err_msg = (
+                "Failed to dump results because of a formatting error:\n\n"
+                f"{self._format_exit_run_error_snapshot(data)}"
+            )
+            self.logger.critical(err_msg)
+            raise RuntimeError(err_msg) from None

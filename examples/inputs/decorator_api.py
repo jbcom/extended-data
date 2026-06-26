@@ -8,7 +8,7 @@ This example demonstrates the modern decorator-based API:
 - JSON decoding from inputs
 
 Run with:
-    python -m examples.decorator_api
+    python examples/inputs/decorator_api.py
 """
 
 from __future__ import annotations
@@ -26,6 +26,7 @@ from extended_data.inputs import directed_inputs, input_config
 class UserService:
     """Example service demonstrating decorator-based input handling."""
 
+    @input_config("user_id", source_name="USER_ID", required=True)
     def get_user(self, user_id: str) -> dict[str, str]:
         """Get a user by ID.
 
@@ -41,9 +42,9 @@ class UserService:
         The api_key is required and sourced from API_KEY input.
         The endpoint parameter uses its default if not in inputs.
         """
-        return f"Calling {endpoint} with key {api_key[:4]}..."
+        return f"Calling {endpoint} with configured API key"
 
-    @input_config("config", decode_from_json=True)
+    @input_config("config", source_name="CONFIG", decode_from_json=True)
     def parse_config(self, config: dict[str, str] | None = None) -> dict[str, str]:
         """Parse configuration from JSON input.
 
@@ -51,7 +52,7 @@ class UserService:
         """
         return config or {}
 
-    @input_config("port", is_integer=True, default=8080)
+    @input_config("port", source_name="PORT", is_integer=True, default=8080)
     def get_port(self, port: int) -> int:
         """Get the configured port.
 

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from extended_data.serialization_utils import normalize_data_encoding
+from extended_data.primitives.serialization import normalize_data_encoding
 
 
 def test_normalize_data_encoding_aliases_and_passthrough() -> None:

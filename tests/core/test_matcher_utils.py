@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import pytest
 
-from extended_data.matcher_utils import is_non_empty_match, is_partial_match
+from extended_data.primitives.matching import is_non_empty_match, is_partial_match
 
 
 @pytest.mark.parametrize(

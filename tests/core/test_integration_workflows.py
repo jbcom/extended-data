@@ -26,25 +26,26 @@ def test_integration_workflow_serialization_transformation_export():
         }
         edt.write_file(tmp_path, raw_data)
 
-        # 2. Read and Decode
-        content = edt.read_file(tmp_path)
-        loaded_data = edt.decode_file(content, file_path=tmp_path)
+        # 2. Read and decode through the Tier 3 file boundary
+        loaded_data = edt.read_data_file(tmp_path)
         assert loaded_data == raw_data
+        assert isinstance(loaded_data, edt.ExtendedDict)
 
         # 3. Transform: Convert types and transform strings
         transformed = {
-            "name": edt.to_pascal_case(loaded_data["project_name"]),
-            "config": edt.reconstruct_special_types(loaded_data["settings"]),
-            "item_list": [edt.humanize(i) for i in loaded_data["items"]],
+            "name": loaded_data["project_name"].to_pascal_case(),
+            "config": loaded_data["settings"].reconstruct_special_types(),
+            "item_list": [item.humanize() for item in loaded_data["items"]],
         }
 
         assert transformed["name"] == "MyGreatProject"
+        assert isinstance(transformed["config"], edt.ExtendedDict)
         assert transformed["config"]["enable_feature"] is True
         assert transformed["config"]["max_retries"] == 5
         assert transformed["item_list"] == ["Item one", "Item two"]
 
         # 4. Export: Make safe for export (e.g. GitHub Actions)
-        export_safe = edt.make_raw_data_export_safe(transformed)
+        export_safe = edt.ExtendedDict(transformed).to_export_safe()
         assert isinstance(export_safe, dict)
         # Verify it's still equivalent
         assert export_safe["name"] == "MyGreatProject"
@@ -74,15 +75,15 @@ def test_integration_workflow_data_transformation_pipeline():
     dict1 = {"a": {"b": 1}, "c": 3}
     dict2 = {"a": {"d": 4}, "e": 5}
 
-    # 1. Merge maps
-    merged = edt.deep_merge(dict1, dict2)
+    # 1. Merge maps through the Tier 2 container surface
+    merged = edt.ExtendedDict(dict1).deep_merge(dict2)
     assert merged["a"] == {"b": 1, "d": 4}
 
     # 2. Flatten map
-    flattened = edt.flatten_map(merged)
+    flattened = merged.flatten()
     assert flattened["a.b"] == 1
     assert flattened["a.d"] == 4
 
     # 3. Transform keys
-    unhumped = edt.unhump_map(merged)
+    unhumped = merged.unhump()
     assert "a" in unhumped

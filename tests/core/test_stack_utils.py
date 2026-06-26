@@ -19,7 +19,7 @@ import sys
 
 import pytest
 
-from extended_data.stack_utils import (
+from extended_data.primitives.introspection import (
     current_python_version_is_at_least,
     filter_methods,
     get_available_methods,

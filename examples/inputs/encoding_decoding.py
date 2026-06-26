@@ -8,7 +8,7 @@ This example demonstrates input decoding capabilities:
 - Combined Base64 + JSON/YAML decoding
 
 Run with:
-    python -m examples.encoding_decoding
+    python examples/inputs/encoding_decoding.py
 """
 
 from __future__ import annotations
@@ -21,7 +21,7 @@ from extended_data.inputs import InputProvider
 def main() -> None:
     """Demonstrate encoding/decoding features."""
     # Prepare encoded test data
-    json_data = '{"database": "postgres", "port": 5432}'
+    json_data = '{"database": "postgres", "port": "5432", "enabled": "true"}'
     yaml_data = "server:\n  host: localhost\n  port: 8080"
     base64_json = base64.b64encode(json_data.encode()).decode()
     base64_yaml = base64.b64encode(yaml_data.encode()).decode()
@@ -38,34 +38,42 @@ def main() -> None:
     )
 
     # JSON decoding
-    inputs.decode_input("json_config", decode_from_json=True)
+    json_config = inputs.decode_input("json_config", decode_from_json=True, as_extended=True)
+    json_config.reconstruct_special_types().to_export_safe()
 
     # YAML decoding
-    inputs.decode_input("yaml_config", decode_from_yaml=True)
+    yaml_config = inputs.decode_input("yaml_config", decode_from_yaml=True, as_extended=True)
+    yaml_config["server"]["host"].upper_first()
 
     # Base64 + JSON decoding
-    inputs.decode_input(
+    base64_decoded_json = inputs.decode_input(
         "base64_json_config",
         decode_from_base64=True,
         decode_from_json=True,
+        as_extended=True,
     )
+    base64_decoded_json.wrap_for_export(allow_encoding="json")
 
     # Base64 + YAML decoding
-    inputs.decode_input(
+    base64_decoded_yaml = inputs.decode_input(
         "base64_yaml_config",
         decode_from_base64=True,
         decode_from_yaml=True,
+        as_extended=True,
     )
+    base64_decoded_yaml.to_export_safe()
 
     # Plain text (no decoding)
-    inputs.get_input("plain_text")
+    inputs.get_input("plain_text", as_extended=True).upper_first()
 
     # Missing input with default
-    inputs.decode_input(
+    fallback = inputs.decode_input(
         "nonexistent",
-        default={"fallback": True},
+        default={"fallback": "true"},
         decode_from_json=True,
+        as_extended=True,
     )
+    fallback.reconstruct_special_types()
 
 
 if __name__ == "__main__":

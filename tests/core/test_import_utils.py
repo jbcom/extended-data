@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import pytest
 
-from extended_data.import_utils import unwrap_raw_data_from_import
+from extended_data.containers import ExtendedDict, ExtendedList, ExtendedString
+from extended_data.io.importers import unwrap_raw_data_from_import
 
 
 @pytest.mark.parametrize(
@@ -35,3 +36,32 @@ def test_unwrap_raw_data_from_import_rejects_unsupported_encoding() -> None:
     """Reject unsupported import encodings."""
     with pytest.raises(ValueError, match="Unsupported encoding format: xml"):
         unwrap_raw_data_from_import("<key>value</key>", "xml")
+
+
+def test_unwrap_raw_data_from_import_returns_extended_containers_by_default() -> None:
+    """Decoded imports enter the Tier 2 container layer by default."""
+    result = unwrap_raw_data_from_import(
+        '{"service": {"name": "api"}, "ports": [8080]}',
+        encoding="json",
+    )
+
+    assert isinstance(result, ExtendedDict)
+    assert isinstance(result["service"], ExtendedDict)
+    assert isinstance(result["service"]["name"], ExtendedString)
+    assert isinstance(result["ports"], ExtendedList)
+
+
+def test_unwrap_raw_data_from_import_can_return_builtin_containers() -> None:
+    """Decoded imports can explicitly return plain Python containers."""
+    result = unwrap_raw_data_from_import('{"service": {"name": "api"}}', encoding="json", as_extended=False)
+
+    assert isinstance(result, dict)
+    assert not isinstance(result, ExtendedDict)
+
+
+def test_unwrap_raw_data_from_import_returns_extended_raw_strings_by_default() -> None:
+    """Raw imports promote to ExtendedString by default."""
+    result = unwrap_raw_data_from_import("plain text", encoding="raw")
+
+    assert isinstance(result, ExtendedString)
+    assert result.upper_first() == "Plain text"

@@ -5,10 +5,12 @@ This example demonstrates the fundamental features of the InputProvider API:
 - Loading inputs from environment variables
 - Providing default values
 - Type conversion (boolean, integer, float)
+- Detached Tier 2 input snapshots
+- Explicit input replacement
 - Input freezing and thawing
 
 Run with:
-    python -m examples.basic_usage
+    python examples/inputs/basic_usage.py
 """
 
 from __future__ import annotations
@@ -38,13 +40,19 @@ def main() -> None:
     inputs.get_input("PORT", is_integer=True)
     inputs.get_input("TIMEOUT", is_float=True)
     inputs.get_input("NAME")
+    inputs.inputs["NAME"].to_snake_case()
+    inputs.snapshot_inputs()["NAME"].to_snake_case()
 
     # Demonstrate default values
     inputs.get_input("LOG_LEVEL", default="INFO")
 
+    # Replace active inputs with a new promoted snapshot
+    inputs.replace_inputs({"SERVICE": {"name": "api"}}, clear_frozen=True)
+    inputs.snapshot_inputs()["SERVICE"]["name"].upper_first()
+
     # Demonstrate freeze/thaw functionality
     inputs.freeze_inputs()
-
+    inputs.snapshot_inputs(frozen=True)["SERVICE"]["name"].upper_first()
     inputs.thaw_inputs()
 
 

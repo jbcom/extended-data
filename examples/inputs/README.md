@@ -1,19 +1,20 @@
-# Examples
+# Input Examples
 
-This directory contains working examples demonstrating the features of `Extended Data inputs`.
+This directory contains working examples for `InputProvider` and the decorator
+helpers in `extended_data.inputs`.
 
 ## Running Examples
 
 All examples can be run as Python modules from the project root:
 
 ```bash
-# Install the package first
-uv sync
+# Install the local package first
+uv sync --extra tests
 
 # Run examples
-uv run python -m examples.basic_usage
-uv run python -m examples.decorator_api
-uv run python -m examples.encoding_decoding
+uv run python examples/inputs/basic_usage.py
+uv run python examples/inputs/decorator_api.py
+uv run python examples/inputs/encoding_decoding.py
 ```
 
 ## Available Examples
@@ -23,6 +24,8 @@ uv run python -m examples.encoding_decoding
 Demonstrates the `InputProvider` API:
 - Loading inputs from environment variables
 - Environment variable prefix filtering
+- Direct `ExtendedDict`/`ExtendedString` input snapshot access with `snapshot_inputs()`
+- Active input replacement with `replace_inputs()`
 - Type conversion (boolean, integer, float)
 - Default values
 - Input freezing and thawing
@@ -45,4 +48,5 @@ Demonstrates input decoding capabilities:
 - YAML decoding
 - Base64 decoding
 - Combined Base64 + JSON/YAML decoding
-- Default values for missing inputs
+- Tier 2 reconstruction/export methods on decoded inputs
+- Promoted default values for missing inputs
