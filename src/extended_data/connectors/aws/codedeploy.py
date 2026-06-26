@@ -7,7 +7,7 @@ and standalone Python workloads can rely on the same implementation.
 from __future__ import annotations
 
 from collections.abc import Iterable, Mapping, Sequence
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 
 from extended_data.connectors.aws import AWSConnector
@@ -61,7 +61,7 @@ def _coerce_datetime(value: datetime | str | float | None) -> datetime | None:
     if isinstance(value, datetime):
         return value
     if isinstance(value, (int, float)):
-        return datetime.fromtimestamp(value, tz=timezone.utc)
+        return datetime.fromtimestamp(value, tz=UTC)
     if isinstance(value, str):
         text = value.strip()
         if text.endswith("Z"):

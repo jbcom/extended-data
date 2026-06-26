@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import patch
 
 import pytest
@@ -61,7 +61,7 @@ class TestProjectManifest:
             "project": "project2",
             "asset_specs": {},
             "version": "1.0",
-            "last_updated": datetime.now(timezone.utc).isoformat(),
+            "last_updated": datetime.now(UTC).isoformat(),
         }
 
         with open(manifest_path, "w") as f:
@@ -82,7 +82,7 @@ class TestProjectManifest:
                     "project": "project2",
                     "asset_specs": {},
                     "version": "1.0",
-                    "last_updated": datetime.now(timezone.utc).isoformat(),
+                    "last_updated": datetime.now(UTC).isoformat(),
                 }
             )
         )
@@ -338,7 +338,7 @@ class TestTaskUpdate:
             relative_path="hash-abc_text3d.glb",
             sha256_hash="abc123def456",
             file_size_bytes=10000,
-            downloaded_at=datetime.now(timezone.utc),
+            downloaded_at=datetime.now(UTC),
             source_url="https://example.com/model.glb",
         )
 

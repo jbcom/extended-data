@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from pydantic import BaseModel, Field
 
 
-class TaskStatus(str, Enum):
+class TaskStatus(StrEnum):
     PENDING = "PENDING"
     IN_PROGRESS = "IN_PROGRESS"
     SUCCEEDED = "SUCCEEDED"
@@ -16,7 +16,7 @@ class TaskStatus(str, Enum):
     EXPIRED = "EXPIRED"
 
 
-class ArtStyle(str, Enum):
+class ArtStyle(StrEnum):
     """Art style for text-to-3D generation.
 
     Per Meshy API docs:
@@ -28,7 +28,7 @@ class ArtStyle(str, Enum):
     SCULPTURE = "sculpture"
 
 
-class TexturePBRMapType(str, Enum):
+class TexturePBRMapType(StrEnum):
     BASE_COLOR = "baseColor"
     METALLIC = "metallic"
     ROUGHNESS = "roughness"
@@ -277,7 +277,7 @@ class RetextureResult(BaseModel):
 # Asset Intent categories
 
 
-class AssetIntent(str, Enum):
+class AssetIntent(StrEnum):
     """Categories for 3D asset generation."""
 
     PLAYER_CHARACTER = "player_character"

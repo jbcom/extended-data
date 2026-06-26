@@ -44,11 +44,9 @@ import sqlite3
 
 from contextlib import contextmanager, suppress
 from dataclasses import asdict, dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, cast
-
-from typing_extensions import Self
+from typing import TYPE_CHECKING, Any, Self, cast
 
 from extended_data.containers import ExtendedDict, ExtendedList, extend_data
 from extended_data.io import wrap_raw_data_for_export
@@ -71,7 +69,7 @@ except ImportError:
 
 
 def _utc_now() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 @dataclass

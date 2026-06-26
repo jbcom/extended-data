@@ -3,7 +3,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime, UTC
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -122,11 +122,11 @@ class TestVaultConnector:
         assert connector._is_token_valid() is False
 
         # Set future expiration
-        connector._vault_token_expiration = datetime(2099, 12, 31, 23, 59, 59, tzinfo=timezone.utc)
+        connector._vault_token_expiration = datetime(2099, 12, 31, 23, 59, 59, tzinfo=UTC)
         assert connector._is_token_valid() is True
 
         # Set past expiration
-        connector._vault_token_expiration = datetime(2020, 1, 1, 0, 0, 0, tzinfo=timezone.utc)
+        connector._vault_token_expiration = datetime(2020, 1, 1, 0, 0, 0, tzinfo=UTC)
         assert connector._is_token_valid() is False
 
     @patch("extended_data.connectors.vault.hvac.Client")
@@ -151,7 +151,7 @@ class TestVaultConnector:
 
         mock_client = MagicMock()
         connector._vault_client = mock_client
-        connector._vault_token_expiration = datetime(2099, 1, 1, tzinfo=timezone.utc)
+        connector._vault_token_expiration = datetime(2099, 1, 1, tzinfo=UTC)
 
         kv_v2 = mock_client.secrets.kv.v2
 
@@ -197,7 +197,7 @@ class TestVaultConnector:
 
         mock_client = MagicMock()
         connector._vault_client = mock_client
-        connector._vault_token_expiration = datetime(2099, 1, 1, tzinfo=timezone.utc)
+        connector._vault_token_expiration = datetime(2099, 1, 1, tzinfo=UTC)
 
         mock_client.secrets.kv.v2.list_secrets.side_effect = VaultError("invalid")
 
@@ -218,7 +218,7 @@ class TestVaultConnector:
 
         mock_client = MagicMock()
         connector._vault_client = mock_client
-        connector._vault_token_expiration = datetime(2099, 1, 1, tzinfo=timezone.utc)
+        connector._vault_token_expiration = datetime(2099, 1, 1, tzinfo=UTC)
         mock_client.secrets.kv.v2.list_secrets.side_effect = VaultError(
             "denied password=hunter2 Authorization: Bearer raw_token"
         )
@@ -257,7 +257,7 @@ class TestVaultConnector:
 
         mock_client = MagicMock()
         connector._vault_client = mock_client
-        connector._vault_token_expiration = datetime(2099, 1, 1, tzinfo=timezone.utc)
+        connector._vault_token_expiration = datetime(2099, 1, 1, tzinfo=UTC)
 
         mock_client.secrets.aws.list_roles.return_value = {"data": {"keys": ["prod-sync", "dev-sync"]}}
 
@@ -285,7 +285,7 @@ class TestVaultConnector:
 
         mock_client = MagicMock()
         connector._vault_client = mock_client
-        connector._vault_token_expiration = datetime(2099, 1, 1, tzinfo=timezone.utc)
+        connector._vault_token_expiration = datetime(2099, 1, 1, tzinfo=UTC)
 
         mock_client.secrets.aws.list_roles.side_effect = VaultError("boom")
 
@@ -302,7 +302,7 @@ class TestVaultConnector:
 
         mock_client = MagicMock()
         connector._vault_client = mock_client
-        connector._vault_token_expiration = datetime(2099, 1, 1, tzinfo=timezone.utc)
+        connector._vault_token_expiration = datetime(2099, 1, 1, tzinfo=UTC)
 
         mock_client.secrets.aws.read_role.return_value = {"data": {"arn": "arn:aws:iam::123:role/prod"}}
 
@@ -321,7 +321,7 @@ class TestVaultConnector:
 
         mock_client = MagicMock()
         connector._vault_client = mock_client
-        connector._vault_token_expiration = datetime(2099, 1, 1, tzinfo=timezone.utc)
+        connector._vault_token_expiration = datetime(2099, 1, 1, tzinfo=UTC)
 
         mock_client.secrets.aws.read_role.side_effect = VaultError("missing")
 
@@ -335,7 +335,7 @@ class TestVaultConnector:
 
         mock_client = MagicMock()
         connector._vault_client = mock_client
-        connector._vault_token_expiration = datetime(2099, 1, 1, tzinfo=timezone.utc)
+        connector._vault_token_expiration = datetime(2099, 1, 1, tzinfo=UTC)
         connector.list_secrets = MagicMock(return_value=extend_data({"prod/db": {}}))  # type: ignore[method-assign]
         mock_client.secrets.kv.v2.read_secret_version.return_value = {
             "data": {"data": {"password": "hunter2", "username": "admin"}}
@@ -357,7 +357,7 @@ class TestVaultConnector:
 
         mock_client = MagicMock()
         connector._vault_client = mock_client
-        connector._vault_token_expiration = datetime(2099, 1, 1, tzinfo=timezone.utc)
+        connector._vault_token_expiration = datetime(2099, 1, 1, tzinfo=UTC)
 
         mock_client.secrets.aws.generate_credentials.return_value = {
             "data": {"access_key": "AKIA", "secret_key": "SECRET", "security_token": "TOKEN"}
@@ -383,7 +383,7 @@ class TestVaultConnector:
 
         mock_client = MagicMock()
         connector._vault_client = mock_client
-        connector._vault_token_expiration = datetime(2099, 1, 1, tzinfo=timezone.utc)
+        connector._vault_token_expiration = datetime(2099, 1, 1, tzinfo=UTC)
 
         mock_client.secrets.aws.generate_credentials.side_effect = VaultError("boom")
 
@@ -398,7 +398,7 @@ class TestVaultConnector:
 
         mock_client = MagicMock()
         connector._vault_client = mock_client
-        connector._vault_token_expiration = datetime(2099, 1, 1, tzinfo=timezone.utc)
+        connector._vault_token_expiration = datetime(2099, 1, 1, tzinfo=UTC)
         mock_client.secrets.kv.v2.create_or_update_secret.side_effect = VaultError(
             "write failed at prod/db password=hunter2 token=raw-token"
         )
@@ -421,7 +421,7 @@ class TestVaultConnector:
 
         mock_client = MagicMock()
         connector._vault_client = mock_client
-        connector._vault_token_expiration = datetime(2099, 1, 1, tzinfo=timezone.utc)
+        connector._vault_token_expiration = datetime(2099, 1, 1, tzinfo=UTC)
         mock_client.secrets.aws.generate_credentials.side_effect = VaultError(
             "denied api_key=key_123 Authorization: Bearer raw_token"
         )

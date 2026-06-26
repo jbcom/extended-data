@@ -6,7 +6,7 @@ import base64
 import hashlib
 import hmac
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from extended_data.connectors.meshy import base
 from extended_data.connectors.meshy.webhooks.schemas import MeshyWebhookPayload
@@ -19,7 +19,7 @@ from ..persistence.schemas import ArtifactRecord
 
 def _utc_now() -> datetime:
     """Return current UTC time with timezone info."""
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 class WebhookHandler:

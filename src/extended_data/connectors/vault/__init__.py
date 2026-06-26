@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections import deque
 from collections.abc import Iterable, Mapping
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 
 from extended_data.connectors._optional import require_extra
@@ -179,7 +179,7 @@ class VaultConnector(ConnectorBase):
         """Check if the current Vault token is still valid."""
         if not self._vault_token_expiration:
             return False
-        return datetime.now(timezone.utc) < self._vault_token_expiration
+        return datetime.now(UTC) < self._vault_token_expiration
 
     @staticmethod
     def _validate_mount_point(mount_point: str | None) -> None:

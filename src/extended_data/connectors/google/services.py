@@ -49,8 +49,8 @@ def _parse_project_activity_time(value: Any) -> dt.datetime | None:
         return None
 
     if parsed.tzinfo is None:
-        parsed = parsed.replace(tzinfo=dt.timezone.utc)
-    return parsed.astimezone(dt.timezone.utc)
+        parsed = parsed.replace(tzinfo=dt.UTC)
+    return parsed.astimezone(dt.UTC)
 
 
 def _latest_project_activity_time(project_data: Mapping[str, Any]) -> dt.datetime | None:
@@ -74,10 +74,10 @@ def _project_activity_is_stale(
     if activity_time is None:
         return True
 
-    reference_time = now or dt.datetime.now(dt.timezone.utc)
+    reference_time = now or dt.datetime.now(dt.UTC)
     if reference_time.tzinfo is None:
-        reference_time = reference_time.replace(tzinfo=dt.timezone.utc)
-    cutoff = reference_time.astimezone(dt.timezone.utc) - dt.timedelta(days=days_since_activity)
+        reference_time = reference_time.replace(tzinfo=dt.UTC)
+    cutoff = reference_time.astimezone(dt.UTC) - dt.timedelta(days=days_since_activity)
     return activity_time <= cutoff
 
 

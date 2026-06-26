@@ -28,14 +28,13 @@ Usage:
 from __future__ import annotations
 
 import builtins
-import sys
 import threading
 import time
 
 from abc import ABC
 from collections.abc import Mapping
 from contextlib import suppress
-from typing import TYPE_CHECKING, Any, ClassVar
+from typing import TYPE_CHECKING, Any, ClassVar, Self
 
 import httpx
 
@@ -50,11 +49,6 @@ from extended_data.inputs import InputProvider
 from extended_data.logging import Logging
 from extended_data.primitives.redaction import redact_sensitive_text
 
-
-if sys.version_info >= (3, 11):
-    from typing import Self
-else:
-    from typing_extensions import Self
 
 if TYPE_CHECKING:
     from collections.abc import Callable

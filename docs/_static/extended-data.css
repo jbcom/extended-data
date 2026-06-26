@@ -1,0 +1,22 @@
+/* Brand layer on top of Furo. Keep layout behavior owned by the theme. */
+
+:root {
+  --extended-data-accent: #b45309;
+}
+
+.sidebar-brand-text {
+  letter-spacing: 0;
+}
+
+.content h1,
+.content h2 {
+  letter-spacing: 0;
+}
+
+.content code.literal {
+  border-radius: 4px;
+}
+
+.admonition.note {
+  border-left-color: var(--extended-data-accent);
+}

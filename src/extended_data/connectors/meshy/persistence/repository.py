@@ -5,7 +5,7 @@ from __future__ import annotations
 import os
 import tempfile
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, cast
 
@@ -26,7 +26,7 @@ from extended_data.primitives.redaction import redact_sensitive_text
 
 def _utc_now() -> datetime:
     """Return current UTC time with timezone info."""
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 def _manifest_payload(manifest: ProjectManifest) -> dict[str, Any]:

@@ -11,3 +11,6 @@ __pycache__/
 *.log
 coverage.xml
 .coverage
+.tox/
+docs/apidocs/
+docs/_build/

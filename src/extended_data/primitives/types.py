@@ -283,7 +283,7 @@ def string_to_datetime(val: str, raise_on_error: bool = False) -> datetime.datet
         dt = datetime.datetime.fromisoformat(val.replace(" ", "T"))
         if dt.tzinfo is None:
             # Set UTC timezone if not provided
-            dt = dt.replace(tzinfo=datetime.timezone.utc)
+            dt = dt.replace(tzinfo=datetime.UTC)
         return dt
     except ValueError as exc:
         if raise_on_error:

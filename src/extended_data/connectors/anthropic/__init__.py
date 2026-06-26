@@ -30,7 +30,7 @@ import os
 from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from typing import TYPE_CHECKING, Any
 
 import httpx
@@ -123,7 +123,7 @@ class AnthropicAPIError(AnthropicError):
 # =============================================================================
 
 
-class MessageRole(str, Enum):
+class MessageRole(StrEnum):
     """Message role in conversation."""
 
     USER = "user"

@@ -18,7 +18,7 @@ else:
     _ObjectProxyBase = wrapt.ObjectProxy
 
 
-class YamlTagged(_ObjectProxyBase):  # type: ignore[misc]
+class YamlTagged(_ObjectProxyBase):
     """Wrapper class for YAML tagged objects."""
 
     def __init__(self, tag: str, wrapped: Any) -> None:

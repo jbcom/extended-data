@@ -82,7 +82,7 @@ def test_extended_string_chains_primitive_transforms() -> None:
         12,
         30,
         0,
-        tzinfo=datetime.timezone.utc,
+        tzinfo=datetime.UTC,
     )
     assert ExtendedString("12:30").to_time() == datetime.time(12, 30)
     assert ExtendedString("api-gateway").is_partial_match("gateway") is True

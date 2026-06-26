@@ -22,6 +22,11 @@ PUBLIC_TEXT_ROOTS = (
     REPO_ROOT / "examples",
     REPO_ROOT / "README.md",
 )
+GENERATED_PUBLIC_TEXT_ROOTS = (
+    REPO_ROOT / "docs" / "_build",
+    REPO_ROOT / "docs" / "apidocs",
+)
+PUBLIC_TEXT_IGNORED_SUFFIXES = {".pyc", ".png"}
 OLD_PROJECT_TERMS = ("extended-data-library", "terraform-modules", "TerraformDataSource")
 OLD_PUBLIC_API_NAMES = ("VendorConnectorBase",)
 OLD_PACKAGE_NAMESPACES = (
@@ -55,7 +60,7 @@ SECRETSSYNC_PROJECT_PATTERNS = (
 )
 IMPRECISE_SECRETSSYNC_TERMS = ("secret sync primitives",)
 EXTRA_REFERENCE_RE = re.compile(r"extended-data\[([^\]\n]+)\]")
-NON_RUNTIME_EXTRAS = {"all", "dev", "tests", "typing"}
+NON_RUNTIME_EXTRAS = {"all", "dev", "docs", "tests", "typing"}
 PACKAGE_SHAPE_RE = re.compile(r"^  ([a-z_]+)/\s+")
 UNPATCHED_RUNTIME_VULNERABILITIES = {
     "chromadb": "GHSA-f4j7-r4q5-qw2c",
@@ -69,6 +74,30 @@ def _pyproject() -> tomlkit.TOMLDocument:
 
 def _uv_lock() -> tomlkit.TOMLDocument:
     return tomlkit.parse((REPO_ROOT / "uv.lock").read_text(encoding="utf-8"))
+
+
+def _is_generated_public_text_path(path: Path) -> bool:
+    for generated_root in GENERATED_PUBLIC_TEXT_ROOTS:
+        try:
+            path.relative_to(generated_root)
+        except ValueError:
+            continue
+        return True
+    return False
+
+
+def _is_public_text_file(path: Path) -> bool:
+    return path.is_file() and path.suffix not in PUBLIC_TEXT_IGNORED_SUFFIXES and not _is_generated_public_text_path(path)
+
+
+def _iter_public_text_files(*roots: Path) -> list[Path]:
+    paths: list[Path] = []
+    for root in roots:
+        if root.is_file():
+            paths.append(root)
+        else:
+            paths.extend(path for path in root.rglob("*") if _is_public_text_file(path))
+    return sorted(path for path in paths if _is_public_text_file(path))
 
 
 def _requirement_name(requirement: str) -> str:
@@ -162,16 +191,7 @@ def test_public_text_does_not_reference_old_project_origins() -> None:
     """Public code/docs should describe current Extended Data surfaces, not origin packages."""
     offenders: list[str] = []
 
-    paths: list[Path] = []
-    for root in PUBLIC_TEXT_ROOTS:
-        if root.is_file():
-            paths.append(root)
-        else:
-            paths.extend(path for path in root.rglob("*") if path.is_file())
-
-    for path in sorted(paths):
-        if path.suffix in {".pyc", ".png"}:
-            continue
+    for path in _iter_public_text_files(*PUBLIC_TEXT_ROOTS):
         text = path.read_text(encoding="utf-8")
         for term in (*OLD_PROJECT_TERMS, *OLD_PUBLIC_API_NAMES):
             if term in text:
@@ -251,13 +271,7 @@ def test_public_install_guidance_names_known_extras() -> None:
     """Static install examples should not teach extras that pyproject does not publish."""
     known_extras = set(_pyproject()["project"]["optional-dependencies"])
     offenders: list[str] = []
-    paths = [REPO_ROOT / "README.md"]
-    paths.extend(path for root in (REPO_ROOT / "docs", REPO_ROOT / "examples", REPO_ROOT / "src") for path in root.rglob("*"))
-
-    for path in sorted(path for path in paths if path.is_file()):
-        if path.suffix in {".pyc", ".png"}:
-            continue
-
+    for path in _iter_public_text_files(REPO_ROOT / "README.md", REPO_ROOT / "docs", REPO_ROOT / "examples", REPO_ROOT / "src"):
         relative_path = path.relative_to(REPO_ROOT)
         for line_number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
             for match in EXTRA_REFERENCE_RE.finditer(line):
@@ -351,12 +365,7 @@ def test_readme_package_shape_matches_public_subpackages() -> None:
 def test_public_guidance_does_not_use_removed_runtime_keywords() -> None:
     """Docs and examples should not keep teaching removed compatibility keywords."""
     offenders: list[str] = []
-    paths = [REPO_ROOT / "README.md"]
-    paths.extend(path for root in (REPO_ROOT / "docs", REPO_ROOT / "examples") for path in root.rglob("*"))
-
-    for path in sorted(path for path in paths if path.is_file()):
-        if path.suffix in {".pyc", ".png"}:
-            continue
+    for path in _iter_public_text_files(REPO_ROOT / "README.md", REPO_ROOT / "docs", REPO_ROOT / "examples"):
         text = path.read_text(encoding="utf-8")
         for keyword in REMOVED_PUBLIC_KEYWORDS:
             if keyword in text:
@@ -368,12 +377,7 @@ def test_public_guidance_does_not_use_removed_runtime_keywords() -> None:
 def test_public_guidance_uses_integrated_connector_framing() -> None:
     """Public docs should frame connectors as integrated external-data surfaces."""
     offenders: list[str] = []
-    paths = [REPO_ROOT / "README.md"]
-    paths.extend(path for root in (REPO_ROOT / "docs", REPO_ROOT / "examples", REPO_ROOT / "src") for path in root.rglob("*"))
-
-    for path in sorted(path for path in paths if path.is_file()):
-        if path.suffix in {".pyc", ".png"}:
-            continue
+    for path in _iter_public_text_files(REPO_ROOT / "README.md", REPO_ROOT / "docs", REPO_ROOT / "examples", REPO_ROOT / "src"):
         text = path.read_text(encoding="utf-8")
         for phrase in IMPRECISE_VENDOR_FRAMING:
             if phrase in text:
@@ -385,12 +389,7 @@ def test_public_guidance_uses_integrated_connector_framing() -> None:
 def test_public_guidance_uses_standalone_package_framing() -> None:
     """Public docs should not frame Extended Data as an extraction artifact."""
     offenders: list[str] = []
-    paths = [REPO_ROOT / "README.md"]
-    paths.extend(path for root in (REPO_ROOT / "docs", REPO_ROOT / "examples", REPO_ROOT / "src") for path in root.rglob("*"))
-
-    for path in sorted(path for path in paths if path.is_file()):
-        if path.suffix in {".pyc", ".png"}:
-            continue
+    for path in _iter_public_text_files(REPO_ROOT / "README.md", REPO_ROOT / "docs", REPO_ROOT / "examples", REPO_ROOT / "src"):
         text = path.read_text(encoding="utf-8")
         for phrase in EXTRACTION_ERA_FRAMING:
             if phrase in text:
@@ -402,12 +401,7 @@ def test_public_guidance_uses_standalone_package_framing() -> None:
 def test_public_text_does_not_promise_future_api_surfaces() -> None:
     """Clean-break docs should describe current surfaces instead of placeholders."""
     offenders: list[str] = []
-    paths = [REPO_ROOT / "README.md"]
-    paths.extend(path for root in (REPO_ROOT / "docs", REPO_ROOT / "examples", REPO_ROOT / "src") for path in root.rglob("*"))
-
-    for path in sorted(path for path in paths if path.is_file()):
-        if path.suffix in {".pyc", ".png"}:
-            continue
+    for path in _iter_public_text_files(REPO_ROOT / "README.md", REPO_ROOT / "docs", REPO_ROOT / "examples", REPO_ROOT / "src"):
         relative_path = path.relative_to(REPO_ROOT)
         for line_number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
             normalized = line.lower()
@@ -421,12 +415,7 @@ def test_public_text_does_not_promise_future_api_surfaces() -> None:
 def test_public_text_does_not_keep_bootstrap_markers() -> None:
     """Extracted package docs should not keep launch-era status markers."""
     offenders: list[str] = []
-    paths = [REPO_ROOT / "README.md"]
-    paths.extend(path for root in (REPO_ROOT / "docs", REPO_ROOT / "examples", REPO_ROOT / "src") for path in root.rglob("*"))
-
-    for path in sorted(path for path in paths if path.is_file()):
-        if path.suffix in {".pyc", ".png"}:
-            continue
+    for path in _iter_public_text_files(REPO_ROOT / "README.md", REPO_ROOT / "docs", REPO_ROOT / "examples", REPO_ROOT / "src"):
         relative_path = path.relative_to(REPO_ROOT)
         for line_number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
             for marker in BOOTSTRAP_TEXT_MARKERS:
@@ -439,12 +428,7 @@ def test_public_text_does_not_keep_bootstrap_markers() -> None:
 def test_public_guidance_names_secrets_sync_roles_precisely() -> None:
     """Use SecretSync for the product and reserve exact names for CLI modules."""
     offenders: list[str] = []
-    paths = [REPO_ROOT / "README.md"]
-    paths.extend(path for root in (REPO_ROOT / "docs", REPO_ROOT / "src") for path in root.rglob("*"))
-
-    for path in sorted(path for path in paths if path.is_file()):
-        if path.suffix in {".pyc", ".png"}:
-            continue
+    for path in _iter_public_text_files(REPO_ROOT / "README.md", REPO_ROOT / "docs", REPO_ROOT / "src"):
         text = path.read_text(encoding="utf-8")
         for pattern in SECRETSSYNC_PROJECT_PATTERNS:
             if pattern.search(text):

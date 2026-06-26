@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass
-from enum import Enum
+from enum import StrEnum
 from typing import cast
 
 from extended_data.containers import ExtendedDict, ExtendedList, extend_data
@@ -24,7 +24,7 @@ class AnimationMeta:
     preview_url: str
 
 
-class AnimationCategory(str, Enum):
+class AnimationCategory(StrEnum):
     """Animation categories."""
 
     BODYMOVEMENTS = "BodyMovements"
@@ -34,7 +34,7 @@ class AnimationCategory(str, Enum):
     WALKANDRUN = "WalkAndRun"
 
 
-class AnimationSubcategory(str, Enum):
+class AnimationSubcategory(StrEnum):
     """Animation subcategories."""
 
     ACTING = "Acting"

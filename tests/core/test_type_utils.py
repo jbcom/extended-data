@@ -130,15 +130,15 @@ def string_to_date_data(request: Any) -> tuple[str, datetime.date | None]:
     params=[
         (
             "2023-09-05T12:30:00",
-            datetime.datetime(2023, 9, 5, 12, 30, 0, tzinfo=datetime.timezone.utc),
+            datetime.datetime(2023, 9, 5, 12, 30, 0, tzinfo=datetime.UTC),
         ),
         (
             "2023-09-05 12:30:00",
-            datetime.datetime(2023, 9, 5, 12, 30, 0, tzinfo=datetime.timezone.utc),
+            datetime.datetime(2023, 9, 5, 12, 30, 0, tzinfo=datetime.UTC),
         ),
         (
             "2023-09-05T12:30:00.123456",
-            datetime.datetime(2023, 9, 5, 12, 30, 0, 123456, tzinfo=datetime.timezone.utc),
+            datetime.datetime(2023, 9, 5, 12, 30, 0, 123456, tzinfo=datetime.UTC),
         ),
         ("invalid-datetime", None),
     ]
@@ -211,7 +211,7 @@ def test_string_type_converters_accept_extended_string_values() -> None:
         12,
         30,
         0,
-        tzinfo=datetime.timezone.utc,
+        tzinfo=datetime.UTC,
     )
     assert string_to_time(ExtendedString("12:30")) == datetime.time(12, 30, 0)
     assert string_to_path(ExtendedString("/valid/path")) == Path("/valid/path")
@@ -496,7 +496,7 @@ def test_typeof(item: Any, primitive_only: bool, expected_type: type) -> None:
     [
         (datetime.date(2023, 9, 5), "2023-09-05"),
         (
-            datetime.datetime(2023, 9, 5, 12, 30, tzinfo=datetime.timezone.utc),
+            datetime.datetime(2023, 9, 5, 12, 30, tzinfo=datetime.UTC),
             "2023-09-05T12:30:00",
         ),
         (Path("/some/path"), "/some/path"),
@@ -554,7 +554,7 @@ def test_convert_special_types_handles_extended_containers() -> None:
         (
             [
                 "/path/to/file",
-                datetime.datetime(2023, 9, 5, 12, 30, tzinfo=datetime.timezone.utc),
+                datetime.datetime(2023, 9, 5, 12, 30, tzinfo=datetime.UTC),
             ],
             ["/path/to/file", "2023-09-05T12:30:00"],
         ),
@@ -591,7 +591,7 @@ def test_convert_special_types_handles_tuple_frozenset_and_yaml_pairs() -> None:
         ("2023-09-05", datetime.date(2023, 9, 5)),  # Date string to datetime.date
         (
             "2023-09-05T12:30:00",
-            datetime.datetime(2023, 9, 5, 12, 30, tzinfo=datetime.timezone.utc),
+            datetime.datetime(2023, 9, 5, 12, 30, tzinfo=datetime.UTC),
         ),  # Datetime string to datetime.datetime
         ("12:30:00", datetime.time(12, 30, 0)),  # Time string to datetime.time
         ("/some/path", Path("/some/path")),  # Path string to Path
@@ -646,7 +646,7 @@ def test_reconstruct_special_type_fails_silently_for_invalid_structured_data(obj
             ["/path/to/file", "2023-09-05T12:30:00"],
             [
                 Path("/path/to/file"),
-                datetime.datetime(2023, 9, 5, 12, 30, tzinfo=datetime.timezone.utc),
+                datetime.datetime(2023, 9, 5, 12, 30, tzinfo=datetime.UTC),
             ],
         ),
         (
@@ -657,7 +657,7 @@ def test_reconstruct_special_type_fails_silently_for_invalid_structured_data(obj
             ["2023-09-05", {"nested": ["2023-09-05T12:30:00"]}],
             [
                 datetime.date(2023, 9, 5),
-                {"nested": [datetime.datetime(2023, 9, 5, 12, 30, tzinfo=datetime.timezone.utc)]},
+                {"nested": [datetime.datetime(2023, 9, 5, 12, 30, tzinfo=datetime.UTC)]},
             ],
         ),
         (
@@ -726,7 +726,7 @@ def test_reconstruct_special_type_fail_silently() -> None:
                 {
                     "nested": [
                         True,
-                        {"deep": datetime.datetime(2023, 9, 5, 12, 30, tzinfo=datetime.timezone.utc)},
+                        {"deep": datetime.datetime(2023, 9, 5, 12, 30, tzinfo=datetime.UTC)},
                     ]
                 }
             ],

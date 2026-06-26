@@ -28,7 +28,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from contextlib import suppress
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 import httpx
@@ -52,7 +52,7 @@ __all__ = [
 ]
 
 
-class SessionState(str, Enum):
+class SessionState(StrEnum):
     """Jules session states."""
 
     UNSPECIFIED = "SESSION_STATE_UNSPECIFIED"
@@ -68,7 +68,7 @@ class SessionState(str, Enum):
     BLOCKED = "BLOCKED"
 
 
-class AutomationMode(str, Enum):
+class AutomationMode(StrEnum):
     """Automation modes for Jules sessions."""
 
     UNSPECIFIED = "AUTOMATION_MODE_UNSPECIFIED"

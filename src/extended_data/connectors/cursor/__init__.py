@@ -26,7 +26,7 @@ import re
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from typing import TYPE_CHECKING, Any
 from urllib.parse import urlparse
 
@@ -119,7 +119,7 @@ class CursorAPIError(CursorError):
 # =============================================================================
 
 
-class AgentState(str, Enum):
+class AgentState(StrEnum):
     """Agent execution state."""
 
     PENDING = "pending"

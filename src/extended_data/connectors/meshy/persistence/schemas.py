@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
-from enum import Enum
+from datetime import UTC, datetime
+from enum import StrEnum
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -11,10 +11,10 @@ from pydantic import BaseModel, ConfigDict, Field
 
 def _utc_now() -> datetime:
     """Return current UTC time with timezone info."""
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
-class TaskStatus(str, Enum):
+class TaskStatus(StrEnum):
     """Task status enum."""
 
     PENDING = "PENDING"

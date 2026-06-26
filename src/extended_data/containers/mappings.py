@@ -4,9 +4,7 @@ from __future__ import annotations
 
 from collections import UserDict
 from collections.abc import Iterable, Mapping
-from typing import TYPE_CHECKING, Any, overload
-
-from typing_extensions import Self
+from typing import TYPE_CHECKING, Any, Self, overload
 
 
 if TYPE_CHECKING:

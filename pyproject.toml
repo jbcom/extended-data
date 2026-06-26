@@ -6,7 +6,7 @@ build-backend = "hatchling.build"
 name = "extended-data"
 version = "7.0.0"
 description = "Comprehensive Python data utilities for serialization, inputs, logging, external data, and workflows"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 license = { text = "MIT" }
 readme = "README.md"
 keywords = [
@@ -27,7 +27,6 @@ classifiers = [
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
@@ -42,7 +41,7 @@ dependencies = [
     "more-itertools>=11.0.2",
     "num2words>=0.5.14",
     "orjson>=3.10.7",
-    "pydantic>=2.11.10,<2.12.dev0",
+    "pydantic>=2.13.4,<3.0.0",
     "python-hcl2>=4.3.4",
     "pyyaml>=6.0.1",
     "requests>=2.33.1",
@@ -57,7 +56,7 @@ dependencies = [
 ]
 
 [project.urls]
-Documentation = "https://github.com/jbcom/extended-data#readme"
+Documentation = "https://extended-data.dev"
 Issues = "https://github.com/jbcom/extended-data/issues"
 Source = "https://github.com/jbcom/extended-data"
 Changelog = "https://github.com/jbcom/extended-data/blob/main/CHANGELOG.md"
@@ -126,6 +125,13 @@ dev = [
     "extended-data[tests,typing]",
     "ruff>=0.8.0",
 ]
+docs = [
+    "furo>=2025.12.19",
+    "myst-parser>=4.0.1,<6.0.0",
+    "sphinx>=8.2.3,<9.0.0",
+    "sphinx-autodoc2>=0.5.0",
+    "sphinx-copybutton>=0.5.2",
+]
 all = [
     "anthropic>=0.96.0",
     "boto3>=1.42.92",
@@ -191,7 +197,7 @@ show_missing = true
 skip_covered = true
 
 [tool.ruff]
-target-version = "py310"
+target-version = "py311"
 line-length = 120
 src = ["src", "tests"]
 

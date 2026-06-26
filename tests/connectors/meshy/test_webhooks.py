@@ -7,7 +7,7 @@ import hashlib
 import hmac
 import json
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -133,8 +133,8 @@ class TestWebhookHandler:
                     task_id="task-12345-abcde",
                     service="text3d",
                     status="IN_PROGRESS",
-                    created_at=datetime.now(timezone.utc),
-                    updated_at=datetime.now(timezone.utc),
+                    created_at=datetime.now(UTC),
+                    updated_at=datetime.now(UTC),
                 )
             ],
         )
@@ -200,8 +200,8 @@ class TestWebhookHandler:
                     task_id="task-failed-xyz",
                     service="text3d",
                     status="IN_PROGRESS",
-                    created_at=datetime.now(timezone.utc),
-                    updated_at=datetime.now(timezone.utc),
+                    created_at=datetime.now(UTC),
+                    updated_at=datetime.now(UTC),
                 )
             ],
         )
@@ -230,8 +230,8 @@ class TestWebhookHandler:
                     task_id="task-failed-secret",
                     service="text3d",
                     status="IN_PROGRESS",
-                    created_at=datetime.now(timezone.utc),
-                    updated_at=datetime.now(timezone.utc),
+                    created_at=datetime.now(UTC),
+                    updated_at=datetime.now(UTC),
                 )
             ],
         )
@@ -273,8 +273,8 @@ class TestWebhookHandler:
                     task_id="task-12345-abcde",
                     service="text3d",
                     status="IN_PROGRESS",
-                    created_at=datetime.now(timezone.utc),
-                    updated_at=datetime.now(timezone.utc),
+                    created_at=datetime.now(UTC),
+                    updated_at=datetime.now(UTC),
                 )
             ],
         )

@@ -6,6 +6,7 @@ This module provides operations for working with S3 buckets and objects.
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
+from datetime import UTC
 from typing import TYPE_CHECKING, Any, cast
 
 from extended_data.connectors.aws._diagnostics import safe_aws_ref, safe_aws_text
@@ -702,7 +703,7 @@ class AWSS3Mixin:
         Returns:
             Dictionary mapping bucket names to size info (bytes, object_count).
         """
-        from datetime import datetime, timedelta, timezone
+        from datetime import datetime, timedelta
 
         self.logger.info("Getting S3 bucket sizes from CloudWatch")
         role_arn = execution_role_arn or getattr(self, "execution_role_arn", None)
@@ -719,7 +720,7 @@ class AWSS3Mixin:
             )
             bucket_names = list(buckets.keys())
 
-        end_time = datetime.now(tz=timezone.utc)
+        end_time = datetime.now(tz=UTC)
         start_time = end_time - timedelta(days=2)
 
         bucket_sizes: dict[str, dict[str, Any]] = {}

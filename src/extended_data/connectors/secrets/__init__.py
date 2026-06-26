@@ -34,7 +34,7 @@ import shutil
 import subprocess
 
 from dataclasses import asdict, dataclass, field
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
 from typing import Any
 
@@ -47,7 +47,7 @@ from extended_data.primitives.formats.errors import DataDecodeError
 from extended_data.primitives.redaction import redact_sensitive_data, redact_sensitive_text
 
 
-class SyncOperation(str, Enum):
+class SyncOperation(StrEnum):
     """Pipeline operation types."""
 
     MERGE = "merge"
@@ -55,7 +55,7 @@ class SyncOperation(str, Enum):
     PIPELINE = "pipeline"
 
 
-class OutputFormat(str, Enum):
+class OutputFormat(StrEnum):
     """Output format for diff display."""
 
     HUMAN = "human"
