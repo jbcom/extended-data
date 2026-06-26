@@ -7,8 +7,8 @@ package root.
 from extended_data import Logging
 
 logger = Logging(logger_name="pipeline")
-logger.info("starting", data={"service": "api"})
-logger.warning("retrying", data={"attempt": 2})
+logger.logged_statement("starting", json_data={"service": "api"}, log_level="info")
+logger.logged_statement("retrying", json_data={"attempt": 2}, log_level="warning")
 ```
 
 Logging helpers share the package's data-lowering and redaction behavior. When
@@ -21,5 +21,5 @@ from extended_data.primitives import redact_sensitive_data
 
 logger = Logging(logger_name="safe")
 payload = redact_sensitive_data({"token": "abc", "status": "ok"})
-logger.info("connector response", data=payload)
+logger.logged_statement("decoded payload", json_data=payload, log_level="info")
 ```

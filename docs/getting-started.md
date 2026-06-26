@@ -6,21 +6,13 @@ Install the base package:
 pip install extended-data
 ```
 
-Use extras when a workflow needs vendor SDKs or framework adapters:
-
-```bash
-pip install "extended-data[aws,google,github,slack,vault]"
-pip install "extended-data[meshy,mcp,webhooks]"
-pip install "extended-data[ai]"
-```
-
 ## First Workflow
 
 ```python
 from extended_data import DataWorkflow, ExtendedDict, Logging
 from extended_data.primitives import decode_json, encode_yaml, number_to_words
 
-logger = Logging(logger_name="docs")
+logger = Logging(logger_name="docs", enable_console=False, enable_file=False)
 payload = ExtendedDict(decode_json('{"service": {"name": "api"}}'))
 
 result = (
@@ -30,29 +22,25 @@ result = (
     .result()
 )
 
-logger.info("prepared config", data=result.as_builtin())
-print(payload["service"]["name"].upper_first())
-print(number_to_words(42))
-print(encode_yaml(result.as_builtin()))
+logger.logged_statement("prepared config", json_data=result.as_builtin(), log_level="info")
+
+assert payload["service"]["name"].upper_first() == "Api"
+assert number_to_words(42) == "forty-two"
+assert "replicas: 3" in encode_yaml(result.as_builtin())
 ```
 
-## Connector Catalog
+## Inputs And Logging
 
 ```python
-from extended_data import ConnectorFabric, InputProvider
+from extended_data import InputProvider, Logging
 
-inputs = InputProvider(inputs={"GITHUB_OWNER": "jbcom"}, from_environment=False)
-fabric = ConnectorFabric(inputs=inputs.inputs)
+inputs = InputProvider(inputs={"SERVICE_NAME": "api"}, from_environment=False)
+logger = Logging(logger_name="example", enable_console=False, enable_file=False)
 
-print(fabric.list_connectors())
-print(fabric.list_available_connectors())
-print(fabric.list_connectors_by_category("development"))
+logger.logged_statement("loaded inputs", json_data={"service": inputs.inputs["SERVICE_NAME"]}, log_level="info")
+
+assert inputs.inputs["SERVICE_NAME"] == "api"
 ```
-
-`list_connectors()` returns the known catalog, including integrations whose
-optional SDK extras are not installed. Use `list_available_connectors()` when a
-runtime needs only integrations that can actually be constructed in the current
-environment.
 
 ## Local Development
 

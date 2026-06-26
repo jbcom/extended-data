@@ -100,13 +100,18 @@ def test_inspect_rejects_ambiguous_input_sources(tmp_path) -> None:
     assert "pass either VALUE or --file" in _stdout_text(mock_write)
 
 
-def test_connector_commands_delegate_to_connector_cli() -> None:
-    """Existing connector commands remain available from the package entrypoint."""
-    with patch("extended_data.connectors.cli.main", return_value=7) as mock_main:
-        exit_code = cli_module.main(["list", "--json"])
+def test_removed_connector_commands_are_not_top_level_cli_commands() -> None:
+    """The base package CLI should not delegate to the split vendor package."""
+    with patch("sys.stderr.write") as mock_write:
+        try:
+            cli_module.main(["list", "--json"])
+        except SystemExit as exc:
+            exit_code = int(exc.code)
+        else:
+            exit_code = 0
 
-    assert exit_code == 7
-    mock_main.assert_called_once_with(["list", "--json"])
+    assert exit_code == 2
+    assert "invalid choice" in _stdout_text(mock_write)
 
 
 def test_merge_files_exports_deep_merged_workflow_result(tmp_path) -> None:

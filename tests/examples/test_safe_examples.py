@@ -1,9 +1,8 @@
-"""Smoke tests for examples that do not require live vendor credentials."""
+"""Smoke tests for runnable extended-data examples."""
 
 from __future__ import annotations
 
 import ast
-import importlib.util
 import os
 import py_compile
 import re
@@ -33,12 +32,6 @@ SAFE_EXAMPLES = [
     "examples/logging/verbosity_control.py",
 ]
 CONNECTOR_EXAMPLES = [
-    "examples/connectors/basic_aws.py",
-    "examples/connectors/basic_google.py",
-    "examples/connectors/basic_meshy.py",
-    "examples/connectors/basic_secrets.py",
-    "examples/connectors/langchain_tools.py",
-    "examples/connectors/mcp_server.py",
 ]
 ALL_EXAMPLES = SAFE_EXAMPLES + CONNECTOR_EXAMPLES
 STALE_EXAMPLE_COMMANDS = (
@@ -196,24 +189,6 @@ def test_examples_do_not_import_tier1_utilities_from_root() -> None:
     assert offenders == []
 
 
-def test_secrets_example_does_not_print_raw_sync_results() -> None:
-    """SecretSync output can include secret values and should not be echoed."""
-    text = (REPO_ROOT / "examples/connectors/basic_secrets.py").read_text(encoding="utf-8")
-    raw_result_fields = [
-        "error_message",
-        "secrets_processed",
-        "secrets_added",
-        "secrets_modified",
-        "secrets_removed",
-        "secrets_unchanged",
-        "diff_output",
-    ]
-
-    for field in raw_result_fields:
-        assert f'print(result["{field}"])' not in text
-        assert f"print(result['{field}'])" not in text
-
-
 def _is_sensitive_identifier(node: ast.AST) -> bool:
     if isinstance(node, ast.Name):
         return bool(SENSITIVE_IDENTIFIER_RE.search(node.id))
@@ -247,17 +222,3 @@ def test_examples_do_not_echo_partial_sensitive_values() -> None:
 def test_example_compiles(example_path: str, tmp_path: Path) -> None:
     """Every example should at least remain syntactically valid."""
     py_compile.compile(str(REPO_ROOT / example_path), cfile=str(tmp_path / "example.pyc"), doraise=True)
-
-
-@pytest.mark.parametrize("example_path", CONNECTOR_EXAMPLES)
-def test_connector_example_imports_without_live_credentials(example_path: str) -> None:
-    """Credential-gated connector examples should keep import-time side effects out."""
-    module_path = REPO_ROOT / example_path
-    module_name = example_path.replace("/", "_").removesuffix(".py")
-    spec = importlib.util.spec_from_file_location(module_name, module_path)
-    assert spec is not None
-    module = importlib.util.module_from_spec(spec)
-    assert spec.loader is not None
-    spec.loader.exec_module(module)
-
-    assert callable(module.main)

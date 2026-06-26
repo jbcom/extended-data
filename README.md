@@ -1,10 +1,20 @@
 # Extended Data
 
 Comprehensive Python data utilities for serialization, configuration inputs,
-structured logging, external data connectors, and workflow-oriented integrations.
+structured logging, file processing, and workflow composition.
 
-The public API lives under one `extended_data` namespace with explicit tiers for
-pure primitives, extended containers, and higher-order data processors.
+The public API lives under one `extended_data` namespace with three deliberate
+tiers:
+
+- Tier 1: pure functions for codecs, string transforms, redaction, matching,
+  type coercion, mapping, sequence, and state utilities.
+- Tier 2: `ExtendedString`, `ExtendedDict`, `ExtendedList`, `ExtendedTuple`,
+  and `ExtendedSet` containers that expose Tier 1 operations as methods.
+- Tier 3: data processors that compose the first two tiers for files, inputs,
+  logging, export/import boundaries, and workflows.
+
+External API clients live in the separate `vendor-connectors` distribution.
+SecretSync's Python bridge lives in `secrets-sync-bridge`.
 
 ## Install
 
@@ -12,100 +22,38 @@ pure primitives, extended containers, and higher-order data processors.
 pip install extended-data
 ```
 
-Optional integrations are installed by feature:
+Development and documentation extras are available for contributors:
 
 ```bash
-pip install "extended-data[aws,github,vault]"
-pip install "extended-data[google,slack,zoom]"
-pip install "extended-data[anthropic,cursor]"
-pip install "extended-data[ai]"        # LangChain, MCP, and Strands
-pip install "extended-data[langchain,mcp,strands]"
-pip install "extended-data[meshy,mcp]"
-pip install "extended-data[meshy,vector,webhooks]"
-pip install "extended-data[secrets]"
+pip install "extended-data[dev]"
+pip install "extended-data[docs]"
 ```
-
-Published runtime extras are `anthropic`, `aws`, `cursor`, `github`, `google`,
-`langchain`, `mcp`, `meshy`, `secrets`, `slack`, `strands`, `vault`, `vector`,
-`webhooks`, `zoom`, and aggregate `ai`.
-
-CrewAI adapters remain available when `crewai` is installed independently, but
-`extended-data` intentionally does not publish a CrewAI extra while current
-CrewAI releases pull vulnerable `chromadb` versions transitively.
-The `vector` extra installs `sqlite-vec` for local vector search; embedding
-model packages such as `sentence-transformers` are user-managed while current
-releases pull vulnerable `torch` versions transitively.
 
 ## Usage
 
 ```python
-from extended_data import ConnectorFabric, DataFile, DataWorkflow, ExtendedDict, InputProvider, Logging, decode_file
+from extended_data import DataFile, DataWorkflow, ExtendedDict, InputProvider, Logging, decode_file
 from extended_data.primitives import decode_json, encode_yaml, number_to_words, redact_sensitive_text
 
-logger = Logging(logger_name="example")
-inputs = InputProvider(inputs={"GITHUB_OWNER": "jbcom"}, from_environment=False)
-connectors = ConnectorFabric(inputs=inputs.inputs, logger=logger)
-data = decode_json('{"status": "ok"}')
-payload = ExtendedDict(data).deep_merge({"source": "example"})
-decoded_file = decode_file('{"service": {"name": "api"}}', suffix="json")
-artifact = DataFile.decode('{"service": {"name": "api"}}', suffix="json")
-workflow = DataWorkflow.from_value(payload).merge({"region": "us-east-1"}).transform("unhump").result()
+logger = Logging(logger_name="example", enable_console=False, enable_file=False)
+inputs = InputProvider(inputs={"SERVICE_NAME": "api"}, from_environment=False)
+data = decode_json('{"service": {"name": "api"}}')
+payload = ExtendedDict(data).deep_merge({"replicas": 3})
+decoded_file = decode_file('{"service": {"name": "worker"}}', suffix="json")
+artifact = DataFile.decode("service:\n  name: api\n", suffix="yaml")
+workflow = DataWorkflow.from_value(payload).transform("unhump").result()
 
-print(encode_yaml(payload))
-print(decoded_file["service"]["name"].upper_first())
-print(number_to_words(42))
-print(redact_sensitive_text("Authorization: Bearer raw_token"))
-print(redact_sensitive_text("failed for user@example.com", values=["user@example.com"]))
-print(artifact.metadata["encoding"])
-print(workflow.as_builtin())
+logger.logged_statement("prepared workflow", json_data=workflow.as_builtin(), log_level="info")
+
+assert inputs.inputs["SERVICE_NAME"] == "api"
+assert decoded_file["service"]["name"].upper_first() == "Worker"
+assert artifact.metadata["encoding"] == "yaml"
+assert number_to_words(42) == "forty-two"
+assert redact_sensitive_text("Authorization: Bearer raw_token") == "Authorization: [REDACTED]"
+assert "replicas: 3" in encode_yaml(workflow.as_builtin())
 ```
 
-The fabric can also instantiate any registered connector by name:
-
-```python
-github = connectors.get_connector(
-    "github",
-    github_owner="jbcom",
-    github_token="...",
-)
-```
-
-Built-in connector classes are also package-root exports when direct
-construction reads better:
-
-```python
-from extended_data import GitHubConnector, SlackConnector
-```
-
-Connector names are normalized before lookup. If a known built-in connector is
-requested without its optional extra installed, the registry raises an
-`ImportError` with the matching `extended-data[...]` install target.
-
-Inspect the connector catalog and runtime availability before wiring external
-data workflows:
-
-```python
-names = connectors.list_connectors()
-available = connectors.list_available_connectors()
-catalog = connectors.list_connector_info()
-github_info = connectors.get_connector_info("github")
-cloud_connectors = connectors.list_connectors_by_category("cloud")
-repository_connectors = connectors.list_connectors_by_capability("repositories")
-```
-
-`list_connectors()` returns an `ExtendedList` of catalog connector names,
-including known built-ins whose optional SDK extras are not installed yet. Use
-`list_available_connectors()` when a workflow needs only connectors runnable in
-the current environment. Use `list_connector_info()` when a workflow needs
-availability, category, capability, extra, install, class, module, and
-description metadata. Use
-`list_connector_categories()`, `list_connector_capabilities()`,
-`list_connectors_by_category()`, and `list_connectors_by_capability()` when a
-workflow needs to select integrations by data domain instead of hard-coding a
-single connector name.
-
-The installed CLI exposes the package's Tier 3 data boundary plus the connector
-catalog and call surface:
+The installed CLI exposes the Tier 3 data boundary:
 
 ```bash
 extended-data decode '{"service": {"name": "api"}}' --suffix json
@@ -113,235 +61,57 @@ extended-data decode --file config.yaml --output json
 extended-data inspect --file config.yaml
 extended-data merge config/base.yaml config/dev.yaml --output yaml
 extended-data transform --file payload.json --step reconstruct --step unhump
-extended-data list
-extended-data list --category cloud
-extended-data list --capability repositories --json
-extended-data info github --json
-extended-data methods github --json
 ```
 
 ## Package Shape
 
 ```text
 extended_data/
-  primitives/   Tier 1 pure functions and codecs
   containers/   Tier 2 ExtendedString/Dict/List/Tuple/Set wrappers
-  io/           Tier 3 file, import, export, and base64 processors
   inputs/       InputProvider and decorator-based input injection
+  io/           Tier 3 file, import, export, and base64 processors
   logging/      structured lifecycle logging
-  connectors/   Tier 3 ConnectorFabric and data integrations
-  secrets/      SecretSync CLI bridge and typed result exports
+  primitives/   Tier 1 pure functions and codecs
   workflows/    Tier 3 higher-order workflow composition
 ```
 
 Tier 1 primitive names are explicit in this major version and live under
-`extended_data.primitives`, not the package root. Use
-`bytes_to_string()` for bytes-like coercion and `string_to_bool()`,
-`string_to_int()`, `string_to_float()`, `string_to_path()`,
-`string_to_date()`, `string_to_datetime()`, and `string_to_time()` for scalar
-string conversion. Use `redact_sensitive_text()` and
-`redact_sensitive_data()` for diagnostic and JSON-like payload redaction. Pass
-`values=[...]` when a caller knows specific context values, such as resource
-IDs, emails, paths, or URLs, must be withheld in addition to common secret
-fields. The old `bytestostr` and `strto*` helper names are not preserved. Old
-package import namespaces are not shimmed; missing imports are intentional so
-incorrect imports fail fast.
-Tier 1 public exports stay function-oriented; use `get_default_dict()` for
-nested or sorted default mappings instead of importing the internal helper class.
+`extended_data.primitives`, not the package root. Use `bytes_to_string()` for
+bytes-like coercion and `string_to_bool()`, `string_to_int()`,
+`string_to_float()`, `string_to_path()`, `string_to_date()`,
+`string_to_datetime()`, and `string_to_time()` for scalar string conversion.
+Use `redact_sensitive_text()` and `redact_sensitive_data()` for diagnostic and
+JSON-like payload redaction. Pass `values=[...]` when a caller knows specific
+context values, such as resource IDs, emails, paths, or URLs, must be withheld
+in addition to common secret fields.
 
-Connectors are first-class data integrations in the fabric. `ConnectorFabric`
-uses the registry to resolve connectors by name, injects shared input/logging
-context, caches connector instances, and lets specialized helpers coexist with
-generic connector lookup. `list_connectors()` returns the full connector
-catalog, including known connectors that need an `extended-data[...]` extra; use
-`list_available_connectors()` for registered connectors whose runtime
-requirements are installed.
-Catalog entries include normalized categories and capabilities so workflows can
-select cloud, AI, communications, development, media, or secrets integrations
-without string matching class names.
-Custom `ConnectorBase` subclasses can set `CONNECTOR_CATEGORY` and
-`CONNECTOR_CAPABILITIES` to publish the same metadata through entry-point
-registration.
-Secret-like cache key fields such as `token`, `api_key`, `password`, and
-`client_secret` are hashed before they are stored in the fabric cache.
-`AWSConnector` and `GoogleConnector` are unified first-class classes: S3,
-Organizations, SSO, Workspace, Cloud Resource Manager, Billing, and services
-operations live on those connectors directly rather than on separate
-`*Full` classes.
-Google registry names are unified as well: use `google` for Workspace, Cloud,
-Billing, and service discovery rather than split `google_*` connector aliases.
-AWS Secrets Manager prefix loading is exposed as the generic
-`load_secrets_by_prefix()` data method rather than as a service-specific helper.
-AWS secret listing/deletion and Vault role filtering APIs use the canonical
-`prefix` keyword; the old `name_prefix` convenience keyword is intentionally not
-preserved.
-Connector data payloads are promoted into Tier 2 containers at the boundary, so
-decoded files, HTTP response data, GraphQL responses, and SDK-shaped maps can
-use `ExtendedDict`, `ExtendedList`, and `ExtendedString` methods immediately.
-Built-in HTTP connectors decode response bytes through the same file/data
-decoding primitives instead of bypassing the boundary with transport-specific
-JSON helpers.
-Use `request_data_file()` when a connector workflow needs API response data and
-non-secret provenance such as source URL, HTTP status, content type, method,
-and endpoint in one `DataFile` artifact. Use `request_workflow()` when that
-decoded response should immediately enter a `DataWorkflow` for merging,
-transforming, writing, and provenance-preserving result handling; the
-`get_workflow()`, `post_workflow()`, `put_workflow()`, `patch_workflow()`, and
-`delete_workflow()` helpers provide verb-specific shortcuts.
-Data-returning AI tool wrappers expose the same `ExtendedDict`/`ExtendedList`
-payload contract; framework factory functions still return framework tool
-objects.
-The generic CLI `call` command and MCP bridge expose only methods that
-advertise Extended Data payload returns.
-The MCP bridge also exposes credential-free catalog tools such as
-`extended_data_list_connector_info`,
-`extended_data_list_connectors_by_category`, and
-`extended_data_list_connectors_by_capability` so MCP clients can discover
-usable integrations before invoking connector methods.
-CLI `--arg` values that look like JSON are decoded through the same structured
-data boundary used by files, inputs, and connector payloads before method
-dispatch.
-Google service-account strings and Meshy persisted manifests/metadata follow
-that same decode path instead of parsing JSON in connector-local code.
-AWS S3 JSON object writes and Meshy manifest writes use the shared export
-boundary as well, keeping connector persistence aligned with Tier 3 file data;
-Meshy vector-store metadata follows the same path.
-CLI JSON output, MCP tool results, and SecretSync `results_json` use that same
-export boundary after redaction.
-GitHub workflow YAML generation and `Logging.exit_run()` stdout serialization
-also route through the shared exporter.
-Serialized CLI/MCP boundaries and connector API error messages reuse the Tier 1
-redaction primitives for common secret-bearing keys and token-shaped strings.
-CLI and MCP connector calls pass method arguments through `values=[...]` as
-context-sensitive diagnostic data, and connectors can add their own
-operation-specific values for resource IDs, paths, URLs, emails, prompt text, or
-external payload handles. Connector data methods can return structured
-connector payloads without making stdout, tool responses, logs, or raised
-transport errors a secret leak by default. Raw SDK/client objects and raw
-transport responses remain available from the methods that explicitly return
-them.
+Tier 2 containers inherit from standard Python collection primitives and expose
+chainable data operations. For example, `ExtendedString.decode_json()` promotes
+JSON into extended containers, `ExtendedDict.reconstruct_special_types()` turns
+string scalars into booleans/numbers/dates where safe, and
+`ExtendedList.first_non_empty()` returns the first meaningful value without
+lowering the surrounding data boundary.
 
-The `secrets` connector integrates with the standalone SecretSync project
-(`jbcom/secrets-sync`) through the `secretsync` CLI. It expects
-`secretsync pipeline --output json` to return the stable pipeline result
-envelope used by this package.
-That JSON envelope is decoded through the same file/data primitives as other
-structured connector payloads before being lowered into the `SyncResult` model.
-Configuration inspection uses the same decoded file artifact path for YAML
-pipeline configs.
+Tier 3 processors keep structured data moving through explicit boundaries.
+`DataFile` reads, decodes, tracks metadata, and exports structured files.
+`DataWorkflow` layers reads, merges, transforms, writes, and provenance into a
+single result object. `InputProvider` loads direct inputs and environment data,
+and `Logging` provides structured lifecycle logging with stored-message
+snapshots returned as extended containers.
 
-```python
-from extended_data import SecretsConnector, SyncOptions
+The old `extended_data_types`, `directed_inputs_class`, and `lifecyclelogging`
+package names are not shimmed. The removed `extended_data.connectors` and
+`extended_data.secrets` namespaces are also not preserved. Clean-break import
+failures are intentional so stale migrations are visible.
 
-result = SecretsConnector().run_pipeline(
-    "pipeline.yaml",
-    SyncOptions(dry_run=True),
-)
-```
-
-The package is intentionally tiered:
-
-- Tier 1 functions stay stateless and composable.
-- Tier 2 containers inherit `UserString`, `UserDict`, `UserList`, immutable
-  `tuple`, or `MutableSet`-compatible primitives and expose ergonomic methods
-  over Tier 1 functions.
-- Tier 3 processors use the first two tiers to handle files, inputs, API data,
-  external integrations, and workflows.
-
-Tier 3 decoders return Tier 2 containers by default, so
-data files, Base64 payloads, and directed inputs can immediately use
-`ExtendedDict`, `ExtendedList`, `ExtendedTuple`, `ExtendedSet`, and
-`ExtendedString` methods.
-`ExtendedList.filter_values()` exposes the Tier 1 allowlist/denylist list
-filtering primitive as a chainable container operation.
-`ExtendedList.split_by_type()`, `ExtendedTuple.split_by_type()`, and
-`ExtendedDict.split_by_type()` expose the Tier 1 type-splitting primitives as
-type-name keyed `ExtendedDict` results.
-`ExtendedList.first_non_empty()` and `ExtendedTuple.first_non_empty()` expose
-ordered non-empty selection while preserving promoted nested values.
-`ExtendedList.zipmap()` and `ExtendedTuple.zipmap()` compose ordered key
-containers with value iterables and return promoted `ExtendedDict` mappings.
-`ExtendedDict.first_non_empty_value()` returns the first matching non-empty
-value as promoted Tier 2 data, so selected nested maps and lists remain
-chainable. Use `ExtendedDict.first_non_empty_entry()` and
-`ExtendedDict.non_empty_entries()` when callers need selected key/value entries
-instead of just the selected value.
-Generic type routing can still ask for plain data roles with
-`typeof(value, primitive_only=True)`, which treats Extended containers as their
-underlying `str`, `list`, `dict`, and `set` roles.
-String tokenization stays inside the same surface: `ExtendedString.split()`
-returns an `ExtendedList` of `ExtendedString` values, and partition operations
-return `ExtendedTuple` values. `ExtendedString.is_partial_match()` and
-`ExtendedString.is_non_empty_match()` expose the Tier 1 matching primitives
-without requiring callers to drop back to function-only utility code.
-`ExtendedString.to_bool()`, `to_int()`, `to_float()`, `to_path()`,
-`to_date()`, `to_datetime()`, and `to_time()` expose the Tier 1 scalar
-conversion family as direct string-container methods.
-`ExtendedString.decode_json()`, `decode_yaml()`, `decode_toml()`,
-`decode_hcl2()`, and `decode_base64()` expose structured text decoding from
-the string container and promote decoded maps/lists into Tier 2 data by
-default.
-`ExtendedString.reconstruct_special_type()` and the container
-`reconstruct_special_types()` methods restore booleans, numbers, dates, times,
-paths, and structured JSON/YAML values while staying in promoted Tier 2 data.
-Container `to_export_safe()` and `wrap_for_export()` methods expose the Tier 3
-export boundary directly from promoted values for JSON, YAML, TOML, HCL, and
-raw string output.
-Format encoders lower extended containers, including extended mapping keys, at
-the serialization boundary.
-`read_data_file()` is the direct file boundary for one-step read plus decode
-workflows; it raises for missing files and promotes structured data into Tier 2
-containers by default. `DataFile` makes one decoded file or URL artifact
-first-class with promoted data, promoted source metadata, detached
-`as_extended()` views, direct write/export helpers, and a `workflow()` bridge
-for artifact-first processing. DataFile source labels and metadata use the
-shared Tier 1 redaction policy before they enter workflow steps or result
-metadata. `DataWorkflow` makes multi-step compositions first-class: read,
-decode, or accept a `DataFile` artifact, deep-merge mapping layers, apply named
-transformations, write an output artifact, and keep the step trail in a
-`WorkflowResult`. `DataWorkflow.merge_file()` reads a structured file through
-the same `DataFile` boundary before merging it. Workflow metadata is promoted
-and preserved across
-transformations, lowering/promoting, and writes, so file and API provenance can
-stay with the result. Completed workflow results expose detached promoted views
-with `as_extended()` plus direct `to_export_safe()` and `wrap_for_export()`
-helpers. `DataWorkflow.transform()` applies the same named Tier 2 transform
-catalog exposed by the package CLI, including `reconstruct`, `unhump`,
-`deduplicate`, `compact`, and string case transforms. Missing file inputs,
-missing merge layers, unknown transform names, shape-incompatible transforms,
-and empty writes fail loudly.
-`InputProvider` stores its active, frozen, and merged input snapshots as
-`ExtendedDict` values, so direct input-data access can use Tier 2 container
-methods. `snapshot_inputs()` returns detached active or frozen snapshots, and
-`replace_inputs()` installs a new active snapshot while clearing stale frozen
-state by default. `get_input()` remains the scalar coercion boundary for
-booleans, numbers, paths, datetimes, and credential strings; pass
-`as_extended=True` when an injected raw or fallback input value should stay in
-Tier 2 form and keep using container methods such as `reconstruct_special_types()`
-and `to_export_safe()`. Stdin JSON plus JSON/YAML `decode_input()` paths use
-the same file/data decoding boundary as structured files and connector
-payloads.
-`Logging` stores marked log message collections as `ExtendedDict` and
-`ExtendedSet` values while keeping Python logger and handler objects plain.
-Use `get_stored_messages()` or `snapshot_stored_messages()` when downstream
-data workflows need detached promoted copies of collected messages. Runtime log
-messages and attached JSON payloads use the same Tier 1 redaction policy as
-connector diagnostics, and `exit_run()` formatting failures report redacted
-result snapshots instead of raw payload data.
-
-More detail lives in [`docs/package-surface.md`](docs/package-surface.md).
-
-## Development
+## Local Development
 
 ```bash
-uv sync --extra tests --extra typing
-uv run --with pip-audit==2.10.0 pip-audit --skip-editable
-uv run pytest
-uv run ruff check src tests
-uv run mypy src/extended_data
-uv build
+uv sync --all-extras --dev
+tox -e lint
+tox -e typecheck
+tox -e py311,py312,py313,py314
+tox -e examples
+tox -e docs
+tox -e build
 ```
-
-## License
-
-MIT.

@@ -42,17 +42,16 @@ EXTRACTION_ERA_FRAMING = (
     "remaining migration work",
     "unfinished migration work",
 )
-IMPRECISE_VENDOR_FRAMING = (
-    "vendor data connectors",
-    "vendor workflows",
-    "vendor integrations",
-    "vendor-specific",
-    "vendor data payloads",
-    "vendor data operations",
-    "vendor payload handles",
-    "vendor resource",
-    "structured vendor payloads",
-    "vendor or AI layers",
+REMOVED_IN_PACKAGE_SURFACES = (
+    "ConnectorFabric",
+    "SecretsConnector",
+    "from extended_data.connectors",
+    "from extended_data.secrets",
+    "extended-data[aws",
+    "extended-data[google",
+    "extended-data[github",
+    "extended-data[meshy",
+    "extended-data[secrets",
 )
 SECRETSSYNC_PROJECT_PATTERNS = (
     re.compile(r"\bsecretssync\s+(?:Go\s+)?(?:project|library|repo|repository|CLI|connector|bindings?)\b", re.IGNORECASE),
@@ -345,11 +344,7 @@ def test_project_scripts_preserve_package_cli_boundaries() -> None:
     """The broad CLI entrypoint should not regress to a connector-only module."""
     scripts = {str(name): str(target) for name, target in _pyproject()["project"]["scripts"].items()}
 
-    assert scripts == {
-        "extended-data": "extended_data.cli:main",
-        "extended-data-mcp": "extended_data.connectors.mcp:main",
-        "meshy-mcp": "extended_data.connectors.meshy.mcp:main",
-    }
+    assert scripts == {"extended-data": "extended_data.cli:main"}
 
 
 def test_readme_package_shape_matches_public_subpackages() -> None:
@@ -385,12 +380,12 @@ def test_public_guidance_does_not_use_removed_runtime_keywords() -> None:
     assert offenders == []
 
 
-def test_public_guidance_uses_integrated_connector_framing() -> None:
-    """Public docs should frame connectors as integrated external-data surfaces."""
+def test_public_guidance_does_not_claim_removed_in_package_surfaces() -> None:
+    """Public docs should not describe split packages as in-package modules."""
     offenders: list[str] = []
     for path in _iter_public_text_files(REPO_ROOT / "README.md", REPO_ROOT / "docs", REPO_ROOT / "examples", REPO_ROOT / "src"):
         text = path.read_text(encoding="utf-8")
-        for phrase in IMPRECISE_VENDOR_FRAMING:
+        for phrase in REMOVED_IN_PACKAGE_SURFACES:
             if phrase in text:
                 offenders.append(f"{path.relative_to(REPO_ROOT)}: {phrase}")
 
@@ -450,3 +445,18 @@ def test_public_guidance_names_secrets_sync_roles_precisely() -> None:
                 offenders.append(f"{path.relative_to(REPO_ROOT)}: {term}")
 
     assert offenders == []
+
+
+def test_ownership_map_documents_moved_surfaces() -> None:
+    """Moved surfaces should have explicit destination ownership in public docs."""
+    ownership_map = (REPO_ROOT / "docs" / "ownership-map.md").read_text(encoding="utf-8")
+
+    for expected_text in (
+        "jbcom/vendor-connectors",
+        "vendor-connectors[...]",
+        "jbcom/secrets-sync",
+        "secrets-sync-bridge",
+        "jbcom/agentic-crew",
+        "agentic-crew[...]",
+    ):
+        assert expected_text in ownership_map

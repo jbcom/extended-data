@@ -13,7 +13,6 @@ from extended_data.primitives.redaction import redact_sensitive_text
 from extended_data.workflows import DataWorkflow, WorkflowResult, list_data_transform_steps
 
 
-CONNECTOR_COMMANDS = frozenset({"call", "info", "list", "mcp", "methods"})
 OUTPUT_ENCODINGS = ("json", "yaml", "toml", "hcl", "raw")
 
 
@@ -127,7 +126,7 @@ def _build_parser() -> argparse.ArgumentParser:
     """Build the top-level Extended Data argument parser."""
     parser = argparse.ArgumentParser(
         prog="extended-data",
-        description="CLI for Extended Data primitives, files, workflows, and connectors",
+        description="CLI for Extended Data primitives, files, and workflows",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
@@ -136,8 +135,6 @@ Examples:
   extended-data inspect --file config.yaml
   extended-data merge base.yaml env.yaml --output yaml
   extended-data transform --file payload.json --step reconstruct --step unhump
-  extended-data list --category cloud
-  extended-data call github get_repository_file --path service.json --json
         """,
     )
     subparsers = parser.add_subparsers(dest="command", help="Commands")
@@ -190,11 +187,6 @@ Examples:
 def main(argv: Sequence[str] | None = None) -> int:
     """Run the Extended Data CLI."""
     args = list(argv) if argv is not None else sys.argv[1:]
-    if args and args[0] in CONNECTOR_COMMANDS:
-        from extended_data.connectors.cli import main as connectors_main
-
-        return connectors_main(args)
-
     parser = _build_parser()
     parsed = parser.parse_args(args)
 

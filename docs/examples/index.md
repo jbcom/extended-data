@@ -10,5 +10,4 @@ source.
 core
 inputs
 logging
-connectors
 ```

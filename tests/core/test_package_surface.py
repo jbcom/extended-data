@@ -1,18 +1,15 @@
-"""Tests for the integrated extended-data package surface."""
+"""Tests for the public extended-data package surface."""
 
 from __future__ import annotations
 
 from importlib import util
 from importlib.metadata import version
 from types import ModuleType
-from typing import get_type_hints
 
 import extended_data
 import extended_data.logging as lifecycle_logging
 
-from extended_data import connectors, containers, inputs, io, primitives, secrets, workflows
-from extended_data.connectors.connectors import ConnectorFabric
-from extended_data.connectors.registry import BUILTIN_CONNECTORS
+from extended_data import containers, inputs, io, primitives, workflows
 from extended_data.containers import ExtendedDict, ExtendedList, ExtendedSet, ExtendedString, ExtendedTuple
 from extended_data.inputs import InputProvider
 from extended_data.logging import Logging
@@ -25,8 +22,6 @@ PUBLIC_MODULES = (
     io,
     inputs,
     lifecycle_logging,
-    connectors,
-    secrets,
     workflows,
 )
 
@@ -47,10 +42,8 @@ def test_package_version_is_distribution_version() -> None:
     expected = version("extended-data")
 
     assert extended_data.__version__ == expected
-    assert connectors.__version__ == expected
     assert inputs.__version__ == expected
     assert lifecycle_logging.__version__ == expected
-    assert secrets.__version__ == expected
 
 
 def test_public_all_exports_resolve_to_real_values() -> None:
@@ -83,32 +76,10 @@ def test_tier1_primitives_are_not_root_exports() -> None:
         assert name not in extended_data.__all__
 
 
-def test_root_lazy_exports_do_not_describe_tier1_primitives() -> None:
-    """The package root lazy loader should not present Tier 1 primitives as root exports."""
-    lazy_loader_docs = extended_data.__getattr__.__doc__ or ""
-
-    assert "primitives" not in lazy_loader_docs
-    assert "connectors and processors" in lazy_loader_docs
-
-
 def test_clean_major_version_public_names() -> None:
-    """The public surface uses integrated extended-data names."""
+    """The public surface uses integrated extended-data names only."""
     assert inputs.InputProvider.__name__ == "InputProvider"
-    assert connectors.ConnectorBase.__name__ == "ConnectorBase"
-    assert connectors.ConnectorFabric is ConnectorFabric
-    assert extended_data.ConnectorBase is connectors.ConnectorBase
     assert not hasattr(inputs, "DirectedInputsClass")
-    assert not hasattr(connectors, "VendorConnectorBase")
-    assert not hasattr(connectors, "VendorConnectors")
-    assert not hasattr(extended_data, "VendorConnectorBase")
-    assert not hasattr(connectors, "AWSConnectorFull")
-    assert not hasattr(connectors, "GoogleConnectorFull")
-    assert not hasattr(connectors, "GoogleCloudConnector")
-    assert not hasattr(connectors, "GoogleWorkspaceConnector")
-    assert not hasattr(connectors, "GoogleBillingConnector")
-    assert not hasattr(extended_data, "GoogleCloudConnector")
-    assert not hasattr(extended_data, "GoogleWorkspaceConnector")
-    assert not hasattr(extended_data, "GoogleBillingConnector")
     assert not hasattr(primitives, "SortedDefaultDict")
     assert not hasattr(extended_data, "SortedDefaultDict")
     assert not hasattr(primitives, "removeprefix")
@@ -131,88 +102,30 @@ def test_clean_major_version_public_names() -> None:
         assert not hasattr(extended_data, old_name)
 
 
-def test_old_monorepo_import_namespaces_are_not_preserved() -> None:
-    """Old package import namespaces should remain absent in the clean major version."""
-    old_namespaces = (
-        "directed_inputs_class",
-        "extended_data_types",
-        "lifecyclelogging",
-        "vendor_connectors",
-    )
-
-    for namespace in old_namespaces:
+def test_old_import_namespaces_are_not_preserved_inside_extended_data() -> None:
+    """Clean major-version breaks should not keep old in-package shims."""
+    for namespace in (
+        "extended_data.connectors",
+        "extended_data.secrets",
+    ):
         assert util.find_spec(namespace) is None
 
 
-def test_root_exports_first_class_integrated_surfaces() -> None:
-    """Inputs, logging, and connector fabric are available from the root package."""
+def test_root_exports_first_class_base_surfaces() -> None:
+    """Inputs, logging, IO, containers, and workflows are available from the root package."""
     assert extended_data.DataDecodeError.__name__ == "DataDecodeError"
     assert extended_data.DataFile.__name__ == "DataFile"
     assert extended_data.DataWorkflow.__name__ == "DataWorkflow"
     assert extended_data.InputProvider is InputProvider
     assert extended_data.Logging is Logging
-    assert extended_data.ConnectorBase is connectors.ConnectorBase
-    assert extended_data.ConnectorAdapter is connectors.ConnectorAdapter
-    assert extended_data.BuiltinConnectorAdapter is connectors.BuiltinConnectorAdapter
-    assert extended_data.ConnectorFabric is ConnectorFabric
-    assert extended_data.ConnectorInfo.__name__ == "ConnectorInfo"
     assert extended_data.WorkflowResult.__name__ == "WorkflowResult"
     assert extended_data.WorkflowStep.__name__ == "WorkflowStep"
     assert callable(extended_data.data_transform_action)
     assert callable(extended_data.list_data_transform_steps)
-    assert "unhump" in extended_data.DATA_TRANSFORM_STEPS
-    assert "reconstruct" in extended_data.list_data_transform_steps()
-    assert extended_data.SecretsConnector is secrets.SecretsConnector
-    assert extended_data.SyncOptions is secrets.SyncOptions
-    assert extended_data.SyncResult is secrets.SyncResult
-    assert extended_data.SyncOperation is secrets.SyncOperation
-    assert extended_data.OutputFormat is secrets.OutputFormat
     assert callable(extended_data.directed_inputs)
     assert callable(extended_data.read_data_file)
-    assert callable(extended_data.get_connector)
-    assert callable(extended_data.get_connector_adapter)
-    assert callable(extended_data.list_available_connectors)
-    assert callable(extended_data.list_connector_info)
-    assert callable(extended_data.list_connector_categories)
-    assert callable(extended_data.list_connector_capabilities)
-    assert callable(extended_data.list_connectors_by_category)
-    assert callable(extended_data.list_connectors_by_capability)
-    connector_names = extended_data.list_connectors()
-    github_adapter = extended_data.get_connector_adapter("github")
-    available_connector_names = extended_data.list_available_connectors()
-    connector_categories = extended_data.list_connector_categories()
-    connector_capabilities = extended_data.list_connector_capabilities()
-    cloud_connectors = extended_data.list_connectors_by_category("cloud")
-    repository_connectors = extended_data.list_connectors_by_capability("repositories")
-    assert isinstance(connector_names, ExtendedList)
-    assert isinstance(github_adapter, connectors.ConnectorAdapter)
-    assert github_adapter.name == "github"
-    assert isinstance(connector_names[0], ExtendedString)
-    assert isinstance(available_connector_names, ExtendedList)
-    assert isinstance(available_connector_names[0], ExtendedString)
-    assert set(available_connector_names) <= set(connector_names)
-    assert isinstance(connector_categories, ExtendedList)
-    assert isinstance(connector_categories[0], ExtendedString)
-    assert "cloud" in connector_categories
-    assert isinstance(connector_capabilities, ExtendedList)
-    assert isinstance(connector_capabilities[0], ExtendedString)
-    assert "repositories" in connector_capabilities
-    assert isinstance(cloud_connectors, ExtendedList)
-    assert isinstance(cloud_connectors[0], ExtendedDict)
-    assert "aws" in {connector["name"] for connector in cloud_connectors}
-    assert isinstance(repository_connectors, ExtendedList)
-    assert isinstance(repository_connectors[0], ExtendedDict)
-    assert "github" in {connector["name"] for connector in repository_connectors}
-    assert get_type_hints(connectors.list_connectors)["return"] == ExtendedList[ExtendedString]
-    assert get_type_hints(connectors.list_available_connectors)["return"] == ExtendedList[ExtendedString]
-    assert get_type_hints(connectors.list_connector_categories)["return"] == ExtendedList[ExtendedString]
-    assert get_type_hints(connectors.list_connector_capabilities)["return"] == ExtendedList[ExtendedString]
-    assert get_type_hints(ConnectorFabric.list_connectors)["return"] == ExtendedList[ExtendedString]
-    assert get_type_hints(ConnectorFabric.list_available_connectors)["return"] == ExtendedList[ExtendedString]
-    assert get_type_hints(ConnectorFabric.list_connector_categories)["return"] == ExtendedList[ExtendedString]
-    assert get_type_hints(ConnectorFabric.list_connector_capabilities)["return"] == ExtendedList[ExtendedString]
-    assert get_type_hints(ConnectorFabric.get_connector)["return"] is connectors.ConnectorBase
-    assert "cursor" in connector_names
+    assert "unhump" in extended_data.DATA_TRANSFORM_STEPS
+    assert "reconstruct" in extended_data.list_data_transform_steps()
 
 
 def test_logging_exposes_stored_messages_as_detached_tier2_data() -> None:
@@ -275,57 +188,7 @@ def test_tier2_container_methods_expose_integrated_primitives() -> None:
     assert export_safe == {"launched": "2026-06-10"}
 
 
-def test_redaction_is_a_tier1_primitive_not_connector_local() -> None:
+def test_redaction_is_a_tier1_primitive() -> None:
     """Diagnostic redaction should live with reusable Tier 1 utilities."""
     assert primitives.redact_sensitive_text("password=hunter2") == "password=[REDACTED]"
     assert primitives.redact_sensitive_data({"api_key": "key_123"}) == {"api_key": "[REDACTED]"}
-    assert util.find_spec("extended_data.connectors.redaction") is None
-    assert not hasattr(connectors, "redact_sensitive_text")
-
-
-def test_connectors_root_exports_builtin_connector_classes() -> None:
-    """Every built-in registry connector class is exported from the connector package root."""
-    for spec in BUILTIN_CONNECTORS.values():
-        value = getattr(connectors, spec.class_name)
-
-        assert isinstance(value, type)
-        assert value.__name__ == spec.class_name
-
-
-def test_package_root_exports_builtin_connector_classes() -> None:
-    """Built-in connector classes are first-class root package exports."""
-    for spec in BUILTIN_CONNECTORS.values():
-        root_value = getattr(extended_data, spec.class_name)
-        connector_value = getattr(connectors, spec.class_name)
-
-        assert root_value is connector_value
-
-
-def test_first_class_connectors_keep_operation_mixins_without_optional_extras() -> None:
-    """Unified connector classes should expose real operation mixins before SDK extras are installed."""
-    assert callable(connectors.AWSConnector.list_s3_buckets)
-    assert callable(connectors.AWSConnector.get_organization_accounts)
-    assert callable(connectors.AWSConnector.list_sso_users)
-    assert callable(connectors.GoogleConnector.list_projects)
-    assert callable(connectors.GoogleConnector.list_users)
-    assert callable(connectors.GoogleConnector.list_billing_accounts)
-
-
-def test_google_registry_uses_single_first_class_connector() -> None:
-    """Google Workspace, Cloud, and Billing operations should not be split into connector aliases."""
-    connector_names = {connector["name"] for connector in connectors.list_connector_info()}
-
-    assert "google" in connector_names
-    assert "google_cloud" not in connector_names
-    assert "google_workspace" not in connector_names
-    assert "google_billing" not in connector_names
-
-
-def test_clean_major_version_does_not_preserve_duplicate_tool_modules() -> None:
-    """Secrets tool factories live on the package root and connector implementation module."""
-    assert util.find_spec("extended_data.secrets.tools") is None
-    assert callable(secrets.get_tools)
-    assert callable(secrets.get_langchain_tools)
-    assert callable(secrets.get_crewai_tools)
-    assert callable(secrets.get_strands_tools)
-    assert callable(connectors.SecretsConnector)
