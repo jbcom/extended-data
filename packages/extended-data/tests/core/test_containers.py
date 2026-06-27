@@ -770,3 +770,92 @@ def test_container_classes_are_root_exports() -> None:
     assert extended_data.ExtendedTuple is ExtendedTuple
     assert extended_data.extend_data is extend_data
     assert extended_data.to_builtin is to_builtin
+
+
+def test_extended_string_transform_methods_round_trip() -> None:
+    """ExtendedString transform bound methods should delegate to Tier 1 primitives."""
+    assert ExtendedString("camelCase").lower_first() == "camelCase"
+    assert ExtendedString("CamelCase").lower_first() == "camelCase"
+    assert ExtendedString("API Response").sanitize() == "API_Response"
+    assert ExtendedString("API Response").sanitize("-") == "API-Response"
+    assert ExtendedString("abcdefghijklmnop").truncate(5) == "ab..."
+    assert ExtendedString("abcdefghijklmnop").truncate(5, ender="!") == "abcd!"
+    assert ExtendedString("api_service").titleize_name() == "Api Service"
+    assert ExtendedString("api response").to_camel_case() == "apiResponse"
+    assert ExtendedString("api response").to_camel_case(uppercase_first=True) == "ApiResponse"
+    assert ExtendedString("api response").to_pascal_case() == "ApiResponse"
+    assert ExtendedString("API Response").pluralize() == "API Responses"
+    assert ExtendedString("API Responses").singularize() == "API Response"
+    assert ExtendedString("api_response").humanize() == "API response"
+    assert ExtendedString("api_response").titleize() == "Api Response"
+
+
+def test_extended_string_is_url_bound_method() -> None:
+    """ExtendedString.is_url should delegate to the Tier 1 url detector."""
+    assert ExtendedString("https://example.com").is_url() is True
+    assert ExtendedString("not a url").is_url() is False
+
+
+def test_extended_dict_unhump_bound_method() -> None:
+    """ExtendedDict.unhump should delegate to unhump_map with prefix option."""
+    value = ExtendedDict({"serviceName": "api", "HTTPResponse": 200})
+    unhumped = value.unhump()
+    assert unhumped == {"service_name": "api", "http_response": 200}
+    assert isinstance(unhumped, ExtendedDict)
+
+    prefixed = ExtendedDict({"v1Service": "api", "v2Other": "x"}).unhump(drop_without_prefix="v1")
+    assert prefixed == {"v1_service": "api"}
+
+
+def test_extended_dict_delitem_succeeds_on_mappings() -> None:
+    """ExtendedData.__delitem__ should delete keys on mutable mappings."""
+    value = ExtendedDict({"service": "api", "region": "us-east-1"})
+    del value["region"]
+    assert "region" not in value
+    assert value == {"service": "api"}
+
+
+def test_reconstruct_special_types_fail_silently_branches() -> None:
+    """reconstruct_special_types(fail_silently=True) should swallow, False should raise."""
+    from extended_data.primitives.types import ConversionError
+
+    bad_yaml = "---\ninvalid: [unclosed"
+    bad = ExtendedList([bad_yaml])
+
+    with pytest.raises(ConversionError):
+        bad.reconstruct_special_types(fail_silently=False)
+
+    silent = bad.reconstruct_special_types(fail_silently=True)
+    assert isinstance(silent, ExtendedList)
+
+    bad_tuple = ExtendedTuple((bad_yaml,))
+    with pytest.raises(ConversionError):
+        bad_tuple.reconstruct_special_types(fail_silently=False)
+    silent_tuple = bad_tuple.reconstruct_special_types(fail_silently=True)
+    assert isinstance(silent_tuple, ExtendedTuple)
+
+    bad_set = ExtendedSet({bad_yaml})
+    with pytest.raises(ConversionError):
+        bad_set.reconstruct_special_types(fail_silently=False)
+    silent_set = bad_set.reconstruct_special_types(fail_silently=True)
+    assert isinstance(silent_set, ExtendedSet)
+
+    bad_dict = ExtendedDict({"key": bad_yaml})
+    with pytest.raises(ConversionError):
+        bad_dict.reconstruct_special_types(fail_silently=False)
+    silent_dict = bad_dict.reconstruct_special_types(fail_silently=True)
+    assert isinstance(silent_dict, ExtendedDict)
+
+
+def test_extended_set_discard_and_copy() -> None:
+    """ExtendedSet.discard and copy should mutate / duplicate as expected."""
+    value = ExtendedSet({"api", "worker", "gateway"})
+    discarded = value.discard("worker")
+    assert discarded is value
+    assert "worker" not in value
+    assert value == {"api", "gateway"}
+
+    copied = value.copy()
+    assert copied == value
+    assert copied is not value
+    assert isinstance(copied, ExtendedSet)

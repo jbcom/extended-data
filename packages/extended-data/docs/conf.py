@@ -63,6 +63,6 @@ autodoc2_packages = [
 ]
 autodoc2_render_plugin = "rst"
 autodoc2_docstring_parser_regexes = [(r".*", "myst")]
-autodoc2_hidden_objects = ["inherited", "dunder"]
+autodoc2_hidden_objects = ["inherited", "dunder", "private"]
 autodoc2_class_docstring = "merge"
 autodoc2_module_summary = True

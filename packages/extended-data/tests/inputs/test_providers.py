@@ -38,8 +38,8 @@ import pytest
 
 from extended_data import base64_encode
 from extended_data.containers import ExtendedDict, ExtendedString
-from extended_data.inputs import __main__ as inputs_module
-from extended_data.inputs.__main__ import InputProvider
+from extended_data.inputs import providers as inputs_module
+from extended_data.inputs.providers import InputProvider
 
 
 @pytest.fixture
@@ -286,6 +286,19 @@ def test_decode_input_base64():
     dic = InputProvider(inputs={"base64_key": encoded_value})
     decoded = dic.decode_input("base64_key", decode_from_base64=True, decode_from_json=True)
     assert decoded == {"name": "test"}
+
+
+def test_decode_input_base64_then_yaml():
+    """Base64 payload decoded then re-decoded as YAML should produce a mapping."""
+    import yaml
+
+    yaml_payload = yaml.safe_dump({"name": "test", "replicas": 3})
+    encoded_value = base64_encode(yaml_payload.encode())
+    dic = InputProvider(inputs={"base64_key": encoded_value})
+
+    decoded = dic.decode_input("base64_key", decode_from_base64=True, decode_from_yaml=True)
+
+    assert decoded == {"name": "test", "replicas": 3}
 
 
 def test_decode_input_base64_from_bytes():

@@ -13,7 +13,7 @@ The old directed inputs package is now first-class under
        from_environment=False,
    )
 
-   print(provider.get_input("APP_DEBUG", as_type=bool))
+   print(provider.get_input("APP_DEBUG", is_bool=True))
    print(provider.snapshot_inputs())
 
 Decorators
