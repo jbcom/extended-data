@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "extended-data"
-version = "8.4.1"
+version = "8.4.2"
 description = "Comprehensive Python data utilities for serialization, inputs, logging, and workflows"
 requires-python = ">=3.11"
 license = { text = "MIT" }
