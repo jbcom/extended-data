@@ -167,6 +167,12 @@ class ExtendedTuple(tuple[T, ...], ExtendedData):
         items = () if values is None else values
         return super().__new__(cls, (cls._wrap_item(item) for item in items))
 
+    def __init__(self, values: Iterable[T] | None = None) -> None:
+        """Consume the factory marker after ``ExtendedData`` promotion."""
+        del values
+        if getattr(self, _FACTORY_INITIALIZED_ATTR, False):
+            setattr(self, _FACTORY_INITIALIZED_ATTR, False)
+
     @staticmethod
     def _wrap_item(item: T) -> T:
         """Promote nested built-in containers to extended containers."""

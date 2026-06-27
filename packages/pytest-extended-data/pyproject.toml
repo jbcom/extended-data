@@ -1,0 +1,47 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "pytest-extended-data"
+version = "0.0.0"
+description = "Pytest fixtures and assertions for projects using extended-data"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+readme = "README.md"
+keywords = [
+    "extended-data",
+    "pytest",
+    "fixtures",
+    "testing",
+]
+authors = [{ name = "Jon Bogaty", email = "jon@jonbogaty.com" }]
+maintainers = [{ name = "Jon Bogaty", email = "jon@jonbogaty.com" }]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Framework :: Pytest",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Typing :: Typed",
+]
+dependencies = [
+    "extended-data>=8.3.1",
+    "pytest>=9.0.3",
+]
+
+[project.urls]
+Documentation = "https://extended-data.dev"
+Issues = "https://github.com/jbcom/extended-data/issues"
+Source = "https://github.com/jbcom/extended-data"
+Changelog = "https://github.com/jbcom/extended-data/blob/main/packages/pytest-extended-data/CHANGELOG.md"
+
+[project.entry-points.pytest11]
+extended_data = "pytest_extended_data.plugin"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/pytest_extended_data"]

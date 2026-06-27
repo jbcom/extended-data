@@ -1,27 +1,33 @@
 Publishing Checklist
 ====================
 
-``extended-data`` uses the standard ``ci.yml`` > ``release.yml`` >
-``cd.yml`` workflow shape. ``release.yml`` owns release-please. When a
+The workspace uses the standard ``ci.yml`` > ``release.yml`` > ``cd.yml``
+workflow shape. ``release.yml`` owns release-please. When a
 release-please PR merge creates a release tag, it dispatches ``cd.yml``
-for package publication and the Sphinx/Furo documentation deploy. Do not
-hand-edit versions, changelog entries, release tags, or GitHub releases
-during the normal release path.
+with the package name for package publication. ``extended-data`` releases
+also deploy the Sphinx/Furo documentation site. Do not hand-edit
+versions, changelog entries, release tags, or GitHub releases during the
+normal release path.
 
 Release Model
 -------------
 
 - ``release.yml`` owns release-please version detection, changelog
-  updates, release PRs, Git tags, and dispatching ``cd.yml`` after a
-  release is created.
-- ``cd.yml`` owns tag-gated package verification, PyPI publication, and
-  GitHub Pages publication for ``extended-data.dev``.
-- The package name is ``extended-data``; PyPI publication uses the
-  tighter ``extended-data`` distribution name.
+  updates, release PRs, Git tags, and dispatching ``cd.yml`` with the
+  selected workspace package after a release is created.
+- ``cd.yml`` owns tag-gated package verification and selected-package
+  PyPI publication.
+- ``cd.yml`` deploys GitHub Pages only for ``extended-data`` releases.
+- Published package names are ``extended-data`` and
+  ``pytest-extended-data``.
 - The CD workflow publishes only for the release tag passed by
   ``release.yml``.
 - The PyPI job uses OIDC trusted publishing through ``uv publish``; no
   PyPI token should be stored in repository secrets for the normal path.
+- Do not configure package release-please entries to update the root
+  ``uv.lock`` through ``extra-files``. The release PR owns package
+  metadata, changelogs, and the release manifest; workspace setup can
+  refresh the lock locally when needed.
 
 Maintainer Preflight
 --------------------
@@ -31,13 +37,8 @@ workflow diagnostics:
 
 .. code:: bash
 
-   uv sync --extra tests --extra typing
-   uv run --with pip-audit==2.10.0 pip-audit --skip-editable
-   uv run ruff check .
-   uv run mypy src/extended_data
-   uv run pytest
-   uv run sphinx-build -W -E -b html docs docs/_build/html
-   uv build
+   uv sync --all-packages --all-extras --dev
+   tox -e lint,typecheck,audit,py311,py312,py313,py314,examples,docs,build
 
 Workflow Hygiene
 ----------------
@@ -79,15 +80,18 @@ Publishing Flow
    updates.
 4. Merge the release PR.
 5. Confirm ``release.yml`` created the GitHub release and dispatched
-   ``cd.yml``.
-6. Confirm ``cd.yml`` published to PyPI through trusted publishing and
-   deployed the Sphinx site to GitHub Pages for ``extended-data.dev``.
-7. Verify the package can be installed from PyPI:
+   ``cd.yml`` with the expected package name.
+6. Confirm ``cd.yml`` published to PyPI through trusted publishing.
+7. For ``extended-data`` releases, confirm ``cd.yml`` deployed the
+   Sphinx site to GitHub Pages for ``extended-data.dev``.
+8. Verify the package can be installed from PyPI:
 
 .. code:: bash
 
    python -m pip install extended-data
    python -c "import extended_data; print(extended_data.__version__)"
+   python -m pip install pytest-extended-data
+   python -c "import pytest_extended_data; print(pytest_extended_data.__all__)"
 
 Manual Repairs
 --------------

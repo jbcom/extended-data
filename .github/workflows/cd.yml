@@ -7,6 +7,10 @@ on:
         description: Release tag to publish and deploy
         required: true
         type: string
+      package:
+        description: Workspace package to publish
+        required: true
+        type: string
 
 permissions: {}
 
@@ -32,6 +36,7 @@ jobs:
         with:
           version: "0.11.19"
           enable-cache: true
+      - run: uv sync --all-packages --all-extras --dev
       - run: uv tool install tox --with tox-uv --with tox-gh
       - run: tox -e "py$(echo '${{ matrix.python-version }}' | tr -d '.')"
 
@@ -52,6 +57,7 @@ jobs:
         with:
           version: "0.11.19"
           enable-cache: true
+      - run: uv sync --all-packages --all-extras --dev
       - run: uv tool install tox --with tox-uv --with tox-gh
       - run: tox -e lint,typecheck,audit,examples,docs,build
 
@@ -74,11 +80,18 @@ jobs:
         with:
           version: "0.11.19"
           enable-cache: true
-      - run: uv build
-      - run: uv publish --trusted-publishing always
+      - name: Validate package input
+        run: |
+          case "${{ inputs.package }}" in
+            extended-data|pytest-extended-data) ;;
+            *) echo "unsupported package: ${{ inputs.package }}" >&2; exit 1 ;;
+          esac
+      - run: uv build --package "${{ inputs.package }}" --out-dir dist --clear
+      - run: uv publish --trusted-publishing always dist/*
 
   publish-docs:
     name: Publish docs to GitHub Pages
+    if: inputs.package == 'extended-data'
     needs: publish-package
     runs-on: ubuntu-latest
     permissions:
@@ -103,11 +116,12 @@ jobs:
         with:
           version: "0.11.19"
           enable-cache: true
+      - run: uv sync --all-packages --all-extras --dev
       - run: uv tool install tox --with tox-uv --with tox-gh
       - run: tox -e docs
       - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:
-          path: docs/_build/html
+          path: packages/extended-data/docs/_build/html
       - id: deployment
         name: Deploy docs
         uses: actions/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128 # v5.0.0

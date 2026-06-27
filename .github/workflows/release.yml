@@ -21,10 +21,17 @@ jobs:
         with:
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
-      - name: Dispatch continuous delivery
-        if: steps.release.outputs.release_created == 'true'
+      - name: Dispatch extended-data continuous delivery
+        if: steps.release.outputs['packages/extended-data--release_created'] == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
-          RELEASE_TAG: ${{ steps.release.outputs.tag_name }}
-        run: gh workflow run cd.yml --repo "$GH_REPO" --ref main -f tag="$RELEASE_TAG"
+          RELEASE_TAG: ${{ steps.release.outputs['packages/extended-data--tag_name'] }}
+        run: gh workflow run cd.yml --repo "$GH_REPO" --ref main -f tag="$RELEASE_TAG" -f package="extended-data"
+      - name: Dispatch pytest-extended-data continuous delivery
+        if: steps.release.outputs['packages/pytest-extended-data--release_created'] == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ steps.release.outputs['packages/pytest-extended-data--tag_name'] }}
+        run: gh workflow run cd.yml --repo "$GH_REPO" --ref main -f tag="$RELEASE_TAG" -f package="pytest-extended-data"

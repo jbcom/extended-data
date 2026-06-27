@@ -12,5 +12,5 @@ __pycache__/
 coverage.xml
 .coverage
 .tox/
-docs/apidocs/
-docs/_build/
+packages/extended-data/docs/apidocs/
+packages/extended-data/docs/_build/

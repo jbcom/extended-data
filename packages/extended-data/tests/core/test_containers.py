@@ -527,23 +527,32 @@ def test_extended_data_factory_does_not_reinitialize_promoted_containers(monkeyp
 
         monkeypatch.setattr(container_type, "__init__", wrapped)
 
-    for container_type in (ExtendedDict, ExtendedList, ExtendedSet, ExtendedString):
+    for container_type in (ExtendedDict, ExtendedList, ExtendedSet, ExtendedString, ExtendedTuple):
         count_initializers(container_type)
 
-    ExtendedData({"service": {"name": "api"}})
+    mapping = ExtendedData({"service": {"name": "api"}})
     assert calls[ExtendedDict] == 2
+    assert getattr(mapping, _FACTORY_INITIALIZED_ATTR, False) is False
 
     calls[ExtendedList] = 0
-    ExtendedData([["api"]])
+    sequence = ExtendedData([["api"]])
     assert calls[ExtendedList] == 2
+    assert getattr(sequence, _FACTORY_INITIALIZED_ATTR, False) is False
 
     calls[ExtendedSet] = 0
-    ExtendedData({"api"})
+    unique_values = ExtendedData({"api"})
     assert calls[ExtendedSet] == 1
+    assert getattr(unique_values, _FACTORY_INITIALIZED_ATTR, False) is False
 
     calls[ExtendedString] = 0
-    ExtendedData("api")
+    text = ExtendedData("api")
     assert calls[ExtendedString] == 1
+    assert getattr(text, _FACTORY_INITIALIZED_ATTR, False) is False
+
+    calls[ExtendedTuple] = 0
+    tuple_value = ExtendedData(("api",))
+    assert calls[ExtendedTuple] == 1
+    assert getattr(tuple_value, _FACTORY_INITIALIZED_ATTR, False) is False
 
 
 def test_generic_extended_data_facade_methods_for_scalar_values(tmp_path: Path) -> None:

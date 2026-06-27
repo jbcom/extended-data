@@ -95,6 +95,25 @@ boundary:
    extended-data merge config/base.yaml config/dev.yaml --output yaml
    extended-data transform --file payload.json --step reconstruct --step unhump
 
+Pytest Plugin
+-------------
+
+``pytest-extended-data`` is a separate developer-facing distribution in
+the same workspace. It publishes pytest fixtures and assertion helpers
+through the standard ``pytest11`` plugin entry point, so downstream
+packages can opt into Extended Data test helpers without installing
+pytest behavior from the runtime package.
+
+.. code:: bash
+
+   uv add --dev pytest-extended-data
+
+.. code:: python
+
+   def test_payload_shape(extended_data_value):
+       assert extended_data_value.shape == "mapping"
+       assert extended_data_value["service"]["name"] == "api"
+
 Split Packages
 --------------
 
