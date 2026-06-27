@@ -1,5 +1,12 @@
 # Changelog
 
+## [8.3.0](https://github.com/jbcom/extended-data/compare/extended-data-v8.2.0...extended-data-v8.3.0) (2026-06-27)
+
+
+### Features
+
+* make ExtendedData the polymorphic container root ([217d8d7](https://github.com/jbcom/extended-data/commit/217d8d7694d26b75c8a0e65979f5b8162a33be9f))
+
 ## [8.2.0](https://github.com/jbcom/extended-data/compare/extended-data-v8.1.0...extended-data-v8.2.0) (2026-06-27)
 
 
