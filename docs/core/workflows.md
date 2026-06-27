@@ -36,6 +36,22 @@ print(result.as_extended())
 print(result.as_builtin())
 ```
 
+## Data Sync
+
+```python
+from extended_data import DataWorkflow, sync_value_to_file
+
+direct = sync_value_to_file({"service": "api"}, "build/config.json", encoding="json")
+workflow = DataWorkflow.from_value({"service": "api"}).sync_file("build/config.yaml")
+
+print(direct.changed)
+print(workflow.to_dict()["destination"])
+```
+
+Sync primitives compare rendered output before writing. That gives higher
+layers, such as `vendor-fabric`, a base local file sync operation without
+reimplementing export, redaction, and metadata handling.
+
 The CLI exposes the same data boundary:
 
 ```bash

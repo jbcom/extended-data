@@ -9,9 +9,9 @@ cadence are first-class.
 | Surface | Current owner |
 | --- | --- |
 | Pure data functions | `extended_data.primitives` |
-| Extended containers | `extended_data.containers` |
+| Generic and shape-specific extended containers | `extended_data.containers` |
 | File import/export and codecs | `extended_data.io` |
-| Workflow composition | `extended_data.workflows` |
+| Workflow composition and local file sync primitives | `extended_data.workflows` |
 | Input loading and decorators | `extended_data.inputs` |
 | Structured lifecycle logging | `extended_data.logging` |
 
@@ -19,12 +19,12 @@ cadence are first-class.
 
 | Prior surface | Current repository | Install target |
 | --- | --- | --- |
-| External vendor API clients | `jbcom/vendor-connectors` | `vendor-connectors` |
-| Vendor MCP and tool adapters | `jbcom/vendor-connectors` | `vendor-connectors[...]` |
-| Meshy, Slack, Google, GitHub, AWS, Vault, Zoom, Anthropic, Cursor integrations | `jbcom/vendor-connectors` | `vendor-connectors[...]` |
-| SecretSync Python bridge | `jbcom/secrets-sync` | `secrets-sync-bridge` |
-| SecretSync agent tool wrappers | `jbcom/agentic-crew` | `agentic-crew[secrets-sync]` |
-| Agent framework integrations | `jbcom/agentic-crew` | `agentic-crew[...]` |
+| External vendor API clients | `jbcom/vendor-fabric` | `vendor-fabric` |
+| Vendor fabric MCP and tool adapters | `jbcom/vendor-fabric` | `vendor-fabric[...]` |
+| Meshy, Slack, Google, GitHub, AWS, Vault, Zoom, Anthropic, Cursor integrations | `jbcom/vendor-fabric` | `vendor-fabric[...]` |
+| Vendor-backed Python sync capabilities | `jbcom/vendor-fabric` | `vendor-fabric[secrets-sync]` |
+| SecretSync agent tool wrappers | `jbcom/vendor-fabric` | `vendor-fabric[ai,secrets-sync]` |
+| Agent framework integrations | `jbcom/vendor-fabric` | `vendor-fabric[ai]` |
 
 The old in-package connector and secrets namespaces are intentionally absent.
 That is a clean major-version boundary: code should depend on the package that
@@ -36,11 +36,7 @@ The intended layering is dependency-inward:
 
 ```text
 extended-data
-  <- vendor-connectors
-  <- secrets-sync-bridge
-
-vendor-connectors + secrets-sync-bridge
-  <- agentic-crew
+  <- vendor-fabric
 ```
 
 `extended-data` has no dependency on the higher layers. Higher layers may use

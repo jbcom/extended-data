@@ -10,7 +10,14 @@ import extended_data
 import extended_data.logging as lifecycle_logging
 
 from extended_data import containers, inputs, io, primitives, workflows
-from extended_data.containers import ExtendedDict, ExtendedList, ExtendedSet, ExtendedString, ExtendedTuple
+from extended_data.containers import (
+    ExtendedData,
+    ExtendedDict,
+    ExtendedList,
+    ExtendedSet,
+    ExtendedString,
+    ExtendedTuple,
+)
 from extended_data.inputs import InputProvider
 from extended_data.logging import Logging
 
@@ -116,6 +123,7 @@ def test_root_exports_first_class_base_surfaces() -> None:
     assert extended_data.DataDecodeError.__name__ == "DataDecodeError"
     assert extended_data.DataFile.__name__ == "DataFile"
     assert extended_data.DataWorkflow.__name__ == "DataWorkflow"
+    assert extended_data.ExtendedData.__name__ == "ExtendedData"
     assert extended_data.InputProvider is InputProvider
     assert extended_data.Logging is Logging
     assert extended_data.WorkflowResult.__name__ == "WorkflowResult"
@@ -192,3 +200,32 @@ def test_redaction_is_a_tier1_primitive() -> None:
     """Diagnostic redaction should live with reusable Tier 1 utilities."""
     assert primitives.redact_sensitive_text("password=hunter2") == "password=[REDACTED]"
     assert primitives.redact_sensitive_data({"api_key": "key_123"}) == {"api_key": "[REDACTED]"}
+
+
+def test_extended_data_wraps_any_promoted_shape() -> None:
+    """ExtendedData should be the generic facade over shape-specific containers."""
+    wrapped_dict = ExtendedData({"service": {"name": "api"}, "ports": [8080]})
+    wrapped_list = ExtendedData(["api", "api", "worker"])
+    wrapped_string = ExtendedData("api-gateway")
+
+    merged = wrapped_dict.merge({"service": {"debug": True}, "ports": [8081]})
+    transformed = wrapped_list.unique()
+
+    assert wrapped_dict.data_type == "ExtendedDict"
+    assert merged.as_builtin() == {
+        "service": {"name": "api", "debug": True},
+        "ports": [8080, 8081],
+    }
+    assert transformed == ["api", "worker"]
+    assert wrapped_string.upper_first() == "Api-gateway"
+    assert ExtendedData(merged).as_builtin() == merged.as_builtin()
+
+
+def test_extended_data_truthiness_mirrors_wrapped_value() -> None:
+    """ExtendedData should not make scalar falsey values truthy."""
+    assert bool(ExtendedData(None)) is False
+    assert bool(ExtendedData(False)) is False
+    assert bool(ExtendedData(0)) is False
+    assert bool(ExtendedData("")) is False
+    assert bool(ExtendedData([])) is False
+    assert bool(ExtendedData("api")) is True
