@@ -271,7 +271,7 @@ def test_transform_can_write_output_artifact(tmp_path) -> None:
     assert "http_response_code: 200" in output_text
 
 
-def test_decode_compact_json_drops_indent(tmp_path) -> None:
+def test_decode_compact_json_drops_indent() -> None:
     """--compact should produce single-line JSON without indent."""
     with patch("sys.stdout.write") as mock_write:
         exit_code = cli_module.main(["decode", '{"service": "api"}', "--suffix", "json", "--compact"])
@@ -282,7 +282,7 @@ def test_decode_compact_json_drops_indent(tmp_path) -> None:
     assert "\n" not in output.strip()
 
 
-def test_decode_non_json_output_ignores_compact(tmp_path) -> None:
+def test_decode_non_json_output_ignores_compact() -> None:
     """--compact only affects JSON; YAML output should remain unchanged."""
     with patch("sys.stdout.write") as mock_write:
         exit_code = cli_module.main(["decode", '{"service": "api"}', "--suffix", "json", "--output", "yaml", "--compact"])
@@ -293,7 +293,7 @@ def test_decode_non_json_output_ignores_compact(tmp_path) -> None:
     assert "api" in output
 
 
-def test_decode_toml_output(tmp_path) -> None:
+def test_decode_toml_output() -> None:
     """decode should emit TOML when --output toml is requested."""
     with patch("sys.stdout.write") as mock_write:
         exit_code = cli_module.main(["decode", '{"service": "api", "replicas": 3}', "--suffix", "json", "--output", "toml"])
@@ -304,7 +304,7 @@ def test_decode_toml_output(tmp_path) -> None:
     assert "replicas = 3" in output
 
 
-def test_decode_hcl_output(tmp_path) -> None:
+def test_decode_hcl_output() -> None:
     """decode should emit HCL when --output hcl is requested."""
     with patch("sys.stdout.write") as mock_write:
         exit_code = cli_module.main(["decode", '{"locals": [{"region": "us-east-1"}]}', "--suffix", "json", "--output", "hcl"])
@@ -329,7 +329,7 @@ def test_inspect_toml_output(tmp_path) -> None:
     assert "json" in output
 
 
-def test_inspect_hcl_output(tmp_path) -> None:
+def test_inspect_hcl_output() -> None:
     """inspect should emit HCL metadata when --output hcl is requested."""
     with patch("sys.stdout.write") as mock_write:
         exit_code = cli_module.main(["inspect", '{"service": "api"}', "--suffix", "json", "--output", "hcl"])
