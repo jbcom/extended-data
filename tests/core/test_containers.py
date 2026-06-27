@@ -10,9 +10,12 @@ from collections.abc import MutableSet
 from pathlib import Path
 from typing import Any
 
+import pytest
+
 import extended_data
 
 from extended_data.containers import (
+    ExtendedData,
     ExtendedDict,
     ExtendedList,
     ExtendedSet,
@@ -431,6 +434,78 @@ def test_extended_tuple_preserves_surface_for_builtin_tuple_operations() -> None
     assert isinstance(right_repeated[2], ExtendedDict)
 
 
+def test_extended_data_is_generic_container_for_unknown_shapes(tmp_path: Path) -> None:
+    """ExtendedData should hold and operate on any promoted data shape."""
+    vendor = ExtendedData({"vendor": "google", "payload": {"names": ["alpha"]}})
+    sequence = ExtendedData([{"name": "api"}]).append({"name": "worker"})
+    scalar = ExtendedData(42)
+    decoded = ExtendedData.decode('{"service": {"name": "api"}}', suffix="json")
+    file_path = tmp_path / "config.yaml"
+    file_path.write_text("service:\n  name: api\n", encoding="utf-8")
+    loaded = ExtendedData.read(file_path)
+    synced = loaded.sync_to_file(tmp_path / "out.json", encoding="json", source="test")
+
+    vendor["enabled"] = "true"
+    merged = vendor.merge({"payload": {"region": "us-east-1"}})
+    mapped = vendor.map_builtin(lambda data: {**data, "vendor": data["vendor"].upper()})
+
+    assert vendor.shape == "mapping"
+    assert vendor.is_mapping is True
+    assert vendor.data_type == "ExtendedDict"
+    assert isinstance(vendor.value, ExtendedDict)
+    assert vendor.get("vendor").upper_first() == "Google"
+    assert vendor["payload"]["names"][0].upper_first() == "Alpha"
+    assert isinstance(vendor["enabled"], ExtendedString)
+    assert "vendor" in vendor
+    assert merged.as_builtin()["payload"]["region"] == "us-east-1"
+    assert mapped.as_builtin()["vendor"] == "GOOGLE"
+    assert sequence.shape == "list"
+    assert sequence.is_sequence is True
+    assert isinstance(sequence[1], ExtendedDict)
+    assert sequence[1]["name"].upper_first() == "Worker"
+    assert scalar.shape == "scalar"
+    assert scalar.is_scalar is True
+    assert len(scalar) == 1
+    assert list(scalar) == [42]
+    assert decoded.shape == "mapping"
+    assert decoded["service"]["name"].upper_first() == "Api"
+    assert loaded.shape == "mapping"
+    assert loaded["service"]["name"].upper_first() == "Api"
+    assert synced.changed is True
+    assert json.loads((tmp_path / "out.json").read_text(encoding="utf-8")) == {"service": {"name": "api"}}
+
+
+def test_extended_data_detects_string_set_none_and_object_shapes() -> None:
+    """ExtendedData exposes broad shape predicates for non-mapping data too."""
+
+    class VendorRecord:
+        pass
+
+    text = ExtendedData("HTTP Response Value")
+    tags = ExtendedData({"prod", "api"}).add("sync")
+    empty = ExtendedData()
+    record = ExtendedData(VendorRecord())
+
+    assert text.shape == "string"
+    assert text.is_string is True
+    assert text.to_snake_case() == "http_response_value"
+    assert tags.shape == "set"
+    assert tags.is_set is True
+    assert "sync" in tags
+    assert empty.shape == "none"
+    assert empty.is_none is True
+    assert record.shape == "object"
+    assert record.copy().shape == "object"
+
+
+def test_extended_data_getattr_fails_cleanly_before_initialization() -> None:
+    """Uninitialized wrappers should not recurse when attributes are missing."""
+    uninitialized = object.__new__(ExtendedData)
+
+    with pytest.raises(AttributeError, match="missing"):
+        _ = uninitialized.missing
+
+
 def test_extend_data_recursively_wraps_builtin_containers() -> None:
     """The container factory promotes plain values into the Tier 2 surface."""
     wrapped = extend_data(
@@ -477,6 +552,7 @@ def test_to_builtin_recursively_unwraps_extended_containers() -> None:
 
 def test_container_classes_are_root_exports() -> None:
     """Tier 2 containers are root-level convenience exports."""
+    assert extended_data.ExtendedData is ExtendedData
     assert extended_data.ExtendedString is ExtendedString
     assert extended_data.ExtendedDict is ExtendedDict
     assert extended_data.ExtendedList is ExtendedList
