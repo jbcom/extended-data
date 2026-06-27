@@ -194,7 +194,7 @@ def test_release_workflow_dispatches_cd_after_release_please() -> None:
 
     assert "googleapis/release-please-action@" in release_workflow
     assert "steps.release.outputs.release_created == 'true'" in release_workflow
-    assert 'GH_REPO: ${{ github.repository }}' in release_workflow
+    assert "GH_REPO: ${{ github.repository }}" in release_workflow
     assert 'gh workflow run cd.yml --repo "$GH_REPO" --ref main -f tag="$RELEASE_TAG"' in release_workflow
 
 
@@ -453,11 +453,10 @@ def test_ownership_map_documents_moved_surfaces() -> None:
     ownership_map = (REPO_ROOT / "docs" / "ownership-map.md").read_text(encoding="utf-8")
 
     for expected_text in (
-        "jbcom/cloud-connectors-python",
-        "cloud-connectors[...]",
-        "jbcom/secrets-sync",
-        "secrets-sync-bridge",
-        "jbcom/agent-orchestration",
-        "agentic-crew[...]",
+        "jbcom/vendor-fabric",
+        "vendor-fabric[...]",
+        "vendor-fabric[secrets-sync]",
+        "vendor-fabric[ai,secrets-sync]",
+        "vendor-fabric[ai]",
     ):
         assert expected_text in ownership_map

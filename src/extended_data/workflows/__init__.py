@@ -12,6 +12,7 @@ from typing import Any, TypeAlias
 from extended_data.containers import ExtendedDict, extend_data, to_builtin
 from extended_data.io.exporters import make_raw_data_export_safe, wrap_raw_data_for_export
 from extended_data.io.files import DataFile, FilePath, write_file
+from extended_data.workflows.sync import DataSyncResult, sync_file_to_file, sync_value_to_file
 
 
 WorkflowAction: TypeAlias = Callable[[Any], Any]
@@ -341,6 +342,29 @@ class DataWorkflow:
             metadata=self.metadata,
         )
 
+    def sync_file(
+        self,
+        file_path: FilePath,
+        *,
+        encoding: str | None = None,
+        charset: str = "utf-8",
+        allow_empty: bool = False,
+        dry_run: bool = False,
+        tld: Path | None = None,
+    ) -> DataSyncResult:
+        """Sync the current workflow value to a local file if it changed."""
+        return sync_value_to_file(
+            self._value,
+            file_path,
+            source="workflow",
+            encoding=encoding,
+            charset=charset,
+            allow_empty=allow_empty,
+            dry_run=dry_run,
+            tld=tld,
+            metadata={"steps": list(self._steps), **to_builtin(self.metadata)},
+        )
+
 
 def _deep_merge_action(*mappings: Mapping[str, Any]) -> WorkflowAction:
     """Return a typed workflow action that deep-merges mapping values."""
@@ -384,6 +408,7 @@ def _decode_step_name(*, file_path: FilePath | None, suffix: str | None) -> str:
 
 __all__ = [
     "DATA_TRANSFORM_STEPS",
+    "DataSyncResult",
     "DataWorkflow",
     "StepLike",
     "WorkflowAction",
@@ -391,4 +416,6 @@ __all__ = [
     "WorkflowStep",
     "data_transform_action",
     "list_data_transform_steps",
+    "sync_file_to_file",
+    "sync_value_to_file",
 ]

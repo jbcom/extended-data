@@ -8,13 +8,14 @@ tiers:
 
 - Tier 1: pure functions for codecs, string transforms, redaction, matching,
   type coercion, mapping, sequence, and state utilities.
-- Tier 2: `ExtendedString`, `ExtendedDict`, `ExtendedList`, `ExtendedTuple`,
-  and `ExtendedSet` containers that expose Tier 1 operations as methods.
+- Tier 2: `ExtendedData`, `ExtendedString`, `ExtendedDict`, `ExtendedList`,
+  `ExtendedTuple`, and `ExtendedSet` containers that expose Tier 1 operations
+  as methods.
 - Tier 3: data processors that compose the first two tiers for files, inputs,
   logging, export/import boundaries, and workflows.
 
-External API clients live in the separate `cloud-connectors` distribution.
-SecretSync's Python bridge lives in `secrets-sync-bridge`.
+External API clients live in the separate `vendor-fabric` distribution.
+Vendor-backed Python sync and agent workflows also live in `vendor-fabric`.
 
 ## Install
 
@@ -32,20 +33,22 @@ pip install "extended-data[docs]"
 ## Usage
 
 ```python
-from extended_data import DataFile, DataWorkflow, ExtendedDict, InputProvider, Logging, decode_file
+from extended_data import DataFile, DataWorkflow, ExtendedData, ExtendedDict, InputProvider, Logging, decode_file
 from extended_data.primitives import decode_json, encode_yaml, number_to_words, redact_sensitive_text
 
 logger = Logging(logger_name="example", enable_console=False, enable_file=False)
 inputs = InputProvider(inputs={"SERVICE_NAME": "api"}, from_environment=False)
 data = decode_json('{"service": {"name": "api"}}')
 payload = ExtendedDict(data).deep_merge({"replicas": 3})
+wrapped = ExtendedData(payload).merge({"owner": "platform"})
 decoded_file = decode_file('{"service": {"name": "worker"}}', suffix="json")
 artifact = DataFile.decode("service:\n  name: api\n", suffix="yaml")
-workflow = DataWorkflow.from_value(payload).transform("unhump").result()
+workflow = DataWorkflow.from_value(wrapped.value).transform("unhump").result()
 
 logger.logged_statement("prepared workflow", json_data=workflow.as_builtin(), log_level="info")
 
 assert inputs.inputs["SERVICE_NAME"] == "api"
+assert wrapped.as_builtin()["owner"] == "platform"
 assert decoded_file["service"]["name"].upper_first() == "Worker"
 assert artifact.metadata["encoding"] == "yaml"
 assert number_to_words(42) == "forty-two"
@@ -67,7 +70,7 @@ extended-data transform --file payload.json --step reconstruct --step unhump
 
 ```text
 extended_data/
-  containers/   Tier 2 ExtendedString/Dict/List/Tuple/Set wrappers
+  containers/   Tier 2 ExtendedData and ExtendedString/Dict/List/Tuple/Set wrappers
   inputs/       InputProvider and decorator-based input injection
   io/           Tier 3 file, import, export, and base64 processors
   logging/      structured lifecycle logging
@@ -86,17 +89,18 @@ context values, such as resource IDs, emails, paths, or URLs, must be withheld
 in addition to common secret fields.
 
 Tier 2 containers inherit from standard Python collection primitives and expose
-chainable data operations. For example, `ExtendedString.decode_json()` promotes
-JSON into extended containers, `ExtendedDict.reconstruct_special_types()` turns
-string scalars into booleans/numbers/dates where safe, and
-`ExtendedList.first_non_empty()` returns the first meaningful value without
-lowering the surrounding data boundary.
+chainable data operations. `ExtendedData` is the generic facade for any incoming
+value and delegates to shape-specific containers where possible. For example,
+`ExtendedString.decode_json()` promotes JSON into extended containers,
+`ExtendedDict.reconstruct_special_types()` turns string scalars into
+booleans/numbers/dates where safe, and `ExtendedList.first_non_empty()` returns
+the first meaningful value without lowering the surrounding data boundary.
 
 Tier 3 processors keep structured data moving through explicit boundaries.
 `DataFile` reads, decodes, tracks metadata, and exports structured files.
-`DataWorkflow` layers reads, merges, transforms, writes, and provenance into a
-single result object. `InputProvider` loads direct inputs and environment data,
-and `Logging` provides structured lifecycle logging with stored-message
+`DataWorkflow` layers reads, merges, transforms, writes, syncs, and provenance
+into a single result object. `InputProvider` loads direct inputs and environment
+data, and `Logging` provides structured lifecycle logging with stored-message
 snapshots returned as extended containers.
 
 The old `extended_data_types`, `directed_inputs_class`, and `lifecyclelogging`

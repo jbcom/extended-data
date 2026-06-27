@@ -5,7 +5,7 @@
 
 ### ⚠ BREAKING CHANGES
 
-* extended-data now ships only the base data primitives, containers, IO, inputs, logging, and workflow surfaces. Vendor integrations move to cloud-connectors, SecretSync bridge runtime moves to secrets-sync-bridge, and agent-facing wrappers move to agentic-crew.
+* extended-data now ships only the base data primitives, containers, IO, inputs, logging, and workflow surfaces. Vendor integrations, Python-native SecretSync, and agent-facing wrappers move to vendor-fabric.
 * clean integrated package surface ([#2](https://github.com/jbcom/extended-data/issues/2))
 
 ### Features

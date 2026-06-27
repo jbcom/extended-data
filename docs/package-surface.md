@@ -27,6 +27,7 @@ surfaces.
 
 Extended containers promote decoded data into ergonomic objects:
 
+- `ExtendedData`
 - `ExtendedString`
 - `ExtendedDict`
 - `ExtendedList`
@@ -34,14 +35,16 @@ Extended containers promote decoded data into ergonomic objects:
 - `ExtendedSet`
 
 ```python
-from extended_data import ExtendedDict, ExtendedList, ExtendedString
+from extended_data import ExtendedData, ExtendedDict, ExtendedList, ExtendedString
 
 assert ExtendedString("api-gateway").to_snake_case() == "api_gateway"
 assert ExtendedList([None, "", {"service": "api"}]).first_non_empty()["service"] == "api"
 assert ExtendedDict({"enabled": "true"}).reconstruct_special_types()["enabled"] is True
+assert ExtendedData({"service": "api"}).merge({"replicas": 2}).as_builtin()["replicas"] == 2
 ```
 
-The containers keep Python collection behavior while adding methods that route
+`ExtendedData` is the generic facade for any incoming value. Shape-specific
+containers keep Python collection behavior while adding methods that route
 through Tier 1 primitives.
 
 ## Tier 3 Processors
@@ -49,7 +52,7 @@ through Tier 1 primitives.
 Tier 3 surfaces compose primitives and containers for real data movement:
 
 - `DataFile` reads, decodes, tracks metadata, and exports structured files.
-- `DataWorkflow` layers file reads, merges, transforms, writes, and provenance.
+- `DataWorkflow` layers file reads, merges, transforms, writes, syncs, and provenance.
 - `InputProvider` loads direct inputs and environment data.
 - `Logging` handles structured lifecycle logging and returns stored snapshots
   as extended containers.
@@ -83,9 +86,9 @@ extended-data transform --file payload.json --step reconstruct --step unhump
 
 ## Split Packages
 
-`cloud-connectors` owns external API clients, optional provider SDK dependencies,
-MCP/tool adapters, and provider-specific examples. `secrets-sync-bridge` owns the
-Python bridge to the `secrets-sync` Go CLI.
+`vendor-fabric` owns external API clients, optional provider SDK dependencies,
+MCP/tool adapters, provider-specific examples, vendor-backed Python sync, and
+agent workflows.
 
 `extended-data` does not preserve `extended_data.connectors`,
 `extended_data.secrets`, `extended_data_types`, `directed_inputs_class`, or

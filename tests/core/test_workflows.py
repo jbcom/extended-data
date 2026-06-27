@@ -11,6 +11,7 @@ import pytest
 
 from extended_data import (
     DataFile,
+    DataSyncResult,
     DataWorkflow,
     ExtendedDict,
     ExtendedList,
@@ -22,6 +23,8 @@ from extended_data import (
     data_transform_action,
     list_data_transform_steps,
     read_data_file,
+    sync_file_to_file,
+    sync_value_to_file,
     write_file,
 )
 from extended_data.primitives import decode_hcl2, encode_hcl2
@@ -120,6 +123,48 @@ def test_data_workflow_merge_file_reads_and_merges_layer(tmp_path: Path) -> None
         "service": {"name": "api", "debug": True},
         "ports": [8080, 8081],
     }
+
+
+def test_sync_value_to_file_writes_only_when_rendered_output_changes(tmp_path: Path) -> None:
+    """Generic sync should compare the rendered file output before writing."""
+    first = sync_value_to_file({"service": "api"}, "config.json", encoding="json", tld=tmp_path)
+    second = sync_value_to_file({"service": "api"}, "config.json", encoding="json", tld=tmp_path)
+
+    assert isinstance(first, DataSyncResult)
+    assert first.changed is True
+    assert first.bytes_written > 0
+    assert second.changed is False
+    assert second.bytes_written == 0
+    assert read_data_file("config.json", tld=tmp_path) == {"service": "api"}
+
+
+def test_sync_value_to_file_dry_run_reports_change_without_writing(tmp_path: Path) -> None:
+    """Dry-run sync should render and compare without mutating the destination."""
+    result = sync_value_to_file({"service": "api"}, "config.json", encoding="json", dry_run=True, tld=tmp_path)
+
+    assert result.changed is True
+    assert result.dry_run is True
+    assert not (tmp_path / "config.json").exists()
+
+
+def test_sync_file_to_file_reads_through_data_file_boundary(tmp_path: Path) -> None:
+    """File sync composes DataFile read/decode and sync write behavior."""
+    write_file("source.yaml", {"service": {"name": "api"}}, tld=tmp_path)
+
+    result = sync_file_to_file("source.yaml", "dest.json", encoding="json", tld=tmp_path)
+
+    assert result.changed is True
+    assert result.source == "source.yaml"
+    assert read_data_file("dest.json", tld=tmp_path) == {"service": {"name": "api"}}
+
+
+def test_data_workflow_sync_file_returns_sync_result(tmp_path: Path) -> None:
+    """Workflow sync should expose sync metadata without forcing a WorkflowResult."""
+    result = DataWorkflow.from_value({"service": "api"}).sync_file("config.json", encoding="json", tld=tmp_path)
+
+    assert isinstance(result, DataSyncResult)
+    assert result.to_dict()["changed"] is True
+    assert result.metadata["steps"] == ["value"]
 
 
 def test_data_workflow_merge_requires_mapping_values() -> None:

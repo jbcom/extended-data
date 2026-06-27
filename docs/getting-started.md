@@ -9,14 +9,15 @@ pip install extended-data
 ## First Workflow
 
 ```python
-from extended_data import DataWorkflow, ExtendedDict, Logging
+from extended_data import DataWorkflow, ExtendedData, ExtendedDict, Logging
 from extended_data.primitives import decode_json, encode_yaml, number_to_words
 
 logger = Logging(logger_name="docs", enable_console=False, enable_file=False)
 payload = ExtendedDict(decode_json('{"service": {"name": "api"}}'))
+generic = ExtendedData(payload).merge({"owner": "platform"})
 
 result = (
-    DataWorkflow.from_value(payload, metadata={"source": "inline"})
+    DataWorkflow.from_value(generic.value, metadata={"source": "inline"})
     .merge({"replicas": 3}, name="merge-runtime")
     .transform("unhump")
     .result()
@@ -25,6 +26,7 @@ result = (
 logger.logged_statement("prepared config", json_data=result.as_builtin(), log_level="info")
 
 assert payload["service"]["name"].upper_first() == "Api"
+assert generic.as_builtin()["owner"] == "platform"
 assert number_to_words(42) == "forty-two"
 assert "replicas: 3" in encode_yaml(result.as_builtin())
 ```

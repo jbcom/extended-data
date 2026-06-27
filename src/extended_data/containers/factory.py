@@ -13,6 +13,10 @@ from extended_data.primitives.formats.yaml import LiteralScalarString, YamlPairs
 
 def extend_data(value: Any) -> Any:
     """Recursively wrap built-in containers in Extended Data containers."""
+    from extended_data.containers.data import ExtendedData
+
+    if isinstance(value, ExtendedData):
+        return value.value
     if isinstance(value, YamlTagged | YamlPairs | LiteralScalarString):
         return value
     if isinstance(value, ExtendedString | ExtendedDict | ExtendedList | ExtendedSet | ExtendedTuple):
@@ -32,6 +36,10 @@ def extend_data(value: Any) -> Any:
 
 def to_builtin(value: Any) -> Any:
     """Recursively unwrap Extended Data containers to built-in Python values."""
+    from extended_data.containers.data import ExtendedData
+
+    if isinstance(value, ExtendedData):
+        return to_builtin(value.value)
     if isinstance(value, YamlTagged | YamlPairs | LiteralScalarString):
         return value
     if isinstance(value, ExtendedString):

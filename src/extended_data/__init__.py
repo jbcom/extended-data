@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from extended_data._version import __version__
 from extended_data.containers import (
+    ExtendedData,
     ExtendedDict,
     ExtendedList,
     ExtendedSet,
@@ -46,6 +47,7 @@ from extended_data.logging import ExitRunError, KeyTransform, Logging
 from extended_data.primitives.formats.errors import DataDecodeError
 from extended_data.workflows import (
     DATA_TRANSFORM_STEPS,
+    DataSyncResult,
     DataWorkflow,
     StepLike,
     WorkflowAction,
@@ -53,6 +55,8 @@ from extended_data.workflows import (
     WorkflowStep,
     data_transform_action,
     list_data_transform_steps,
+    sync_file_to_file,
+    sync_value_to_file,
 )
 
 
@@ -60,8 +64,10 @@ __all__ = [
     "DATA_TRANSFORM_STEPS",
     "DataDecodeError",
     "DataFile",
+    "DataSyncResult",
     "DataWorkflow",
     "ExitRunError",
+    "ExtendedData",
     "ExtendedDict",
     "ExtendedList",
     "ExtendedSet",
@@ -98,6 +104,8 @@ __all__ = [
     "read_data_file",
     "read_file",
     "resolve_local_path",
+    "sync_file_to_file",
+    "sync_value_to_file",
     "to_builtin",
     "unwrap_raw_data_from_import",
     "wrap_raw_data_for_export",

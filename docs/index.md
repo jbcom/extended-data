@@ -8,14 +8,14 @@ inputs, and structured logging.
 pip install extended-data
 ```
 
-External API clients live in the separate `cloud-connectors` distribution.
-SecretSync's Python bridge lives in `secrets-sync-bridge`.
+External API clients live in the separate `vendor-fabric` distribution.
+Vendor-backed Python sync and agent workflows also live in `vendor-fabric`.
 
 ## Package Tiers
 
 ```text
 extended_data/
-  containers/   ExtendedString, ExtendedDict, ExtendedList, ExtendedTuple, ExtendedSet
+  containers/   ExtendedData plus ExtendedString/Dict/List/Tuple/Set
   inputs/       input loading and decorator-based injection
   io/           file, import, export, and base64 processors
   logging/      structured lifecycle logging
