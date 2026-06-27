@@ -17,7 +17,7 @@ surface docs, so treat them as part of the documented contract.
 
 ## Related Documentation
 
-- [Package surface](../../docs/package-surface.md)
+- [Extended Data documentation](https://extended-data.dev)
 - [Repository README](../../README.md)
 
 ## Running Examples

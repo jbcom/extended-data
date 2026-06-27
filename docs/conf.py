@@ -16,7 +16,6 @@ extensions = [
 ]
 
 source_suffix = {
-    ".md": "markdown",
     ".rst": "restructuredtext",
 }
 
@@ -45,14 +44,6 @@ html_theme_options = {
     },
 }
 
-myst_enable_extensions = [
-    "colon_fence",
-    "deflist",
-    "fieldlist",
-    "tasklist",
-]
-myst_heading_anchors = 3
-
 intersphinx_mapping = {
     "python": ("https://docs.python.org/3", None),
 }
@@ -70,7 +61,8 @@ autodoc2_packages = [
         "exclude_dirs": ["__pycache__"],
     }
 ]
-autodoc2_render_plugin = "myst"
+autodoc2_render_plugin = "rst"
+autodoc2_docstring_parser_regexes = [(r".*", "myst")]
 autodoc2_hidden_objects = ["inherited", "dunder"]
 autodoc2_class_docstring = "merge"
 autodoc2_module_summary = True

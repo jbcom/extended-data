@@ -6,7 +6,7 @@ from collections import UserDict
 from collections.abc import Mapping
 from typing import TYPE_CHECKING, Any, Self
 
-from extended_data.containers.data import ExtendedData
+from extended_data.containers.data import _FACTORY_INITIALIZED_ATTR, ExtendedData
 
 
 if TYPE_CHECKING:
@@ -31,6 +31,9 @@ class ExtendedDict(UserDict[str, Any], ExtendedData):
 
     def __init__(self, initialdata: Mapping[str, Any] | None = None, **kwargs: Any) -> None:
         """Initialize the extended dictionary."""
+        if getattr(self, _FACTORY_INITIALIZED_ATTR, False):
+            setattr(self, _FACTORY_INITIALIZED_ATTR, False)
+            return
         if initialdata is self and not kwargs:
             return
         super().__init__()

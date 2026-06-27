@@ -3,9 +3,13 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Iterable, Iterator, Mapping
+from contextlib import suppress
 from copy import deepcopy
 from pathlib import Path
 from typing import Any, Self, cast
+
+
+_FACTORY_INITIALIZED_ATTR = "_extended_data_factory_initialized"
 
 
 class ExtendedData:
@@ -28,6 +32,8 @@ class ExtendedData:
 
         promoted = extend_data(value)
         if isinstance(promoted, ExtendedData):
+            with suppress(AttributeError, TypeError):
+                setattr(promoted, _FACTORY_INITIALIZED_ATTR, True)
             return cast(Self, promoted)
 
         instance = super().__new__(cls)

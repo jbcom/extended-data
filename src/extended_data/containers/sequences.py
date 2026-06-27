@@ -7,7 +7,7 @@ from collections.abc import Callable, Iterable, Iterator, MutableSet
 from operator import index as operator_index
 from typing import Any, SupportsIndex, TypeVar, cast, overload
 
-from extended_data.containers.data import ExtendedData
+from extended_data.containers.data import _FACTORY_INITIALIZED_ATTR, ExtendedData
 from extended_data.containers.mappings import ExtendedDict
 from extended_data.primitives.mappings import zipmap as primitive_zipmap
 from extended_data.primitives.sequences import filter_list, flatten_list
@@ -26,6 +26,9 @@ class ExtendedList(UserList[T], ExtendedData):
 
     def __init__(self, initlist: Iterable[T] | None = None) -> None:
         """Initialize the extended list."""
+        if getattr(self, _FACTORY_INITIALIZED_ATTR, False):
+            setattr(self, _FACTORY_INITIALIZED_ATTR, False)
+            return
         if initlist is self:
             return
         super().__init__()
@@ -293,6 +296,9 @@ class ExtendedSet(MutableSet[T], ExtendedData):
 
     def __init__(self, values: Iterable[T] | None = None) -> None:
         """Initialize the extended set."""
+        if getattr(self, _FACTORY_INITIALIZED_ATTR, False):
+            setattr(self, _FACTORY_INITIALIZED_ATTR, False)
+            return
         if values is self:
             return
         self._data: set[T] = set()

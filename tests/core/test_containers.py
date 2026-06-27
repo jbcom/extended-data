@@ -24,6 +24,7 @@ from extended_data.containers import (
     extend_data,
     to_builtin,
 )
+from extended_data.containers.data import _FACTORY_INITIALIZED_ATTR
 
 
 def test_tier2_containers_inherit_expected_python_bases() -> None:
@@ -509,6 +510,100 @@ def test_extended_data_detects_string_set_none_and_object_shapes() -> None:
     assert empty.is_none is True
     assert record.shape == "object"
     assert record.copy().shape == "object"
+
+
+def test_extended_data_factory_does_not_reinitialize_promoted_containers(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Factory-promoted containers should not run their initializer twice."""
+    calls: dict[type[object], int] = {}
+
+    def count_initializers(container_type: type[object]) -> None:
+        original = container_type.__init__
+        calls[container_type] = 0
+
+        def wrapped(self: object, *args: object, **kwargs: object) -> None:
+            if not getattr(self, _FACTORY_INITIALIZED_ATTR, False):
+                calls[container_type] += 1
+            original(self, *args, **kwargs)
+
+        monkeypatch.setattr(container_type, "__init__", wrapped)
+
+    for container_type in (ExtendedDict, ExtendedList, ExtendedSet, ExtendedString):
+        count_initializers(container_type)
+
+    ExtendedData({"service": {"name": "api"}})
+    assert calls[ExtendedDict] == 2
+
+    calls[ExtendedList] = 0
+    ExtendedData([["api"]])
+    assert calls[ExtendedList] == 2
+
+    calls[ExtendedSet] = 0
+    ExtendedData({"api"})
+    assert calls[ExtendedSet] == 1
+
+    calls[ExtendedString] = 0
+    ExtendedData("api")
+    assert calls[ExtendedString] == 1
+
+
+def test_generic_extended_data_facade_methods_for_scalar_values(tmp_path: Path) -> None:
+    """Scalar holders should expose the same explicit boundary helpers."""
+    scalar = ExtendedData(42)
+    output_path = tmp_path / "answer.json"
+    synced_path = tmp_path / "answer-sync.json"
+
+    written = scalar.write(output_path, encoding="json")
+    synced = scalar.sync_to_file(synced_path, encoding="json", source="test")
+    workflow = scalar.workflow()
+    transformed = ExtendedData("HTTP Response Value").transform("to-snake-case")
+
+    assert type(scalar) is ExtendedData
+    assert scalar.value == 42
+    assert scalar.data_type == "int"
+    assert scalar.as_builtin() == 42
+    assert scalar.as_extended() == 42
+    assert scalar.copy().value == 42
+    assert scalar.cast({"service": "api"}) == {"service": "api"}
+    assert scalar.map(lambda value: {"answer": value}) == {"answer": 42}
+    assert scalar.map_builtin(lambda value: value + 1).value == 43
+    assert scalar.get("missing", "fallback") == "fallback"
+    assert "missing" not in scalar
+    assert repr(scalar) == "ExtendedData(42)"
+    assert scalar.to_export_safe() == 42
+    assert json.loads(scalar.wrap_for_export(allow_encoding="json")) == 42
+    assert written == output_path
+    assert json.loads(output_path.read_text(encoding="utf-8")) == 42
+    assert synced.changed is True
+    assert json.loads(synced_path.read_text(encoding="utf-8")) == 42
+    assert workflow.result().as_builtin() == 42
+    assert transformed == "http_response_value"
+
+    with pytest.raises(TypeError, match="merge is not available for int"):
+        scalar.merge({"answer": 42})
+    with pytest.raises(TypeError, match="append is not available for int"):
+        scalar.append("value")
+    with pytest.raises(TypeError, match="extend is not available for int"):
+        scalar.extend(["value"])
+    with pytest.raises(TypeError, match="update is not available for int"):
+        scalar.update({"value": 42})
+    with pytest.raises(TypeError, match="add is not available for int"):
+        scalar.add("value")
+    with pytest.raises(TypeError):
+        _ = scalar["missing"]
+    with pytest.raises(TypeError):
+        scalar["missing"] = "value"
+    with pytest.raises(TypeError):
+        del scalar["missing"]
+
+
+def test_generic_extended_data_delegates_object_attributes() -> None:
+    """Object holders should delegate unknown attributes to the wrapped value."""
+    path = ExtendedData(Path("/tmp/service.yaml"))
+
+    assert path.shape == "scalar"
+    assert path.name == "service.yaml"
+    assert len(path) == 1
+    assert list(path) == [Path("/tmp/service.yaml")]
 
 
 def test_extended_data_getattr_fails_cleanly_before_initialization() -> None:

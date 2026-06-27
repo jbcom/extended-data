@@ -15,7 +15,7 @@ WORKFLOW_ROOT = REPO_ROOT / ".github" / "workflows"
 ACTION_REF_WITH_COMMENT_RE = re.compile(r"^\s*(?:-\s*)?uses:\s*([^#\s]+)(?:\s+#\s*(\S+))?")
 PINNED_SHA_RE = re.compile(r"^[0-9a-f]{40}$")
 ACTION_VERSION_COMMENT_RE = re.compile(r"^v\d+\.\d+\.\d+$")
-PIN_TABLE_RE = re.compile(r"^\|\s*`([^`]+)`\s*\|\s*`([^`]+)`\s*\|\s*`([0-9a-f]{40})`\s*\|$")
+PIN_TABLE_RE = re.compile(r"^\|\s*`{1,2}([^`]+)`{1,2}\s*\|\s*`{1,2}([^`]+)`{1,2}\s*\|\s*`{1,2}([0-9a-f]{40})`{1,2}\s*\|$")
 PUBLIC_TEXT_ROOTS = (
     REPO_ROOT / "src",
     REPO_ROOT / "docs",
@@ -145,7 +145,7 @@ def _workflow_action_pins() -> dict[str, tuple[str, str]]:
 
 def _publishing_checklist_pins() -> dict[str, tuple[str, str]]:
     pins: dict[str, tuple[str, str]] = {}
-    checklist = (REPO_ROOT / "docs" / "PUBLISHING_CHECKLIST.md").read_text(encoding="utf-8")
+    checklist = (REPO_ROOT / "docs" / "PUBLISHING_CHECKLIST.rst").read_text(encoding="utf-8")
 
     for line in checklist.splitlines():
         match = PIN_TABLE_RE.match(line.strip())
@@ -154,7 +154,7 @@ def _publishing_checklist_pins() -> dict[str, tuple[str, str]]:
         action, version, ref = match.groups()
         pins[action] = (version, ref)
 
-    assert pins, "docs/PUBLISHING_CHECKLIST.md must list current workflow action pins"
+    assert pins, "docs/PUBLISHING_CHECKLIST.rst must list current workflow action pins"
     return pins
 
 
@@ -304,7 +304,7 @@ def test_public_install_guidance_documents_every_runtime_extra() -> None:
     text = "\n".join(
         [
             (REPO_ROOT / "README.md").read_text(encoding="utf-8"),
-            (REPO_ROOT / "docs" / "package-surface.md").read_text(encoding="utf-8"),
+            (REPO_ROOT / "docs" / "package-surface.rst").read_text(encoding="utf-8"),
         ],
     )
 
@@ -450,7 +450,7 @@ def test_public_guidance_names_secrets_sync_roles_precisely() -> None:
 
 def test_ownership_map_documents_moved_surfaces() -> None:
     """Moved surfaces should have explicit destination ownership in public docs."""
-    ownership_map = (REPO_ROOT / "docs" / "ownership-map.md").read_text(encoding="utf-8")
+    ownership_map = (REPO_ROOT / "docs" / "ownership-map.rst").read_text(encoding="utf-8")
 
     for expected_text in (
         "jbcom/vendor-fabric",

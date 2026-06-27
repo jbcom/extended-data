@@ -15,8 +15,11 @@ tiers:
 - Tier 3: data processors that compose the first two tiers for files, inputs,
   logging, export/import boundaries, and workflows.
 
-External API clients live in the separate `vendor-fabric` distribution.
-Vendor-backed Python sync and agent workflows also live in `vendor-fabric`.
+External API clients and provider-backed Python sync live in the separate
+`vendor-fabric` distribution. Agent workflow orchestration lives in the
+separate `agentic-fabric` distribution.
+
+Documentation: [extended-data.dev](https://extended-data.dev)
 
 ## Install
 
