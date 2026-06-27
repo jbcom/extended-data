@@ -1,5 +1,12 @@
 # Changelog
 
+## [8.4.0](https://github.com/jbcom/extended-data/compare/extended-data-v8.3.1...extended-data-v8.4.0) (2026-06-27)
+
+
+### Features
+
+* split extended data workspace packages ([5d49998](https://github.com/jbcom/extended-data/commit/5d4999836ff5c42faf1c9082e014a85d266845e4))
+
 ## [8.3.1](https://github.com/jbcom/extended-data/compare/extended-data-v8.3.0...extended-data-v8.3.1) (2026-06-27)
 
 
