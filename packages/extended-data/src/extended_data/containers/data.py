@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import Callable, Iterable, Iterator, Mapping
 from contextlib import suppress
 from copy import deepcopy
+from functools import wraps
 from pathlib import Path
 from typing import Any, Self, cast
 
@@ -23,10 +24,30 @@ class ExtendedData:
     API, and vendor boundaries.
     """
 
-    def __new__(cls, value: Any = None) -> Self:
+    def __init_subclass__(cls, **kwargs: Any) -> None:
+        """Make factory re-entry safe for downstream subclasses."""
+        super().__init_subclass__(**kwargs)
+        original_init = cls.__dict__.get("__init__")
+        if original_init is None or getattr(original_init, "_extended_data_factory_guard", False):
+            return
+
+        @wraps(original_init)
+        def guarded_init(self: Any, *args: Any, **kwargs: Any) -> None:
+            if getattr(self, _FACTORY_INITIALIZED_ATTR, False):
+                setattr(self, _FACTORY_INITIALIZED_ATTR, False)
+                return
+            original_init(self, *args, **kwargs)
+
+        guarded_init._extended_data_factory_guard = True  # type: ignore[attr-defined]
+        cls.__init__ = guarded_init  # type: ignore[method-assign]
+
+    def __new__(cls, value: Any = None, *args: Any, **kwargs: Any) -> Self:
         """Return the most specific Extended Data object for ``value``."""
         if cls is not ExtendedData:
             return super().__new__(cls)
+        if args or kwargs:
+            msg = "ExtendedData() accepts a single optional value"
+            raise TypeError(msg)
 
         from extended_data.containers.factory import extend_data
 

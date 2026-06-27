@@ -61,6 +61,32 @@ code paths:
    assert ExtendedData(42).is_scalar
    assert ExtendedData().is_none
 
+Downstream packages can subclass ``ExtendedData`` for additive facades
+without being collapsed by the root factory. Store the promoted payload
+with ``ExtendedData(value)`` and keep provider or runtime behavior on the
+subclass:
+
+.. code:: python
+
+   class ProviderData(ExtendedData):
+       def __init__(self, value, *, provider):
+           self.provider = provider
+           self._data = ExtendedData(value)
+
+       @property
+       def value(self):
+           return self._data
+
+   provider_data = ProviderData({"service": {"name": "api"}}, provider="vendor")
+
+   assert type(provider_data) is ProviderData
+   assert provider_data.shape == "mapping"
+   assert provider_data["service"]["name"].upper_first() == "Api"
+
+Facades that need to keep the same outer identity while changing shape
+should override ``cast()`` and replace their internal ``ExtendedData``
+value.
+
 It also provides shared data-boundary helpers:
 
 .. code:: python

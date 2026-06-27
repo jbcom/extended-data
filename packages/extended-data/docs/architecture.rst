@@ -100,6 +100,36 @@ Higher-order packages that must keep a stable outer identity can
 override ``cast()`` locally by storing an internal ``ExtendedData``
 value. That pattern belongs in those downstream repositories, not here.
 
+Downstream Subclasses
+---------------------
+
+Downstream packages may subclass ``ExtendedData`` when they need an
+additive facade for coordination behavior. The base constructor only
+performs polymorphic promotion when ``cls is ExtendedData``; constructing
+a subclass keeps the subclass instance intact.
+
+Use this pattern for stable downstream identities:
+
+.. code:: python
+
+   class VendorLikeData(ExtendedData):
+       def __init__(self, value, *, provider):
+           self.provider = provider
+           self._data = ExtendedData(value)
+
+       @property
+       def value(self):
+           return self._data
+
+       def cast(self, value):
+           self._data = ExtendedData(value)
+           return self
+
+``ExtendedData(value)`` remains the canonical promotion path for the
+stored payload. The downstream subclass owns only its additive behavior,
+such as provider activation, capability dispatch, or runtime state.
+It should not reimplement shape promotion or fork the container classes.
+
 Data Boundaries
 ---------------
 
