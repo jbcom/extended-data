@@ -17,7 +17,6 @@ Functions:
 
 Classes:
     - ConversionError: Custom error class for handling conversion failures.
-    - ReconstructionError: Custom error class for handling reconstruction failures.
 
 Constants:
     - DATE_PATTERN: Regex for matching ISO 8601 date strings.

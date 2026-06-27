@@ -739,6 +739,38 @@ def test_write_file_tfvars_infers_hcl(tmp_path: Path) -> None:
     assert decode_file(content, file_path=test_file) == data
 
 
+def test_write_file_toml(tmp_path: Path) -> None:
+    """TOML encoding should round-trip through write_file and decode_file."""
+    test_file = tmp_path / "config.toml"
+    data = {"service": "api", "replicas": 3, "enabled": True}
+
+    result = write_file(test_file, data, tld=tmp_path)
+
+    assert result == test_file.resolve()
+    assert test_file.exists()
+    content = test_file.read_text()
+    assert 'service = "api"' in content
+    assert "replicas = 3" in content
+    assert decode_file(content, file_path=test_file) == data
+
+
+def test_data_file_toml_round_trip(tmp_path: Path) -> None:
+    """DataFile should preserve TOML data across write then read."""
+    source = tmp_path / "source.toml"
+    source.write_text('service = "api"\nreplicas = 3\n', encoding="utf-8")
+
+    artifact = DataFile.read(source)
+    assert artifact.data == {"service": "api", "replicas": 3}
+    assert artifact.encoding == "toml"
+
+    target = tmp_path / "build" / "out.toml"
+    artifact.write(target, tld=tmp_path)
+
+    reread = DataFile.read(target)
+    assert reread.data == artifact.data
+    assert reread.encoding == "toml"
+
+
 def test_write_file_bytes(tmp_path: Path) -> None:
     """Write raw bytes without re-encoding."""
     test_file = tmp_path / "payload.bin"

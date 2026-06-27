@@ -25,7 +25,7 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
 from extended_data.containers import ExtendedDict, to_builtin
-from extended_data.inputs.__main__ import InputProvider
+from extended_data.inputs.providers import InputProvider
 
 
 if TYPE_CHECKING:
