@@ -15,11 +15,11 @@ def extend_data(value: Any) -> Any:
     """Recursively wrap built-in containers in Extended Data containers."""
     from extended_data.containers.data import ExtendedData
 
-    if isinstance(value, ExtendedData):
-        return value.value
     if isinstance(value, YamlTagged | YamlPairs | LiteralScalarString):
         return value
     if isinstance(value, ExtendedString | ExtendedDict | ExtendedList | ExtendedSet | ExtendedTuple):
+        return value
+    if isinstance(value, ExtendedData):
         return value
     if isinstance(value, str):
         return ExtendedString(value)
@@ -38,8 +38,6 @@ def to_builtin(value: Any) -> Any:
     """Recursively unwrap Extended Data containers to built-in Python values."""
     from extended_data.containers.data import ExtendedData
 
-    if isinstance(value, ExtendedData):
-        return to_builtin(value.value)
     if isinstance(value, YamlTagged | YamlPairs | LiteralScalarString):
         return value
     if isinstance(value, ExtendedString):
@@ -52,6 +50,8 @@ def to_builtin(value: Any) -> Any:
         return tuple(to_builtin(item) for item in value)
     if isinstance(value, ExtendedSet):
         return {to_builtin(item) for item in value}
+    if isinstance(value, ExtendedData):
+        return to_builtin(value.value)
     if isinstance(value, Mapping):
         return {to_builtin(key): to_builtin(item) for key, item in value.items()}
     if isinstance(value, list):
