@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING, Any
 
 import extended_data.primitives.matching as primitive_matching
 
-from extended_data.containers.data import ExtendedData
+from extended_data.containers.data import _FACTORY_INITIALIZED_ATTR, ExtendedData
 from extended_data.primitives.string_transforms import (
     humanize,
     ordinalize,
@@ -57,6 +57,9 @@ class ExtendedString(UserString, ExtendedData):
 
     def __init__(self, seq: object = "") -> None:
         """Initialize the extended string."""
+        if getattr(self, _FACTORY_INITIALIZED_ATTR, False):
+            setattr(self, _FACTORY_INITIALIZED_ATTR, False)
+            return
         if seq is self:
             return
         super().__init__(seq)

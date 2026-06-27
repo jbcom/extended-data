@@ -24,6 +24,7 @@ from extended_data.containers import (
     extend_data,
     to_builtin,
 )
+from extended_data.containers.data import _FACTORY_INITIALIZED_ATTR
 
 
 def test_tier2_containers_inherit_expected_python_bases() -> None:
@@ -509,6 +510,40 @@ def test_extended_data_detects_string_set_none_and_object_shapes() -> None:
     assert empty.is_none is True
     assert record.shape == "object"
     assert record.copy().shape == "object"
+
+
+def test_extended_data_factory_does_not_reinitialize_promoted_containers(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Factory-promoted containers should not run their initializer twice."""
+    calls: dict[type[object], int] = {}
+
+    def count_initializers(container_type: type[object]) -> None:
+        original = container_type.__init__
+        calls[container_type] = 0
+
+        def wrapped(self: object, *args: object, **kwargs: object) -> None:
+            if not getattr(self, _FACTORY_INITIALIZED_ATTR, False):
+                calls[container_type] += 1
+            original(self, *args, **kwargs)
+
+        monkeypatch.setattr(container_type, "__init__", wrapped)
+
+    for container_type in (ExtendedDict, ExtendedList, ExtendedSet, ExtendedString):
+        count_initializers(container_type)
+
+    ExtendedData({"service": {"name": "api"}})
+    assert calls[ExtendedDict] == 2
+
+    calls[ExtendedList] = 0
+    ExtendedData([["api"]])
+    assert calls[ExtendedList] == 2
+
+    calls[ExtendedSet] = 0
+    ExtendedData({"api"})
+    assert calls[ExtendedSet] == 1
+
+    calls[ExtendedString] = 0
+    ExtendedData("api")
+    assert calls[ExtendedString] == 1
 
 
 def test_generic_extended_data_facade_methods_for_scalar_values(tmp_path: Path) -> None:
