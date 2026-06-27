@@ -506,7 +506,7 @@ requires-dist = [
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.8.0" },
     { name = "sortedcontainers", specifier = ">=2.4.0" },
     { name = "sortedcontainers-stubs", marker = "extra == 'typing'", specifier = ">=2.4.2" },
-    { name = "sphinx", marker = "extra == 'docs'", specifier = ">=8.2.3,<9.0.0" },
+    { name = "sphinx", marker = "extra == 'docs'", specifier = ">=8.2.3,<10.0.0" },
     { name = "sphinx-autodoc2", marker = "extra == 'docs'", specifier = ">=0.5.0" },
     { name = "sphinx-copybutton", marker = "extra == 'docs'", specifier = ">=0.5.2" },
     { name = "tomlkit", specifier = ">=0.13.2" },
@@ -536,12 +536,12 @@ dev = [
 
 [package.metadata.requires-dev]
 dev = [
-    { name = "mypy", specifier = ">=1.20.1" },
-    { name = "pip-audit", specifier = "==2.10.0" },
+    { name = "mypy", specifier = ">=2.1.0" },
+    { name = "pip-audit", specifier = "==2.10.1" },
     { name = "ruff", specifier = ">=0.8.0" },
-    { name = "tox", specifier = ">=4.11" },
-    { name = "tox-gh", specifier = ">=1.3" },
-    { name = "tox-uv", specifier = ">=1.11" },
+    { name = "tox", specifier = ">=4.56.1" },
+    { name = "tox-gh", specifier = ">=1.7.1" },
+    { name = "tox-uv", specifier = ">=1.35.2" },
 ]
 
 [[package]]
@@ -1124,7 +1124,7 @@ wheels = [
 
 [[package]]
 name = "pip-audit"
-version = "2.10.0"
+version = "2.10.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "cachecontrol", extra = ["filecache"] },
@@ -1138,9 +1138,9 @@ dependencies = [
     { name = "tomli" },
     { name = "tomli-w" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/bd/89/0e999b413facab81c33d118f3ac3739fd02c0622ccf7c4e82e37cebd8447/pip_audit-2.10.0.tar.gz", hash = "sha256:427ea5bf61d1d06b98b1ae29b7feacc00288a2eced52c9c58ceed5253ef6c2a4", size = 53776, upload-time = "2025-12-01T23:42:40.612Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/66/a4/f21d5f0a0edabcbce31560b73c7c5a6f72ae87af4236fd1069c8f59a353d/pip_audit-2.10.1.tar.gz", hash = "sha256:1eb4565d19ebe5d48996f4b770b4d2b32887e12cb12cfa637f1a064011b55ffc", size = 54275, upload-time = "2026-06-10T22:17:01.744Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/be/f3/4888f895c02afa085630a3a3329d1b18b998874642ad4c530e9a4d7851fe/pip_audit-2.10.0-py3-none-any.whl", hash = "sha256:16e02093872fac97580303f0848fa3ad64f7ecf600736ea7835a2b24de49613f", size = 61518, upload-time = "2025-12-01T23:42:39.193Z" },
+    { url = "https://files.pythonhosted.org/packages/a3/a7/b0c504148114047bd1bc9d97447453c6850ca176bb2f3c0038835994e8b7/pip_audit-2.10.1-py3-none-any.whl", hash = "sha256:99ef3f600a317c1945f1e89e227ef26e1c2d618429b8bd3fa6f4f7c440c4611a", size = 62023, upload-time = "2026-06-10T22:17:00.309Z" },
 ]
 
 [[package]]

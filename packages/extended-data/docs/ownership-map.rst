@@ -35,8 +35,9 @@ Moved Out
 | External vendor API   | ``jbcom/vendor-fabric`` | ``vendor-fabric``                  |
 | clients               |                         |                                    |
 +-----------------------+-------------------------+------------------------------------+
-| Vendor fabric MCP and | ``jbcom/vendor-fabric`` | ``vendor-fabric[...]``             |
-| tool adapters         |                         |                                    |
+| Vendor capability     | ``jbcom/vendor-fabric`` | ``vendor-fabric[...]``             |
+| dispatch and provider |                         |                                    |
+| SDK adapters          |                         |                                    |
 +-----------------------+-------------------------+------------------------------------+
 | Meshy, Slack, Google, | ``jbcom/vendor-fabric`` | ``vendor-fabric[...]``             |
 | GitHub, AWS, Vault,   |                         |                                    |
@@ -46,10 +47,10 @@ Moved Out
 | Vendor-backed Python  | ``jbcom/vendor-fabric`` | ``vendor-fabric[secrets-sync]``    |
 | sync capabilities     |                         |                                    |
 +-----------------------+-------------------------+------------------------------------+
-| SecretSync agent tool | ``jbcom/vendor-fabric`` | ``vendor-fabric[ai,secrets-sync]`` |
+| SecretSync agent tool | ``jbcom/agentic-fabric``| ``agentic-fabric[...]``            |
 | wrappers              |                         |                                    |
 +-----------------------+-------------------------+------------------------------------+
-| Agent framework       | ``jbcom/vendor-fabric`` | ``vendor-fabric[ai]``              |
+| Agent framework       | ``jbcom/agentic-fabric``| ``agentic-fabric[...]``            |
 | integrations          |                         |                                    |
 +-----------------------+-------------------------+------------------------------------+
 
@@ -66,7 +67,10 @@ The intended layering is dependency-inward:
 
    extended-data
      <- vendor-fabric
+          <- agentic-fabric
 
 ``extended-data`` has no dependency on the higher layers. Higher layers
 may use ``extended-data`` primitives, containers, input handling,
 workflows, and logging without reimplementing those base concerns.
+``agentic-fabric`` depends on ``vendor-fabric`` for provider coordination;
+``vendor-fabric`` depends on ``extended-data`` for generic data behavior.
