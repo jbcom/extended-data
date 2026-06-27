@@ -1,61 +1,79 @@
-"""Generic Extended Data container facade."""
+"""Generic Extended Data root and factory."""
 
 from __future__ import annotations
 
-from collections import UserString
 from collections.abc import Callable, Iterable, Iterator, Mapping
 from copy import deepcopy
 from pathlib import Path
-from typing import Any, Self
-
-from extended_data.containers.mappings import ExtendedDict
-from extended_data.containers.sequences import ExtendedList, ExtendedSet, ExtendedTuple
-from extended_data.containers.strings import ExtendedString
+from typing import Any, Self, cast
 
 
 class ExtendedData:
-    """Stable holder for any promoted Extended Data value.
+    """Common root and factory for any Extended Data value.
 
-    ``extend_data`` returns the most specific Tier 2 container for a value. This
-    facade is for higher-level code that cannot or should not care whether the
-    current payload is mapping-, sequence-, string-, set-, scalar-, or object-
-    shaped.
+    ``ExtendedData(value)`` returns the most specific concrete Tier 2 container
+    whenever one exists. Mapping values become ``ExtendedDict`` instances, list
+    values become ``ExtendedList`` instances, strings become ``ExtendedString``
+    instances, and so on. Scalars and arbitrary objects remain in a small generic
+    holder so the same workflow, export, and sync helpers are available at file,
+    API, and vendor boundaries.
     """
 
-    __hash__ = None  # type: ignore[assignment]
+    def __new__(cls, value: Any = None) -> Self:
+        """Return the most specific Extended Data object for ``value``."""
+        if cls is not ExtendedData:
+            return super().__new__(cls)
 
-    def __init__(self, value: Any = None) -> None:
-        """Promote and store any supported data shape."""
         from extended_data.containers.factory import extend_data
 
-        self._value = value.value if isinstance(value, ExtendedData) else extend_data(value)
+        promoted = extend_data(value)
+        if isinstance(promoted, ExtendedData):
+            return cast(Self, promoted)
+
+        instance = super().__new__(cls)
+        instance._value = promoted
+        return instance
+
+    def __init__(self, value: Any = None) -> None:
+        """Initialize scalar/object holders without touching concrete subtypes."""
+        if type(self) is ExtendedData and not hasattr(self, "_value"):
+            self._value = value
 
     @property
     def value(self) -> Any:
-        """Return the promoted underlying value."""
-        return self._value
+        """Return the concrete value represented by this object."""
+        if type(self) is ExtendedData:
+            return self._value
+        return self
 
     @property
     def data_type(self) -> str:
-        """Return the promoted value type name."""
-        return type(self._value).__name__
+        """Return this value type name."""
+        return type(self.value).__name__
 
     @property
     def shape(self) -> str:
-        """Return the broad data shape represented by the current value."""
-        if self._value is None:
+        """Return the broad data shape represented by this value."""
+        from collections import UserString
+
+        from extended_data.containers.mappings import ExtendedDict
+        from extended_data.containers.sequences import ExtendedList, ExtendedSet, ExtendedTuple
+        from extended_data.containers.strings import ExtendedString
+
+        value = self.value
+        if value is None:
             return "none"
-        if isinstance(self._value, ExtendedDict | Mapping):
+        if isinstance(value, ExtendedDict | Mapping):
             return "mapping"
-        if isinstance(self._value, ExtendedList | list):
+        if isinstance(value, ExtendedList | list):
             return "list"
-        if isinstance(self._value, ExtendedTuple | tuple):
+        if isinstance(value, ExtendedTuple | tuple):
             return "tuple"
-        if isinstance(self._value, ExtendedSet | set | frozenset):
+        if isinstance(value, ExtendedSet | set | frozenset):
             return "set"
-        if isinstance(self._value, ExtendedString | str | UserString):
+        if isinstance(value, ExtendedString | str | UserString):
             return "string"
-        if isinstance(self._value, bool | int | float | complex | bytes | bytearray | memoryview | Path):
+        if isinstance(value, bool | int | float | complex | bytes | bytearray | memoryview | Path):
             return "scalar"
         return "object"
 
@@ -91,7 +109,7 @@ class ExtendedData:
 
     @classmethod
     def from_value(cls, value: Any = None) -> ExtendedData:
-        """Create an ``ExtendedData`` wrapper from any value."""
+        """Create an Extended Data object from any value."""
         return cls(value)
 
     @classmethod
@@ -102,7 +120,7 @@ class ExtendedData:
         file_path: str | Path | None = None,
         suffix: str | None = None,
     ) -> ExtendedData:
-        """Decode raw structured data and return a generic wrapper."""
+        """Decode raw structured data and return concrete Extended Data."""
         from extended_data.io.files import decode_file
 
         return cls(decode_file(data, file_path=file_path, suffix=suffix, as_extended=True))
@@ -118,7 +136,7 @@ class ExtendedData:
         headers: Mapping[str, str] | None = None,
         tld: Path | None = None,
     ) -> ExtendedData:
-        """Read a local file or URL and return decoded generic data."""
+        """Read a local file or URL and return concrete Extended Data."""
         from extended_data.io.files import read_data_file
 
         return cls(
@@ -137,7 +155,7 @@ class ExtendedData:
         """Return the value lowered to built-in Python containers."""
         from extended_data.containers.factory import to_builtin
 
-        return to_builtin(self._value)
+        return to_builtin(self.value)
 
     def as_extended(self) -> Any:
         """Return a detached promoted copy of the value."""
@@ -146,19 +164,16 @@ class ExtendedData:
         return extend_data(deepcopy(self.as_builtin()))
 
     def copy(self) -> ExtendedData:
-        """Return a detached ``ExtendedData`` copy."""
-        return ExtendedData(deepcopy(self._value))
+        """Return a detached Extended Data copy."""
+        return ExtendedData(deepcopy(self.as_builtin()))
 
-    def replace(self, value: Any) -> Self:
-        """Replace the underlying value and return this facade."""
-        from extended_data.containers.factory import extend_data
-
-        self._value = extend_data(value)
-        return self
+    def cast(self, value: Any) -> ExtendedData:
+        """Return ``value`` promoted into the appropriate Extended Data subtype."""
+        return ExtendedData(value)
 
     def map(self, transform: Callable[[Any], Any]) -> ExtendedData:
-        """Apply a callable to the promoted value and wrap the result."""
-        return ExtendedData(transform(self._value))
+        """Apply a callable to this value and wrap the result."""
+        return ExtendedData(transform(self.value))
 
     def map_builtin(self, transform: Callable[[Any], Any]) -> ExtendedData:
         """Apply a callable to lowered built-in data and wrap the result."""
@@ -168,11 +183,11 @@ class ExtendedData:
         """Apply named DataWorkflow transforms and wrap the result."""
         from extended_data.workflows import DataWorkflow
 
-        return ExtendedData(DataWorkflow.from_value(self._value).transform(*steps).result().value)
+        return ExtendedData(DataWorkflow.from_value(self.value).transform(*steps).result().value)
 
     def merge(self, *mappings: Mapping[str, Any]) -> ExtendedData:
         """Deep-merge mappings when this wrapper contains mapping-shaped data."""
-        method = getattr(self._value, "deep_merge", None)
+        method = getattr(self.value, "deep_merge", None)
         if not callable(method):
             raise TypeError(f"merge is not available for {self.data_type}")
         return ExtendedData(method(*mappings))
@@ -181,7 +196,7 @@ class ExtendedData:
         """Start a DataWorkflow from this value."""
         from extended_data.workflows import DataWorkflow
 
-        return DataWorkflow.from_value(self._value)
+        return DataWorkflow.from_value(self.value)
 
     def sync_to_file(
         self,
@@ -235,24 +250,29 @@ class ExtendedData:
         """Return this value converted to export-safe primitive data."""
         from extended_data.io.exporters import make_raw_data_export_safe
 
-        return make_raw_data_export_safe(self._value, export_to_yaml=export_to_yaml)
+        return make_raw_data_export_safe(self.value, export_to_yaml=export_to_yaml)
 
     def wrap_for_export(self, allow_encoding: bool | str = True, **format_opts: Any) -> str:
         """Return this value wrapped as an encoded export string."""
         from extended_data.io.exporters import wrap_raw_data_for_export
 
-        return wrap_raw_data_for_export(self._value, allow_encoding=allow_encoding, **format_opts)
+        return wrap_raw_data_for_export(self.value, allow_encoding=allow_encoding, **format_opts)
 
     def get(self, key: Any, default: Any = None) -> Any:
         """Return a mapping value by key, or ``default`` when unavailable."""
-        method = getattr(self._value, "get", None)
-        if not callable(method):
+        if not self.is_mapping:
             return default
-        return method(key, default)
+        try:
+            return self[key]
+        except KeyError:
+            return default
 
     def append(self, item: Any) -> Self:
         """Append to list-shaped data and return this wrapper."""
-        method = getattr(self._value, "append", None)
+        value = self.value
+        if value is self:
+            raise TypeError(f"append is not available for {self.data_type}")
+        method = getattr(value, "append", None)
         if not callable(method):
             raise TypeError(f"append is not available for {self.data_type}")
         method(item)
@@ -260,7 +280,10 @@ class ExtendedData:
 
     def extend(self, values: Iterable[Any]) -> Self:
         """Extend list-shaped data and return this wrapper."""
-        method = getattr(self._value, "extend", None)
+        value = self.value
+        if value is self:
+            raise TypeError(f"extend is not available for {self.data_type}")
+        method = getattr(value, "extend", None)
         if not callable(method):
             raise TypeError(f"extend is not available for {self.data_type}")
         method(values)
@@ -268,7 +291,10 @@ class ExtendedData:
 
     def update(self, *args: Any, **kwargs: Any) -> Self:
         """Update mapping- or set-shaped data and return this wrapper."""
-        method = getattr(self._value, "update", None)
+        value = self.value
+        if value is self:
+            raise TypeError(f"update is not available for {self.data_type}")
+        method = getattr(value, "update", None)
         if not callable(method):
             raise TypeError(f"update is not available for {self.data_type}")
         method(*args, **kwargs)
@@ -276,7 +302,10 @@ class ExtendedData:
 
     def add(self, item: Any) -> Self:
         """Add to set-shaped data and return this wrapper."""
-        method = getattr(self._value, "add", None)
+        value = self.value
+        if value is self:
+            raise TypeError(f"add is not available for {self.data_type}")
+        method = getattr(value, "add", None)
         if not callable(method):
             raise TypeError(f"add is not available for {self.data_type}")
         method(item)
@@ -292,47 +321,71 @@ class ExtendedData:
 
     def __iter__(self) -> Iterator[Any]:
         """Iterate the underlying value."""
+        value = self.value
+        if value is self:
+            msg = f"iteration is not available for {self.data_type}"
+            raise TypeError(msg)
         try:
-            return iter(self._value)
+            return iter(value)
         except TypeError:
-            return iter([self._value])
+            return iter([value])
 
     def __len__(self) -> int:
         """Return the underlying value length, or one for scalars."""
+        value = self.value
+        if value is self:
+            msg = f"length is not available for {self.data_type}"
+            raise TypeError(msg)
         try:
-            return len(self._value)
+            return len(value)
         except TypeError:
             return 1
 
     def __bool__(self) -> bool:
         """Mirror the truthiness of the wrapped value."""
-        return bool(self._value)
+        value = self.value
+        if value is self:
+            return len(self) > 0
+        return bool(value)
 
     def __getitem__(self, key: Any) -> Any:
         """Index the underlying value."""
-        return self._value[key]
+        value = self.value
+        if value is self:
+            msg = f"indexing is not available for {self.data_type}"
+            raise TypeError(msg)
+        return value[key]
 
     def __setitem__(self, key: Any, value: Any) -> None:
         """Set an item on mutable underlying data."""
-        self._value[key] = value
+        target = self.value
+        if target is self:
+            msg = f"item assignment is not available for {self.data_type}"
+            raise TypeError(msg)
+        target[key] = value
 
     def __delitem__(self, key: Any) -> None:
         """Delete an item from mutable underlying data."""
-        del self._value[key]
+        value = self.value
+        if value is self:
+            msg = f"item deletion is not available for {self.data_type}"
+            raise TypeError(msg)
+        del value[key]
 
     def __contains__(self, item: object) -> bool:
         """Return whether an item is present in the underlying value."""
+        value = self.value
+        if value is self:
+            try:
+                self[item]
+            except (IndexError, KeyError, TypeError):
+                return False
+            return True
         try:
-            return item in self._value
+            return item in value
         except TypeError:
             return False
 
-    def __eq__(self, other: object) -> bool:
-        """Compare against another facade or raw value by built-in representation."""
-        if isinstance(other, ExtendedData):
-            return self.as_builtin() == other.as_builtin()
-        return self.as_builtin() == other
-
     def __repr__(self) -> str:
         """Return a useful debugging representation."""
-        return f"ExtendedData({self._value!r})"
+        return f"ExtendedData({self.value!r})"

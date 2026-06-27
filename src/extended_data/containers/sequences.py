@@ -7,6 +7,7 @@ from collections.abc import Callable, Iterable, Iterator, MutableSet
 from operator import index as operator_index
 from typing import Any, SupportsIndex, TypeVar, cast, overload
 
+from extended_data.containers.data import ExtendedData
 from extended_data.containers.mappings import ExtendedDict
 from extended_data.primitives.mappings import zipmap as primitive_zipmap
 from extended_data.primitives.sequences import filter_list, flatten_list
@@ -20,11 +21,13 @@ T = TypeVar("T")
 U = TypeVar("U")
 
 
-class ExtendedList(UserList[T]):
+class ExtendedList(UserList[T], ExtendedData):
     """List wrapper with chainable primitive operations."""
 
     def __init__(self, initlist: Iterable[T] | None = None) -> None:
         """Initialize the extended list."""
+        if initlist is self:
+            return
         super().__init__()
         self.extend(initlist or [])
 
@@ -48,13 +51,15 @@ class ExtendedList(UserList[T]):
             return
         self.data[i] = self._wrap_item(cast(T, item))
 
-    def append(self, item: T) -> None:
+    def append(self, item: T) -> ExtendedList[T]:  # type: ignore[override]
         """Append a value while preserving extended nested containers."""
         self.data.append(self._wrap_item(item))
+        return self
 
-    def extend(self, other: Iterable[T]) -> None:
+    def extend(self, other: Iterable[T]) -> ExtendedList[T]:  # type: ignore[override]
         """Extend values while preserving extended nested containers."""
         self.data.extend(self._wrap_item(item) for item in other)
+        return self
 
     def __iadd__(self, other: Iterable[T]) -> ExtendedList[T]:
         """Extend in place while preserving extended nested containers."""
@@ -67,9 +72,10 @@ class ExtendedList(UserList[T]):
         self.data[:] = [self._wrap_item(item) for item in self.data]
         return self
 
-    def insert(self, i: int, item: T) -> None:
+    def insert(self, i: int, item: T) -> ExtendedList[T]:  # type: ignore[override]
         """Insert a value while preserving extended nested containers."""
         self.data.insert(i, self._wrap_item(item))
+        return self
 
     def flatten(self) -> ExtendedList[Any]:
         """Return a recursively flattened copy."""
@@ -148,7 +154,7 @@ class ExtendedList(UserList[T]):
         return ExtendedList(values)
 
 
-class ExtendedTuple(tuple[T, ...]):
+class ExtendedTuple(tuple[T, ...], ExtendedData):
     """Tuple wrapper with immutable chainable sequence operations."""
 
     __slots__ = ()
@@ -282,11 +288,13 @@ class ExtendedTuple(tuple[T, ...]):
         return tuple(self)
 
 
-class ExtendedSet(MutableSet[T]):
+class ExtendedSet(MutableSet[T], ExtendedData):
     """Set wrapper with explicit chainable operations."""
 
     def __init__(self, values: Iterable[T] | None = None) -> None:
         """Initialize the extended set."""
+        if values is self:
+            return
         self._data: set[T] = set()
         for value in values or []:
             self.add(value)
@@ -314,19 +322,22 @@ class ExtendedSet(MutableSet[T]):
         """Return a value-oriented representation."""
         return f"{self.__class__.__name__}({self._data!r})"
 
-    def add(self, value: T) -> None:
+    def add(self, value: T) -> ExtendedSet[T]:  # type: ignore[override]
         """Add a value to the set."""
         self._data.add(self._wrap_item(value))
+        return self
 
-    def update(self, *others: Iterable[T]) -> None:
+    def update(self, *others: Iterable[T]) -> ExtendedSet[T]:
         """Add values from one or more iterables."""
         for other in others:
             for value in other:
                 self.add(value)
+        return self
 
-    def discard(self, value: T) -> None:
+    def discard(self, value: T) -> ExtendedSet[T]:  # type: ignore[override]
         """Remove a value from the set if present."""
         self._data.discard(value)
+        return self
 
     def copy(self) -> ExtendedSet[T]:
         """Return a shallow copy."""

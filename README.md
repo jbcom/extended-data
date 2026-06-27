@@ -10,7 +10,8 @@ tiers:
   type coercion, mapping, sequence, and state utilities.
 - Tier 2: `ExtendedData`, `ExtendedString`, `ExtendedDict`, `ExtendedList`,
   `ExtendedTuple`, and `ExtendedSet` containers that expose Tier 1 operations
-  as methods.
+  as methods. `ExtendedData` is the common root and polymorphic constructor for
+  the shape-specific containers.
 - Tier 3: data processors that compose the first two tiers for files, inputs,
   logging, export/import boundaries, and workflows.
 
@@ -43,7 +44,7 @@ payload = ExtendedDict(data).deep_merge({"replicas": 3})
 wrapped = ExtendedData(payload).merge({"owner": "platform"})
 decoded_file = decode_file('{"service": {"name": "worker"}}', suffix="json")
 artifact = DataFile.decode("service:\n  name: api\n", suffix="yaml")
-workflow = DataWorkflow.from_value(wrapped.value).transform("unhump").result()
+workflow = DataWorkflow.from_value(wrapped).transform("unhump").result()
 
 logger.logged_statement("prepared workflow", json_data=workflow.as_builtin(), log_level="info")
 
@@ -70,7 +71,7 @@ extended-data transform --file payload.json --step reconstruct --step unhump
 
 ```text
 extended_data/
-  containers/   Tier 2 ExtendedData and ExtendedString/Dict/List/Tuple/Set wrappers
+  containers/   Tier 2 ExtendedData root plus String/Dict/List/Tuple/Set containers
   inputs/       InputProvider and decorator-based input injection
   io/           Tier 3 file, import, export, and base64 processors
   logging/      structured lifecycle logging
@@ -89,10 +90,12 @@ context values, such as resource IDs, emails, paths, or URLs, must be withheld
 in addition to common secret fields.
 
 Tier 2 containers inherit from standard Python collection primitives and expose
-chainable data operations. `ExtendedData` is the generic facade for any incoming
-value and delegates to shape-specific containers where possible. For example,
-`ExtendedString.decode_json()` promotes JSON into extended containers,
-`ExtendedDict.reconstruct_special_types()` turns string scalars into
+chainable data operations. `ExtendedData` is the polymorphic constructor for any
+incoming value: `ExtendedData({"service": "api"})` is an `ExtendedDict`,
+`ExtendedData(["api"])` is an `ExtendedList`, and `ExtendedData("api")` is an
+`ExtendedString`, while all of them are also `isinstance(value, ExtendedData)`.
+For example, `ExtendedString.decode_json()` promotes JSON into extended
+containers, `ExtendedDict.reconstruct_special_types()` turns string scalars into
 booleans/numbers/dates where safe, and `ExtendedList.first_non_empty()` returns
 the first meaningful value without lowering the surrounding data boundary.
 

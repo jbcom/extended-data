@@ -33,11 +33,19 @@ def test_tier2_containers_inherit_expected_python_bases() -> None:
     assert issubclass(ExtendedList, UserList)
     assert issubclass(ExtendedTuple, tuple)
     assert issubclass(ExtendedSet, MutableSet)
+    assert issubclass(ExtendedString, ExtendedData)
+    assert issubclass(ExtendedDict, ExtendedData)
+    assert issubclass(ExtendedList, ExtendedData)
+    assert issubclass(ExtendedTuple, ExtendedData)
+    assert issubclass(ExtendedSet, ExtendedData)
     assert isinstance(ExtendedString("api"), UserString)
     assert isinstance(ExtendedDict({"service": "api"}), UserDict)
     assert isinstance(ExtendedList(["api"]), UserList)
     assert isinstance(ExtendedTuple(("api",)), tuple)
     assert isinstance(ExtendedSet({"api"}), MutableSet)
+    assert isinstance(ExtendedData({"service": "api"}), ExtendedDict)
+    assert isinstance(ExtendedData(["api"]), ExtendedList)
+    assert isinstance(ExtendedData("api"), ExtendedString)
 
 
 def test_extended_string_chains_primitive_transforms() -> None:
@@ -435,7 +443,7 @@ def test_extended_tuple_preserves_surface_for_builtin_tuple_operations() -> None
 
 
 def test_extended_data_is_generic_container_for_unknown_shapes(tmp_path: Path) -> None:
-    """ExtendedData should hold and operate on any promoted data shape."""
+    """ExtendedData should create and operate as the concrete promoted shape."""
     vendor = ExtendedData({"vendor": "google", "payload": {"names": ["alpha"]}})
     sequence = ExtendedData([{"name": "api"}]).append({"name": "worker"})
     scalar = ExtendedData(42)
@@ -452,7 +460,9 @@ def test_extended_data_is_generic_container_for_unknown_shapes(tmp_path: Path) -
     assert vendor.shape == "mapping"
     assert vendor.is_mapping is True
     assert vendor.data_type == "ExtendedDict"
-    assert isinstance(vendor.value, ExtendedDict)
+    assert type(vendor) is ExtendedDict
+    assert isinstance(vendor, ExtendedData)
+    assert vendor.value is vendor
     assert vendor.get("vendor").upper_first() == "Google"
     assert vendor["payload"]["names"][0].upper_first() == "Alpha"
     assert isinstance(vendor["enabled"], ExtendedString)
@@ -461,10 +471,13 @@ def test_extended_data_is_generic_container_for_unknown_shapes(tmp_path: Path) -
     assert mapped.as_builtin()["vendor"] == "GOOGLE"
     assert sequence.shape == "list"
     assert sequence.is_sequence is True
+    assert type(sequence) is ExtendedList
+    assert isinstance(sequence, ExtendedData)
     assert isinstance(sequence[1], ExtendedDict)
     assert sequence[1]["name"].upper_first() == "Worker"
     assert scalar.shape == "scalar"
     assert scalar.is_scalar is True
+    assert type(scalar) is ExtendedData
     assert len(scalar) == 1
     assert list(scalar) == [42]
     assert decoded.shape == "mapping"

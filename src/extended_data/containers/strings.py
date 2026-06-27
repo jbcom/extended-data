@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING, Any
 
 import extended_data.primitives.matching as primitive_matching
 
+from extended_data.containers.data import ExtendedData
 from extended_data.primitives.string_transforms import (
     humanize,
     ordinalize,
@@ -51,8 +52,14 @@ def _coerce_string_argument(value: str | UserString) -> str:
     return str(value) if isinstance(value, UserString) else value
 
 
-class ExtendedString(UserString):
+class ExtendedString(UserString, ExtendedData):
     """String wrapper with chainable primitive operations."""
+
+    def __init__(self, seq: object = "") -> None:
+        """Initialize the extended string."""
+        if seq is self:
+            return
+        super().__init__(seq)
 
     def lower_first(self) -> ExtendedString:
         """Return a copy with the first character lowercased."""

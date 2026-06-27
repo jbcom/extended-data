@@ -2,8 +2,9 @@
 
 Tier 2 wraps Python data shapes with shape-specific `ExtendedString`,
 `ExtendedDict`, `ExtendedList`, `ExtendedTuple`, and `ExtendedSet` containers.
-Tier 3 starts with `ExtendedData`, a stable facade for callers that do not know
-or should not care which shape is currently inside a payload.
+`ExtendedData` is their common root and polymorphic constructor: callers can use
+one entrypoint while still receiving the concrete extended type for the incoming
+value.
 
 Construction and mutation promote nested values, so method chains survive normal
 Python literals.
@@ -20,27 +21,35 @@ print(payload["tags"].compact().deduplicate())
 print(ExtendedString("HTTP Response Value").to_snake_case())
 ```
 
-## Generic ExtendedData
+## Polymorphic ExtendedData
 
 Use `ExtendedData` at file, API, workflow, and vendor boundaries where the
 payload may be a mapping today, a list tomorrow, or a scalar status value from a
-different provider.
+different provider. The constructor returns the concrete extended subtype when
+one applies, so normal Python collection behavior remains native rather than
+proxied.
 
 ```python
-from extended_data import ExtendedData
+from extended_data import ExtendedData, ExtendedDict, ExtendedList, ExtendedString
 
 vendor = ExtendedData({"vendor": "google", "payload": {"names": ["alpha"]}})
 vendor["enabled"] = "true"
 
+assert type(vendor) is ExtendedDict
+assert isinstance(vendor, ExtendedData)
 assert vendor.shape == "mapping"
 assert vendor.get("vendor").upper_first() == "Google"
 assert vendor["payload"]["names"][0].upper_first() == "Alpha"
 
 merged = vendor.merge({"payload": {"region": "us-east-1"}})
 assert merged.as_builtin()["payload"]["region"] == "us-east-1"
+
+assert type(ExtendedData([{"name": "api"}]).append({"name": "worker"})) is ExtendedList
+assert type(ExtendedData("HTTP Response Value")) is ExtendedString
 ```
 
-The facade exposes broad shape predicates without forcing dict-only code paths:
+The common root exposes broad shape predicates without forcing dict-only code
+paths:
 
 ```python
 assert ExtendedData("HTTP Response Value").is_string
