@@ -1,5 +1,12 @@
 # Changelog
 
+## [8.4.1](https://github.com/jbcom/extended-data/compare/extended-data-v8.4.0...extended-data-v8.4.1) (2026-06-27)
+
+
+### Bug Fixes
+
+* stabilize ExtendedData subclass factory reentry ([#28](https://github.com/jbcom/extended-data/issues/28)) ([9a0fce5](https://github.com/jbcom/extended-data/commit/9a0fce5dad766be5b4c7445c6a42cf67b4183040))
+
 ## [8.4.0](https://github.com/jbcom/extended-data/compare/extended-data-v8.3.1...extended-data-v8.4.0) (2026-06-27)
 
 
