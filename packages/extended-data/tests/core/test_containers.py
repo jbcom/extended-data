@@ -585,6 +585,7 @@ def test_extended_data_subclasses_keep_identity_and_delegate_to_internal_value()
     assert type(coordinated.value) is ExtendedDict
     assert coordinated.shape == "mapping"
     assert coordinated.is_mapping is True
+    assert list(coordinated.keys()) == ["service"]
     assert coordinated["service"]["name"].upper_first() == "Api"
     assert coordinated.as_builtin() == {"service": {"name": "api"}}
     assert extend_data(coordinated) is coordinated
@@ -600,6 +601,26 @@ def test_extended_data_subclasses_keep_identity_and_delegate_to_internal_value()
     assert coordinated[0]["name"].upper_first() == "Worker"
     assert coordinated[1]["name"].upper_first() == "Scheduler"
     assert to_builtin(coordinated) == [{"name": "worker"}, {"name": "scheduler"}]
+
+
+def test_extended_data_subclass_facades_delegate_attribute_methods() -> None:
+    """Facade subclasses should preserve promoted mapping and string methods."""
+
+    class CoordinatedData(ExtendedData):
+        def __init__(self, value: Any) -> None:
+            self._data = ExtendedData(value)
+
+        @property
+        def value(self) -> ExtendedData:
+            return self._data
+
+    mapping = CoordinatedData({"service": {"name": "api"}})
+    text = CoordinatedData("api response")
+
+    assert list(mapping.keys()) == ["service"]
+    assert mapping.get("service")["name"].upper_first() == "Api"
+    assert text.upper_first() == "Api response"
+    assert text.to_snake_case() == "api_response"
 
 
 def test_extended_data_subclass_guard_supports_mixin_initializers() -> None:

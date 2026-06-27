@@ -11,6 +11,7 @@ from typing import Any, Self, cast
 
 
 _FACTORY_INITIALIZED_ATTR = "_extended_data_factory_initialized"
+_DELEGATING_ATTRIBUTE_ATTR = "_extended_data_delegating_attribute"
 
 
 class ExtendedData:
@@ -37,7 +38,11 @@ class ExtendedData:
 
         @wraps(original_init)
         def guarded_init(self: Any, *args: Any, **kwargs: Any) -> None:
-            if getattr(self, _FACTORY_INITIALIZED_ATTR, False):
+            try:
+                initialized = object.__getattribute__(self, _FACTORY_INITIALIZED_ATTR)
+            except AttributeError:
+                initialized = False
+            if initialized:
                 setattr(self, _FACTORY_INITIALIZED_ATTR, False)
                 return
             original_init(self, *args, **kwargs)
@@ -344,10 +349,24 @@ class ExtendedData:
 
     def __getattr__(self, name: str) -> Any:
         """Delegate shape-specific operations to the promoted value."""
+        if name.startswith("_"):
+            raise AttributeError(name)
         try:
-            value = object.__getattribute__(self, "_value")
+            delegating_attribute = object.__getattribute__(self, _DELEGATING_ATTRIBUTE_ATTR)
+        except AttributeError:
+            delegating_attribute = False
+        if delegating_attribute:
+            raise AttributeError(name)
+        try:
+            object.__setattr__(self, _DELEGATING_ATTRIBUTE_ATTR, True)
+            value = self.value
         except AttributeError as exc:
             raise AttributeError(name) from exc
+        finally:
+            with suppress(AttributeError):
+                object.__delattr__(self, _DELEGATING_ATTRIBUTE_ATTR)
+        if value is self:
+            raise AttributeError(name)
         return getattr(value, name)
 
     def __iter__(self) -> Iterator[Any]:
