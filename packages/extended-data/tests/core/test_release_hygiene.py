@@ -17,6 +17,8 @@ WORKSPACE_ROOT = Path(__file__).resolve().parents[4]
 REPO_ROOT = PACKAGE_ROOT
 WORKFLOW_ROOT = WORKSPACE_ROOT / ".github" / "workflows"
 DEPENDABOT_CONFIG = WORKSPACE_ROOT / ".github" / "dependabot.yml"
+AGENTIC_REINFORCEMENT = WORKSPACE_ROOT / "AGENTIC_REINFORCEMENT.md"
+SECRETSSYNC_ALIGNMENT = WORKSPACE_ROOT / "SECRETS_SYNC_ALIGNMENT.md"
 PYTEST_PLUGIN_ROOT = WORKSPACE_ROOT / "packages" / "pytest-extended-data"
 ACTION_REF_WITH_COMMENT_RE = re.compile(r"^\s*(?:-\s*)?uses:\s*([^#\s]+)(?:\s+#\s*(\S+))?")
 PINNED_SHA_RE = re.compile(r"^[0-9a-f]{40}$")
@@ -47,6 +49,14 @@ BOOTSTRAP_TEXT_MARKERS = ("(NEW)",)
 EXTRACTION_ERA_FRAMING = (
     "remaining migration work",
     "unfinished migration work",
+)
+BOUNDARY_DRIFT_TERMS = (
+    "connector handoff",
+    "``vendor-fabric`` owns agent workflows",
+    "``vendor-fabric`` owns external API clients, optional provider SDK\n"
+    "dependencies, MCP/tool adapters",
+    "| SecretSync agent tool | ``jbcom/vendor-fabric``",
+    "| Agent framework       | ``jbcom/vendor-fabric``",
 )
 REMOVED_IN_PACKAGE_SURFACES = (
     "ConnectorFabric",
@@ -311,6 +321,54 @@ def test_public_text_does_not_reference_old_project_origins() -> None:
     assert offenders == []
 
 
+def test_public_text_preserves_downstream_layer_boundaries() -> None:
+    """Public code/docs should keep vendor and agent ownership separated."""
+    offenders: list[str] = []
+
+    for path in _iter_public_text_files(*PUBLIC_TEXT_ROOTS):
+        text = path.read_text(encoding="utf-8")
+        for term in BOUNDARY_DRIFT_TERMS:
+            if term in text:
+                offenders.append(f"{path.relative_to(PACKAGE_ROOT)}: {term}")
+
+    assert offenders == []
+
+
+def test_agentic_reinforcement_documents_layer_contract() -> None:
+    """Root reinforcement guidance should keep the downstream stack boundary explicit."""
+    reinforcement = AGENTIC_REINFORCEMENT.read_text(encoding="utf-8")
+
+    for expected_text in (
+        "`ExtendedData` is the root superclass and polymorphic factory.",
+        "`vendor-fabric` may extend `ExtendedData` with additive provider coordination.",
+        "`agentic-fabric` may extend the vendor layer with additive runtime and agent\n  behavior.",
+        "Do not add vendor-aware or agent-aware branching here.",
+        "Preserve `ExtendedData` factory semantics, shape promotion, and\n  built-in-to-extended round-tripping.",
+    ):
+        assert expected_text in reinforcement
+
+
+def test_secretssync_alignment_documents_base_layer_boundary() -> None:
+    """Root SecretSync guidance should keep runtime concerns out of this package."""
+    alignment = SECRETSSYNC_ALIGNMENT.read_text(encoding="utf-8")
+
+    for expected_text in (
+        "`secrets-sync` owns the Go pipeline runtime, CLI, GitHub Action, deployment\n"
+        "   artifacts, and the gopy binding source consumed from Python.",
+        "`vendor-fabric` owns the Python facade over those bindings, plus credential\n"
+        "   handoff, provider coordination, and `ExtendedData` integration.",
+        "`agentic-fabric` owns framework-specific tool wrapping and runtime\n"
+        "   orchestration on top of `VendorData`.",
+        "`extended-data` stays the generic base layer underneath all of them.",
+        "PyPI distribution: `secrets-sync-python-binding`",
+        "Python import/module: `secrets_sync`",
+        "`extended-data` should stay agnostic to that binding and only provide generic\n"
+        "  primitives that the downstream facade layers can reuse.",
+        "Do not add SecretSync-specific runtime policy here.",
+    ):
+        assert expected_text in alignment
+
+
 def test_old_package_namespace_shims_do_not_exist() -> None:
     """Clean major-version breaks should not grow old import namespace shims."""
     offenders: list[str] = []
@@ -556,7 +614,7 @@ def test_ownership_map_documents_moved_surfaces() -> None:
         "jbcom/vendor-fabric",
         "vendor-fabric[...]",
         "vendor-fabric[secrets-sync]",
-        "vendor-fabric[ai,secrets-sync]",
-        "vendor-fabric[ai]",
+        "jbcom/agentic-fabric",
+        "agentic-fabric[...]",
     ):
         assert expected_text in ownership_map

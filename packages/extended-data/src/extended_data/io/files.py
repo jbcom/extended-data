@@ -181,7 +181,7 @@ def _data_file_metadata(
     data: Any,
     extra: Mapping[str, Any] | None = None,
 ) -> ExtendedDict:
-    """Return promoted artifact metadata for workflow and connector handoff."""
+    """Return promoted artifact metadata for workflow and downstream handoff."""
     metadata = ExtendedDict(redact_sensitive_data(extra or {}))
     metadata.update(
         {

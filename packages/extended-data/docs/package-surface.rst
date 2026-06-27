@@ -118,8 +118,12 @@ Split Packages
 --------------
 
 ``vendor-fabric`` owns external API clients, optional provider SDK
-dependencies, MCP/tool adapters, provider-specific examples,
-vendor-backed Python sync, and agent workflows.
+dependencies, provider-specific examples, vendor capability dispatch,
+and vendor-backed Python sync.
+
+``agentic-fabric`` owns agent orchestration, runtime selection,
+agent-facing tool catalogs, MCP agent adapters, and framework adapters
+such as LangChain, CrewAI, LangGraph, and Strands.
 
 ``extended-data`` does not preserve ``extended_data.connectors``,
 ``extended_data.secrets``, ``extended_data_types``,
