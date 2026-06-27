@@ -8,11 +8,9 @@ on:
         required: true
         type: string
       package:
-        description: Runtime package to publish
+        description: Workspace package to publish
         required: true
-        type: choice
-        options:
-          - extended-data
+        type: string
 
 permissions: {}
 
@@ -85,7 +83,7 @@ jobs:
       - name: Validate package input
         run: |
           case "${{ inputs.package }}" in
-            extended-data) ;;
+            extended-data|pytest-extended-data) ;;
             *) echo "unsupported package: ${{ inputs.package }}" >&2; exit 1 ;;
           esac
       - run: uv build --package "${{ inputs.package }}" --out-dir dist --clear

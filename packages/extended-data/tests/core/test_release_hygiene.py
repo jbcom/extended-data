@@ -180,10 +180,9 @@ def test_publishing_checklist_matches_workflow_action_pins() -> None:
     assert _publishing_checklist_pins() == _workflow_action_pins()
 
 
-def test_cd_workflows_use_pypi_trusted_publishing() -> None:
-    """Publishing should use PyPI trusted publishing from package CD workflows."""
+def test_cd_workflow_uses_pypi_trusted_publishing() -> None:
+    """Publishing should use PyPI trusted publishing from the standard CD workflow."""
     cd_workflow = (WORKFLOW_ROOT / "cd.yml").read_text(encoding="utf-8")
-    pytest_cd_workflow = (WORKFLOW_ROOT / "cd-pytest-extended-data.yml").read_text(encoding="utf-8")
     release_workflow = (WORKFLOW_ROOT / "release.yml").read_text(encoding="utf-8")
     forbidden_token_markers = (
         "PYPI_API_TOKEN",
@@ -194,15 +193,15 @@ def test_cd_workflows_use_pypi_trusted_publishing() -> None:
         "secrets.PYPI",
     )
 
-    for workflow in (cd_workflow, pytest_cd_workflow):
-        assert "id-token: write" in workflow
-        assert "uv publish --trusted-publishing always" in workflow
-        assert "uv publish" in workflow
-        for marker in forbidden_token_markers:
-            assert marker not in workflow
-    assert "uv build --package pytest-extended-data" not in cd_workflow
-    assert "uv build --package pytest-extended-data" in pytest_cd_workflow
+    assert "id-token: write" in cd_workflow
+    assert "uv publish --trusted-publishing always" in cd_workflow
+    assert "uv publish" in cd_workflow
+    assert "extended-data|pytest-extended-data" in cd_workflow
+    assert 'uv build --package "${{ inputs.package }}"' in cd_workflow
+    for marker in forbidden_token_markers:
+        assert marker not in cd_workflow
     assert "uv publish" not in release_workflow
+    assert not (WORKFLOW_ROOT / "cd-pytest-extended-data.yml").exists()
 
 
 def test_release_workflow_dispatches_cd_after_release_please() -> None:
@@ -214,7 +213,15 @@ def test_release_workflow_dispatches_cd_after_release_please() -> None:
     assert "packages/extended-data--release_created" in release_workflow
     assert "packages/pytest-extended-data--release_created" in release_workflow
     assert 'gh workflow run cd.yml --repo "$GH_REPO" --ref main -f tag="$RELEASE_TAG" -f package="extended-data"' in release_workflow
-    assert 'gh workflow run cd-pytest-extended-data.yml --repo "$GH_REPO" --ref main -f tag="$RELEASE_TAG"' in release_workflow
+    assert 'gh workflow run cd.yml --repo "$GH_REPO" --ref main -f tag="$RELEASE_TAG" -f package="pytest-extended-data"' in release_workflow
+
+
+def test_standard_workflow_file_set_is_present() -> None:
+    """Repository automation should use the standard ci/release/cd/automerge names."""
+    workflow_names = {path.name for path in WORKFLOW_ROOT.glob("*.yml")}
+
+    assert {"ci.yml", "release.yml", "cd.yml", "automerge.yml"}.issubset(workflow_names)
+    assert all(not name.startswith("cd-") for name in workflow_names)
 
 
 def test_workspace_declares_runtime_and_pytest_plugin_packages() -> None:
