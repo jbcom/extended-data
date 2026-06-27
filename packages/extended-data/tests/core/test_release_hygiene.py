@@ -230,11 +230,17 @@ def test_standard_workflow_file_set_is_present() -> None:
 
 
 def test_automerge_workflow_limits_default_token_permissions() -> None:
-    """Automerge should rely on the dedicated CI token and deny the default token."""
+    """Automerge should use a minimal base-context token without checking out PR code."""
     automerge_workflow = (WORKFLOW_ROOT / "automerge.yml").read_text(encoding="utf-8")
+    workflow = yaml.load(automerge_workflow, Loader=yaml.BaseLoader)
+    automerge_steps = workflow["jobs"]["automerge"]["steps"]
+    merge_step = next(step for step in automerge_steps if step["name"] == "Enable auto-merge (squash)")
 
-    assert "permissions: {}" in automerge_workflow
-    assert "secrets.CI_GITHUB_TOKEN" in automerge_workflow
+    assert "pull_request_target" in workflow["on"]
+    assert workflow["permissions"] == {"contents": "write", "pull-requests": "write"}
+    assert merge_step["env"]["GH_TOKEN"] == "${{ github.token }}"
+    for step in automerge_steps:
+        assert step.get("uses") != "actions/checkout"
 
 
 def test_dependabot_covers_workspace_package_directories() -> None:
