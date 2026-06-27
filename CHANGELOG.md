@@ -1,5 +1,12 @@
 # Changelog
 
+## [8.3.1](https://github.com/jbcom/extended-data/compare/extended-data-v8.3.0...extended-data-v8.3.1) (2026-06-27)
+
+
+### Bug Fixes
+
+* stabilize ExtendedData factory initialization ([e2b785f](https://github.com/jbcom/extended-data/commit/e2b785fe513097c9c4ac22fe7be9734f0c442fbb))
+
 ## [8.3.0](https://github.com/jbcom/extended-data/compare/extended-data-v8.2.0...extended-data-v8.3.0) (2026-06-27)
 
 
