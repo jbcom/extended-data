@@ -109,7 +109,5 @@ Do not set `skip_missing_interpreters = true`. Python 3.11, 3.12, 3.13, and
 - Keep release-please configured for conventional commits so it can open release
   pull requests.
 - CD must build and publish packages to PyPI through trusted publishing.
-  `extended-data` uses `.github/workflows/cd.yml`; `pytest-extended-data` uses
-  `.github/workflows/cd-pytest-extended-data.yml` so PyPI can register a
-  distinct trusted publisher for the plugin package.
+  All packages in this repository publish through `.github/workflows/cd.yml`.
 - Tagged `extended-data` releases must also deploy GitHub Pages docs.

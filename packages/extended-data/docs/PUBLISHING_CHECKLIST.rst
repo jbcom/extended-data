@@ -2,11 +2,10 @@ Publishing Checklist
 ====================
 
 The workspace uses the standard ``ci.yml`` > ``release.yml`` >
-package-specific CD workflow shape. ``release.yml`` owns release-please.
-When a release-please PR merge creates a release tag, it dispatches
-``cd.yml`` for ``extended-data`` or ``cd-pytest-extended-data.yml`` for
-``pytest-extended-data``. ``extended-data`` releases also deploy the
-Sphinx/Furo documentation site. Do not hand-edit versions, changelog
+``cd.yml`` workflow shape. ``release.yml`` owns release-please. When a
+release-please PR merge creates a release tag, it dispatches ``cd.yml``
+with the selected package name. ``extended-data`` releases also deploy
+the Sphinx/Furo documentation site. Do not hand-edit versions, changelog
 entries, release tags, or GitHub releases during the normal release
 path.
 
@@ -14,12 +13,10 @@ Release Model
 -------------
 
 - ``release.yml`` owns release-please version detection, changelog
-  updates, release PRs, Git tags, and dispatching package-specific CD
-  after a release is created.
-- ``cd.yml`` owns tag-gated ``extended-data`` verification, PyPI
-  publication, and docs deployment.
-- ``cd-pytest-extended-data.yml`` owns tag-gated
-  ``pytest-extended-data`` verification and PyPI publication.
+  updates, release PRs, Git tags, and dispatching ``cd.yml`` after a
+  release is created.
+- ``cd.yml`` owns tag-gated package verification, selected-package PyPI
+  publication, and ``extended-data`` docs deployment.
 - ``cd.yml`` deploys GitHub Pages only for ``extended-data`` releases.
 - Published package names are ``extended-data`` and
   ``pytest-extended-data``.
@@ -27,9 +24,8 @@ Release Model
   ``release.yml``.
 - The PyPI job uses OIDC trusted publishing through ``uv publish``; no
   PyPI token should be stored in repository secrets for the normal path.
-- PyPI trusted publishers must match their package workflow filenames:
-  ``extended-data`` uses ``cd.yml`` and ``pytest-extended-data`` uses
-  ``cd-pytest-extended-data.yml``.
+- PyPI trusted publishers for this repository must use workflow
+  filename ``cd.yml``.
 - Do not configure package release-please entries to update the root
   ``uv.lock`` through ``extra-files``. The release PR owns package
   metadata, changelogs, and the release manifest; workspace setup can
@@ -129,7 +125,7 @@ there is a matching pending publisher. Before rerunning the first
 +-------------------+----------------------------------+
 | GitHub repository | ``extended-data``                |
 +-------------------+----------------------------------+
-| Workflow filename | ``cd-pytest-extended-data.yml``  |
+| Workflow filename | ``cd.yml``                       |
 +-------------------+----------------------------------+
 | Environment       | leave blank                      |
 +-------------------+----------------------------------+
@@ -138,4 +134,4 @@ Then rerun:
 
 .. code:: bash
 
-   gh workflow run cd-pytest-extended-data.yml --ref main -f tag=pytest-extended-data-v0.1.0
+   gh workflow run cd.yml --ref main -f tag=pytest-extended-data-v0.1.0 -f package=pytest-extended-data
