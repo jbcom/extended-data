@@ -555,6 +555,99 @@ def test_extended_data_factory_does_not_reinitialize_promoted_containers(monkeyp
     assert getattr(tuple_value, _FACTORY_INITIALIZED_ATTR, False) is False
 
 
+def test_extended_data_factory_rejects_extra_root_constructor_arguments() -> None:
+    """Root factory construction should stay a single-value boundary."""
+    with pytest.raises(TypeError, match=r"ExtendedData\(\) accepts a single optional value"):
+        ExtendedData({"service": "api"}, provider="vendor")  # type: ignore[call-arg]
+
+
+def test_extended_data_subclasses_keep_identity_and_delegate_to_internal_value() -> None:
+    """Downstream facades should extend ExtendedData without being factory-collapsed."""
+
+    class CoordinatedData(ExtendedData):
+        def __init__(self, value: Any, *, provider: str = "test") -> None:
+            self.provider = provider
+            self._data = ExtendedData(value)
+
+        @property
+        def value(self) -> ExtendedData:
+            return self._data
+
+        def cast(self, value: Any) -> CoordinatedData:
+            self._data = ExtendedData(value)
+            return self
+
+    coordinated = CoordinatedData({"service": {"name": "api"}}, provider="vendor")
+
+    assert type(coordinated) is CoordinatedData
+    assert isinstance(coordinated, ExtendedData)
+    assert coordinated.provider == "vendor"
+    assert type(coordinated.value) is ExtendedDict
+    assert coordinated.shape == "mapping"
+    assert coordinated.is_mapping is True
+    assert list(coordinated.keys()) == ["service"]
+    assert coordinated["service"]["name"].upper_first() == "Api"
+    assert coordinated.as_builtin() == {"service": {"name": "api"}}
+    assert extend_data(coordinated) is coordinated
+    assert ExtendedData(coordinated) is coordinated
+    assert to_builtin(coordinated) == {"service": {"name": "api"}}
+
+    same_outer_identity = coordinated.cast([{"name": "worker"}])
+    same_outer_identity.append({"name": "scheduler"})
+
+    assert same_outer_identity is coordinated
+    assert type(coordinated.value) is ExtendedList
+    assert coordinated.shape == "list"
+    assert coordinated[0]["name"].upper_first() == "Worker"
+    assert coordinated[1]["name"].upper_first() == "Scheduler"
+    assert to_builtin(coordinated) == [{"name": "worker"}, {"name": "scheduler"}]
+
+
+def test_extended_data_subclass_facades_delegate_attribute_methods() -> None:
+    """Facade subclasses should preserve promoted mapping and string methods."""
+
+    class CoordinatedData(ExtendedData):
+        def __init__(self, value: Any) -> None:
+            self._data = ExtendedData(value)
+
+        @property
+        def value(self) -> ExtendedData:
+            return self._data
+
+    mapping = CoordinatedData({"service": {"name": "api"}})
+    text = CoordinatedData("api response")
+
+    assert list(mapping.keys()) == ["service"]
+    assert mapping.get("service")["name"].upper_first() == "Api"
+    assert text.upper_first() == "Api response"
+    assert text.to_snake_case() == "api_response"
+
+
+def test_extended_data_subclass_guard_supports_mixin_initializers() -> None:
+    """Factory re-entry should not rerun initializers inherited from mixins."""
+
+    class ProviderInitMixin:
+        def __init__(self, value: Any, *, provider: str = "mixin") -> None:
+            self.provider = provider
+            self.init_count = getattr(self, "init_count", 0) + 1
+            self._data = ExtendedData(value)
+
+        @property
+        def value(self) -> ExtendedData:
+            return self._data
+
+    class MixinCoordinatedData(ProviderInitMixin, ExtendedData):
+        pass
+
+    coordinated = MixinCoordinatedData({"service": {"name": "api"}}, provider="vendor")
+    promoted_again = ExtendedData(coordinated)
+
+    assert promoted_again is coordinated
+    assert coordinated.init_count == 1
+    assert coordinated.provider == "vendor"
+    assert coordinated["service"]["name"].upper_first() == "Api"
+
+
 def test_generic_extended_data_facade_methods_for_scalar_values(tmp_path: Path) -> None:
     """Scalar holders should expose the same explicit boundary helpers."""
     scalar = ExtendedData(42)
