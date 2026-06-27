@@ -1,5 +1,12 @@
 # Changelog
 
+## [8.2.0](https://github.com/jbcom/extended-data/compare/extended-data-v8.1.0...extended-data-v8.2.0) (2026-06-27)
+
+
+### Features
+
+* make ExtendedData the generic data boundary ([030a475](https://github.com/jbcom/extended-data/commit/030a475644e5603b6624991b725e0294511f9b3c))
+
 ## [8.1.0](https://github.com/jbcom/extended-data/compare/extended-data-v8.0.0...extended-data-v8.1.0) (2026-06-27)
 
 
