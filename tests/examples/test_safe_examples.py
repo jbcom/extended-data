@@ -8,6 +8,7 @@ import py_compile
 import re
 import subprocess
 import sys
+import textwrap
 
 from pathlib import Path
 
@@ -50,7 +51,7 @@ FUNCTION_FIRST_BASIC_USAGE_HELPERS = (
 )
 ROOT_DISALLOWED_TIER1_IMPORTS = tuple(sorted(primitives.__all__))
 PYTHON_MARKDOWN_BLOCK_RE = re.compile(r"```python\n(?P<code>.*?)\n```", re.DOTALL)
-EXAMPLE_LITERAL_INCLUDE_RE = re.compile(r"\{literalinclude\}\s+\.\./\.\./(?P<path>examples/[^\s]+\.py)")
+EXAMPLE_LITERAL_INCLUDE_RE = re.compile(r"^\.\. literalinclude::\s+\.\./\.\./(?P<path>examples/[^\s]+\.py)", re.MULTILINE)
 SENSITIVE_IDENTIFIER_RE = re.compile(r"(api_?key|secret|token|password|authorization)", re.IGNORECASE)
 
 
@@ -60,6 +61,38 @@ def _readme_usage_snippet() -> str:
     match = re.search(r"```python\n(?P<code>.*?)\n```", usage_section, re.DOTALL)
     assert match is not None
     return match.group("code")
+
+
+def _rst_python_code_blocks(text: str) -> list[str]:
+    blocks: list[str] = []
+    lines = text.splitlines()
+    index = 0
+
+    while index < len(lines):
+        if lines[index].strip() not in {".. code:: python", ".. code-block:: python"}:
+            index += 1
+            continue
+
+        index += 1
+        while index < len(lines) and (not lines[index].strip() or lines[index].startswith("   :")):
+            index += 1
+
+        block: list[str] = []
+        while index < len(lines):
+            line = lines[index]
+            if not line.strip():
+                block.append(line)
+                index += 1
+                continue
+            if not line.startswith(("   ", "\t")):
+                break
+            block.append(line)
+            index += 1
+
+        if block:
+            blocks.append(textwrap.dedent("\n".join(block)).strip())
+
+    return blocks
 
 
 def test_example_inventory_is_complete() -> None:
@@ -77,7 +110,7 @@ def test_all_examples_are_included_in_sphinx_docs() -> None:
     """Every runnable example should be rendered from source in Sphinx docs."""
     documented: set[str] = set()
 
-    for path in sorted((REPO_ROOT / "docs" / "examples").glob("*.md")):
+    for path in sorted((REPO_ROOT / "docs" / "examples").glob("*.rst")):
         text = path.read_text(encoding="utf-8")
         documented.update(match.group("path") for match in EXAMPLE_LITERAL_INCLUDE_RE.finditer(text))
 
@@ -121,15 +154,24 @@ def test_readme_usage_snippet_runs(tmp_path: Path) -> None:
     assert result.returncode == 0, f"README usage snippet failed\nSTDOUT:\n{result.stdout}\nSTDERR:\n{result.stderr}"
 
 
-def test_markdown_python_snippets_compile() -> None:
+def test_documentation_python_snippets_compile() -> None:
     """Documentation snippets may be conceptual, but they should remain valid Python."""
-    markdown_paths = [REPO_ROOT / "README.md", *(REPO_ROOT / "docs").rglob("*.md")]
+    markdown_paths = [REPO_ROOT / "README.md"]
+    rst_paths = sorted((REPO_ROOT / "docs").rglob("*.rst"))
     offenders: list[str] = []
 
     for path in sorted(markdown_paths):
         text = path.read_text(encoding="utf-8")
         for index, match in enumerate(PYTHON_MARKDOWN_BLOCK_RE.finditer(text), start=1):
             code = match.group("code")
+            try:
+                compile(code, f"{path.relative_to(REPO_ROOT)}#python-block-{index}", "exec")
+            except SyntaxError as exc:
+                offenders.append(f"{path.relative_to(REPO_ROOT)} block {index}: {exc}")
+
+    for path in rst_paths:
+        text = path.read_text(encoding="utf-8")
+        for index, code in enumerate(_rst_python_code_blocks(text), start=1):
             try:
                 compile(code, f"{path.relative_to(REPO_ROOT)}#python-block-{index}", "exec")
             except SyntaxError as exc:

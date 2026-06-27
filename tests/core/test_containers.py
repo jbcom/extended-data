@@ -511,6 +511,66 @@ def test_extended_data_detects_string_set_none_and_object_shapes() -> None:
     assert record.copy().shape == "object"
 
 
+def test_generic_extended_data_facade_methods_for_scalar_values(tmp_path: Path) -> None:
+    """Scalar holders should expose the same explicit boundary helpers."""
+    scalar = ExtendedData(42)
+    output_path = tmp_path / "answer.json"
+    synced_path = tmp_path / "answer-sync.json"
+
+    written = scalar.write(output_path, encoding="json")
+    synced = scalar.sync_to_file(synced_path, encoding="json", source="test")
+    workflow = scalar.workflow()
+    transformed = ExtendedData("HTTP Response Value").transform("to-snake-case")
+
+    assert type(scalar) is ExtendedData
+    assert scalar.value == 42
+    assert scalar.data_type == "int"
+    assert scalar.as_builtin() == 42
+    assert scalar.as_extended() == 42
+    assert scalar.copy().value == 42
+    assert scalar.cast({"service": "api"}) == {"service": "api"}
+    assert scalar.map(lambda value: {"answer": value}) == {"answer": 42}
+    assert scalar.map_builtin(lambda value: value + 1).value == 43
+    assert scalar.get("missing", "fallback") == "fallback"
+    assert "missing" not in scalar
+    assert repr(scalar) == "ExtendedData(42)"
+    assert scalar.to_export_safe() == 42
+    assert json.loads(scalar.wrap_for_export(allow_encoding="json")) == 42
+    assert written == output_path
+    assert json.loads(output_path.read_text(encoding="utf-8")) == 42
+    assert synced.changed is True
+    assert json.loads(synced_path.read_text(encoding="utf-8")) == 42
+    assert workflow.result().as_builtin() == 42
+    assert transformed == "http_response_value"
+
+    with pytest.raises(TypeError, match="merge is not available for int"):
+        scalar.merge({"answer": 42})
+    with pytest.raises(TypeError, match="append is not available for int"):
+        scalar.append("value")
+    with pytest.raises(TypeError, match="extend is not available for int"):
+        scalar.extend(["value"])
+    with pytest.raises(TypeError, match="update is not available for int"):
+        scalar.update({"value": 42})
+    with pytest.raises(TypeError, match="add is not available for int"):
+        scalar.add("value")
+    with pytest.raises(TypeError):
+        _ = scalar["missing"]
+    with pytest.raises(TypeError):
+        scalar["missing"] = "value"
+    with pytest.raises(TypeError):
+        del scalar["missing"]
+
+
+def test_generic_extended_data_delegates_object_attributes() -> None:
+    """Object holders should delegate unknown attributes to the wrapped value."""
+    path = ExtendedData(Path("/tmp/service.yaml"))
+
+    assert path.shape == "scalar"
+    assert path.name == "service.yaml"
+    assert len(path) == 1
+    assert list(path) == [Path("/tmp/service.yaml")]
+
+
 def test_extended_data_getattr_fails_cleanly_before_initialization() -> None:
     """Uninitialized wrappers should not recurse when attributes are missing."""
     uninitialized = object.__new__(ExtendedData)
