@@ -1,0 +1,177 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "extended-data"
+version = "8.3.1"
+description = "Comprehensive Python data utilities for serialization, inputs, logging, and workflows"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+readme = "README.md"
+keywords = [
+    "data",
+    "serialization",
+    "configuration",
+    "logging",
+    "files",
+    "workflows",
+    "inputs",
+]
+authors = [{ name = "Jon Bogaty", email = "jon@jonbogaty.com" }]
+maintainers = [{ name = "Jon Bogaty", email = "jon@jonbogaty.com" }]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Typing :: Typed",
+]
+dependencies = [
+    "deepmerge>=2.0",
+    "gitpython>=3.1.0",
+    "inflection>=0.5.1",
+    "num2words>=0.5.14",
+    "orjson>=3.10.7",
+    "python-hcl2>=4.3.4",
+    "pyyaml>=6.0.1",
+    "rich>=13.7.1",
+    "ruamel.yaml>=0.18.0",
+    "sortedcontainers>=2.4.0",
+    "tomlkit>=0.13.2",
+    "typing-extensions>=4.12.2",
+    "validators>=0.22.0",
+    "wrapt>=1.16.0",
+]
+
+[project.urls]
+Documentation = "https://extended-data.dev"
+Issues = "https://github.com/jbcom/extended-data/issues"
+Source = "https://github.com/jbcom/extended-data"
+Changelog = "https://github.com/jbcom/extended-data/blob/main/packages/extended-data/CHANGELOG.md"
+
+[project.optional-dependencies]
+tests = [
+    "coverage[toml]>=7.6.0",
+    "hypothesis>=6.100.2",
+    "pytest>=9.0.3",
+    "pytest-asyncio>=1.3.0",
+    "pytest-cov>=7.1.0",
+    "pytest-mock>=3.15.1",
+    "pytest-timeout>=2.4.0",
+    "pytest-xdist>=3.6.1",
+]
+typing = [
+    "mypy>=1.20.1",
+    "sortedcontainers-stubs>=2.4.2",
+    "types-PyYAML>=6.0.12.20240724",
+]
+dev = [
+    "extended-data[tests,typing]",
+    "ruff>=0.8.0",
+]
+docs = [
+    "furo>=2025.12.19",
+    "myst-parser>=4.0.1,<6.0.0",
+    "sphinx>=8.2.3,<9.0.0",
+    "sphinx-autodoc2>=0.5.0",
+    "sphinx-copybutton>=0.5.2",
+]
+all = []
+
+[project.scripts]
+extended-data = "extended_data.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/extended_data"]
+
+[tool.pytest.ini_options]
+addopts = ["-ra", "--strict-markers", "--strict-config"]
+testpaths = ["tests"]
+xfail_strict = true
+asyncio_mode = "auto"
+timeout = 30
+timeout_method = "thread"
+
+[tool.coverage.run]
+branch = true
+parallel = true
+source = ["extended_data"]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true
+
+[tool.ruff]
+target-version = "py311"
+line-length = 120
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["ALL"]
+ignore = [
+    "ANN",
+    "ARG",
+    "BLE001",
+    "C901",
+    "COM",
+    "D105",
+    "D205",
+    "D415",
+    "D417",
+    "DTZ007",
+    "E402",
+    "E501",
+    "EM",
+    "ERA001",
+    "FBT",
+    "FIX",
+    "G",
+    "PERF",
+    "PLC0415",
+    "PLR0124",
+    "PLR0911",
+    "PLR0912",
+    "PLR0913",
+    "PLR0915",
+    "PLR2004",
+    "PLW0603",
+    "PTH",
+    "RET505",
+    "RUF012",
+    "S105",
+    "S110",
+    "S310",
+    "S603",
+    "SLF001",
+    "TCH",
+    "TD",
+    "TID252",
+    "TRY003",
+    "TRY300",
+    "TRY301",
+    "TRY401",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["B018", "BLE", "D", "DTZ", "INP001", "LOG001", "N802", "N803", "PLC0415", "PT", "S", "SIM117", "TRY"]
+"examples/**" = ["D", "EXE001", "INP001", "S110", "SIM105", "T201"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint.isort]
+lines-between-types = 1
+lines-after-imports = 2
+
+[tool.mypy]
+strict = true
+pretty = true
+show_error_codes = true
+enable_error_code = ["ignore-without-code"]
+ignore_missing_imports = true
+warn_return_any = false

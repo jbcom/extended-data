@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import re
 
 from importlib import import_module, resources
@@ -10,21 +11,24 @@ from pathlib import Path
 import tomlkit
 
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
-WORKFLOW_ROOT = REPO_ROOT / ".github" / "workflows"
+PACKAGE_ROOT = Path(__file__).resolve().parents[2]
+WORKSPACE_ROOT = Path(__file__).resolve().parents[4]
+REPO_ROOT = PACKAGE_ROOT
+WORKFLOW_ROOT = WORKSPACE_ROOT / ".github" / "workflows"
+PYTEST_PLUGIN_ROOT = WORKSPACE_ROOT / "packages" / "pytest-extended-data"
 ACTION_REF_WITH_COMMENT_RE = re.compile(r"^\s*(?:-\s*)?uses:\s*([^#\s]+)(?:\s+#\s*(\S+))?")
 PINNED_SHA_RE = re.compile(r"^[0-9a-f]{40}$")
 ACTION_VERSION_COMMENT_RE = re.compile(r"^v\d+\.\d+\.\d+$")
 PIN_TABLE_RE = re.compile(r"^\|\s*`{1,2}([^`]+)`{1,2}\s*\|\s*`{1,2}([^`]+)`{1,2}\s*\|\s*`{1,2}([0-9a-f]{40})`{1,2}\s*\|$")
 PUBLIC_TEXT_ROOTS = (
-    REPO_ROOT / "src",
-    REPO_ROOT / "docs",
-    REPO_ROOT / "examples",
-    REPO_ROOT / "README.md",
+    PACKAGE_ROOT / "src",
+    PACKAGE_ROOT / "docs",
+    PACKAGE_ROOT / "examples",
+    PACKAGE_ROOT / "README.md",
 )
 GENERATED_PUBLIC_TEXT_ROOTS = (
-    REPO_ROOT / "docs" / "_build",
-    REPO_ROOT / "docs" / "apidocs",
+    PACKAGE_ROOT / "docs" / "_build",
+    PACKAGE_ROOT / "docs" / "apidocs",
 )
 PUBLIC_TEXT_IGNORED_SUFFIXES = {".pyc", ".png"}
 OLD_PROJECT_TERMS = ("extended-data-library", "terraform-modules", "TerraformDataSource")
@@ -68,11 +72,19 @@ UNPATCHED_RUNTIME_VULNERABILITIES = {
 
 
 def _pyproject() -> tomlkit.TOMLDocument:
-    return tomlkit.parse((REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+    return tomlkit.parse((PACKAGE_ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+
+
+def _workspace_pyproject() -> tomlkit.TOMLDocument:
+    return tomlkit.parse((WORKSPACE_ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+
+
+def _pytest_plugin_pyproject() -> tomlkit.TOMLDocument:
+    return tomlkit.parse((PYTEST_PLUGIN_ROOT / "pyproject.toml").read_text(encoding="utf-8"))
 
 
 def _uv_lock() -> tomlkit.TOMLDocument:
-    return tomlkit.parse((REPO_ROOT / "uv.lock").read_text(encoding="utf-8"))
+    return tomlkit.parse((WORKSPACE_ROOT / "uv.lock").read_text(encoding="utf-8"))
 
 
 def _is_generated_public_text_path(path: Path) -> bool:
@@ -126,17 +138,17 @@ def _workflow_action_pins() -> dict[str, tuple[str, str]]:
             action, separator, ref = uses.rpartition("@")
             version = match.group(2)
             if not separator or PINNED_SHA_RE.fullmatch(ref) is None:
-                relative_path = path.relative_to(REPO_ROOT)
+                relative_path = path.relative_to(WORKSPACE_ROOT)
                 offenders.append(f"{relative_path}:{line_number}: {uses}")
                 continue
             if version is None or ACTION_VERSION_COMMENT_RE.fullmatch(version) is None:
-                relative_path = path.relative_to(REPO_ROOT)
+                relative_path = path.relative_to(WORKSPACE_ROOT)
                 offenders.append(f"{relative_path}:{line_number}: missing stable version comment for {uses}")
                 continue
 
             existing = pins.setdefault(action, (version, ref))
             if existing != (version, ref):
-                relative_path = path.relative_to(REPO_ROOT)
+                relative_path = path.relative_to(WORKSPACE_ROOT)
                 offenders.append(f"{relative_path}:{line_number}: conflicting pin for {action}")
 
     assert offenders == []
@@ -145,7 +157,7 @@ def _workflow_action_pins() -> dict[str, tuple[str, str]]:
 
 def _publishing_checklist_pins() -> dict[str, tuple[str, str]]:
     pins: dict[str, tuple[str, str]] = {}
-    checklist = (REPO_ROOT / "docs" / "PUBLISHING_CHECKLIST.rst").read_text(encoding="utf-8")
+    checklist = (PACKAGE_ROOT / "docs" / "PUBLISHING_CHECKLIST.rst").read_text(encoding="utf-8")
 
     for line in checklist.splitlines():
         match = PIN_TABLE_RE.match(line.strip())
@@ -154,7 +166,7 @@ def _publishing_checklist_pins() -> dict[str, tuple[str, str]]:
         action, version, ref = match.groups()
         pins[action] = (version, ref)
 
-    assert pins, "docs/PUBLISHING_CHECKLIST.rst must list current workflow action pins"
+    assert pins, "packages/extended-data/docs/PUBLISHING_CHECKLIST.rst must list current workflow action pins"
     return pins
 
 
@@ -193,9 +205,48 @@ def test_release_workflow_dispatches_cd_after_release_please() -> None:
     release_workflow = (WORKFLOW_ROOT / "release.yml").read_text(encoding="utf-8")
 
     assert "googleapis/release-please-action@" in release_workflow
-    assert "steps.release.outputs.release_created == 'true'" in release_workflow
     assert "GH_REPO: ${{ github.repository }}" in release_workflow
-    assert 'gh workflow run cd.yml --repo "$GH_REPO" --ref main -f tag="$RELEASE_TAG"' in release_workflow
+    assert "packages/extended-data--release_created" in release_workflow
+    assert "packages/pytest-extended-data--release_created" in release_workflow
+    assert 'gh workflow run cd.yml --repo "$GH_REPO" --ref main -f tag="$RELEASE_TAG" -f package="extended-data"' in release_workflow
+    assert 'gh workflow run cd.yml --repo "$GH_REPO" --ref main -f tag="$RELEASE_TAG" -f package="pytest-extended-data"' in release_workflow
+
+
+def test_workspace_declares_runtime_and_pytest_plugin_packages() -> None:
+    """The repository root should be an unpublished uv workspace."""
+    workspace = _workspace_pyproject()
+
+    assert workspace["tool"]["uv"]["package"] is False
+    assert set(workspace["tool"]["uv"]["workspace"]["members"]) == {
+        "packages/extended-data",
+        "packages/pytest-extended-data",
+    }
+    assert workspace["tool"]["uv"]["sources"]["extended-data"]["workspace"] is True
+    assert workspace["tool"]["uv"]["sources"]["pytest-extended-data"]["workspace"] is True
+
+
+def test_release_please_tracks_workspace_package_paths() -> None:
+    """Release Please should publish package paths instead of the workspace root."""
+    config = json.loads((WORKSPACE_ROOT / "release-please-config.json").read_text(encoding="utf-8"))
+    manifest = json.loads((WORKSPACE_ROOT / ".release-please-manifest.json").read_text(encoding="utf-8"))
+
+    assert set(config["packages"]) == {"packages/extended-data", "packages/pytest-extended-data"}
+    assert set(manifest) == {"packages/extended-data", "packages/pytest-extended-data"}
+    assert config["packages"]["packages/extended-data"]["package-name"] == "extended-data"
+    assert config["packages"]["packages/pytest-extended-data"]["package-name"] == "pytest-extended-data"
+    for package_config in config["packages"].values():
+        assert package_config["release-type"] == "python"
+        assert "extra-files" not in package_config
+
+
+def test_pytest_plugin_package_exposes_pytest11_entrypoint() -> None:
+    """Shared pytest behavior should live in the plugin package, not runtime code."""
+    plugin_project = _pytest_plugin_pyproject()["project"]
+
+    assert plugin_project["name"] == "pytest-extended-data"
+    assert "extended-data>=8.3.1" in plugin_project["dependencies"]
+    assert plugin_project["entry-points"]["pytest11"]["extended_data"] == "pytest_extended_data.plugin"
+    assert (PYTEST_PLUGIN_ROOT / "src" / "pytest_extended_data" / "py.typed").is_file()
 
 
 def test_public_text_does_not_reference_old_project_origins() -> None:
@@ -206,7 +257,7 @@ def test_public_text_does_not_reference_old_project_origins() -> None:
         text = path.read_text(encoding="utf-8")
         for term in (*OLD_PROJECT_TERMS, *OLD_PUBLIC_API_NAMES):
             if term in text:
-                offenders.append(f"{path.relative_to(REPO_ROOT)}: {term}")
+                offenders.append(f"{path.relative_to(PACKAGE_ROOT)}: {term}")
 
     assert offenders == []
 
@@ -216,12 +267,12 @@ def test_old_package_namespace_shims_do_not_exist() -> None:
     offenders: list[str] = []
 
     for namespace in OLD_PACKAGE_NAMESPACES:
-        package_path = REPO_ROOT / "src" / namespace
-        module_path = REPO_ROOT / "src" / f"{namespace}.py"
+        package_path = PACKAGE_ROOT / "src" / namespace
+        module_path = PACKAGE_ROOT / "src" / f"{namespace}.py"
         if package_path.exists():
-            offenders.append(str(package_path.relative_to(REPO_ROOT)))
+            offenders.append(str(package_path.relative_to(PACKAGE_ROOT)))
         if module_path.exists():
-            offenders.append(str(module_path.relative_to(REPO_ROOT)))
+            offenders.append(str(module_path.relative_to(PACKAGE_ROOT)))
 
     assert offenders == []
 
@@ -231,7 +282,7 @@ def test_typed_classifier_has_pep561_marker() -> None:
     classifiers = _pyproject()["project"]["classifiers"]
 
     assert "Typing :: Typed" in classifiers
-    assert (REPO_ROOT / "src" / "extended_data" / "py.typed").is_file()
+    assert (PACKAGE_ROOT / "src" / "extended_data" / "py.typed").is_file()
     assert resources.files("extended_data").joinpath("py.typed").is_file()
 
 

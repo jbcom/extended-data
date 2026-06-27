@@ -29,7 +29,7 @@ html_extra_path = ["CNAME"]
 html_theme_options = {
     "source_repository": "https://github.com/jbcom/extended-data/",
     "source_branch": "main",
-    "source_directory": "docs/",
+    "source_directory": "packages/extended-data/docs/",
     "light_css_variables": {
         "color-brand-primary": "#0f766e",
         "color-brand-content": "#115e59",
