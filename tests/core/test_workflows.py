@@ -144,6 +144,7 @@ def test_sync_value_to_file_dry_run_reports_change_without_writing(tmp_path: Pat
 
     assert result.changed is True
     assert result.dry_run is True
+    assert result.bytes_written == 0
     assert not (tmp_path / "config.json").exists()
 
 
@@ -165,6 +166,18 @@ def test_data_workflow_sync_file_returns_sync_result(tmp_path: Path) -> None:
     assert isinstance(result, DataSyncResult)
     assert result.to_dict()["changed"] is True
     assert result.metadata["steps"] == ["value"]
+
+
+def test_data_workflow_sync_file_preserves_steps_metadata(tmp_path: Path) -> None:
+    """Workflow metadata should not overwrite the reserved sync steps key."""
+    result = DataWorkflow.from_value({"service": "api"}, metadata={"steps": ["user"], "source": "test"}).sync_file(
+        "config.json",
+        encoding="json",
+        tld=tmp_path,
+    )
+
+    assert result.metadata["steps"] == ["value"]
+    assert result.metadata["source"] == "test"
 
 
 def test_data_workflow_merge_requires_mapping_values() -> None:

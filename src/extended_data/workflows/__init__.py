@@ -362,7 +362,7 @@ class DataWorkflow:
             allow_empty=allow_empty,
             dry_run=dry_run,
             tld=tld,
-            metadata={"steps": list(self._steps), **to_builtin(self.metadata)},
+            metadata={**to_builtin(self.metadata), "steps": list(self._steps)},
         )
 
 

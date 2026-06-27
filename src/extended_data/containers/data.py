@@ -97,6 +97,10 @@ class ExtendedData:
         except TypeError:
             return 1
 
+    def __bool__(self) -> bool:
+        """Mirror the truthiness of the wrapped value."""
+        return bool(self._value)
+
     def __getitem__(self, key: Any) -> Any:
         """Index the underlying value."""
         return self._value[key]

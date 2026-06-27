@@ -74,7 +74,7 @@ def sync_value_to_file(
         destination=ExtendedString(redact_sensitive_text(file_path)),
         changed=changed,
         dry_run=dry_run,
-        bytes_written=len(rendered.encode(charset)) if changed else 0,
+        bytes_written=len(rendered.encode(charset)) if changed and not dry_run else 0,
         encoding=ExtendedString(resolved_encoding),
         output_path=output_path,
         metadata=ExtendedDict(redact_sensitive_data(metadata or {})),

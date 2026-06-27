@@ -219,3 +219,13 @@ def test_extended_data_wraps_any_promoted_shape() -> None:
     assert transformed == ["api", "worker"]
     assert wrapped_string.upper_first() == "Api-gateway"
     assert ExtendedData(merged).as_builtin() == merged.as_builtin()
+
+
+def test_extended_data_truthiness_mirrors_wrapped_value() -> None:
+    """ExtendedData should not make scalar falsey values truthy."""
+    assert bool(ExtendedData(None)) is False
+    assert bool(ExtendedData(False)) is False
+    assert bool(ExtendedData(0)) is False
+    assert bool(ExtendedData("")) is False
+    assert bool(ExtendedData([])) is False
+    assert bool(ExtendedData("api")) is True
