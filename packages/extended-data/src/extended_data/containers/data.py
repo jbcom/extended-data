@@ -27,8 +27,12 @@ class ExtendedData:
     def __init_subclass__(cls, **kwargs: Any) -> None:
         """Make factory re-entry safe for downstream subclasses."""
         super().__init_subclass__(**kwargs)
-        original_init = cls.__dict__.get("__init__")
-        if original_init is None or getattr(original_init, "_extended_data_factory_guard", False):
+        original_init = getattr(cls, "__init__", None)
+        if (
+            original_init is None
+            or original_init is object.__init__
+            or getattr(original_init, "_extended_data_factory_guard", False)
+        ):
             return
 
         @wraps(original_init)

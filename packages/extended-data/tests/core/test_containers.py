@@ -602,6 +602,31 @@ def test_extended_data_subclasses_keep_identity_and_delegate_to_internal_value()
     assert to_builtin(coordinated) == [{"name": "worker"}, {"name": "scheduler"}]
 
 
+def test_extended_data_subclass_guard_supports_mixin_initializers() -> None:
+    """Factory re-entry should not rerun initializers inherited from mixins."""
+
+    class ProviderInitMixin:
+        def __init__(self, value: Any, *, provider: str = "mixin") -> None:
+            self.provider = provider
+            self.init_count = getattr(self, "init_count", 0) + 1
+            self._data = ExtendedData(value)
+
+        @property
+        def value(self) -> ExtendedData:
+            return self._data
+
+    class MixinCoordinatedData(ProviderInitMixin, ExtendedData):
+        pass
+
+    coordinated = MixinCoordinatedData({"service": {"name": "api"}}, provider="vendor")
+    promoted_again = ExtendedData(coordinated)
+
+    assert promoted_again is coordinated
+    assert coordinated.init_count == 1
+    assert coordinated.provider == "vendor"
+    assert coordinated["service"]["name"].upper_first() == "Api"
+
+
 def test_generic_extended_data_facade_methods_for_scalar_values(tmp_path: Path) -> None:
     """Scalar holders should expose the same explicit boundary helpers."""
     scalar = ExtendedData(42)
