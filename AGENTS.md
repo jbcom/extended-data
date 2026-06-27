@@ -6,7 +6,7 @@ workspace.
 Use the canonical checkout only:
 
 ```bash
-/Users/jbogaty/src/jbcom/extended-data
+~/src/jbcom/extended-data
 ```
 
 Do not create side worktrees for this repository. If useful work exists in
@@ -48,10 +48,10 @@ behavior, agent runtimes, or agent framework adapters. Those belong to
 
 | Layer | Local checkout | Remote |
 | --- | --- | --- |
-| Base data | `/Users/jbogaty/src/jbcom/extended-data` | `https://github.com/jbcom/extended-data` |
-| Vendor layer | `/Users/jbogaty/src/jbcom/vendor-fabric` | `https://github.com/jbcom/vendor-fabric` |
-| Agent layer | `/Users/jbogaty/src/jbcom/agentic-fabric` | `https://github.com/jbcom/agentic-fabric` |
-| Legacy monorepo | `/Users/jbogaty/src/jbcom/extended-data-library` | `https://github.com/jbcom/extended-data-library` |
+| Base data | `~/src/jbcom/extended-data` | `https://github.com/jbcom/extended-data` |
+| Vendor layer | `~/src/jbcom/vendor-fabric` | `https://github.com/jbcom/vendor-fabric` |
+| Agent layer | `~/src/jbcom/agentic-fabric` | `https://github.com/jbcom/agentic-fabric` |
+| Legacy monorepo | `~/src/jbcom/extended-data-library` | `https://github.com/jbcom/extended-data-library` |
 
 ## Architecture Docs
 

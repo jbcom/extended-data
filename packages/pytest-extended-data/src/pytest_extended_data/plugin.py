@@ -23,8 +23,7 @@ def assert_extended_shape(value: ExtendedData, shape: str) -> None:
     extended_data = _extended_data_type()
     if not isinstance(value, extended_data):
         raise TypeError(f"expected ExtendedData value, got {type(value).__name__}")
-    if value.shape != shape:
-        raise AssertionError(f"expected ExtendedData shape {shape!r}, got {value.shape!r}")
+    assert value.shape == shape, f"expected ExtendedData shape {shape!r}, got {value.shape!r}"
 
 
 def assert_builtin_round_trip(value: ExtendedData, expected: Any) -> None:
@@ -34,12 +33,10 @@ def assert_builtin_round_trip(value: ExtendedData, expected: Any) -> None:
         raise TypeError(f"expected ExtendedData value, got {type(value).__name__}")
 
     actual = value.as_builtin()
-    if actual != expected:
-        raise AssertionError(f"expected built-in data {expected!r}, got {actual!r}")
+    assert actual == expected, f"expected built-in data {expected!r}, got {actual!r}"
 
     round_trip = extended_data(actual).as_builtin()
-    if round_trip != expected:
-        raise AssertionError(f"expected round-trip data {expected!r}, got {round_trip!r}")
+    assert round_trip == expected, f"expected round-trip data {expected!r}, got {round_trip!r}"
 
 
 @pytest.fixture

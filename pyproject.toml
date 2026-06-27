@@ -110,6 +110,7 @@ ignore = [
 [tool.ruff.lint.per-file-ignores]
 "packages/*/tests/**" = ["B018", "BLE", "D", "DTZ", "INP001", "LOG001", "N802", "N803", "PLC0415", "PT", "S", "SIM117", "TRY"]
 "packages/extended-data/examples/**" = ["D", "EXE001", "INP001", "S110", "SIM105", "T201"]
+"packages/pytest-extended-data/src/pytest_extended_data/plugin.py" = ["S101"]
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"
