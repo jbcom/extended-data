@@ -1,4 +1,4 @@
 {
-  "packages/extended-data": "8.3.1",
-  "packages/pytest-extended-data": "0.0.0"
+  "packages/extended-data": "8.4.0",
+  "packages/pytest-extended-data": "0.1.0"
 }
