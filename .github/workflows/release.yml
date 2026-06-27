@@ -34,4 +34,4 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
           RELEASE_TAG: ${{ steps.release.outputs['packages/pytest-extended-data--tag_name'] }}
-        run: gh workflow run cd.yml --repo "$GH_REPO" --ref main -f tag="$RELEASE_TAG" -f package="pytest-extended-data"
+        run: gh workflow run cd-pytest-extended-data.yml --repo "$GH_REPO" --ref main -f tag="$RELEASE_TAG"
