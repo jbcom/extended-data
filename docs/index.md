@@ -8,7 +8,7 @@ inputs, and structured logging.
 pip install extended-data
 ```
 
-External API clients live in the separate `vendor-connectors` distribution.
+External API clients live in the separate `cloud-connectors` distribution.
 SecretSync's Python bridge lives in `secrets-sync-bridge`.
 
 ## Package Tiers

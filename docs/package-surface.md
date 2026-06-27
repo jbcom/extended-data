@@ -83,8 +83,8 @@ extended-data transform --file payload.json --step reconstruct --step unhump
 
 ## Split Packages
 
-`vendor-connectors` owns external API clients, optional vendor SDK dependencies,
-MCP/tool adapters, and vendor-specific examples. `secrets-sync-bridge` owns the
+`cloud-connectors` owns external API clients, optional provider SDK dependencies,
+MCP/tool adapters, and provider-specific examples. `secrets-sync-bridge` owns the
 Python bridge to the `secrets-sync` Go CLI.
 
 `extended-data` does not preserve `extended_data.connectors`,

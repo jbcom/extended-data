@@ -13,7 +13,7 @@ tiers:
 - Tier 3: data processors that compose the first two tiers for files, inputs,
   logging, export/import boundaries, and workflows.
 
-External API clients live in the separate `vendor-connectors` distribution.
+External API clients live in the separate `cloud-connectors` distribution.
 SecretSync's Python bridge lives in `secrets-sync-bridge`.
 
 ## Install

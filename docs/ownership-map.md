@@ -19,12 +19,12 @@ cadence are first-class.
 
 | Prior surface | Current repository | Install target |
 | --- | --- | --- |
-| External vendor API clients | `jbcom/vendor-connectors` | `vendor-connectors` |
-| Vendor MCP and tool adapters | `jbcom/vendor-connectors` | `vendor-connectors[...]` |
-| Meshy, Slack, Google, GitHub, AWS, Vault, Zoom, Anthropic, Cursor integrations | `jbcom/vendor-connectors` | `vendor-connectors[...]` |
+| External cloud and vendor API clients | `jbcom/cloud-connectors-python` | `cloud-connectors` |
+| Cloud connector MCP and tool adapters | `jbcom/cloud-connectors-python` | `cloud-connectors[...]` |
+| Meshy, Slack, Google, GitHub, AWS, Vault, Zoom, Anthropic, Cursor integrations | `jbcom/cloud-connectors-python` | `cloud-connectors[...]` |
 | SecretSync Python bridge | `jbcom/secrets-sync` | `secrets-sync-bridge` |
-| SecretSync agent tool wrappers | `jbcom/agentic-crew` | `agentic-crew[secrets-sync]` |
-| Agent framework integrations | `jbcom/agentic-crew` | `agentic-crew[...]` |
+| SecretSync agent tool wrappers | `jbcom/agent-orchestration` | `agentic-crew[secrets-sync]` |
+| Agent framework integrations | `jbcom/agent-orchestration` | `agentic-crew[...]` |
 
 The old in-package connector and secrets namespaces are intentionally absent.
 That is a clean major-version boundary: code should depend on the package that
@@ -36,10 +36,10 @@ The intended layering is dependency-inward:
 
 ```text
 extended-data
-  <- vendor-connectors
+  <- cloud-connectors
   <- secrets-sync-bridge
 
-vendor-connectors + secrets-sync-bridge
+cloud-connectors + secrets-sync-bridge
   <- agentic-crew
 ```
 
