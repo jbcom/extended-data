@@ -1,5 +1,12 @@
 # Changelog
 
+## [8.1.0](https://github.com/jbcom/extended-data/compare/extended-data-v8.0.0...extended-data-v8.1.0) (2026-06-27)
+
+
+### Features
+
+* add generic data facade and sync primitives ([daf4db8](https://github.com/jbcom/extended-data/commit/daf4db8d6bd681af285084380742cb492cc1a2b7))
+
 ## [8.0.0](https://github.com/jbcom/extended-data/compare/extended-data-v7.0.0...extended-data-v8.0.0) (2026-06-26)
 
 
