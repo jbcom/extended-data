@@ -1,5 +1,12 @@
 # Changelog
 
+## [8.4.2](https://github.com/jbcom/extended-data/compare/extended-data-v8.4.1...extended-data-v8.4.2) (2026-06-27)
+
+
+### Bug Fixes
+
+* close doc, autodoc2, and test coverage gaps ([#30](https://github.com/jbcom/extended-data/issues/30)) ([9c577df](https://github.com/jbcom/extended-data/commit/9c577df4e68c0ace888566a981f6054806b0da75))
+
 ## [8.4.1](https://github.com/jbcom/extended-data/compare/extended-data-v8.4.0...extended-data-v8.4.1) (2026-06-27)
 
 
