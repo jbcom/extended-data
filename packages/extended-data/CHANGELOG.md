@@ -1,5 +1,13 @@
 # Changelog
 
+## [8.4.3](https://github.com/jbcom/extended-data/compare/extended-data-v8.4.2...extended-data-v8.4.3) (2026-07-15)
+
+
+### Bug Fixes
+
+* align setup-uv publishing checklist pin ([2d08b45](https://github.com/jbcom/extended-data/commit/2d08b4567a80052b09b6f9457678b9c882d036d5))
+* restore extended-data release hygiene ([4207aec](https://github.com/jbcom/extended-data/commit/4207aecd639c4390098ccd6d61d42fc79b365282))
+
 ## [8.4.2](https://github.com/jbcom/extended-data/compare/extended-data-v8.4.1...extended-data-v8.4.2) (2026-06-27)
 
 
