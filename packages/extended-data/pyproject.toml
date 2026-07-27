@@ -33,7 +33,7 @@ classifiers = [
 ]
 dependencies = [
     "deepmerge>=2.0",
-    "gitpython>=3.1.0",
+    "gitpython>=3.1.54",
     "inflection>=0.5.1",
     "num2words>=0.5.14",
     "orjson>=3.10.7",
