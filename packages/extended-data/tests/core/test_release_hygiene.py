@@ -53,8 +53,10 @@ EXTRACTION_ERA_FRAMING = (
 BOUNDARY_DRIFT_TERMS = (
     "connector handoff",
     "``vendor-fabric`` owns agent workflows",
-    "``vendor-fabric`` owns external API clients, optional provider SDK\n"
-    "dependencies, MCP/tool adapters",
+    (
+        "``vendor-fabric`` owns external API clients, optional provider SDK\n"
+        "dependencies, MCP/tool adapters"
+    ),
     "| SecretSync agent tool | ``jbcom/vendor-fabric``",
     "| Agent framework       | ``jbcom/vendor-fabric``",
 )
@@ -353,17 +355,25 @@ def test_secretssync_alignment_documents_base_layer_boundary() -> None:
     alignment = SECRETSSYNC_ALIGNMENT.read_text(encoding="utf-8")
 
     for expected_text in (
-        "`secrets-sync` owns the Go pipeline runtime, CLI, GitHub Action, deployment\n"
-        "   artifacts, and the gopy binding source consumed from Python.",
-        "`vendor-fabric` owns the Python facade over those bindings, plus credential\n"
-        "   handoff, provider coordination, and `ExtendedData` integration.",
-        "`agentic-fabric` owns framework-specific tool wrapping and runtime\n"
-        "   orchestration on top of `VendorData`.",
+        (
+            "`secrets-sync` owns the Go pipeline runtime, CLI, GitHub Action, deployment\n"
+            "   artifacts, and the gopy binding source consumed from Python."
+        ),
+        (
+            "`vendor-fabric` owns the Python facade over those bindings, plus credential\n"
+            "   handoff, provider coordination, and `ExtendedData` integration."
+        ),
+        (
+            "`agentic-fabric` owns framework-specific tool wrapping and runtime\n"
+            "   orchestration on top of `VendorData`."
+        ),
         "`extended-data` stays the generic base layer underneath all of them.",
         "PyPI distribution: `secrets-sync-python-binding`",
         "Python import/module: `secrets_sync`",
-        "`extended-data` should stay agnostic to that binding and only provide generic\n"
-        "  primitives that the downstream facade layers can reuse.",
+        (
+            "`extended-data` should stay agnostic to that binding and only provide generic\n"
+            "  primitives that the downstream facade layers can reuse."
+        ),
         "Do not add SecretSync-specific runtime policy here.",
     ):
         assert expected_text in alignment
