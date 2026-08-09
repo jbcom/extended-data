@@ -539,7 +539,7 @@ dev = [
 dev = [
     { name = "mypy", specifier = ">=2.3.0" },
     { name = "pip-audit", specifier = "==2.10.1" },
-    { name = "ruff", specifier = ">=0.16.0" },
+    { name = "ruff", specifier = ">=0.16.1" },
     { name = "tox", specifier = ">=4.58.0" },
     { name = "tox-gh", specifier = ">=1.8.0" },
     { name = "tox-uv", specifier = ">=1.36.0" },
