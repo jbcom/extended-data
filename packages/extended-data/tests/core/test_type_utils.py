@@ -8,6 +8,7 @@ special type handling, and error handling mechanisms.
 from __future__ import annotations
 
 import datetime
+import time
 
 from pathlib import Path
 from typing import Any
@@ -803,3 +804,65 @@ class TestMakeHashable:
 
         result = make_hashable(CustomClass())
         assert result == "custom_str"
+
+
+class TestReDoSRegression:
+    """Tests for ReDoS vulnerability fixes (GitHub Security Alert #6)."""
+
+    def test_path_validation_completes_quickly_with_many_chars_followed_by_invalid(self) -> None:
+        """Ensure path validation doesn't cause catastrophic backtracking.
+        
+        This test addresses CWE-1333 (Inefficient Regular Expression Complexity).
+        Before the fix, the PATH_PATTERN regex had nested quantifiers that could
+        cause exponential time complexity with certain malicious inputs.
+        
+        The vulnerable pattern was: r'^(?:[a-zA-Z]:)?[\\/](?:[^<>:"|?*\n]+[\\/])*[^<>:"|?*\n]*$'
+        With nested quantifiers on character sets that could overlap.
+        """
+        # This string would cause ReDoS: many valid path characters followed by invalid
+        malicious_input = "/valid" + "a" * 50 + "!"
+        
+        start_time = time.time()
+        result = string_to_path(malicious_input)
+        elapsed_time = time.time() - start_time
+        
+        # Should complete in well under 1 second (ReDoS would take exponentially longer)
+        assert elapsed_time < 1.0, f"Path validation took {elapsed_time}s, possible ReDoS"
+        assert result is None, "Invalid path should return None"
+
+    def test_path_validation_rejects_forbidden_characters(self) -> None:
+        """Verify that paths with forbidden characters are rejected."""
+        forbidden_paths = [
+            "/path/with:colon",
+            "/path/with<angle",
+            '/path/with"quote',
+            "/path/with|pipe",
+            "/path/with?question",
+            "/path/with*asterisk",
+            "/path/with\nnewline",
+        ]
+        
+        for bad_path in forbidden_paths:
+            assert string_to_path(bad_path) is None, f"Should reject path with forbidden char: {bad_path}"
+
+    def test_path_validation_accepts_legitimate_paths(self) -> None:
+        """Verify that legitimate paths still work after the fix."""
+        valid_paths = [
+            "/valid/unix/path",
+            "/path-with-dashes",
+            "/path_with_underscores",
+            "/path.with.dots",
+            "/path/with spaces",
+            "C:\\windows\\path",
+            "D:/mixed/slashes",
+        ]
+        
+        for good_path in valid_paths:
+            result = string_to_path(good_path)
+            assert result is not None, f"Should accept valid path: {good_path}"
+            assert isinstance(result, Path)
+
+    def test_reconstruct_special_type_uses_safe_path_validation(self) -> None:
+        """Ensure reconstruct_special_type also uses the safe path validation."""
+        result = reconstruct_special_type("/valid/path")
+        assert isinstance(result, Path)

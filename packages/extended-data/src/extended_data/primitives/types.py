@@ -54,7 +54,10 @@ DATETIME_PATTERN: re.Pattern[str] = re.compile(
     r"^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}(:\d{2})?(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})?$"
 )  # Matches extended datetime formats like YYYY-MM-DDTHH:MM[:SS][.fff][Z|±hh:mm]
 TIME_PATTERN: re.Pattern[str] = re.compile(r"^\d{2}:\d{2}(:\d{2}(\.\d{1,6})?)?$")  # Matches HH:MM[:SS] and microseconds
-PATH_PATTERN: re.Pattern[str] = re.compile(r'^(?:[a-zA-Z]:)?[\\/](?:[^<>:"|?*\n]+[\\/])*[^<>:"|?*\n]*$')
+# Path validation pattern - simplified to avoid ReDoS vulnerability (CWE-1333)
+# Matches absolute paths starting with / or \ (or drive letter on Windows)
+# Forbidden characters are validated separately to prevent catastrophic backtracking
+PATH_PATTERN: re.Pattern[str] = re.compile(r'^(?:[a-zA-Z]:)?[\\/]')
 INTEGER_PATTERN: re.Pattern[str] = re.compile(r"^-?\d+$")
 NUMBER_PATTERN: re.Pattern[str] = re.compile(r"^-?\d+(\.\d+)?$")
 TRUTHY_PATTERN: re.Pattern[str] = re.compile(r"^(y|yes|t|true|on|1)$", re.IGNORECASE)
@@ -202,6 +205,23 @@ def string_to_int(val: str, raise_on_error: bool = False) -> int | None:
 def string_to_path(val: str | bytes | os.PathLike[str] | None, raise_on_error: bool = False) -> Path | None:
     """Converts a string or byte representation of a path to a pathlib.Path object.
 
+def _is_valid_path_string(val: str) -> bool:
+    """Check if a string is a valid path without using complex regex.
+    
+    Args:
+        val: String to validate as a path.
+    
+    Returns:
+        True if the string represents a valid absolute path, False otherwise.
+    """
+    # Must start with / or \ (or drive letter on Windows)
+    if not PATH_PATTERN.match(val):
+        return False
+    # Must not contain forbidden characters or newlines
+    forbidden_chars = '<>:"|?*'
+    return not any(char in val for char in forbidden_chars) and '\n' not in val
+
+
     Args:
         val (str | bytes | pathlib.Path | None): The value to convert.
         raise_on_error (bool): Whether to raise an error on invalid value. Defaults to False.
@@ -224,7 +244,7 @@ def string_to_path(val: str | bytes | os.PathLike[str] | None, raise_on_error: b
                 return None
         # Ensure val is converted to string before matching
         val = str(val)
-        if not PATH_PATTERN.match(val):
+        if not _is_valid_path_string(val):
             raise ConversionError(Path, val)
         return Path(val)
     except (ValueError, TypeError) as exc:
@@ -436,8 +456,9 @@ def reconstruct_special_type(converted_obj: str, fail_silently: bool = False) ->
         if TIME_PATTERN.match(converted_obj):
             return string_to_time(converted_obj)
         if PATH_PATTERN.match(converted_obj):
-            return pathlib.Path(converted_obj)
-        if TRUTHY_PATTERN.match(converted_obj) or FALSY_PATTERN.match(converted_obj):
+        # Use the safe path validation helper
+        if _is_valid_path_string(converted_obj):
+            return string_to_path(converted_obj)
             return string_to_bool(converted_obj)
         if NUMBER_PATTERN.match(converted_obj):
             if INTEGER_PATTERN.match(converted_obj):
