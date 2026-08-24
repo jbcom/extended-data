@@ -1,5 +1,13 @@
 # Changelog
 
+## [8.5.4](https://github.com/jbcom/extended-data/compare/extended-data-v8.5.3...extended-data-v8.5.4) (2026-08-24)
+
+
+### Bug Fixes
+
+* require HTTPS for remote file reads ([a3f2bf2](https://github.com/jbcom/extended-data/commit/a3f2bf28b2a97c37029c8b350ae5f7818ac904e2))
+* require HTTPS for remote file reads ([5204409](https://github.com/jbcom/extended-data/commit/520440986bcd54274e21327bda34694cd078c336))
+
 ## [8.5.3](https://github.com/jbcom/extended-data/compare/extended-data-v8.5.2...extended-data-v8.5.3) (2026-08-24)
 
 
