@@ -1,5 +1,13 @@
 # Changelog
 
+## [8.5.0](https://github.com/jbcom/extended-data/compare/extended-data-v8.4.3...extended-data-v8.5.0) (2026-08-24)
+
+
+### Features
+
+* migrate documentation and harden automation ([6174cc4](https://github.com/jbcom/extended-data/commit/6174cc4a7e3f381b584873dededbd75b403d7f55))
+* migrate documentation and harden automation ([eaad458](https://github.com/jbcom/extended-data/commit/eaad458aa42b3aa50e13a5e1ee82e71afea696ad))
+
 ## [8.4.3](https://github.com/jbcom/extended-data/compare/extended-data-v8.4.2...extended-data-v8.4.3) (2026-07-15)
 
 
