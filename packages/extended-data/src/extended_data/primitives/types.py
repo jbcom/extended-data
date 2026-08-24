@@ -23,7 +23,6 @@ Constants:
     - DATETIME_PATTERN: Regex for matching ISO 8601 datetime strings.
     - TIME_PATTERN: Regex for matching time strings.
     - INTEGER_PATTERN: Regex for matching integer strings.
-    - NUMBER_PATTERN: Regex for matching numeric strings.
     - TRUTHY_PATTERN: Regex for matching truthy strings.
     - FALSY_PATTERN: Regex for matching falsy strings.
 """
@@ -54,7 +53,6 @@ DATETIME_PATTERN: re.Pattern[str] = re.compile(
 )  # Matches extended datetime formats like YYYY-MM-DDTHH:MM[:SS][.fff][Z|±hh:mm]
 TIME_PATTERN: re.Pattern[str] = re.compile(r"^\d{2}:\d{2}(:\d{2}(\.\d{1,6})?)?$")  # Matches HH:MM[:SS] and microseconds
 INTEGER_PATTERN: re.Pattern[str] = re.compile(r"^-?\d+$")
-NUMBER_PATTERN: re.Pattern[str] = re.compile(r"^-?\d+(\.\d+)?$")
 TRUTHY_PATTERN: re.Pattern[str] = re.compile(r"^(y|yes|t|true|on|1)$", re.IGNORECASE)
 FALSY_PATTERN: re.Pattern[str] = re.compile(r"^(n|no|f|false|off|0)$", re.IGNORECASE)
 
@@ -83,6 +81,21 @@ def _is_valid_absolute_path_string(value: str) -> bool:
         character in '<>:"|?*\n\r\x00' and not (character == ":" and index == 1 and starts_with_drive)
         for index, character in enumerate(value)
     )
+
+
+def _is_decimal_number_string(value: str) -> bool:
+    """Return whether *value* uses the package's integer or decimal syntax.
+
+    A tiny parser keeps untrusted numeric text out of a backtracking regular
+    expression. It intentionally accepts only an optional leading minus sign,
+    one non-empty integer component, and an optional non-empty fractional
+    component, matching the existing conversion contract.
+    """
+    unsigned = value.removeprefix("-")
+    integer_part, separator, fractional_part = unsigned.partition(".")
+    if not integer_part.isdecimal():
+        return False
+    return not separator or fractional_part.isdecimal()
 
 
 class ConversionError(ValueError):
@@ -182,7 +195,7 @@ def string_to_float(val: str, raise_on_error: bool = False) -> float | None:
         ConversionError: If the value is invalid and raise_on_error is True.
     """
     val = str(val)
-    if NUMBER_PATTERN.match(val):
+    if _is_decimal_number_string(val):
         try:
             return float(val)
         except ValueError as exc:
@@ -463,7 +476,7 @@ def reconstruct_special_type(converted_obj: str, fail_silently: bool = False) ->
             return Path(converted_obj)
         if TRUTHY_PATTERN.match(converted_obj) or FALSY_PATTERN.match(converted_obj):
             return string_to_bool(converted_obj)
-        if NUMBER_PATTERN.match(converted_obj):
+        if _is_decimal_number_string(converted_obj):
             if INTEGER_PATTERN.match(converted_obj):
                 return string_to_int(converted_obj)
             return string_to_float(converted_obj)

@@ -284,6 +284,11 @@ def test_string_to_int_swallows_nested_conversion_errors_when_not_requested(mock
     assert string_to_int("3.14") is None
 
 
+def test_string_to_float_rejects_adversarial_decimal_text() -> None:
+    """Reject long malformed decimals without regex backtracking."""
+    assert string_to_float(("9" * 10_000) + ".") is None
+
+
 def test_string_to_int_raises_when_nested_conversion_returns_none(mocker) -> None:
     """Raise an integer conversion error when nested conversion returns no value."""
     mocker.patch("extended_data.primitives.types.string_to_float", return_value=None)
