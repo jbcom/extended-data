@@ -28,8 +28,9 @@ tox -e lint,typecheck,audit,py311,py312,py313,py314,examples,docs,build
 - Update adjacent version comments when refreshing action SHAs.
 - Use `gh` to verify latest stable action releases before changing pins.
 - Keep top-level `permissions: {}` and grant only job-scoped permissions.
-- SonarQube Cloud analysis runs in CI with the repository `SONAR_TOKEN`; its
-  scanner job produces `coverage.xml` before submitting analysis.
+- SonarQube Cloud analysis runs in CI with the organization-provided
+  `SONAR_TOKEN`; its scanner job produces `coverage.xml` before submitting
+  analysis. Do not create a colliding repository-scoped Sonar token.
 - The repository action allow-list must admit only the pinned
   `SonarSource/sonarqube-scan-action` family in addition to existing entries.
 
@@ -46,7 +47,7 @@ Current workflow action pins:
 | `actions/dependency-review-action` | `v5.0.0` | `a1d282b36b6f3519aa1f3fc636f609c47dddb294` |
 | `astral-sh/setup-uv` | `v10.0.1` | `20cfd1bf945f4377ade1205e4dbc17946fc9a30d` |
 | `googleapis/release-please-action` | `v5.0.0` | `45996ed1f6d02564a971a2fa1b5860e934307cf7` |
-| `SonarSource/sonarqube-scan-action` | `v7.0.0` | `c7ee0f9df90b7aa20e8dcf9695dcfe2e7da5b4f2` |
+| `SonarSource/sonarqube-scan-action` | `v8.2.1` | `22918119ff8e1ca75a623e15c8296b6ea4fbe28f` |
 
 ## Publishing Flow
 
