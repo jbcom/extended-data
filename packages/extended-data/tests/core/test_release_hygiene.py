@@ -267,6 +267,21 @@ def test_automerge_workflow_uses_org_ci_token_without_checkout() -> None:
         assert step.get("uses") != "actions/checkout"
 
 
+def test_repository_policy_gate_uses_read_only_pr_context_without_checkout() -> None:
+    """External control-plane checks must not need target-context credentials."""
+    policy_workflow = (WORKFLOW_ROOT / "repository-policy.yml").read_text(encoding="utf-8")
+    workflow = yaml.load(policy_workflow, Loader=yaml.BaseLoader)
+    policy_steps = workflow["jobs"]["gate"]["steps"]
+
+    assert "pull_request" in workflow["on"]
+    assert "pull_request_target" not in workflow["on"]
+    assert workflow["jobs"]["gate"]["permissions"] == {
+        "contents": "read",
+        "pull-requests": "read",
+    }
+    assert all(step.get("uses") != "actions/checkout" for step in policy_steps)
+
+
 def test_dependabot_covers_workspace_package_directories() -> None:
     """Dependabot should check each uv workspace package, plus root workflow files."""
     dependabot = yaml.safe_load(DEPENDABOT_CONFIG.read_text(encoding="utf-8"))

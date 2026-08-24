@@ -1,7 +1,10 @@
 name: Repository Policy
 
 on:
-  pull_request_target:
+  # This gate reads changed-file metadata through GitHub's API and never checks
+  # out PR code. `pull_request` keeps the token read-only for external forks
+  # and permits release-please's GitHub App PRs to run without approval.
+  pull_request:
     types: [opened, reopened, synchronize, ready_for_review]
 
 permissions: {}
