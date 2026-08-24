@@ -252,12 +252,17 @@ def test_automerge_workflow_uses_org_ci_token_without_checkout() -> None:
     automerge_workflow = (WORKFLOW_ROOT / "automerge.yml").read_text(encoding="utf-8")
     workflow = yaml.load(automerge_workflow, Loader=yaml.BaseLoader)
     automerge_steps = workflow["jobs"]["automerge"]["steps"]
-    merge_step = next(step for step in automerge_steps if step["name"] == "Enable auto-merge (merge commit)")
+    merge_step = next(
+        step for step in automerge_steps if step.get("name") == "Enable auto-merge (merge commit)"
+    )
 
     assert "pull_request_target" in workflow["on"]
     assert workflow["permissions"] == {"contents": "write", "pull-requests": "write"}
     assert merge_step["env"]["GH_TOKEN"] == "${{ secrets.CI_GITHUB_TOKEN }}"
     assert "--auto --merge" in merge_step["run"]
+    classification_step = next(step for step in automerge_steps if step.get("id") == "classification")
+    assert "/non-major-" in classification_step["run"]
+    assert "PR_TITLE" in classification_step["env"]
     for step in automerge_steps:
         assert step.get("uses") != "actions/checkout"
 
@@ -289,6 +294,7 @@ def test_lightweight_release_and_non_major_dependabot_prs_skip_expensive_ci() ->
     assert "release-please--" in ci_workflow
     assert "dependabot[bot]" in ci_workflow
     assert "/non-major-" in ci_workflow
+    assert "PR_TITLE" in ci_workflow
     assert "CI / gate" in ci_workflow
     assert "SonarQube Cloud" in ci_workflow
 
