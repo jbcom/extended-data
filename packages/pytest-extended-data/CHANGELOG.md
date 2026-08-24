@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.2.1](https://github.com/jbcom/extended-data/compare/pytest-extended-data-v0.2.0...pytest-extended-data-v0.2.1) (2026-08-24)
+
+
+### Bug Fixes
+
+* harden path validation and consumer guides ([8a83bd9](https://github.com/jbcom/extended-data/commit/8a83bd9e48cd77a6c3679e56eb9e994c71d2acb1))
+* harden path validation and consumer guides ([4768053](https://github.com/jbcom/extended-data/commit/47680537232e2460a583fde5d8ea136561249eb8))
+
 ## [0.2.0](https://github.com/jbcom/extended-data/compare/pytest-extended-data-v0.1.0...pytest-extended-data-v0.2.0) (2026-08-24)
 
 
