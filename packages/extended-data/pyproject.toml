@@ -74,13 +74,7 @@ dev = [
     "extended-data[tests,typing]",
     "ruff>=0.8.0",
 ]
-docs = [
-    "furo>=2025.12.19",
-    "myst-parser>=4.0.1,<6.0.0",
-    "sphinx>=8.2.3,<10.0.0",
-    "sphinx-autodoc2>=0.5.0",
-    "sphinx-copybutton>=0.5.2",
-]
+docs = []
 all = []
 
 [project.scripts]

@@ -14,3 +14,6 @@ coverage.xml
 .tox/
 packages/extended-data/docs/apidocs/
 packages/extended-data/docs/_build/
+docs/dist/
+docs/node_modules/
+node_modules/

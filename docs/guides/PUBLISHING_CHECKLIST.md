@@ -1,0 +1,89 @@
+# Publishing Checklist
+
+The workspace uses the standard `ci.yml` \> `release.yml` \> `cd.yml` workflow shape. `release.yml` owns release-please. When a release-please PR merge creates a release tag, it dispatches `cd.yml` with the selected package name. `extended-data` releases also deploy the Sourcey documentation site. Do not hand-edit versions, changelog entries, release tags, or GitHub releases during the normal release path.
+
+## Release Model
+
+- `release.yml` owns release-please version detection, changelog updates, release PRs, Git tags, and dispatching `cd.yml` after a release is created.
+- `cd.yml` owns tag-gated package verification, selected-package PyPI publication, and `extended-data` docs deployment.
+- `cd.yml` deploys GitHub Pages only for `extended-data` releases.
+- Published package names are `extended-data` and `pytest-extended-data`.
+- The CD workflow publishes only for the release tag passed by `release.yml`.
+- The PyPI job uses OIDC trusted publishing through `uv publish`; no PyPI token should be stored in repository secrets for the normal path.
+- PyPI trusted publishers for this repository must use workflow filename `cd.yml`.
+- Do not configure package release-please entries to update the root `uv.lock` through `extra-files`. The release PR owns package metadata, changelogs, and the release manifest; workspace setup can refresh the lock locally when needed.
+
+## Maintainer Preflight
+
+Run these before merging a release PR or manually dispatching release workflow diagnostics:
+
+``` bash
+uv sync --all-packages --all-extras --dev
+tox -e lint,typecheck,audit,py311,py312,py313,py314,examples,docs,build
+```
+
+## Workflow Hygiene
+
+- Keep `.github/workflows/*.yml` actions pinned to exact commit SHAs.
+- Update adjacent version comments when refreshing action SHAs.
+- Use `gh` to verify latest stable action releases before changing pins.
+- Keep top-level `permissions: {}` and grant only job-scoped permissions.
+
+Current workflow action pins:
+
+| Action | Stable version | Commit SHA |
+|----|----|----|
+| `actions/checkout` | `v7.0.1` | `3d3c42e5aac5ba805825da76410c181273ba90b1` |
+| `actions/configure-pages` | `v6.0.0` | `45bfe0192ca1faeb007ade9deae92b16b8254a0d` |
+| `actions/deploy-pages` | `v5.0.0` | `cd2ce8fcbc39b97be8ca5fce6e763baed58fa128` |
+| `actions/setup-python` | `v7.0.0` | `5fda3b95a4ea91299a34e894583c3862153e4b97` |
+| `actions/setup-node` | `v7.0.0` | `820762786026740c76f36085b0efc47a31fe5020` |
+| `actions/upload-pages-artifact` | `v5.0.0` | `fc324d3547104276b827a68afc52ff2a11cc49c9` |
+| `actions/dependency-review-action` | `v5.0.0` | `a1d282b36b6f3519aa1f3fc636f609c47dddb294` |
+| `astral-sh/setup-uv` | `v10.0.1` | `20cfd1bf945f4377ade1205e4dbc17946fc9a30d` |
+| `googleapis/release-please-action` | `v5.0.0` | `45996ed1f6d02564a971a2fa1b5860e934307cf7` |
+
+## Publishing Flow
+
+1.  Land normal feature, fix, docs, and maintenance commits using Conventional Commit prefixes.
+2.  Let `release.yml` open or update the release-please PR.
+3.  Review the release PR for the expected changelog and manifest updates.
+4.  Merge the release PR.
+5.  Confirm `release.yml` created the GitHub release and dispatched the expected package CD workflow.
+6.  Confirm the package CD workflow published to PyPI through trusted publishing.
+7.  For `extended-data` releases, confirm `cd.yml` deployed the Sourcey site to GitHub Pages for `extended-data.dev`.
+8.  Verify the package can be installed from PyPI:
+
+``` bash
+python -m pip install extended-data
+python -c "import extended_data; print(extended_data.__version__)"
+python -m pip install pytest-extended-data
+python -c "import pytest_extended_data; print(pytest_extended_data.__all__)"
+```
+
+## Manual Repairs
+
+Manual tags or PyPI uploads are repair paths, not the release process. If a release workflow fails after release-please creates a tag:
+
+1.  Keep the failed tag intact while diagnosing unless the release is proven unrecoverable.
+2.  Prefer rerunning the failed workflow job.
+3.  If a bad GitHub release was published, delete only the bad artifacts needed for repair.
+4.  Document the repair in the PR or release notes.
+
+## First `pytest-extended-data` Publish
+
+PyPI does not let a trusted publisher create a brand-new project unless there is a matching pending publisher. Before rerunning the first `pytest-extended-data` CD publish, add this pending publisher in PyPI:
+
+| Field             | Value                  |
+|-------------------|------------------------|
+| PyPI project      | `pytest-extended-data` |
+| GitHub owner      | `jbcom`                |
+| GitHub repository | `extended-data`        |
+| Workflow filename | `cd.yml`               |
+| Environment       | leave blank            |
+
+Then rerun:
+
+``` bash
+gh workflow run cd.yml --ref main -f tag=pytest-extended-data-v0.1.0 -f package=pytest-extended-data
+```

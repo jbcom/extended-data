@@ -1,0 +1,30 @@
+name: Repository Policy
+
+on:
+  pull_request_target:
+    types: [opened, reopened, synchronize, ready_for_review]
+
+permissions: {}
+
+jobs:
+  gate:
+    name: Repository Policy / gate
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    env:
+      GH_REPO: ${{ github.repository }}
+      HEAD_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name }}
+      PR_NUMBER: ${{ github.event.pull_request.number }}
+    steps:
+      - name: Reject external control-plane changes
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ "$HEAD_REPOSITORY" = "$GH_REPO" ]; then exit 0; fi
+          gh api --paginate "repos/$GH_REPO/pulls/$PR_NUMBER/files" --jq '.[].filename' > changed-files.txt
+          if grep -E '^(\.github/(workflows|actions)/|\.github/dependabot\.yml$|\.coderabbit\.ya?ml$|sonar-project\.properties$|release-please|\.release-please|docs/sourcey\.config\.ts$|docs/package\.json$|pnpm-lock\.yaml$|package\.json$|pyproject\.toml$|uv\.lock$)' changed-files.txt; then
+            echo "External pull requests may not change repository control-plane files." >&2
+            exit 1
+          fi

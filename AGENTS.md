@@ -28,7 +28,7 @@ The workspace root is not a published Python distribution.
 - Tier 1 pure data primitives under `extended_data.primitives`
 - Tier 2 extended containers under `extended_data.containers`
 - Tier 3 file, import, export, workflow, input, and logging processors
-- Sphinx/Furo/autodoc2 documentation for this package
+- Sourcey documentation, deterministic Python API-reference extraction, and GitHub Pages for this package
 - release-please, CD, PyPI publishing, and GitHub Pages for this package
 
 `pytest-extended-data` owns:
@@ -57,10 +57,10 @@ behavior, agent runtimes, or agent framework adapters. Those belong to
 
 Read these before changing code:
 
-- `packages/extended-data/docs/architecture.rst`: `ExtendedData` superclass
+- `docs/guides/architecture.md`: `ExtendedData` superclass
   and tier design
-- `packages/extended-data/docs/pillars.rst`: package ownership principles
-- `packages/extended-data/docs/ownership-map.rst`: moved surfaces and
+- `docs/guides/pillars.md`: package ownership principles
+- `docs/guides/ownership-map.md`: moved surfaces and
   destination repositories
 
 Do not migrate vendor connector or SecretSync provider code into this
@@ -74,10 +74,9 @@ repository.
 - Keep old namespace shims removed.
 - Use Python warnings, exceptions, and logging primitives in library code; keep
   runtime `print()` paths limited to CLI and examples.
-- Keep README, Sphinx guides, examples, and tests aligned with the public API.
-- Keep public docs in reStructuredText under `packages/extended-data/docs/`; do
-  not add authored Markdown pages there.
-- Build docs with Sphinx/Furo/autodoc2 and warnings as errors.
+- Keep README, Sourcey guides, examples, and tests aligned with the public API.
+- Keep public documentation under root `docs/`; Sourcey renders the sole production site.
+- Run `pnpm docs:validate` to ensure Sourcey and generated API/example pages are current.
 - Keep examples under test through `packages/extended-data/tests/examples`.
 - Keep pytest-specific developer hooks in `pytest-extended-data`; do not hide
   pytest plugin behavior in the runtime package.
@@ -104,8 +103,7 @@ Do not set `skip_missing_interpreters = true`. Python 3.11, 3.12, 3.13, and
 
 - Open ready pull requests by default, not draft pull requests.
 - Resolve CI failures and actionable review feedback before merge.
-- Squash merge only when the pull request is green and review feedback is
-  addressed.
+- Use merge commits only when the pull request is green and automated feedback is addressed.
 - Keep release-please configured for conventional commits so it can open release
   pull requests.
 - CD must build and publish packages to PyPI through trusted publishing.
