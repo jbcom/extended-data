@@ -64,6 +64,13 @@ def _readme_usage_snippet() -> str:
     return match.group("code")
 
 
+def _markdown_python_block(path: Path, block_number: int) -> str:
+    """Return a one-based Python fence from a public Markdown document."""
+    blocks = [match.group("code") for match in PYTHON_MARKDOWN_BLOCK_RE.finditer(path.read_text(encoding="utf-8"))]
+    assert len(blocks) >= block_number, f"{path} is missing Python block {block_number}"
+    return blocks[block_number - 1]
+
+
 def _rst_python_code_blocks(text: str) -> list[str]:
     blocks: list[str] = []
     lines = text.splitlines()
@@ -153,6 +160,34 @@ def test_readme_usage_snippet_runs(tmp_path: Path) -> None:
     )
 
     assert result.returncode == 0, f"README usage snippet failed\nSTDOUT:\n{result.stdout}\nSTDERR:\n{result.stderr}"
+
+
+@pytest.mark.parametrize(
+    ("markdown_path", "block_number"),
+    [
+        (WORKSPACE_ROOT / "README.md", 1),
+        (WORKSPACE_ROOT / "docs" / "guides" / "getting-started.md", 1),
+        (WORKSPACE_ROOT / "docs" / "guides" / "agentic-consumers.md", 1),
+    ],
+)
+def test_public_quickstart_snippets_run(markdown_path: Path, block_number: int, tmp_path: Path) -> None:
+    """Keep the primary human and agent-facing quickstarts executable."""
+    env = os.environ.copy()
+    env.pop("OVERRIDE_STDIN", None)
+
+    result = subprocess.run(
+        [sys.executable, "-c", _markdown_python_block(markdown_path, block_number)],
+        cwd=tmp_path,
+        env=env,
+        capture_output=True,
+        text=True,
+        timeout=15,
+        check=False,
+    )
+
+    assert result.returncode == 0, (
+        f"{markdown_path.name} Python block {block_number} failed\nSTDOUT:\n{result.stdout}\nSTDERR:\n{result.stderr}"
+    )
 
 
 def test_documentation_python_snippets_compile() -> None:

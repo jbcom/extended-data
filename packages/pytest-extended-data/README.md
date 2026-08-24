@@ -16,3 +16,22 @@ The plugin is exposed through the standard `pytest11` entry point. It provides:
 - `extended_data_value`: the payload wrapped as an `ExtendedData` value.
 - `assert_extended_shape(value, shape)`: assertion helper for shape checks.
 - `assert_builtin_round_trip(value, expected)`: assertion helper for export-boundary checks.
+
+Use the fixtures as consumer-facing contract checks, rather than duplicating
+private container implementation details in every downstream package:
+
+```python
+def test_configuration_boundary(extended_data_value):
+    assert extended_data_value["service"]["name"] == "api"
+    assert extended_data_value.as_builtin() == {
+        "service": {"name": "api", "ports": [8080, 8443]},
+        "enabled": True,
+    }
+```
+
+The runtime package deliberately has no pytest plugin. Install this package
+only in test environments so production dependencies remain focused on data
+handling.
+
+See the [Package Surface guide](https://extended-data.dev/guides/package-surface.html)
+for the runtime and plugin split.

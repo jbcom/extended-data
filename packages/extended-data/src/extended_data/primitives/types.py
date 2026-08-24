@@ -22,7 +22,6 @@ Constants:
     - DATE_PATTERN: Regex for matching ISO 8601 date strings.
     - DATETIME_PATTERN: Regex for matching ISO 8601 datetime strings.
     - TIME_PATTERN: Regex for matching time strings.
-    - PATH_PATTERN: Regex for matching Unix and Windows-style paths.
     - INTEGER_PATTERN: Regex for matching integer strings.
     - NUMBER_PATTERN: Regex for matching numeric strings.
     - TRUTHY_PATTERN: Regex for matching truthy strings.
@@ -54,11 +53,36 @@ DATETIME_PATTERN: re.Pattern[str] = re.compile(
     r"^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}(:\d{2})?(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})?$"
 )  # Matches extended datetime formats like YYYY-MM-DDTHH:MM[:SS][.fff][Z|±hh:mm]
 TIME_PATTERN: re.Pattern[str] = re.compile(r"^\d{2}:\d{2}(:\d{2}(\.\d{1,6})?)?$")  # Matches HH:MM[:SS] and microseconds
-PATH_PATTERN: re.Pattern[str] = re.compile(r'^(?:[a-zA-Z]:)?[\\/](?:[^<>:"|?*\n]+[\\/])*[^<>:"|?*\n]*$')
 INTEGER_PATTERN: re.Pattern[str] = re.compile(r"^-?\d+$")
 NUMBER_PATTERN: re.Pattern[str] = re.compile(r"^-?\d+(\.\d+)?$")
 TRUTHY_PATTERN: re.Pattern[str] = re.compile(r"^(y|yes|t|true|on|1)$", re.IGNORECASE)
 FALSY_PATTERN: re.Pattern[str] = re.compile(r"^(n|no|f|false|off|0)$", re.IGNORECASE)
+
+
+def _is_valid_absolute_path_string(value: str) -> bool:
+    """Return whether *value* is a portable absolute-path representation.
+
+    Path recognition is intentionally a small sequence of bounded operations,
+    rather than a nested regular expression. This helper accepts POSIX,
+    UNC-style, and drive-qualified Windows absolute paths without depending on
+    the operating system running the library. It rejects characters that are
+    invalid in Windows path components and control characters that should not
+    reach a filesystem boundary.
+    """
+    starts_with_separator = value.startswith(("/", "\\"))
+    starts_with_drive = (
+        len(value) >= 3
+        and value[0] in "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+        and value[1] == ":"
+        and value[2] in {"/", "\\"}
+    )
+    if not (starts_with_separator or starts_with_drive):
+        return False
+
+    return not any(
+        character in '<>:"|?*\n\r\x00' and not (character == ":" and index == 1 and starts_with_drive)
+        for index, character in enumerate(value)
+    )
 
 
 class ConversionError(ValueError):
@@ -222,9 +246,9 @@ def string_to_path(val: str | bytes | os.PathLike[str] | None, raise_on_error: b
                 if raise_on_error:
                     raise ConversionError(Path, val) from exc
                 return None
-        # Ensure val is converted to string before matching
+        # Normalize before applying portable, linear-time path validation.
         val = str(val)
-        if not PATH_PATTERN.match(val):
+        if not _is_valid_absolute_path_string(val):
             raise ConversionError(Path, val)
         return Path(val)
     except (ValueError, TypeError) as exc:
@@ -435,8 +459,8 @@ def reconstruct_special_type(converted_obj: str, fail_silently: bool = False) ->
             return string_to_date(converted_obj)
         if TIME_PATTERN.match(converted_obj):
             return string_to_time(converted_obj)
-        if PATH_PATTERN.match(converted_obj):
-            return pathlib.Path(converted_obj)
+        if _is_valid_absolute_path_string(converted_obj):
+            return Path(converted_obj)
         if TRUTHY_PATTERN.match(converted_obj) or FALSY_PATTERN.match(converted_obj):
             return string_to_bool(converted_obj)
         if NUMBER_PATTERN.match(converted_obj):

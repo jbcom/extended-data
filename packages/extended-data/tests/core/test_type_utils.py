@@ -718,6 +718,27 @@ def test_reconstruct_special_type_fail_silently() -> None:
 
 
 @pytest.mark.parametrize(
+    "value",
+    [
+        "/" + ("safe/" * 10_000) + "forbidden?",
+        "/path/with:colon",
+        "/path/with\nnewline",
+        "relative/path",
+        "C:relative\\path",
+    ],
+)
+def test_string_to_path_rejects_invalid_or_adversarial_path_text(value: str) -> None:
+    """Reject invalid paths without a backtracking regular-expression matcher."""
+    assert string_to_path(value) is None
+
+
+@pytest.mark.parametrize("value", ["/srv/config.yaml", r"C:\\config\\app.yaml", "D:/config/app.yaml"])
+def test_path_reconstruction_supports_portable_absolute_paths(value: str) -> None:
+    """Recognize supported absolute path forms when reconstructing values."""
+    assert reconstruct_special_type(value) == Path(value)
+
+
+@pytest.mark.parametrize(
     ("obj", "expected"),
     [
         (
