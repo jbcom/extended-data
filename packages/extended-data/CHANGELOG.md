@@ -1,5 +1,13 @@
 # Changelog
 
+## [8.5.2](https://github.com/jbcom/extended-data/compare/extended-data-v8.5.1...extended-data-v8.5.2) (2026-08-24)
+
+
+### Bug Fixes
+
+* harden path validation and consumer guides ([8a83bd9](https://github.com/jbcom/extended-data/commit/8a83bd9e48cd77a6c3679e56eb9e994c71d2acb1))
+* harden path validation and consumer guides ([4768053](https://github.com/jbcom/extended-data/commit/47680537232e2460a583fde5d8ea136561249eb8))
+
 ## [8.5.1](https://github.com/jbcom/extended-data/compare/extended-data-v8.5.0...extended-data-v8.5.1) (2026-08-24)
 
 
