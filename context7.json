@@ -1,0 +1,27 @@
+{
+  "$schema": "https://context7.com/schema/context7.json",
+  "projectTitle": "extended-data",
+  "description": "A Python workspace providing extended data primitives, native-like containers, and composable IO, workflow, input, and logging processors.",
+  "branch": "main",
+  "folders": [
+    "docs",
+    "packages/extended-data",
+    "packages/pytest-extended-data"
+  ],
+  "excludeFolders": [
+    "docs/dist",
+    ".github",
+    ".tox",
+    ".venv",
+    "node_modules",
+    "__pycache__",
+    "packages/**/tests"
+  ],
+  "rules": [
+    "Use ExtendedData as the common superclass and polymorphic constructor for incoming values.",
+    "Preserve native Python behavior in extended containers and promote nested built-in values on mutation.",
+    "Keep pure primitives independent of files, logging, vendors, network clients, and agent frameworks.",
+    "Keep vendor SDKs, cloud connectors, SecretSync provider behavior, and agent runtimes out of this package.",
+    "Use explicit data-boundary methods such as as_builtin() and to_export_safe() when leaving the extended-data model."
+  ]
+}

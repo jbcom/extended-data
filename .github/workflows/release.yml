@@ -24,7 +24,7 @@ jobs:
       - name: Enroll release pull requests for merge
         if: steps.release.outputs.prs_created == 'true'
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ secrets.CI_GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}
           RELEASE_PRS: ${{ steps.release.outputs.prs }}
         run: |

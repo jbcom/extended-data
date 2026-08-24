@@ -11,6 +11,12 @@ permissions: {}
 jobs:
   test:
     name: Python ${{ matrix.python-version }}
+    if: >
+      github.event_name != 'pull_request' || !(
+        startsWith(github.event.pull_request.head.ref, 'release-please--') ||
+        (github.event.pull_request.user.login == 'dependabot[bot]' &&
+          contains(github.event.pull_request.head.ref, '/non-major-'))
+      )
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -35,6 +41,12 @@ jobs:
 
   quality:
     name: CI / gate
+    if: >
+      github.event_name != 'pull_request' || !(
+        startsWith(github.event.pull_request.head.ref, 'release-please--') ||
+        (github.event.pull_request.user.login == 'dependabot[bot]' &&
+          contains(github.event.pull_request.head.ref, '/non-major-'))
+      )
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -59,7 +71,14 @@ jobs:
 
   sonarqube:
     name: SonarQube Cloud
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    if: >
+      (github.event_name != 'pull_request' ||
+        github.event.pull_request.head.repo.full_name == github.repository) &&
+      !(github.event_name == 'pull_request' && (
+        startsWith(github.event.pull_request.head.ref, 'release-please--') ||
+        (github.event.pull_request.user.login == 'dependabot[bot]' &&
+          contains(github.event.pull_request.head.ref, '/non-major-'))
+      ))
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -85,7 +104,12 @@ jobs:
 
   dependency-review:
     name: Dependency Review / gate
-    if: github.event_name == 'pull_request'
+    if: >
+      github.event_name == 'pull_request' && !(
+        startsWith(github.event.pull_request.head.ref, 'release-please--') ||
+        (github.event.pull_request.user.login == 'dependabot[bot]' &&
+          contains(github.event.pull_request.head.ref, '/non-major-'))
+      )
     runs-on: ubuntu-latest
     permissions:
       contents: read
