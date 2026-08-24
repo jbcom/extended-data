@@ -1,5 +1,15 @@
 # Changelog
 
+## [8.5.1](https://github.com/jbcom/extended-data/compare/extended-data-v8.5.0...extended-data-v8.5.1) (2026-08-24)
+
+
+### Bug Fixes
+
+* **ci:** classify dependabot updates by metadata ([0a157b9](https://github.com/jbcom/extended-data/commit/0a157b9ac8ba0ce18b8cb33a8178d924b75f897b))
+* **ci:** classify Dependabot updates by metadata ([dc6fbe6](https://github.com/jbcom/extended-data/commit/dc6fbe61765b7be11dc530c60ea50c561108e2d9))
+* **ci:** run policy gate for release PRs ([b086628](https://github.com/jbcom/extended-data/commit/b0866284a5ac3b94a99b5d358c673779d45410ef))
+* **ci:** run policy gate for release PRs ([7c54332](https://github.com/jbcom/extended-data/commit/7c543324cb7743c7c505aceabc34fed7509f8979))
+
 ## [8.5.0](https://github.com/jbcom/extended-data/compare/extended-data-v8.4.3...extended-data-v8.5.0) (2026-08-24)
 
 
