@@ -16,6 +16,8 @@ print(loaded["service"]["name"].upper_first())
 ```
 
 `DataFile` keeps source labels and metadata promoted and redacted before they enter workflow step names or result metadata.
+Remote reads accept HTTPS URLs only; clear-text and unsupported URL schemes are
+rejected before a request is created.
 
 ## DataWorkflow
 
