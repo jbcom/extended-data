@@ -247,8 +247,8 @@ def test_standard_workflow_file_set_is_present() -> None:
     assert all(not name.startswith("cd-") for name in workflow_names)
 
 
-def test_automerge_workflow_limits_default_token_permissions() -> None:
-    """Automerge should use a minimal base-context token without checking out PR code."""
+def test_automerge_workflow_uses_org_ci_token_without_checkout() -> None:
+    """Automerge should use the org CI token without checking out PR code."""
     automerge_workflow = (WORKFLOW_ROOT / "automerge.yml").read_text(encoding="utf-8")
     workflow = yaml.load(automerge_workflow, Loader=yaml.BaseLoader)
     automerge_steps = workflow["jobs"]["automerge"]["steps"]
@@ -256,7 +256,7 @@ def test_automerge_workflow_limits_default_token_permissions() -> None:
 
     assert "pull_request_target" in workflow["on"]
     assert workflow["permissions"] == {"contents": "write", "pull-requests": "write"}
-    assert merge_step["env"]["GH_TOKEN"] == "${{ github.token }}"
+    assert merge_step["env"]["GH_TOKEN"] == "${{ secrets.CI_GITHUB_TOKEN }}"
     assert "--auto --merge" in merge_step["run"]
     for step in automerge_steps:
         assert step.get("uses") != "actions/checkout"
@@ -278,6 +278,19 @@ def test_dependabot_covers_workspace_package_directories() -> None:
     assert github_actions_directories == {"/"}
     for update in updates:
         assert update["schedule"]["interval"] == "weekly"
+        assert update["groups"]["major"]["update-types"] == ["major"]
+        assert update["groups"]["non-major"]["update-types"] == ["minor", "patch"]
+
+
+def test_lightweight_release_and_non_major_dependabot_prs_skip_expensive_ci() -> None:
+    """Vetted release metadata and grouped non-major updates should avoid duplicate testing."""
+    ci_workflow = (WORKFLOW_ROOT / "ci.yml").read_text(encoding="utf-8")
+
+    assert "release-please--" in ci_workflow
+    assert "dependabot[bot]" in ci_workflow
+    assert "/non-major-" in ci_workflow
+    assert "CI / gate" in ci_workflow
+    assert "SonarQube Cloud" in ci_workflow
 
 
 def test_workspace_declares_runtime_and_pytest_plugin_packages() -> None:
