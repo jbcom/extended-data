@@ -8,7 +8,7 @@ const generatedApiPages = readdirSync(join(import.meta.dirname, "reference/gener
   .sort();
 
 const pages = {
-  gettingStarted: ["guides/getting-started", "guides/package-surface"],
+  gettingStarted: ["guides/getting-started", "guides/package-surface", "guides/agentic-consumers"],
   core: ["core/primitives", "core/containers", "core/workflows"],
   operations: ["operations/inputs", "operations/logging"],
   examples: ["examples/core", "examples/inputs", "examples/logging"],
