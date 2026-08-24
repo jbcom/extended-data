@@ -1,5 +1,13 @@
 # Changelog
 
+## [8.5.3](https://github.com/jbcom/extended-data/compare/extended-data-v8.5.2...extended-data-v8.5.3) (2026-08-24)
+
+
+### Bug Fixes
+
+* remove numeric regex backtracking ([1081062](https://github.com/jbcom/extended-data/commit/108106281579d5958914b2f236df14b3f1144a50))
+* remove numeric regex backtracking ([f7400a3](https://github.com/jbcom/extended-data/commit/f7400a35cbe842dd19db7ce7f9c99c827dabbcb8))
+
 ## [8.5.2](https://github.com/jbcom/extended-data/compare/extended-data-v8.5.1...extended-data-v8.5.2) (2026-08-24)
 
 
