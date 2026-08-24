@@ -12,6 +12,7 @@ from copy import deepcopy
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, TypeAlias, cast
+from urllib.parse import urlsplit
 
 import validators
 
@@ -411,13 +412,13 @@ def is_url(path: str) -> bool:
     """Check if a string is a valid and safe URL.
 
     Uses the validators library for robust URL validation,
-    restricted to HTTP/HTTPS schemes only.
+    restricted to HTTPS URLs only so remote file reads are encrypted in transit.
 
     Args:
         path (str): The string to check.
 
     Returns:
-        bool: True if the string is a valid HTTP/HTTPS URL.
+        bool: True if the string is a valid HTTPS URL.
     """
     if not path:
         return False
@@ -425,8 +426,7 @@ def is_url(path: str) -> bool:
     result = validators.url(path)
     if result is not True:
         return False
-    # Additional check: only allow http/https schemes
-    return path.startswith(("http://", "https://"))
+    return urlsplit(path).scheme == "https"
 
 
 def read_file(
@@ -455,11 +455,14 @@ def read_file(
 
     Raises:
         urllib.error.URLError: If the URL cannot be accessed.
-        ValueError: If the URL scheme is not allowed (only http/https permitted).
+        ValueError: If the URL scheme is not allowed (only HTTPS is permitted).
     """
     path_str = str(file_path)
 
-    # Handle URLs (is_url already validates HTTP/HTTPS only)
+    if "://" in path_str and not is_url(path_str):
+        raise ValueError("Remote file URLs must use HTTPS")
+
+    # Handle URLs (is_url already validates HTTPS only).
     if is_url(path_str):
         headers = headers or {}
         request = urllib.request.Request(path_str, headers=dict(headers))

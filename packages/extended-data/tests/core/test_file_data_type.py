@@ -302,7 +302,7 @@ def test_file_path_rel_to_root(file_path: FilePath, expected_rel_to_root: str) -
 @pytest.mark.parametrize(
     ("path", "expected"),
     [
-        ("http://example.com/file.txt", True),
+        ("http://example.com/file.txt", False),
         ("https://example.com/file.txt", True),
         ("/path/to/file.txt", False),
         ("relative/path.txt", False),
@@ -321,6 +321,13 @@ def test_is_url(path: str, expected: bool) -> None:
         The result of is_url matches the expected boolean value.
     """
     assert is_url(path) == expected
+
+
+@pytest.mark.parametrize("url", ["http://example.com/data.txt", "ftp://example.com/data.txt"])
+def test_read_file_rejects_unencrypted_or_unsupported_urls(url: str) -> None:
+    """Fail closed before a non-HTTPS URL can reach a network request."""
+    with pytest.raises(ValueError, match="must use HTTPS"):
+        read_file(url)
 
 
 def test_resolve_local_path_absolute() -> None:
