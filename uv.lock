@@ -372,7 +372,7 @@ wheels = [
 
 [[package]]
 name = "extended-data"
-version = "8.4.3"
+version = "8.5.0"
 source = { editable = "packages/extended-data" }
 dependencies = [
     { name = "deepmerge" },
@@ -1105,7 +1105,7 @@ wheels = [
 
 [[package]]
 name = "pytest-extended-data"
-version = "0.1.0"
+version = "0.2.0"
 source = { editable = "packages/pytest-extended-data" }
 dependencies = [
     { name = "extended-data" },
