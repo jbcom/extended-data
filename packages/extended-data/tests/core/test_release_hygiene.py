@@ -229,6 +229,7 @@ def test_release_workflow_dispatches_cd_after_release_please() -> None:
     release_workflow = (WORKFLOW_ROOT / "release.yml").read_text(encoding="utf-8")
 
     assert "googleapis/release-please-action@" in release_workflow
+    assert "token: ${{ secrets.CI_GITHUB_TOKEN }}" in release_workflow
     assert "GH_REPO: ${{ github.repository }}" in release_workflow
     assert "packages/extended-data--release_created" in release_workflow
     assert "packages/pytest-extended-data--release_created" in release_workflow
