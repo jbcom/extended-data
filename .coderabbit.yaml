@@ -1,0 +1,37 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+language: en-US
+reviews:
+  profile: assertive
+  high_level_summary: true
+  changed_files_summary: true
+  review_status: true
+  collapse_walkthrough: false
+  poem: false
+  request_changes_workflow: true
+  auto_review:
+    enabled: true
+    drafts: false
+    base_branches: [main]
+  pre_merge_checks:
+    title:
+      mode: error
+      requirements: "Use a Conventional Commit type, optionally followed by a scope."
+    description:
+      mode: warning
+    docstrings:
+      mode: warning
+      threshold: 85
+    custom_checks:
+      - name: Public API compatibility
+        mode: error
+        instructions: "Require deliberate documentation and tests for a breaking public API change."
+      - name: Workflow safety
+        mode: error
+        instructions: "Reject mutable Actions, privileged fork-code execution, leaked secrets, and unnecessary write permissions."
+  path_instructions:
+    - path: "packages/**/src/**/*.py"
+      instructions: "Preserve the ExtendedData tier boundaries, type safety, and native container behavior."
+    - path: ".github/**"
+      instructions: "Require least privilege, full-SHA action pins, and no execution of untrusted fork code in privileged jobs."
+    - path: "docs/**"
+      instructions: "Keep Sourcey as the sole docs renderer and preserve tested examples and generated-reference freshness."

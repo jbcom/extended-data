@@ -18,6 +18,7 @@ from extended_data import primitives
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
+WORKSPACE_ROOT = Path(__file__).resolve().parents[4]
 SAFE_EXAMPLES = [
     "examples/core/basic_usage.py",
     "examples/core/composed_workflows.py",
@@ -50,8 +51,8 @@ FUNCTION_FIRST_BASIC_USAGE_HELPERS = (
     "truncate",
 )
 ROOT_DISALLOWED_TIER1_IMPORTS = tuple(sorted(primitives.__all__))
-PYTHON_MARKDOWN_BLOCK_RE = re.compile(r"```python\n(?P<code>.*?)\n```", re.DOTALL)
-EXAMPLE_LITERAL_INCLUDE_RE = re.compile(r"^\.\. literalinclude::\s+\.\./\.\./(?P<path>examples/[^\s]+\.py)", re.MULTILINE)
+PYTHON_MARKDOWN_BLOCK_RE = re.compile(r"``` ?python\n(?P<code>.*?)\n```", re.DOTALL)
+EXAMPLE_PATH_RE = re.compile(r"packages/extended-data/(?P<path>examples/[^\s`]+\.py)")
 SENSITIVE_IDENTIFIER_RE = re.compile(r"(api_?key|secret|token|password|authorization)", re.IGNORECASE)
 
 
@@ -106,13 +107,13 @@ def test_example_inventory_is_complete() -> None:
     assert sorted(ALL_EXAMPLES) == discovered
 
 
-def test_all_examples_are_included_in_sphinx_docs() -> None:
-    """Every runnable example should be rendered from source in Sphinx docs."""
+def test_all_examples_are_included_in_sourcey_docs() -> None:
+    """Every runnable example should be rendered from source in Sourcey docs."""
     documented: set[str] = set()
 
-    for path in sorted((REPO_ROOT / "docs" / "examples").glob("*.rst")):
+    for path in sorted((WORKSPACE_ROOT / "docs" / "examples").glob("*.md")):
         text = path.read_text(encoding="utf-8")
-        documented.update(match.group("path") for match in EXAMPLE_LITERAL_INCLUDE_RE.finditer(text))
+        documented.update(match.group("path") for match in EXAMPLE_PATH_RE.finditer(text))
 
     assert set(ALL_EXAMPLES) == documented
 
@@ -157,25 +158,19 @@ def test_readme_usage_snippet_runs(tmp_path: Path) -> None:
 def test_documentation_python_snippets_compile() -> None:
     """Documentation snippets may be conceptual, but they should remain valid Python."""
     markdown_paths = [REPO_ROOT / "README.md"]
-    rst_paths = sorted((REPO_ROOT / "docs").rglob("*.rst"))
+    markdown_paths.extend(sorted((WORKSPACE_ROOT / "docs").rglob("*.md")))
     offenders: list[str] = []
 
     for path in sorted(markdown_paths):
         text = path.read_text(encoding="utf-8")
+        if "generated" in path.parts and "reference" in path.parts:
+            continue
         for index, match in enumerate(PYTHON_MARKDOWN_BLOCK_RE.finditer(text), start=1):
             code = match.group("code")
             try:
-                compile(code, f"{path.relative_to(REPO_ROOT)}#python-block-{index}", "exec")
+                compile(code, f"{path.relative_to(WORKSPACE_ROOT)}#python-block-{index}", "exec")
             except SyntaxError as exc:
-                offenders.append(f"{path.relative_to(REPO_ROOT)} block {index}: {exc}")
-
-    for path in rst_paths:
-        text = path.read_text(encoding="utf-8")
-        for index, code in enumerate(_rst_python_code_blocks(text), start=1):
-            try:
-                compile(code, f"{path.relative_to(REPO_ROOT)}#python-block-{index}", "exec")
-            except SyntaxError as exc:
-                offenders.append(f"{path.relative_to(REPO_ROOT)} block {index}: {exc}")
+                offenders.append(f"{path.relative_to(WORKSPACE_ROOT)} block {index}: {exc}")
 
     assert offenders == []
 

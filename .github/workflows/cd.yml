@@ -109,6 +109,12 @@ jobs:
       - uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
         with:
           enablement: true
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "22"
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - run: corepack enable
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.13"
@@ -116,12 +122,11 @@ jobs:
         with:
           version: "0.11.19"
           enable-cache: true
-      - run: uv sync --all-packages --all-extras --dev
-      - run: uv tool install tox --with tox-uv --with tox-gh
-      - run: tox -e docs
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --dir docs validate
       - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:
-          path: packages/extended-data/docs/_build/html
+          path: docs/dist
       - id: deployment
         name: Deploy docs
         uses: actions/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128 # v5.0.0

@@ -15,6 +15,7 @@ import yaml
 PACKAGE_ROOT = Path(__file__).resolve().parents[2]
 WORKSPACE_ROOT = Path(__file__).resolve().parents[4]
 REPO_ROOT = PACKAGE_ROOT
+DOCS_ROOT = WORKSPACE_ROOT / "docs"
 WORKFLOW_ROOT = WORKSPACE_ROOT / ".github" / "workflows"
 DEPENDABOT_CONFIG = WORKSPACE_ROOT / ".github" / "dependabot.yml"
 AGENTIC_REINFORCEMENT = WORKSPACE_ROOT / "AGENTIC_REINFORCEMENT.md"
@@ -26,13 +27,13 @@ ACTION_VERSION_COMMENT_RE = re.compile(r"^v\d+\.\d+\.\d+$")
 PIN_TABLE_RE = re.compile(r"^\|\s*`{1,2}([^`]+)`{1,2}\s*\|\s*`{1,2}([^`]+)`{1,2}\s*\|\s*`{1,2}([0-9a-f]{40})`{1,2}\s*\|$")
 PUBLIC_TEXT_ROOTS = (
     PACKAGE_ROOT / "src",
-    PACKAGE_ROOT / "docs",
+    DOCS_ROOT,
     PACKAGE_ROOT / "examples",
     PACKAGE_ROOT / "README.md",
 )
 GENERATED_PUBLIC_TEXT_ROOTS = (
-    PACKAGE_ROOT / "docs" / "_build",
-    PACKAGE_ROOT / "docs" / "apidocs",
+    DOCS_ROOT / "dist",
+    DOCS_ROOT / "reference" / "generated",
 )
 PUBLIC_TEXT_IGNORED_SUFFIXES = {".pyc", ".png"}
 OLD_PROJECT_TERMS = ("extended-data-library", "terraform-modules", "TerraformDataSource")
@@ -112,7 +113,12 @@ def _is_generated_public_text_path(path: Path) -> bool:
 
 
 def _is_public_text_file(path: Path) -> bool:
-    return path.is_file() and path.suffix not in PUBLIC_TEXT_IGNORED_SUFFIXES and not _is_generated_public_text_path(path)
+    return (
+        path.is_file()
+        and "node_modules" not in path.parts
+        and path.suffix not in PUBLIC_TEXT_IGNORED_SUFFIXES
+        and not _is_generated_public_text_path(path)
+    )
 
 
 def _iter_public_text_files(*roots: Path) -> list[Path]:
@@ -171,7 +177,7 @@ def _workflow_action_pins() -> dict[str, tuple[str, str]]:
 
 def _publishing_checklist_pins() -> dict[str, tuple[str, str]]:
     pins: dict[str, tuple[str, str]] = {}
-    checklist = (PACKAGE_ROOT / "docs" / "PUBLISHING_CHECKLIST.rst").read_text(encoding="utf-8")
+    checklist = (DOCS_ROOT / "guides" / "PUBLISHING_CHECKLIST.md").read_text(encoding="utf-8")
 
     for line in checklist.splitlines():
         match = PIN_TABLE_RE.match(line.strip())
@@ -180,7 +186,7 @@ def _publishing_checklist_pins() -> dict[str, tuple[str, str]]:
         action, version, ref = match.groups()
         pins[action] = (version, ref)
 
-    assert pins, "packages/extended-data/docs/PUBLISHING_CHECKLIST.rst must list current workflow action pins"
+    assert pins, "docs/guides/PUBLISHING_CHECKLIST.md must list current workflow action pins"
     return pins
 
 
@@ -246,11 +252,12 @@ def test_automerge_workflow_limits_default_token_permissions() -> None:
     automerge_workflow = (WORKFLOW_ROOT / "automerge.yml").read_text(encoding="utf-8")
     workflow = yaml.load(automerge_workflow, Loader=yaml.BaseLoader)
     automerge_steps = workflow["jobs"]["automerge"]["steps"]
-    merge_step = next(step for step in automerge_steps if step["name"] == "Enable auto-merge (squash)")
+    merge_step = next(step for step in automerge_steps if step["name"] == "Enable auto-merge (merge commit)")
 
     assert "pull_request_target" in workflow["on"]
     assert workflow["permissions"] == {"contents": "write", "pull-requests": "write"}
     assert merge_step["env"]["GH_TOKEN"] == "${{ github.token }}"
+    assert "--auto --merge" in merge_step["run"]
     for step in automerge_steps:
         assert step.get("uses") != "actions/checkout"
 
@@ -450,8 +457,8 @@ def test_public_install_guidance_names_known_extras() -> None:
     """Static install examples should not teach extras that pyproject does not publish."""
     known_extras = set(_pyproject()["project"]["optional-dependencies"])
     offenders: list[str] = []
-    for path in _iter_public_text_files(REPO_ROOT / "README.md", REPO_ROOT / "docs", REPO_ROOT / "examples", REPO_ROOT / "src"):
-        relative_path = path.relative_to(REPO_ROOT)
+    for path in _iter_public_text_files(REPO_ROOT / "README.md", DOCS_ROOT, REPO_ROOT / "examples", REPO_ROOT / "src"):
+        relative_path = path.relative_to(WORKSPACE_ROOT)
         for line_number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
             for match in EXTRA_REFERENCE_RE.finditer(line):
                 extra_group = match.group(1)
@@ -472,7 +479,7 @@ def test_public_install_guidance_documents_every_runtime_extra() -> None:
     text = "\n".join(
         [
             (REPO_ROOT / "README.md").read_text(encoding="utf-8"),
-            (REPO_ROOT / "docs" / "package-surface.rst").read_text(encoding="utf-8"),
+            (DOCS_ROOT / "guides" / "package-surface.md").read_text(encoding="utf-8"),
         ],
     )
 
@@ -540,7 +547,7 @@ def test_readme_package_shape_matches_public_subpackages() -> None:
 def test_public_guidance_does_not_use_removed_runtime_keywords() -> None:
     """Docs and examples should not keep teaching removed compatibility keywords."""
     offenders: list[str] = []
-    for path in _iter_public_text_files(REPO_ROOT / "README.md", REPO_ROOT / "docs", REPO_ROOT / "examples"):
+    for path in _iter_public_text_files(REPO_ROOT / "README.md", DOCS_ROOT, REPO_ROOT / "examples"):
         text = path.read_text(encoding="utf-8")
         for keyword in REMOVED_PUBLIC_KEYWORDS:
             if keyword in text:
@@ -552,7 +559,7 @@ def test_public_guidance_does_not_use_removed_runtime_keywords() -> None:
 def test_public_guidance_does_not_claim_removed_in_package_surfaces() -> None:
     """Public docs should not describe split packages as in-package modules."""
     offenders: list[str] = []
-    for path in _iter_public_text_files(REPO_ROOT / "README.md", REPO_ROOT / "docs", REPO_ROOT / "examples", REPO_ROOT / "src"):
+    for path in _iter_public_text_files(REPO_ROOT / "README.md", DOCS_ROOT, REPO_ROOT / "examples", REPO_ROOT / "src"):
         text = path.read_text(encoding="utf-8")
         for phrase in REMOVED_IN_PACKAGE_SURFACES:
             if phrase in text:
@@ -564,7 +571,7 @@ def test_public_guidance_does_not_claim_removed_in_package_surfaces() -> None:
 def test_public_guidance_uses_standalone_package_framing() -> None:
     """Public docs should not frame Extended Data as an extraction artifact."""
     offenders: list[str] = []
-    for path in _iter_public_text_files(REPO_ROOT / "README.md", REPO_ROOT / "docs", REPO_ROOT / "examples", REPO_ROOT / "src"):
+    for path in _iter_public_text_files(REPO_ROOT / "README.md", DOCS_ROOT, REPO_ROOT / "examples", REPO_ROOT / "src"):
         text = path.read_text(encoding="utf-8")
         for phrase in EXTRACTION_ERA_FRAMING:
             if phrase in text:
@@ -576,8 +583,8 @@ def test_public_guidance_uses_standalone_package_framing() -> None:
 def test_public_text_does_not_promise_future_api_surfaces() -> None:
     """Clean-break docs should describe current surfaces instead of placeholders."""
     offenders: list[str] = []
-    for path in _iter_public_text_files(REPO_ROOT / "README.md", REPO_ROOT / "docs", REPO_ROOT / "examples", REPO_ROOT / "src"):
-        relative_path = path.relative_to(REPO_ROOT)
+    for path in _iter_public_text_files(REPO_ROOT / "README.md", DOCS_ROOT, REPO_ROOT / "examples", REPO_ROOT / "src"):
+        relative_path = path.relative_to(WORKSPACE_ROOT)
         for line_number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
             normalized = line.lower()
             for phrase in FUTURE_API_PROMISES:
@@ -590,8 +597,8 @@ def test_public_text_does_not_promise_future_api_surfaces() -> None:
 def test_public_text_does_not_keep_bootstrap_markers() -> None:
     """Extracted package docs should not keep launch-era status markers."""
     offenders: list[str] = []
-    for path in _iter_public_text_files(REPO_ROOT / "README.md", REPO_ROOT / "docs", REPO_ROOT / "examples", REPO_ROOT / "src"):
-        relative_path = path.relative_to(REPO_ROOT)
+    for path in _iter_public_text_files(REPO_ROOT / "README.md", DOCS_ROOT, REPO_ROOT / "examples", REPO_ROOT / "src"):
+        relative_path = path.relative_to(WORKSPACE_ROOT)
         for line_number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
             for marker in BOOTSTRAP_TEXT_MARKERS:
                 if marker in line:
@@ -603,7 +610,7 @@ def test_public_text_does_not_keep_bootstrap_markers() -> None:
 def test_public_guidance_names_secrets_sync_roles_precisely() -> None:
     """Use SecretSync for the product and reserve exact names for CLI modules."""
     offenders: list[str] = []
-    for path in _iter_public_text_files(REPO_ROOT / "README.md", REPO_ROOT / "docs", REPO_ROOT / "src"):
+    for path in _iter_public_text_files(REPO_ROOT / "README.md", DOCS_ROOT, REPO_ROOT / "src"):
         text = path.read_text(encoding="utf-8")
         for pattern in SECRETSSYNC_PROJECT_PATTERNS:
             if pattern.search(text):
@@ -618,7 +625,7 @@ def test_public_guidance_names_secrets_sync_roles_precisely() -> None:
 
 def test_ownership_map_documents_moved_surfaces() -> None:
     """Moved surfaces should have explicit destination ownership in public docs."""
-    ownership_map = (REPO_ROOT / "docs" / "ownership-map.rst").read_text(encoding="utf-8")
+    ownership_map = (DOCS_ROOT / "guides" / "ownership-map.md").read_text(encoding="utf-8")
 
     for expected_text in (
         "jbcom/vendor-fabric",

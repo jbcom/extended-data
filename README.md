@@ -1,5 +1,7 @@
 # Extended Data Workspace
 
+![Extended Data — structured values crossing clear data boundaries](https://raw.githubusercontent.com/jbcom/extended-data/main/docs/assets/extended-data-hero.png)
+
 This repository is a `uv` workspace for the Extended Data package family.
 
 ## Packages
@@ -18,5 +20,5 @@ uv sync --all-packages --all-extras --dev
 tox -e lint,typecheck,audit,py311,py312,py313,py314,examples,docs,build
 ```
 
-Runtime package docs live in `packages/extended-data/docs` and deploy to
-<https://extended-data.dev>.
+The Sourcey documentation site lives in `docs/` and deploys to
+<https://extended-data.dev>. It is separate from the Python `uv` workspace.

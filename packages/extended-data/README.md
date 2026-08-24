@@ -1,5 +1,7 @@
 # Extended Data
 
+![Extended Data — structured values crossing clear data boundaries](https://raw.githubusercontent.com/jbcom/extended-data/main/docs/assets/extended-data-hero.png)
+
 Comprehensive Python data utilities for serialization, configuration inputs,
 structured logging, file processing, and workflow composition.
 
@@ -27,11 +29,10 @@ Documentation: [extended-data.dev](https://extended-data.dev)
 pip install extended-data
 ```
 
-Development and documentation extras are available for contributors:
+Development extras are available for contributors:
 
 ```bash
 pip install "extended-data[dev]"
-pip install "extended-data[docs]"
 ```
 
 ## Usage
@@ -124,4 +125,10 @@ tox -e py311,py312,py313,py314
 tox -e examples
 tox -e docs
 tox -e build
+```
+
+The documentation site uses the repository's independently locked Sourcey tooling:
+
+```bash
+pnpm docs:validate
 ```

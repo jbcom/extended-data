@@ -34,7 +34,7 @@ jobs:
       - run: tox -e "py$(echo '${{ matrix.python-version }}' | tr -d '.')"
 
   quality:
-    name: Quality, docs, and build
+    name: CI / gate
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -49,6 +49,23 @@ jobs:
         with:
           version: "0.11.19"
           enable-cache: true
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "22"
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - run: corepack enable
       - run: uv sync --all-packages --all-extras --dev
       - run: uv tool install tox --with tox-uv --with tox-gh
       - run: tox -e lint,typecheck,audit,examples,docs,build
+
+  dependency-review:
+    name: Dependency Review / gate
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
+        with:
+          fail-on-severity: high
