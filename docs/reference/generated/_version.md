@@ -12,3 +12,5 @@ def get_version() -> str:
 ## Source
 
 [View source](https://github.com/jbcom/extended-data/blob/main/packages/extended-data/src/extended_data/_version.py)
+
+<!-- Intentional generated-doc drift for protected-gate validation; this PR is closed after observation. -->
