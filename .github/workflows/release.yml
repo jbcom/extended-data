@@ -21,6 +21,16 @@ jobs:
         with:
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
+      - name: Enroll release pull requests for merge
+        if: steps.release.outputs.prs_created == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_PRS: ${{ steps.release.outputs.prs }}
+        run: |
+          printf '%s' "$RELEASE_PRS" | jq -r '.[].number' | while read -r pr_number; do
+            gh pr merge "$pr_number" --repo "$GH_REPO" --auto --merge
+          done
       - name: Dispatch extended-data continuous delivery
         if: steps.release.outputs['packages/extended-data--release_created'] == 'true'
         env:
