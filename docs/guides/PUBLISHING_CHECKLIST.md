@@ -30,6 +30,8 @@ tox -e lint,typecheck,audit,py311,py312,py313,py314,examples,docs,build
 - Keep top-level `permissions: {}` and grant only job-scoped permissions.
 - SonarQube Cloud analysis runs in CI with the repository `SONAR_TOKEN`; its
   scanner job produces `coverage.xml` before submitting analysis.
+- The repository action allow-list must admit only the pinned
+  `SonarSource/sonarqube-scan-action` family in addition to existing entries.
 
 Current workflow action pins:
 
