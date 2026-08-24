@@ -9,14 +9,52 @@ on:
 permissions: {}
 
 jobs:
+  classify-pr:
+    name: Classify pull request
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      skip-expensive-ci: ${{ steps.classification.outputs.skip-expensive-ci }}
+    steps:
+      - id: classification
+        env:
+          IS_RELEASE_PLEASE: ${{ startsWith(github.event.pull_request.head.ref, 'release-please--') }}
+          IS_DEPENDABOT: ${{ github.event.pull_request.user.login == 'dependabot[bot]' }}
+          PR_HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          python3 - <<'PY'
+          import os
+          import re
+
+          should_skip = os.environ["IS_RELEASE_PLEASE"] == "true"
+          if not should_skip and os.environ["IS_DEPENDABOT"] == "true":
+              # Dependabot documents group identifiers in its branch names. Its
+              # standard single-dependency titles provide a safe fallback while
+              # a group is first being adopted.
+              should_skip = "/non-major-" in os.environ["PR_HEAD_REF"]
+              if not should_skip:
+                  versions = re.search(
+                      r"\bfrom\s+[^0-9]*(\d+(?:\.\d+){0,2})\S*\s+to\s+[^0-9]*(\d+(?:\.\d+){0,2})",
+                      os.environ["PR_TITLE"],
+                  )
+                  if versions:
+                      old = tuple(int(part) for part in versions.group(1).split("."))
+                      new = tuple(int(part) for part in versions.group(2).split("."))
+                      old += (0,) * (3 - len(old))
+                      new += (0,) * (3 - len(new))
+                      should_skip = new > old and new[0] == old[0]
+
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
+              output.write(f"skip-expensive-ci={str(should_skip).lower()}\n")
+          PY
+
   test:
     name: Python ${{ matrix.python-version }}
-    if: >
-      github.event_name != 'pull_request' || !(
-        startsWith(github.event.pull_request.head.ref, 'release-please--') ||
-        (github.event.pull_request.user.login == 'dependabot[bot]' &&
-          contains(github.event.pull_request.head.ref, '/non-major-'))
-      )
+    needs: classify-pr
+    if: always() && needs.classify-pr.outputs.skip-expensive-ci != 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -41,12 +79,8 @@ jobs:
 
   quality:
     name: CI / gate
-    if: >
-      github.event_name != 'pull_request' || !(
-        startsWith(github.event.pull_request.head.ref, 'release-please--') ||
-        (github.event.pull_request.user.login == 'dependabot[bot]' &&
-          contains(github.event.pull_request.head.ref, '/non-major-'))
-      )
+    needs: classify-pr
+    if: always() && needs.classify-pr.outputs.skip-expensive-ci != 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -71,14 +105,11 @@ jobs:
 
   sonarqube:
     name: SonarQube Cloud
+    needs: classify-pr
     if: >
+      always() && needs.classify-pr.outputs.skip-expensive-ci != 'true' &&
       (github.event_name != 'pull_request' ||
-        github.event.pull_request.head.repo.full_name == github.repository) &&
-      !(github.event_name == 'pull_request' && (
-        startsWith(github.event.pull_request.head.ref, 'release-please--') ||
-        (github.event.pull_request.user.login == 'dependabot[bot]' &&
-          contains(github.event.pull_request.head.ref, '/non-major-'))
-      ))
+        github.event.pull_request.head.repo.full_name == github.repository)
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -104,12 +135,10 @@ jobs:
 
   dependency-review:
     name: Dependency Review / gate
+    needs: classify-pr
     if: >
-      github.event_name == 'pull_request' && !(
-        startsWith(github.event.pull_request.head.ref, 'release-please--') ||
-        (github.event.pull_request.user.login == 'dependabot[bot]' &&
-          contains(github.event.pull_request.head.ref, '/non-major-'))
-      )
+      always() && github.event_name == 'pull_request' &&
+      needs.classify-pr.outputs.skip-expensive-ci != 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read

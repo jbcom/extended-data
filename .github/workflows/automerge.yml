@@ -20,10 +20,38 @@ jobs:
     runs-on: ubuntu-latest
     if: >
       startsWith(github.event.pull_request.head.ref, 'release-please--') ||
-      (github.event.pull_request.user.login == 'dependabot[bot]' &&
-        contains(github.event.pull_request.head.ref, '/non-major-'))
+      github.event.pull_request.user.login == 'dependabot[bot]'
     steps:
+      - id: classification
+        env:
+          IS_RELEASE_PLEASE: ${{ startsWith(github.event.pull_request.head.ref, 'release-please--') }}
+          PR_HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          python3 - <<'PY'
+          import os
+          import re
+
+          should_merge = os.environ["IS_RELEASE_PLEASE"] == "true"
+          if not should_merge:
+              should_merge = "/non-major-" in os.environ["PR_HEAD_REF"]
+              if not should_merge:
+                  versions = re.search(
+                      r"\bfrom\s+[^0-9]*(\d+(?:\.\d+){0,2})\S*\s+to\s+[^0-9]*(\d+(?:\.\d+){0,2})",
+                      os.environ["PR_TITLE"],
+                  )
+                  if versions:
+                      old = tuple(int(part) for part in versions.group(1).split("."))
+                      new = tuple(int(part) for part in versions.group(2).split("."))
+                      old += (0,) * (3 - len(old))
+                      new += (0,) * (3 - len(new))
+                      should_merge = new > old and new[0] == old[0]
+
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
+              output.write(f"should-merge={str(should_merge).lower()}\n")
+          PY
       - name: Enable auto-merge (merge commit)
+        if: steps.classification.outputs.should-merge == 'true'
         env:
           GH_TOKEN: ${{ secrets.CI_GITHUB_TOKEN }}
           PR_URL: ${{ github.event.pull_request.html_url }}
