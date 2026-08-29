@@ -166,6 +166,7 @@ def snake_case_map() -> dict:
     return {
         "camel_case_key": "value1",
         "another_camel_case": {"nested_camel_case_key": "nested_value1"},
+        "without_prefix": "value2",
     }
 
 
@@ -478,21 +479,18 @@ def test_sorted_default_dict_creates_defaults_and_keeps_keys_sorted() -> None:
     assert result["a"] == [1]
 
 
-def test_unhump_map(camel_case_map: dict) -> None:
+def test_unhump_map(camel_case_map: dict, snake_case_map: dict) -> None:
     """Tests converting camelCase keys to snake_case.
 
     Args:
         camel_case_map (dict): A map with camelCase keys provided by the fixture.
+        snake_case_map (dict): The expected snake_case map provided by the fixture.
 
     Asserts:
         The result of unhump_map matches the expected snake_case map.
     """
     result = unhump_map(camel_case_map, drop_without_prefix=None)
-    assert result == {
-        "camel_case_key": "value1",
-        "another_camel_case": {"nested_camel_case_key": "nested_value1"},
-        "without_prefix": "value2",
-    }
+    assert result == snake_case_map
 
 
 def test_unhump_map_drops_keys_without_prefix() -> None:
