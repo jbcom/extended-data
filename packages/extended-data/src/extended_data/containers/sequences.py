@@ -219,17 +219,7 @@ class ExtendedTuple(tuple[T, ...], ExtendedData):
         """Return a recursively flattened tuple copy."""
         from extended_data.containers.factory import to_builtin
 
-        def _flatten(items: Iterable[Any]) -> list[Any]:
-            flattened: list[Any] = []
-            for item in items:
-                plain_item = to_builtin(item)
-                if isinstance(plain_item, list | tuple):
-                    flattened.extend(_flatten(plain_item))
-                else:
-                    flattened.append(plain_item)
-            return flattened
-
-        return ExtendedTuple(_flatten(self))
+        return ExtendedTuple(flatten_list(to_builtin(tuple(self))))
 
     def compact(self) -> ExtendedTuple[T]:
         """Return a copy without values considered empty."""
