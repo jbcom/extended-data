@@ -6,12 +6,22 @@ import json
 
 from unittest.mock import patch
 
+import pytest
+
 from extended_data import cli as cli_module
 
 
 def _stdout_text(mock_write) -> str:
     """Return concatenated stdout writes from a patched writer."""
     return "".join(call.args[0] for call in mock_write.call_args_list if call.args)
+
+
+def _assert_stdout_substrings(mock_write, *fragments: str) -> str:
+    """Return the captured stdout text and assert it contains every fragment."""
+    output = _stdout_text(mock_write)
+    for fragment in fragments:
+        assert fragment in output
+    return output
 
 
 def test_decode_inline_json_exports_through_datafile_boundary() -> None:
@@ -285,7 +295,9 @@ def test_decode_compact_json_drops_indent() -> None:
 def test_decode_non_json_output_ignores_compact() -> None:
     """--compact only affects JSON; YAML output should remain unchanged."""
     with patch("sys.stdout.write") as mock_write:
-        exit_code = cli_module.main(["decode", '{"service": "api"}', "--suffix", "json", "--output", "yaml", "--compact"])
+        exit_code = cli_module.main(
+            ["decode", '{"service": "api"}', "--suffix", "json", "--output", "yaml", "--compact"]
+        )
 
     assert exit_code == 0
     output = _stdout_text(mock_write)
@@ -293,113 +305,82 @@ def test_decode_non_json_output_ignores_compact() -> None:
     assert "api" in output
 
 
-def test_decode_toml_output() -> None:
-    """decode should emit TOML when --output toml is requested."""
-    with patch("sys.stdout.write") as mock_write:
-        exit_code = cli_module.main(["decode", '{"service": "api", "replicas": 3}', "--suffix", "json", "--output", "toml"])
+@pytest.mark.parametrize(
+    ("command_args", "expected_fragments"),
+    [
+        pytest.param(
+            ["decode", '{"service": "api", "replicas": 3}', "--suffix", "json", "--output", "toml"],
+            ('service = "api"', "replicas = 3"),
+            id="decode-toml",
+        ),
+        pytest.param(
+            ["decode", '{"locals": [{"region": "us-east-1"}]}', "--suffix", "json", "--output", "hcl"],
+            ("locals {", 'region = "us-east-1"'),
+            id="decode-hcl",
+        ),
+        pytest.param(
+            ["inspect", '--file', '{"service": "api"}', "--output", "toml"],
+            ("source", "json"),
+            id="inspect-toml",
+        ),
+        pytest.param(
+            ["inspect", '{"service": "api"}', "--suffix", "json", "--output", "hcl"],
+            ("source", "memory"),
+            id="inspect-hcl",
+        ),
+        pytest.param(
+            ["merge", '{"service": "api", "replicas": 1}', '{"replicas": 3}', "--output", "toml"],
+            ('service = "api"', "replicas = 3"),
+            id="merge-toml",
+        ),
+        pytest.param(
+            ["merge", '{"locals": [{"region": "us-east-1"}]}', '{"locals": [{"zone": "a"}]}', "--output", "hcl"],
+            ("locals {",),
+            id="merge-hcl",
+        ),
+        pytest.param(
+            ["transform", '{"HTTPResponseCode": "200"}', "--suffix", "json", "--step", "reconstruct", "--step", "unhump", "--output", "toml"],
+            ("http_response_code", "200"),
+            id="transform-toml",
+        ),
+        pytest.param(
+            ["transform", '{"locals": [{"region": "us-east-1"}]}', "--suffix", "json", "--step", "reconstruct", "--output", "hcl"],
+            ("locals {",),
+            id="transform-hcl",
+        ),
+    ],
+)
+def test_command_emits_requested_output_format(tmp_path, command_args: list[str], expected_fragments: tuple[str, ...]) -> None:
+    """decode, inspect, merge, and transform should honour --output toml and --output hcl."""
+    from pathlib import Path
 
-    assert exit_code == 0
-    output = _stdout_text(mock_write)
-    assert 'service = "api"' in output
-    assert "replicas = 3" in output
+    paths: dict[str, Path] = {}
+    if "merge" in command_args:
+        merged_args: list[str] = []
+        for arg in command_args:
+            if arg == "merge":
+                merged_args.append(arg)
+                continue
+            if arg.startswith("{"):
+                path = tmp_path / f"input{len(paths)}.json"
+                path.write_text(arg, encoding="utf-8")
+                paths[str(path)] = path
+                merged_args.append(str(path))
+            else:
+                merged_args.append(arg)
+        command_args = merged_args
 
-
-def test_decode_hcl_output() -> None:
-    """decode should emit HCL when --output hcl is requested."""
-    with patch("sys.stdout.write") as mock_write:
-        exit_code = cli_module.main(["decode", '{"locals": [{"region": "us-east-1"}]}', "--suffix", "json", "--output", "hcl"])
-
-    assert exit_code == 0
-    output = _stdout_text(mock_write)
-    assert "locals {" in output
-    assert 'region = "us-east-1"' in output
-
-
-def test_inspect_toml_output(tmp_path) -> None:
-    """inspect should emit TOML metadata when --output toml is requested."""
-    config = tmp_path / "service.json"
-    config.write_text('{"service": "api"}', encoding="utf-8")
-
-    with patch("sys.stdout.write") as mock_write:
-        exit_code = cli_module.main(["inspect", "--file", str(config), "--output", "toml"])
-
-    assert exit_code == 0
-    output = _stdout_text(mock_write)
-    assert "source" in output
-    assert "json" in output
-
-
-def test_inspect_hcl_output() -> None:
-    """inspect should emit HCL metadata when --output hcl is requested."""
-    with patch("sys.stdout.write") as mock_write:
-        exit_code = cli_module.main(["inspect", '{"service": "api"}', "--suffix", "json", "--output", "hcl"])
-
-    assert exit_code == 0
-    output = _stdout_text(mock_write)
-    assert "source" in output
-    assert "memory" in output
-
-
-def test_merge_toml_output(tmp_path) -> None:
-    """merge should emit TOML when --output toml is requested."""
-    base = tmp_path / "base.json"
-    env = tmp_path / "env.json"
-    base.write_text('{"service": "api", "replicas": 1}', encoding="utf-8")
-    env.write_text('{"replicas": 3}', encoding="utf-8")
-
-    with patch("sys.stdout.write") as mock_write:
-        exit_code = cli_module.main(["merge", str(base), str(env), "--output", "toml"])
-
-    assert exit_code == 0
-    output = _stdout_text(mock_write)
-    assert 'service = "api"' in output
-    assert "replicas = 3" in output
-
-
-def test_merge_hcl_output(tmp_path) -> None:
-    """merge should emit HCL when --output hcl is requested."""
-    base = tmp_path / "base.json"
-    env = tmp_path / "env.json"
-    base.write_text('{"locals": [{"region": "us-east-1"}]}', encoding="utf-8")
-    env.write_text('{"locals": [{"zone": "a"}]}', encoding="utf-8")
-
-    with patch("sys.stdout.write") as mock_write:
-        exit_code = cli_module.main(["merge", str(base), str(env), "--output", "hcl"])
-
-    assert exit_code == 0
-    output = _stdout_text(mock_write)
-    assert "locals {" in output
-
-
-def test_transform_toml_output(tmp_path) -> None:
-    """transform should emit TOML when --output toml is requested."""
-    payload = tmp_path / "payload.json"
-    payload.write_text('{"HTTPResponseCode": "200"}', encoding="utf-8")
+    if "inspect" in command_args and "--file" in command_args:
+        file_index = command_args.index("--file") + 1
+        file_path = tmp_path / "service.json"
+        file_path.write_text(command_args[file_index], encoding="utf-8")
+        command_args[file_index] = str(file_path)
 
     with patch("sys.stdout.write") as mock_write:
-        exit_code = cli_module.main(
-            ["transform", "--file", str(payload), "--step", "reconstruct", "--step", "unhump", "--output", "toml"]
-        )
+        exit_code = cli_module.main(command_args)
 
     assert exit_code == 0
-    output = _stdout_text(mock_write)
-    assert "http_response_code" in output
-    assert "200" in output
-
-
-def test_transform_hcl_output(tmp_path) -> None:
-    """transform should emit HCL when --output hcl is requested."""
-    payload = tmp_path / "payload.json"
-    payload.write_text('{"locals": [{"region": "us-east-1"}]}', encoding="utf-8")
-
-    with patch("sys.stdout.write") as mock_write:
-        exit_code = cli_module.main(
-            ["transform", "--file", str(payload), "--step", "reconstruct", "--output", "hcl"]
-        )
-
-    assert exit_code == 0
-    output = _stdout_text(mock_write)
-    assert "locals {" in output
+    _assert_stdout_substrings(mock_write, *expected_fragments)
 
 
 def test_merge_allow_empty_writes_empty_output(tmp_path) -> None:
