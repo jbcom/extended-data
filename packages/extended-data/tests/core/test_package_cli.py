@@ -9,8 +9,8 @@ from unittest.mock import patch
 from extended_data import cli as cli_module
 
 
-def _stdout_text(mock_write) -> str:
-    """Return concatenated stdout writes from a patched writer."""
+def _captured_write_text(mock_write) -> str:
+    """Return concatenated text written through a patched writer."""
     return "".join(call.args[0] for call in mock_write.call_args_list if call.args)
 
 
