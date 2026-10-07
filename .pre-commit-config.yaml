@@ -16,6 +16,6 @@ repos:
     hooks:
       - id: ruff
         name: ruff
-        entry: uv run ruff check packages
+        entry: uv run ruff check packages scripts
         language: system
         pass_filenames: false

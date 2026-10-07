@@ -8,6 +8,17 @@ The workspace uses release-please, GitHub Releases, and PyPI trusted publishing.
 tox -e lint,typecheck,audit,py311,py312,py313,py314,examples,docs,build
 ```
 
+The build gate checks both wheels and source archives for private runtime state,
+generated documentation caches, and machine paths. Source archives select package
+source, tests, examples where present, and package metadata explicitly; the public
+documentation site lives under the workspace's root `docs/` directory.
+
+After building, the archive check can also run directly:
+
+``` bash
+python scripts/verify_distributions.py dist/extended-data dist/pytest-extended-data
+```
+
 ## Release Flow
 
 1.  Merge feature, fix, docs, and maintenance commits to `main`.
