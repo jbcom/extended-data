@@ -1,5 +1,16 @@
 # Changelog
 
+## [8.5.6](https://github.com/jbcom/extended-data/compare/extended-data-v8.5.5...extended-data-v8.5.6) (2026-10-07)
+
+
+### Bug Fixes
+
+* harden distribution checks across build platforms ([87b5bb8](https://github.com/jbcom/extended-data/commit/87b5bb816496ff1f9125e77f672f0929312dbf21))
+* harden distribution checks across build platforms ([#108](https://github.com/jbcom/extended-data/issues/108)) ([a17931f](https://github.com/jbcom/extended-data/commit/a17931f21c0bd1e24f2f11320ddfefdb2e2839e7))
+* normalize serialized machine paths in distributions ([ba6e034](https://github.com/jbcom/extended-data/commit/ba6e034b9a4001c3669ce9b5653e43eb4b0f234e))
+* recognize home path boundaries and Windows casing ([7adac2a](https://github.com/jbcom/extended-data/commit/7adac2ad68afb3904cd55f728b77e313cc3f6660))
+* reject escaped and named Windows archive paths ([3d117d7](https://github.com/jbcom/extended-data/commit/3d117d72744f4648bc1ac4f555ed851ad1947404))
+
 ## [8.5.5](https://github.com/jbcom/extended-data/compare/extended-data-v8.5.4...extended-data-v8.5.5) (2026-10-07)
 
 
