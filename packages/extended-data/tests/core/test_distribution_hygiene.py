@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import io
+import json
 import runpy
 import subprocess
 import sys
@@ -37,7 +38,13 @@ def test_distribution_gate_accepts_clean_pair(tmp_path: Path) -> None:
     assert result.returncode == 0, result.stdout + result.stderr
 
 
-@pytest.mark.parametrize("name", ["docs/_build/cache.doctree", ".agent-state/queue.json", "src/example/.claude/settings.json"])
+@pytest.mark.parametrize("name", [
+    "docs/_build/cache.doctree", ".agent-state/queue.json", "src/example/.claude/settings.json",
+    r"src\example\.claude\settings.json",
+    f"C:/{'Users'}/example/project/cache.txt", r"C:\Users\example\project\cache.txt",
+    r"\Users\example\project\cache.txt", r"src\example\.CLAUDE\settings.json",
+    r"src\example\.AGENT-STATE\queue.json",
+])
 def test_distribution_gate_rejects_private_members(tmp_path: Path, name: str) -> None:
     wheel, _ = _write_pair(tmp_path)
     with zipfile.ZipFile(wheel, "a") as archive:
@@ -47,20 +54,64 @@ def test_distribution_gate_rejects_private_members(tmp_path: Path, name: str) ->
     assert f"forbidden member {name}" in result.stdout
 
 
-def test_distribution_gate_rejects_machine_paths_in_sdist(tmp_path: Path) -> None:
+@pytest.mark.parametrize("machine_path", [
+    f"/{'Users'}/example/project/file.py",
+    "/home/example/project/file.py",
+    "/root/project/file.py",
+    r"C:\Users\example\project\file.py",
+    f"C:/{'Users'}/example/project/file.py",
+    json.dumps({"path": r"C:\Users\example\project\file.py"}),
+    r"c:\users\example\project\file.py",
+    r"C:\USERS\example\project\file.py",
+    json.dumps({"home": "/home/example"}),
+    json.dumps({"home": r"C:\Users\example"}),
+    "HOME=/home/example",
+    r"C:\Users\Example User\project",
+    f"/{'Users'}/Example User/project",
+    "/home/example user/project",
+    "/root",
+    r"\Users\example\project",
+    json.dumps({"path": r"c:\users\Example User"}),
+    json.dumps({"home": "/home/example"}).replace("/", r"\/"),
+    json.dumps({"path": f"/{'Users'}/example/project"}).replace("/", r"\/"),
+    f"/{'users'}/example/project",
+    f"/{'USERS'}/example/project",
+    "(path=/root)", "[/root]", "{path=/root}", "path=/root,", "path=/root;",
+    json.dumps({"home": "/home/example"}).replace("/", r"\u002f"),
+    json.dumps({"home": r"C:\Users\example"}).replace("Users", r"\u0055sers"),
+])
+def test_distribution_gate_rejects_machine_paths_in_sdist(tmp_path: Path, machine_path: str) -> None:
     _, sdist = _write_pair(tmp_path)
     with tarfile.open(sdist, "r:gz") as archive:
         contents = [(member, archive.extractfile(member).read()) for member in archive.getmembers()]
     with tarfile.open(sdist, "w:gz") as archive:
         for member, data in contents:
             archive.addfile(member, io.BytesIO(data))
-        data = f"/{'Users'}/example/project/file.py".encode()
+        data = machine_path.encode()
         member = tarfile.TarInfo("extended_data-1.0.0/tests/cache.pickle")
         member.size = len(data)
         archive.addfile(member, io.BytesIO(data))
     result = subprocess.run([sys.executable, str(VERIFIER), str(tmp_path)], capture_output=True, text=True, check=False)
     assert result.returncode == 1
     assert "machine path in" in result.stdout
+
+
+@pytest.mark.parametrize("encoding", ["utf-16-le", "utf-16-be", "utf-32-le", "utf-32-be"])
+def test_distribution_gate_rejects_unicode_encoded_machine_paths(tmp_path: Path, encoding: str) -> None:
+    wheel, _ = _write_pair(tmp_path)
+    with zipfile.ZipFile(wheel, "a") as archive:
+        archive.writestr("extended_data/config.txt", "C:\\Users\\\u0100\\project".encode(encoding))
+    verify_directory = runpy.run_path(str(VERIFIER))["verify_directory"]
+    assert any("machine path in" in error for error in verify_directory(tmp_path))
+
+
+@pytest.mark.parametrize("placeholder", ["/home/<user>/project", r"C:\Users\<user>\project", "/root/<project>"])
+def test_distribution_gate_allows_documentation_placeholders(tmp_path: Path, placeholder: str) -> None:
+    wheel, _ = _write_pair(tmp_path)
+    with zipfile.ZipFile(wheel, "a") as archive:
+        archive.writestr("extended_data/example.txt", placeholder)
+    verify_directory = runpy.run_path(str(VERIFIER))["verify_directory"]
+    assert verify_directory(tmp_path) == []
 
 
 def test_distribution_gate_rejects_missing_artifacts_and_source(tmp_path: Path) -> None:

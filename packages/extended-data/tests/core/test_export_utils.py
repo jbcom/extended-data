@@ -229,7 +229,7 @@ def test_make_raw_data_export_safe_tuple_with_path() -> None:
         - The result can be serialized to JSON
     """
     path1 = pathlib.Path("/tmp/file1.txt")
-    path2 = pathlib.Path("/home/user/file2.txt")
+    path2 = pathlib.Path("/home/<user>/file2.txt")
 
     data = {
         "tuple_with_paths": (path1, path2, "regular_string"),
@@ -245,12 +245,12 @@ def test_make_raw_data_export_safe_tuple_with_path() -> None:
 
     # Check that Path objects were converted to strings
     assert result["tuple_with_paths"][0] == "/tmp/file1.txt"
-    assert result["tuple_with_paths"][1] == "/home/user/file2.txt"
+    assert result["tuple_with_paths"][1] == "/home/<user>/file2.txt"
     assert result["tuple_with_paths"][2] == "regular_string"
 
     assert result["list_of_tuples"][0][0] == "/tmp/file1.txt"
     assert result["list_of_tuples"][0][1] == "item1"
-    assert result["list_of_tuples"][1][0] == "/home/user/file2.txt"
+    assert result["list_of_tuples"][1][0] == "/home/<user>/file2.txt"
     assert result["list_of_tuples"][1][1] == "item2"
 
     # Verify JSON serialization works
@@ -399,7 +399,7 @@ def test_make_raw_data_export_safe_frozenset_with_path() -> None:
         - The result can be serialized to JSON
     """
     path1 = pathlib.Path("/tmp/file1.txt")
-    path2 = pathlib.Path("/home/user/file2.txt")
+    path2 = pathlib.Path("/home/<user>/file2.txt")
 
     data = {
         "frozenset_with_paths": frozenset([path1, path2]),
@@ -412,7 +412,7 @@ def test_make_raw_data_export_safe_frozenset_with_path() -> None:
 
     # Check that Path objects were converted to strings
     assert "/tmp/file1.txt" in result["frozenset_with_paths"]
-    assert "/home/user/file2.txt" in result["frozenset_with_paths"]
+    assert "/home/<user>/file2.txt" in result["frozenset_with_paths"]
 
     # Verify JSON serialization works
     json_str = json.dumps(result)
