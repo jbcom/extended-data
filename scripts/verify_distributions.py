@@ -15,11 +15,29 @@ PRIVATE_PARTS = {
     ".mcp.json", "opencode.json", "__pycache__", "node_modules", "_build", ".doctrees",
 }
 MACHINE_PATH = re.compile(
-    rb"/(?:Users|home)/[^\x00-\x1f/<>\"']+"
-    rb"|/root(?:/(?!<)|(?=[\x00\s\"']|$))"
+    rb"/(?:(?i:Users)|home)/[^\x00-\x1f/<>\"']+"
+    rb"|/root(?![\w.-]|/<)"
     rb"|/private/(?:tmp|var)/"
     rb"|(?i:(?:[a-z]:[\\/]+|\\+)users[\\/]+)[^\x00-\x1f\\/<>\"']+",
 )
+
+
+def _contains_machine_path(data: bytes) -> bool:
+    """Recognize paths in plain, JSON-escaped and Unicode-encoded text."""
+    representations = [data]
+    if b"\x00" in data:
+        for encoding in ("utf-16-le", "utf-16-be", "utf-32-le", "utf-32-be"):
+            representations.append(data.decode(encoding, errors="ignore").encode())
+    for representation in representations:
+        normalized = re.sub(
+            rb"\\u([0-9a-fA-F]{4})",
+            lambda match: chr(int(match[1], 16)).encode(errors="surrogatepass"),
+            representation,
+        )
+        normalized = re.sub(rb"\\+/", b"/", normalized)
+        if MACHINE_PATH.search(normalized):
+            return True
+    return False
 
 
 def verify_archive(path: Path) -> list[str]:
@@ -36,7 +54,7 @@ def verify_archive(path: Path) -> list[str]:
         parts = {*member.parts, *(part.casefold() for part in windows_member.parts)}
         if member.is_absolute() or windows_member.root or ".." in parts or PRIVATE_PARTS.intersection(parts):
             errors.append(f"{path.name}: forbidden member {name}")
-        if MACHINE_PATH.search(name.encode()) or MACHINE_PATH.search(data):
+        if _contains_machine_path(name.encode()) or _contains_machine_path(data):
             errors.append(f"{path.name}: machine path in {name}")
 
     if is_wheel:

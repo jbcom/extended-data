@@ -72,6 +72,13 @@ def test_distribution_gate_rejects_private_members(tmp_path: Path, name: str) ->
     "/root",
     r"\Users\example\project",
     json.dumps({"path": r"c:\users\Example User"}),
+    json.dumps({"home": "/home/example"}).replace("/", r"\/"),
+    json.dumps({"path": f"/{'Users'}/example/project"}).replace("/", r"\/"),
+    f"/{'users'}/example/project",
+    f"/{'USERS'}/example/project",
+    "(path=/root)", "[/root]", "{path=/root}", "path=/root,", "path=/root;",
+    json.dumps({"home": "/home/example"}).replace("/", r"\u002f"),
+    json.dumps({"home": r"C:\Users\example"}).replace("Users", r"\u0055sers"),
 ])
 def test_distribution_gate_rejects_machine_paths_in_sdist(tmp_path: Path, machine_path: str) -> None:
     _, sdist = _write_pair(tmp_path)
@@ -87,6 +94,15 @@ def test_distribution_gate_rejects_machine_paths_in_sdist(tmp_path: Path, machin
     result = subprocess.run([sys.executable, str(VERIFIER), str(tmp_path)], capture_output=True, text=True, check=False)
     assert result.returncode == 1
     assert "machine path in" in result.stdout
+
+
+@pytest.mark.parametrize("encoding", ["utf-16-le", "utf-16-be", "utf-32-le", "utf-32-be"])
+def test_distribution_gate_rejects_unicode_encoded_machine_paths(tmp_path: Path, encoding: str) -> None:
+    wheel, _ = _write_pair(tmp_path)
+    with zipfile.ZipFile(wheel, "a") as archive:
+        archive.writestr("extended_data/config.txt", "C:\\Users\\\u0100\\project".encode(encoding))
+    verify_directory = runpy.run_path(str(VERIFIER))["verify_directory"]
+    assert any("machine path in" in error for error in verify_directory(tmp_path))
 
 
 @pytest.mark.parametrize("placeholder", ["/home/<user>/project", r"C:\Users\<user>\project", "/root/<project>"])
