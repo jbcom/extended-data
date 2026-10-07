@@ -42,6 +42,8 @@ def test_distribution_gate_accepts_clean_pair(tmp_path: Path) -> None:
     "docs/_build/cache.doctree", ".agent-state/queue.json", "src/example/.claude/settings.json",
     r"src\example\.claude\settings.json",
     f"C:/{'Users'}/example/project/cache.txt", r"C:\Users\example\project\cache.txt",
+    r"\Users\example\project\cache.txt", r"src\example\.CLAUDE\settings.json",
+    r"src\example\.AGENT-STATE\queue.json",
 ])
 def test_distribution_gate_rejects_private_members(tmp_path: Path, name: str) -> None:
     wheel, _ = _write_pair(tmp_path)
@@ -59,6 +61,17 @@ def test_distribution_gate_rejects_private_members(tmp_path: Path, name: str) ->
     r"C:\Users\example\project\file.py",
     f"C:/{'Users'}/example/project/file.py",
     json.dumps({"path": r"C:\Users\example\project\file.py"}),
+    r"c:\users\example\project\file.py",
+    r"C:\USERS\example\project\file.py",
+    json.dumps({"home": "/home/example"}),
+    json.dumps({"home": r"C:\Users\example"}),
+    "HOME=/home/example",
+    r"C:\Users\Example User\project",
+    f"/{'Users'}/Example User/project",
+    "/home/example user/project",
+    "/root",
+    r"\Users\example\project",
+    json.dumps({"path": r"c:\users\Example User"}),
 ])
 def test_distribution_gate_rejects_machine_paths_in_sdist(tmp_path: Path, machine_path: str) -> None:
     _, sdist = _write_pair(tmp_path)
