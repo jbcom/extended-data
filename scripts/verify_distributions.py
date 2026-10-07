@@ -7,7 +7,7 @@ import re
 import tarfile
 import zipfile
 
-from pathlib import Path, PurePosixPath
+from pathlib import Path, PurePosixPath, PureWindowsPath
 
 
 PRIVATE_PARTS = {
@@ -15,7 +15,7 @@ PRIVATE_PARTS = {
     ".mcp.json", "opencode.json", "__pycache__", "node_modules", "_build", ".doctrees",
 }
 MACHINE_PATH = re.compile(
-    rb"/(?:Users|home)/[^/\s<>]+/|/root/(?!<)|/private/(?:tmp|var)/|[A-Za-z]:[\\/]Users[\\/][^\\/\s<>]+[\\/]",
+    rb"/(?:Users|home)/[^/\s<>]+/|/root/(?!<)|/private/(?:tmp|var)/|[A-Za-z]:[\\/]+Users[\\/]+[^\\/\s<>]+[\\/]+",
 )
 
 
@@ -28,10 +28,12 @@ def verify_archive(path: Path) -> list[str]:
 
     def inspect(name: str, data: bytes) -> None:
         member = PurePosixPath(name)
+        windows_member = PureWindowsPath(name)
         names.add(name)
-        if member.is_absolute() or ".." in member.parts or PRIVATE_PARTS.intersection(member.parts):
+        parts = {*member.parts, *windows_member.parts}
+        if member.is_absolute() or windows_member.is_absolute() or ".." in parts or PRIVATE_PARTS.intersection(parts):
             errors.append(f"{path.name}: forbidden member {name}")
-        if MACHINE_PATH.search(data):
+        if MACHINE_PATH.search(name.encode()) or MACHINE_PATH.search(data):
             errors.append(f"{path.name}: machine path in {name}")
 
     if is_wheel:

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import io
+import json
 import runpy
 import subprocess
 import sys
@@ -37,7 +38,11 @@ def test_distribution_gate_accepts_clean_pair(tmp_path: Path) -> None:
     assert result.returncode == 0, result.stdout + result.stderr
 
 
-@pytest.mark.parametrize("name", ["docs/_build/cache.doctree", ".agent-state/queue.json", "src/example/.claude/settings.json"])
+@pytest.mark.parametrize("name", [
+    "docs/_build/cache.doctree", ".agent-state/queue.json", "src/example/.claude/settings.json",
+    r"src\example\.claude\settings.json",
+    f"C:/{'Users'}/example/project/cache.txt", r"C:\Users\example\project\cache.txt",
+])
 def test_distribution_gate_rejects_private_members(tmp_path: Path, name: str) -> None:
     wheel, _ = _write_pair(tmp_path)
     with zipfile.ZipFile(wheel, "a") as archive:
@@ -53,6 +58,7 @@ def test_distribution_gate_rejects_private_members(tmp_path: Path, name: str) ->
     "/root/project/file.py",
     r"C:\Users\example\project\file.py",
     f"C:/{'Users'}/example/project/file.py",
+    json.dumps({"path": r"C:\Users\example\project\file.py"}),
 ])
 def test_distribution_gate_rejects_machine_paths_in_sdist(tmp_path: Path, machine_path: str) -> None:
     _, sdist = _write_pair(tmp_path)
