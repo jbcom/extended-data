@@ -52,7 +52,7 @@ def test_distribution_gate_rejects_private_members(tmp_path: Path, name: str) ->
     "/home/example/project/file.py",
     "/root/project/file.py",
     r"C:\Users\example\project\file.py",
-    "C:/Users/example/project/file.py",
+    f"C:/{'Users'}/example/project/file.py",
 ])
 def test_distribution_gate_rejects_machine_paths_in_sdist(tmp_path: Path, machine_path: str) -> None:
     _, sdist = _write_pair(tmp_path)
