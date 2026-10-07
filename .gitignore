@@ -17,3 +17,9 @@ packages/extended-data/docs/_build/
 docs/dist/
 docs/node_modules/
 node_modules/
+.agent-state/
+.claude/
+.mcp.json
+opencode.json
+.augment/
+.agents/
