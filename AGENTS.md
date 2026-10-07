@@ -3,14 +3,7 @@
 This repository contains the `extended-data` Python package family as a `uv`
 workspace.
 
-Use the canonical checkout only:
-
-```bash
-~/src/jbcom/extended-data
-```
-
-Do not create side worktrees for this repository. If useful work exists in
-another checkout, move it into this checkout before continuing.
+Run workspace commands from the repository root.
 
 ## Workspace Packages
 
@@ -46,12 +39,12 @@ behavior, agent runtimes, or agent framework adapters. Those belong to
 
 `extended-data` is the base layer. It does not wait on downstream repositories.
 
-| Layer | Local checkout | Remote |
-| --- | --- | --- |
-| Base data | `~/src/jbcom/extended-data` | `https://github.com/jbcom/extended-data` |
-| Vendor layer | `~/src/jbcom/vendor-fabric` | `https://github.com/jbcom/vendor-fabric` |
-| Agent layer | `~/src/jbcom/agentic-fabric` | `https://github.com/jbcom/agentic-fabric` |
-| Legacy monorepo | `~/src/jbcom/extended-data-library` | `https://github.com/jbcom/extended-data-library` |
+| Layer | Repository |
+| --- | --- |
+| Base data | `https://github.com/jbcom/extended-data` |
+| Vendor layer | `https://github.com/jbcom/vendor-fabric` |
+| Agent layer | `https://github.com/jbcom/agentic-fabric` |
+| Legacy monorepo | `https://github.com/jbcom/extended-data-library` |
 
 ## Architecture Docs
 

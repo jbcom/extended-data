@@ -45,3 +45,7 @@ extended_data = "pytest_extended_data.plugin"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/pytest_extended_data"]
+
+[tool.hatch.build.targets.sdist]
+only-include = ["src/pytest_extended_data", "tests", "README.md", "CHANGELOG.md", "pyproject.toml"]
+exclude = ["**/__pycache__/**", "**/*.py[cod]", "**/.agent-state/**", "**/.claude/**", "**/.agents/**", "**/.augment/**", "**/.mcp.json", "**/opencode.json"]

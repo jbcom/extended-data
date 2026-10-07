@@ -15,7 +15,7 @@ import sys
 from copy import deepcopy
 from typing import TYPE_CHECKING, Any
 
-from deepmerge import Merger  # type: ignore[attr-defined]
+from deepmerge import Merger
 
 from extended_data.containers.factory import extend_data, to_builtin
 from extended_data.containers.mappings import ExtendedDict

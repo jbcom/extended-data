@@ -83,6 +83,10 @@ extended-data = "extended_data.cli:main"
 [tool.hatch.build.targets.wheel]
 packages = ["src/extended_data"]
 
+[tool.hatch.build.targets.sdist]
+only-include = ["src/extended_data", "tests", "examples", "README.md", "CHANGELOG.md", "pyproject.toml"]
+exclude = ["**/__pycache__/**", "**/*.py[cod]", "**/.agent-state/**", "**/.claude/**", "**/.agents/**", "**/.augment/**", "**/.mcp.json", "**/opencode.json"]
+
 [tool.ruff]
 extend = "../../pyproject.toml"
 src = ["src", "tests"]
