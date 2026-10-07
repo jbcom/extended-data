@@ -14,7 +14,9 @@ PRIVATE_PARTS = {
     ".agent-state", ".claude", ".agents", ".augment", ".git", ".venv", ".tox",
     ".mcp.json", "opencode.json", "__pycache__", "node_modules", "_build", ".doctrees",
 }
-MACHINE_PATH = re.compile(rb"/Users/[A-Za-z][^/\s]*/|/private/(?:tmp|var)/")
+MACHINE_PATH = re.compile(
+    rb"/(?:Users|home)/[^/\s<>]+/|/root/(?!<)|/private/(?:tmp|var)/|[A-Za-z]:[\\/]Users[\\/][^\\/\s<>]+[\\/]",
+)
 
 
 def verify_archive(path: Path) -> list[str]:

@@ -27,16 +27,16 @@ def demonstrate_filepath_type() -> None:
     print("=== FilePath Utilities ===\n")
 
     # FilePath accepts both str and Path
-    path1: FilePath = "/home/user/documents/file.txt"
-    path2: FilePath = Path("/home/user/documents/file.txt")
+    path1: FilePath = "/home/<user>/documents/file.txt"
+    path2: FilePath = Path("/home/<user>/documents/file.txt")
 
     print(f"String path: {path1}")
     print(f"Path object: {path2}")
 
     # Calculate path depth
     paths = [
-        "/home/user/file.txt",
-        "/home/user/docs/project/readme.md",
+        "/home/<user>/file.txt",
+        "/home/<user>/docs/project/readme.md",
         "relative/path/to/file.py",
     ]
 
@@ -52,7 +52,7 @@ def demonstrate_url_detection() -> None:
     test_strings = [
         "https://example.com/path/to/file",
         "http://localhost:8080",
-        "/home/user/file.txt",
+        "/home/<user>/file.txt",
         "relative/path.txt",
         "ftp://files.example.com/data",
     ]

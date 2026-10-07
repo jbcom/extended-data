@@ -47,20 +47,36 @@ def test_distribution_gate_rejects_private_members(tmp_path: Path, name: str) ->
     assert f"forbidden member {name}" in result.stdout
 
 
-def test_distribution_gate_rejects_machine_paths_in_sdist(tmp_path: Path) -> None:
+@pytest.mark.parametrize("machine_path", [
+    f"/{'Users'}/example/project/file.py",
+    "/home/example/project/file.py",
+    "/root/project/file.py",
+    r"C:\Users\example\project\file.py",
+    "C:/Users/example/project/file.py",
+])
+def test_distribution_gate_rejects_machine_paths_in_sdist(tmp_path: Path, machine_path: str) -> None:
     _, sdist = _write_pair(tmp_path)
     with tarfile.open(sdist, "r:gz") as archive:
         contents = [(member, archive.extractfile(member).read()) for member in archive.getmembers()]
     with tarfile.open(sdist, "w:gz") as archive:
         for member, data in contents:
             archive.addfile(member, io.BytesIO(data))
-        data = f"/{'Users'}/example/project/file.py".encode()
+        data = machine_path.encode()
         member = tarfile.TarInfo("extended_data-1.0.0/tests/cache.pickle")
         member.size = len(data)
         archive.addfile(member, io.BytesIO(data))
     result = subprocess.run([sys.executable, str(VERIFIER), str(tmp_path)], capture_output=True, text=True, check=False)
     assert result.returncode == 1
     assert "machine path in" in result.stdout
+
+
+@pytest.mark.parametrize("placeholder", ["/home/<user>/project", r"C:\Users\<user>\project", "/root/<project>"])
+def test_distribution_gate_allows_documentation_placeholders(tmp_path: Path, placeholder: str) -> None:
+    wheel, _ = _write_pair(tmp_path)
+    with zipfile.ZipFile(wheel, "a") as archive:
+        archive.writestr("extended_data/example.txt", placeholder)
+    verify_directory = runpy.run_path(str(VERIFIER))["verify_directory"]
+    assert verify_directory(tmp_path) == []
 
 
 def test_distribution_gate_rejects_missing_artifacts_and_source(tmp_path: Path) -> None:

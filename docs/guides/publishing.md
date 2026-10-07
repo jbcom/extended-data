@@ -12,6 +12,10 @@ The build gate checks both wheels and source archives for private runtime state,
 generated documentation caches, and machine paths. Source archives select package
 source, tests, examples where present, and package metadata explicitly; the public
 documentation site lives under the workspace's root `docs/` directory.
+Workspace-only archive-gate tests stay in the repository because their verifier
+is workspace tooling. Runtime tests remain in the source archive. Machine-path
+checks cover macOS, Linux home/root directories, and Windows user directories;
+documentation placeholders such as `<user>` remain valid.
 
 After building, the archive check can also run directly:
 
