@@ -7,7 +7,7 @@ special type handling, and error handling mechanisms.
 
 from __future__ import annotations
 
-import datetime
+import datetime as dt
 
 from pathlib import Path
 from typing import Any
@@ -112,12 +112,12 @@ def silent_invalid_path_data(request: Any) -> str | bytes:
 
 @pytest.fixture(
     params=[
-        ("2023-09-05", datetime.date(2023, 9, 5)),
-        ("2022-01-01", datetime.date(2022, 1, 1)),
+        ("2023-09-05", dt.date(2023, 9, 5)),
+        ("2022-01-01", dt.date(2022, 1, 1)),
         ("invalid-date", None),
     ]
 )
-def string_to_date_data(request: Any) -> tuple[str, datetime.date | None]:
+def string_to_date_data(request: Any) -> tuple[str, dt.date | None]:
     """Provides data for testing string_to_date function.
 
     Yields:
@@ -130,20 +130,20 @@ def string_to_date_data(request: Any) -> tuple[str, datetime.date | None]:
     params=[
         (
             "2023-09-05T12:30:00",
-            datetime.datetime(2023, 9, 5, 12, 30, 0, tzinfo=datetime.UTC),
+            dt.datetime(2023, 9, 5, 12, 30, 0, tzinfo=dt.UTC),
         ),
         (
             "2023-09-05 12:30:00",
-            datetime.datetime(2023, 9, 5, 12, 30, 0, tzinfo=datetime.UTC),
+            dt.datetime(2023, 9, 5, 12, 30, 0, tzinfo=dt.UTC),
         ),
         (
             "2023-09-05T12:30:00.123456",
-            datetime.datetime(2023, 9, 5, 12, 30, 0, 123456, tzinfo=datetime.UTC),
+            dt.datetime(2023, 9, 5, 12, 30, 0, 123456, tzinfo=dt.UTC),
         ),
         ("invalid-datetime", None),
     ]
 )
-def string_to_datetime_data(request: Any) -> tuple[str, datetime.datetime | None]:
+def string_to_datetime_data(request: Any) -> tuple[str, dt.datetime | None]:
     """Provides data for testing string_to_datetime function.
 
     Yields:
@@ -154,13 +154,13 @@ def string_to_datetime_data(request: Any) -> tuple[str, datetime.datetime | None
 
 @pytest.fixture(
     params=[
-        ("12:30:00", datetime.time(12, 30, 0)),
-        ("12:30", datetime.time(12, 30, 0)),
-        ("12:30:00.123456", datetime.time(12, 30, 0, 123456)),
+        ("12:30:00", dt.time(12, 30, 0)),
+        ("12:30", dt.time(12, 30, 0)),
+        ("12:30:00.123456", dt.time(12, 30, 0, 123456)),
         ("invalid-time", None),
     ]
 )
-def string_to_time_data(request: Any) -> tuple[str, datetime.time | None]:
+def string_to_time_data(request: Any) -> tuple[str, dt.time | None]:
     """Provides data for testing string_to_time function.
 
     Yields:
@@ -203,17 +203,17 @@ def test_string_type_converters_accept_extended_string_values() -> None:
     assert string_to_bool(ExtendedString("true")) is True
     assert string_to_float(ExtendedString("3.14")) == EXPECTED_FLOAT_1
     assert string_to_int(ExtendedString("42")) == EXPECTED_INT_1
-    assert string_to_date(ExtendedString("2023-09-05")) == datetime.date(2023, 9, 5)
-    assert string_to_datetime(ExtendedString("2023-09-05T12:30:00")) == datetime.datetime(
+    assert string_to_date(ExtendedString("2023-09-05")) == dt.date(2023, 9, 5)
+    assert string_to_datetime(ExtendedString("2023-09-05T12:30:00")) == dt.datetime(
         2023,
         9,
         5,
         12,
         30,
         0,
-        tzinfo=datetime.UTC,
+        tzinfo=dt.UTC,
     )
-    assert string_to_time(ExtendedString("12:30")) == datetime.time(12, 30, 0)
+    assert string_to_time(ExtendedString("12:30")) == dt.time(12, 30, 0)
     assert string_to_path(ExtendedString("/valid/path")) == Path("/valid/path")
 
 
@@ -340,7 +340,7 @@ def test_string_to_path_invalid_silent(silent_invalid_path_data: str | bytes) ->
     assert string_to_path(silent_invalid_path_data) is None
 
 
-def test_string_to_date(string_to_date_data: tuple[str, datetime.date | None]) -> None:
+def test_string_to_date(string_to_date_data: tuple[str, dt.date | None]) -> None:
     """Tests converting a string to a date value.
 
     Args:
@@ -367,7 +367,7 @@ def test_string_to_date_invalid_matching_pattern_raises() -> None:
 
 
 def test_string_to_datetime(
-    string_to_datetime_data: tuple[str, datetime.datetime | None],
+    string_to_datetime_data: tuple[str, dt.datetime | None],
 ) -> None:
     """Tests converting a string to a datetime value.
 
@@ -399,10 +399,10 @@ def test_string_to_datetime_preserves_explicit_timezone() -> None:
     """Keep explicit timezone offsets instead of forcing UTC."""
     result = string_to_datetime("2023-09-05T12:30:00+02:00")
 
-    assert result == datetime.datetime(2023, 9, 5, 12, 30, 0, tzinfo=datetime.timezone(datetime.timedelta(hours=2)))
+    assert result == dt.datetime(2023, 9, 5, 12, 30, 0, tzinfo=dt.timezone(dt.timedelta(hours=2)))
 
 
-def test_string_to_time(string_to_time_data: tuple[str, datetime.time | None]) -> None:
+def test_string_to_time(string_to_time_data: tuple[str, dt.time | None]) -> None:
     """Tests converting a string to a time value.
 
     Args:
@@ -499,9 +499,9 @@ def test_typeof(item: Any, primitive_only: bool, expected_type: type) -> None:
 @pytest.mark.parametrize(
     ("obj", "expected"),
     [
-        (datetime.date(2023, 9, 5), "2023-09-05"),
+        (dt.date(2023, 9, 5), "2023-09-05"),
         (
-            datetime.datetime(2023, 9, 5, 12, 30, tzinfo=datetime.UTC),
+            dt.datetime(2023, 9, 5, 12, 30, tzinfo=dt.UTC),
             "2023-09-05T12:30:00",
         ),
         (Path("/some/path"), "/some/path"),
@@ -531,7 +531,7 @@ def test_convert_special_type_handles_yaml_wrappers_and_custom_objects() -> None
 def test_convert_special_type_handles_mappings_and_sequences_directly() -> None:
     """Normalize container inputs passed directly to convert_special_type."""
     assert convert_special_type({"path": Path("/tmp/config.yml")}) == {"path": "/tmp/config.yml"}
-    assert convert_special_type((Path("/tmp/a"), datetime.date(2025, 1, 15))) == ["/tmp/a", "2025-01-15"]
+    assert convert_special_type((Path("/tmp/a"), dt.date(2025, 1, 15))) == ["/tmp/a", "2025-01-15"]
 
 
 def test_convert_special_types_handles_extended_containers() -> None:
@@ -539,7 +539,7 @@ def test_convert_special_types_handles_extended_containers() -> None:
     value = ExtendedDict(
         {
             "enabled": ExtendedString("true"),
-            "paths": ExtendedList([Path("/tmp/a"), datetime.date(2025, 1, 15)]),
+            "paths": ExtendedList([Path("/tmp/a"), dt.date(2025, 1, 15)]),
             "tags": ExtendedSet({ExtendedString("api")}),
         }
     )
@@ -555,15 +555,15 @@ def test_convert_special_types_handles_extended_containers() -> None:
 @pytest.mark.parametrize(
     ("obj", "expected"),
     [
-        ({"date": datetime.date(2023, 9, 5)}, {"date": "2023-09-05"}),
+        ({"date": dt.date(2023, 9, 5)}, {"date": "2023-09-05"}),
         (
             [
                 "/path/to/file",
-                datetime.datetime(2023, 9, 5, 12, 30, tzinfo=datetime.UTC),
+                dt.datetime(2023, 9, 5, 12, 30, tzinfo=dt.UTC),
             ],
             ["/path/to/file", "2023-09-05T12:30:00"],
         ),
-        ({datetime.date(2023, 9, 5)}, ["2023-09-05"]),  # Update expected format to list
+        ({dt.date(2023, 9, 5)}, ["2023-09-05"]),  # Update expected format to list
         (
             ["text", 123, {"key": Path("/some/path")}],
             ["text", 123, {"key": "/some/path"}],
@@ -579,7 +579,7 @@ def test_convert_special_types_handles_tuple_frozenset_and_yaml_pairs() -> None:
     """Normalize composite container types consistently across serializers."""
     result = convert_special_types(
         {
-            "tuple": (Path("/tmp/a"), datetime.date(2025, 1, 15)),
+            "tuple": (Path("/tmp/a"), dt.date(2025, 1, 15)),
             "frozenset": frozenset([1, 2]),
             "pairs": YamlPairs([("path", Path("/tmp/b"))]),
         }
@@ -593,12 +593,12 @@ def test_convert_special_types_handles_tuple_frozenset_and_yaml_pairs() -> None:
 @pytest.mark.parametrize(
     ("obj", "expected"),
     [
-        ("2023-09-05", datetime.date(2023, 9, 5)),  # Date string to datetime.date
+        ("2023-09-05", dt.date(2023, 9, 5)),  # Date string to datetime.date
         (
             "2023-09-05T12:30:00",
-            datetime.datetime(2023, 9, 5, 12, 30, tzinfo=datetime.UTC),
+            dt.datetime(2023, 9, 5, 12, 30, tzinfo=dt.UTC),
         ),  # Datetime string to datetime.datetime
-        ("12:30:00", datetime.time(12, 30, 0)),  # Time string to datetime.time
+        ("12:30:00", dt.time(12, 30, 0)),  # Time string to datetime.time
         ("/some/path", Path("/some/path")),  # Path string to Path
         ("simple string", "simple string"),  # Simple string remains unchanged
         ("123", 123),  # Numeric string to integer
@@ -646,12 +646,12 @@ def test_reconstruct_special_type_fails_silently_for_invalid_structured_data(obj
 @pytest.mark.parametrize(
     ("obj", "expected"),
     [
-        ({"date": "2023-09-05"}, {"date": datetime.date(2023, 9, 5)}),
+        ({"date": "2023-09-05"}, {"date": dt.date(2023, 9, 5)}),
         (
             ["/path/to/file", "2023-09-05T12:30:00"],
             [
                 Path("/path/to/file"),
-                datetime.datetime(2023, 9, 5, 12, 30, tzinfo=datetime.UTC),
+                dt.datetime(2023, 9, 5, 12, 30, tzinfo=dt.UTC),
             ],
         ),
         (
@@ -661,8 +661,8 @@ def test_reconstruct_special_type_fails_silently_for_invalid_structured_data(obj
         (
             ["2023-09-05", {"nested": ["2023-09-05T12:30:00"]}],
             [
-                datetime.date(2023, 9, 5),
-                {"nested": [datetime.datetime(2023, 9, 5, 12, 30, tzinfo=datetime.UTC)]},
+                dt.date(2023, 9, 5),
+                {"nested": [dt.datetime(2023, 9, 5, 12, 30, tzinfo=dt.UTC)]},
             ],
         ),
         (
@@ -679,7 +679,7 @@ def test_reconstruct_special_types(obj: Any, expected: Any) -> None:
 def test_reconstruct_special_types_handles_sets() -> None:
     """Reconstruct values contained in sets."""
     result = reconstruct_special_types({"2023-09-05", "true"}, fail_silently=False)
-    assert result == {datetime.date(2023, 9, 5), True}
+    assert result == {dt.date(2023, 9, 5), True}
 
 
 def test_reconstruct_special_types_handles_tuples_and_frozensets() -> None:
@@ -687,8 +687,8 @@ def test_reconstruct_special_types_handles_tuples_and_frozensets() -> None:
     tuple_result = reconstruct_special_types(("2023-09-05", "true"), fail_silently=False)
     frozenset_result = reconstruct_special_types(frozenset(["2023-09-05", "true"]), fail_silently=False)
 
-    assert tuple_result == (datetime.date(2023, 9, 5), True)
-    assert frozenset_result == frozenset([datetime.date(2023, 9, 5), True])
+    assert tuple_result == (dt.date(2023, 9, 5), True)
+    assert frozenset_result == frozenset([dt.date(2023, 9, 5), True])
 
 
 def test_reconstruct_special_types_handles_extended_containers() -> None:
@@ -706,7 +706,7 @@ def test_reconstruct_special_types_handles_extended_containers() -> None:
 
     assert result["enabled"] is True
     assert result["count"] == 5
-    assert result["items"] == [datetime.date(2023, 9, 5)]
+    assert result["items"] == [dt.date(2023, 9, 5)]
     assert result["tags"] == {False}
 
 
@@ -752,7 +752,7 @@ def test_path_reconstruction_supports_portable_absolute_paths(value: str) -> Non
                 {
                     "nested": [
                         True,
-                        {"deep": datetime.datetime(2023, 9, 5, 12, 30, tzinfo=datetime.UTC)},
+                        {"deep": dt.datetime(2023, 9, 5, 12, 30, tzinfo=dt.UTC)},
                     ]
                 }
             ],

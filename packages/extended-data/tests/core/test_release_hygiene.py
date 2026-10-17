@@ -303,14 +303,18 @@ def test_dependabot_covers_workspace_package_directories() -> None:
         assert update["groups"]["non-major"]["update-types"] == ["minor", "patch"]
 
 
-def test_lightweight_release_and_non_major_dependabot_prs_skip_expensive_ci() -> None:
-    """Vetted release metadata and grouped non-major updates should avoid duplicate testing."""
+def test_only_release_metadata_prs_skip_expensive_ci() -> None:
+    """Only vetted release metadata skips testing; every Dependabot PR is validated.
+
+    Skipped jobs report success, so exempting non-major Dependabot bumps would let
+    auto-merge land an unverified dependency update on main.
+    """
     ci_workflow = (WORKFLOW_ROOT / "ci.yml").read_text(encoding="utf-8")
 
     assert "release-please--" in ci_workflow
-    assert "dependabot[bot]" in ci_workflow
-    assert "/non-major-" in ci_workflow
-    assert "PR_TITLE" in ci_workflow
+    assert "IS_DEPENDABOT" not in ci_workflow
+    assert "/non-major-" not in ci_workflow
+    assert "PR_TITLE" not in ci_workflow
     assert "CI / gate" in ci_workflow
     assert "SonarQube Cloud" in ci_workflow
 

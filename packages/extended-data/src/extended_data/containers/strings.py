@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-import datetime
+import datetime as dt
 
 from collections import UserString
 from collections.abc import Iterable, Mapping
@@ -200,15 +200,15 @@ class ExtendedString(UserString, ExtendedData):
         """Return a path parsed from the string."""
         return string_to_path(self.data, raise_on_error=raise_on_error)
 
-    def to_date(self, *, raise_on_error: bool = False) -> datetime.date | None:
+    def to_date(self, *, raise_on_error: bool = False) -> dt.date | None:
         """Return a date parsed from the string."""
         return string_to_date(self.data, raise_on_error=raise_on_error)
 
-    def to_datetime(self, *, raise_on_error: bool = False) -> datetime.datetime | None:
+    def to_datetime(self, *, raise_on_error: bool = False) -> dt.datetime | None:
         """Return a datetime parsed from the string."""
         return string_to_datetime(self.data, raise_on_error=raise_on_error)
 
-    def to_time(self, *, raise_on_error: bool = False) -> datetime.time | None:
+    def to_time(self, *, raise_on_error: bool = False) -> dt.time | None:
         """Return a time parsed from the string."""
         return string_to_time(self.data, raise_on_error=raise_on_error)
 

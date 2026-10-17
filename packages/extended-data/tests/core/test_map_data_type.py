@@ -30,7 +30,7 @@ Functions:
 
 from __future__ import annotations
 
-import datetime
+import datetime as dt
 
 from collections import defaultdict
 from pathlib import Path
@@ -271,7 +271,7 @@ def test_deduplicate_map_converts_special_types_inside_lists() -> None:
     result = deduplicate_map(
         {
             "paths": [Path("/tmp/a"), Path("/tmp/a")],
-            "dates": [datetime.date(2025, 1, 15), datetime.date(2025, 1, 15)],
+            "dates": [dt.date(2025, 1, 15), dt.date(2025, 1, 15)],
         }
     )
 

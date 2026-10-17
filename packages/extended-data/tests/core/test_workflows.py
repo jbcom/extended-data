@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-import datetime
+import datetime as dt
 import json
 
 from pathlib import Path
@@ -367,7 +367,7 @@ def test_workflow_result_extended_view_is_detached() -> None:
 def test_workflow_result_exports_from_completed_value() -> None:
     """Completed workflow results can be exported without leaving the result boundary."""
     result = DataWorkflow.from_value(
-        {"launched": datetime.date(2026, 6, 10), "service": {"name": "api"}},
+        {"launched": dt.date(2026, 6, 10), "service": {"name": "api"}},
     ).result()
 
     export_safe = result.to_export_safe()

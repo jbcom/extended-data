@@ -10,7 +10,7 @@ Functions:
 
 from __future__ import annotations
 
-import datetime
+import datetime as dt
 
 from pathlib import Path
 
@@ -50,7 +50,7 @@ def test_encode_toml_converts_special_types() -> None:
     """Convert special types before TOML encoding."""
     result = encode_toml(
         {
-            "date": datetime.date(2025, 1, 15),
+            "date": dt.date(2025, 1, 15),
             "path": Path("/tmp/example.txt"),
         }
     )

@@ -30,7 +30,7 @@ Constants:
 from __future__ import annotations
 
 import builtins
-import datetime
+import datetime as dt
 import os
 import pathlib
 import re
@@ -270,7 +270,7 @@ def string_to_path(val: str | bytes | os.PathLike[str] | None, raise_on_error: b
     return None
 
 
-def string_to_date(val: str, raise_on_error: bool = False) -> datetime.date | None:
+def string_to_date(val: str, raise_on_error: bool = False) -> dt.date | None:
     """Converts a string representation of a date to a datetime.date object.
 
     Args:
@@ -286,17 +286,17 @@ def string_to_date(val: str, raise_on_error: bool = False) -> datetime.date | No
     val = str(val)
     if not DATE_PATTERN.match(val):
         if raise_on_error:
-            raise ConversionError(datetime.date, val)
+            raise ConversionError(dt.date, val)
         return None
     try:
-        return datetime.datetime.strptime(val, "%Y-%m-%d").date()
+        return dt.datetime.strptime(val, "%Y-%m-%d").date()
     except ValueError as exc:
         if raise_on_error:
-            raise ConversionError(datetime.date, val) from exc
+            raise ConversionError(dt.date, val) from exc
     return None
 
 
-def string_to_datetime(val: str, raise_on_error: bool = False) -> datetime.datetime | None:
+def string_to_datetime(val: str, raise_on_error: bool = False) -> dt.datetime | None:
     """Converts a string representation of a datetime to a datetime.datetime object.
 
     Args:
@@ -313,21 +313,21 @@ def string_to_datetime(val: str, raise_on_error: bool = False) -> datetime.datet
     val = str(val)
     if not DATETIME_PATTERN.match(val):
         if raise_on_error:
-            raise ConversionError(datetime.datetime, val)
+            raise ConversionError(dt.datetime, val)
         return None
     try:
-        dt = datetime.datetime.fromisoformat(val.replace(" ", "T"))
-        if dt.tzinfo is None:
+        parsed = dt.datetime.fromisoformat(val.replace(" ", "T"))
+        if parsed.tzinfo is None:
             # Set UTC timezone if not provided
-            dt = dt.replace(tzinfo=datetime.UTC)
-        return dt
+            parsed = parsed.replace(tzinfo=dt.UTC)
+        return parsed
     except ValueError as exc:
         if raise_on_error:
-            raise ConversionError(datetime.datetime, val) from exc
+            raise ConversionError(dt.datetime, val) from exc
     return None
 
 
-def string_to_time(val: str, raise_on_error: bool = False) -> datetime.time | None:
+def string_to_time(val: str, raise_on_error: bool = False) -> dt.time | None:
     """Converts a string representation of a time to a datetime.time object.
 
     Args:
@@ -343,18 +343,18 @@ def string_to_time(val: str, raise_on_error: bool = False) -> datetime.time | No
     val = str(val)
     if not TIME_PATTERN.match(val):
         if raise_on_error:
-            raise ConversionError(datetime.time, val)
+            raise ConversionError(dt.time, val)
         return None
 
     try:
         if "." in val:
-            return datetime.datetime.strptime(val, "%H:%M:%S.%f").time()
+            return dt.datetime.strptime(val, "%H:%M:%S.%f").time()
         if ":" in val[5:]:
-            return datetime.datetime.strptime(val, "%H:%M:%S").time()
-        return datetime.datetime.strptime(val, "%H:%M").time()
+            return dt.datetime.strptime(val, "%H:%M:%S").time()
+        return dt.datetime.strptime(val, "%H:%M").time()
     except ValueError as exc:
         if raise_on_error:
-            raise ConversionError(datetime.time, val) from exc
+            raise ConversionError(dt.time, val) from exc
     return None
 
 
@@ -400,7 +400,7 @@ def convert_special_type(obj: Any) -> Any:
     if isinstance(obj, (set, list, tuple, frozenset, UserList, AbstractSet)) and not isinstance(obj, str | UserString):
         return [convert_special_types(v) for v in obj]
 
-    if isinstance(obj, (datetime.date, datetime.datetime)):
+    if isinstance(obj, (dt.date, dt.datetime)):
         return obj.isoformat().removesuffix("+00:00")
     if isinstance(obj, pathlib.Path):
         return str(obj)
