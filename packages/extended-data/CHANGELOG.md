@@ -1,5 +1,13 @@
 # Changelog
 
+## [8.5.7](https://github.com/jbcom/extended-data/compare/extended-data-v8.5.6...extended-data-v8.5.7) (2026-10-17)
+
+
+### Bug Fixes
+
+* restore green main (ruff 0.17 ICN001) and validate Dependabot PRs ([328db49](https://github.com/jbcom/extended-data/commit/328db490997a350bf491a47ba184aeee44a6ebdd))
+* restore green main (ruff 0.17 ICN001) and validate Dependabot PRs ([a28372b](https://github.com/jbcom/extended-data/commit/a28372b44d6fc8420bc2c109ade8443dbcc57d2d))
+
 ## [8.5.6](https://github.com/jbcom/extended-data/compare/extended-data-v8.5.5...extended-data-v8.5.6) (2026-10-07)
 
 
