@@ -13,7 +13,7 @@ Functions:
 
 from __future__ import annotations
 
-import datetime
+import datetime as dt
 import json
 import pathlib
 
@@ -193,8 +193,8 @@ def test_make_raw_data_export_safe_tuple_with_datetime() -> None:
         - datetime objects within tuples are converted to ISO format strings
         - The result can be serialized to JSON
     """
-    test_date = datetime.date(2025, 1, 15)
-    test_datetime = datetime.datetime(2025, 1, 15, 12, 30, 45)
+    test_date = dt.date(2025, 1, 15)
+    test_datetime = dt.datetime(2025, 1, 15, 12, 30, 45)
 
     data = {
         "tuple_with_dates": (test_date, test_datetime, "string"),
@@ -265,7 +265,7 @@ def test_make_raw_data_export_safe_tuple_mixed_types() -> None:
         - Tuples with datetime, Path, and regular types are all converted properly
         - Nested tuples are handled correctly
     """
-    test_date = datetime.date(2025, 1, 15)
+    test_date = dt.date(2025, 1, 15)
     test_path = pathlib.Path("/tmp/test.txt")
 
     data = {
@@ -319,7 +319,7 @@ def test_make_raw_data_export_safe_preserves_yaml_wrappers() -> None:
             "!Sub",
             {
                 "path": pathlib.Path("/tmp/template.yml"),
-                "created": datetime.date(2025, 1, 15),
+                "created": dt.date(2025, 1, 15),
             },
         ),
         "pairs": YamlPairs(
@@ -355,8 +355,8 @@ def test_make_raw_data_export_safe_frozenset_with_datetime() -> None:
         - datetime objects within frozensets are converted to ISO format strings
         - The result can be serialized to JSON
     """
-    test_date = datetime.date(2025, 1, 15)
-    test_datetime = datetime.datetime(2025, 1, 15, 12, 30, 45)
+    test_date = dt.date(2025, 1, 15)
+    test_datetime = dt.datetime(2025, 1, 15, 12, 30, 45)
 
     data = {
         "frozenset_with_dates": frozenset([test_date, test_datetime]),

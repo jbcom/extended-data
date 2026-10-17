@@ -6,7 +6,7 @@ and pathlib.Path.
 
 from __future__ import annotations
 
-import datetime
+import datetime as dt
 import pathlib
 
 from typing import Any
@@ -42,14 +42,14 @@ class PureDumper(SafeDumper):
         self.add_multi_representer(YamlTagged, yaml_represent_tagged)
         self.add_multi_representer(YamlPairs, yaml_represent_pairs)
         self.add_representer(
-            datetime.date,
+            dt.date,
             lambda dumper, data: dumper.represent_scalar(
                 "tag:yaml.org,2002:timestamp",
                 data.isoformat(),
             ),
         )
         self.add_representer(
-            datetime.datetime,
+            dt.datetime,
             lambda dumper, data: dumper.represent_scalar(
                 "tag:yaml.org,2002:timestamp",
                 data.isoformat(),

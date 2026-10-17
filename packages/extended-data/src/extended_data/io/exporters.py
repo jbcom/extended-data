@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-import datetime
+import datetime as dt
 import pathlib
 
 from collections.abc import Mapping
@@ -128,7 +128,7 @@ def make_raw_data_export_safe(raw_data: Any, export_to_yaml: bool = False) -> An
     exported_data = raw_data
 
     # Convert datetime objects to ISO format strings
-    if isinstance(exported_data, (datetime.date, datetime.datetime)):
+    if isinstance(exported_data, (dt.date, dt.datetime)):
         exported_data = exported_data.isoformat()
     # Convert Path objects to strings
     elif isinstance(exported_data, pathlib.Path):
