@@ -11,9 +11,9 @@ def string_to_bool(val: str | bool | None, raise_on_error: bool = False) -> bool
 def string_to_float(val: str, raise_on_error: bool = False) -> float | None:
 def string_to_int(val: str, raise_on_error: bool = False) -> int | None:
 def string_to_path(val: str | bytes | os.PathLike[str] | None, raise_on_error: bool = False) -> Path | None:
-def string_to_date(val: str, raise_on_error: bool = False) -> datetime.date | None:
-def string_to_datetime(val: str, raise_on_error: bool = False) -> datetime.datetime | None:
-def string_to_time(val: str, raise_on_error: bool = False) -> datetime.time | None:
+def string_to_date(val: str, raise_on_error: bool = False) -> dt.date | None:
+def string_to_datetime(val: str, raise_on_error: bool = False) -> dt.datetime | None:
+def string_to_time(val: str, raise_on_error: bool = False) -> dt.time | None:
 def get_default_value_for_type(input_type: builtins.type[Any]) -> Any:
 def get_primitive_type_for_instance_type(value: Any) -> builtins.type[Any]:
 def typeof(item: Any, primitive_only: bool = False) -> builtins.type[Any]:
