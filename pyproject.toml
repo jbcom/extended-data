@@ -25,7 +25,7 @@ dev = [
     "ruff>=0.17.2",
     "tox>=4.67.1",
     "tox-gh>=1.9.0",
-    "tox-uv>=1.37.0",
+    "tox-uv>=1.37.3",
 ]
 
 [tool.pytest.ini_options]
